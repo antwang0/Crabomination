@@ -684,3 +684,4 @@ pub fn explore() -> CardDefinition {
         ..Default::default()
     }
 }
+

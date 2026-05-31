@@ -16850,6 +16850,137 @@ fn clone_with_no_creature_to_copy_dies_as_zero_zero() {
 }
 
 #[test]
+fn steady_progress_proliferates_then_draws() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::steady_progress());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {2}{U}");
+    drain_stack(&mut g);
+    let n = g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(n, 2, "proliferate grew the +1/+1 counter");
+    // -1 cast from hand, +1 drawn.
+    assert_eq!(g.players[0].hand.len(), hand_before, "Steady Progress drew a card");
+}
+
+#[test]
+fn volt_charge_burns_then_proliferates() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == mine).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    let id = g.add_card_to_hand(0, catalog::volt_charge());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable for {2}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3, "3 damage to the opponent");
+    let n = g.battlefield.iter().find(|c| c.id == mine).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(n, 2, "proliferate grew your +1/+1 counter");
+}
+
+#[test]
+fn karns_bastion_has_a_proliferate_ability() {
+    let d = catalog::karns_bastion();
+    assert!(d.card_types.contains(&CardType::Land));
+    assert!(d.activated_abilities.iter().any(|a|
+        matches!(a.effect, crate::effect::Effect::Proliferate)),
+        "Karn's Bastion has a Proliferate activated ability");
+}
+
+#[test]
+fn cr_707_2_clone_copies_printed_pt_not_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 base
+    // A +1/+1 counter on the original makes it a 3/3, but copiable values
+    // (CR 707.2) are the printed characteristics — counters aren't copied.
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    let id = g.add_card_to_hand(0, catalog::clone_card());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let clone = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    assert_eq!((clone.definition.power, clone.definition.toughness), (2, 2),
+        "copiable P/T excludes the original's +1/+1 counter");
+    assert_eq!(clone.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0,
+        "counters are not part of copiable values (CR 707.2)");
+}
+
+#[test]
+fn mirror_image_copies_only_your_own_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::serra_angel()); // opponent's — not copyable
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 yours
+    let _ = mine;
+    let id = g.add_card_to_hand(0, catalog::mirror_image());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mirror Image castable for {1}{U}");
+    drain_stack(&mut g);
+    let img = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    // Copies the controller's Grizzly Bears, never the opponent's Serra Angel.
+    assert_eq!(img.definition.name, "Grizzly Bears");
+}
+
+#[test]
+fn stunt_double_keeps_flash_after_copying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 vanilla, no Flash
+    let id = g.add_card_to_hand(0, catalog::stunt_double());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let dbl = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    assert_eq!(dbl.definition.name, "Grizzly Bears");
+    assert!(dbl.definition.keywords.contains(&Keyword::Flash),
+        "Stunt Double keeps Flash on the copy");
+}
+
+#[test]
+fn cackling_counterpart_makes_a_token_copy() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4 you control
+    let id = g.add_card_to_hand(0, catalog::cackling_counterpart());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.battlefield.iter().filter(|c| c.definition.name == "Serra Angel").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable for {1}{U}{U}");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.definition.name == "Serra Angel").count();
+    assert_eq!(after, before + 1, "a token copy of Serra Angel was created");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Serra Angel" && c.is_token));
+}
+
+#[test]
 fn phantasmal_image_copies_and_keeps_illusion_plus_sacrifice_rider() {
     use crate::card::{CreatureType, EventKind};
     let mut g = two_player_game();

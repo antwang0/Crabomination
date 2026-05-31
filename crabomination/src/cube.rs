@@ -333,6 +333,14 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Image carries its Illusion type + sacrifice-when-targeted rider).
         clone_card,
         phantasmal_image,
+        mirror_image,
+        stunt_double,
+        cackling_counterpart,
+        // Proliferate (CR 701.27) suite — grows the controller's counters
+        // + poisons opponents via `Effect::Proliferate`.
+        steady_progress,
+        volt_charge,
+        karns_bastion,
         // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,

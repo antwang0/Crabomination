@@ -907,6 +907,56 @@ pub fn clone_card() -> CardDefinition {
             filter: SelectionRequirement::Creature,
             extra_creature_types: vec![],
             extra_triggered: vec![],
+            extra_keywords: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Mirror Image — {1}{U}, 0/0 Shapeshifter. "You may have Mirror Image
+/// enter the battlefield as a copy of a creature you control." (The
+/// "except it's not legendary" rider is omitted — no copy-supertype
+/// override yet.)
+pub fn mirror_image() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Mirror Image",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            extra_creature_types: vec![],
+            extra_triggered: vec![],
+            extra_keywords: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Stunt Double — {3}{U}, 0/0 Shapeshifter with Flash. "You may have Stunt
+/// Double enter as a copy of any creature, except it has flash." The copy
+/// keeps Flash via `extra_keywords` (printed Flash also lets it be cast at
+/// instant speed).
+pub fn stunt_double() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Stunt Double",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature,
+            extra_creature_types: vec![],
+            extra_triggered: vec![],
+            extra_keywords: vec![Keyword::Flash],
         }),
         ..Default::default()
     }
@@ -936,6 +986,7 @@ pub fn phantasmal_image() -> CardDefinition {
                     to: ZoneDest::Graveyard,
                 },
             }],
+            extra_keywords: vec![],
         }),
         ..Default::default()
     }

@@ -739,6 +739,10 @@ pub struct EntersAsCopy {
     /// stamped, so they survive the definition rewrite.
     #[serde(default)]
     pub extra_triggered: Vec<crate::effect::TriggeredAbility>,
+    /// Keywords layered on top of the copy (Stunt Double's "except it has
+    /// flash" — though flash matters at cast time; Sakashima-style riders).
+    #[serde(default)]
+    pub extra_keywords: Vec<Keyword>,
 }
 
 /// CR 601.2b/601.2f — an additional cost paid as the spell is cast, listed

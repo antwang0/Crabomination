@@ -1041,3 +1041,59 @@ pub fn intervention_pact() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Steady Progress — {2}{U} Instant. "Proliferate. Draw a card."
+pub fn steady_progress() -> CardDefinition {
+    CardDefinition {
+        name: "Steady Progress",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Proliferate,
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Volt Charge — {2}{R} Instant. "Volt Charge deals 3 damage to any target.
+/// Proliferate."
+pub fn volt_charge() -> CardDefinition {
+    CardDefinition {
+        name: "Volt Charge",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+            Effect::Proliferate,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cackling Counterpart — {1}{U}{U} Instant. "Create a token that's a copy
+/// of target creature you control. Flashback {5}{U}{U}." Token copy via
+/// `Effect::CreateTokenCopyOf`; Flashback via `Keyword::Flashback`.
+pub fn cackling_counterpart() -> CardDefinition {
+    let flashback = ManaCost::new(vec![
+        crate::mana::ManaSymbol::Generic(5),
+        crate::mana::ManaSymbol::Colored(Color::Blue),
+        crate::mana::ManaSymbol::Colored(Color::Blue),
+    ]);
+    CardDefinition {
+        name: "Cackling Counterpart",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(flashback)],
+        effect: Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            extra_creature_types: vec![],
+            override_pt: None,
+        },
+        ..Default::default()
+    }
+}

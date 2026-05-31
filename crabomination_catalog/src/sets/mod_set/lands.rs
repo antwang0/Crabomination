@@ -290,3 +290,23 @@ pub fn exotic_orchard() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Karn's Bastion — Land. "{T}: Add {C}. {4}, {T}: Proliferate."
+pub fn karns_bastion() -> CardDefinition {
+    use super::super::tap_add_colorless;
+    CardDefinition {
+        name: "Karn's Bastion",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::new(vec![crate::mana::ManaSymbol::Generic(4)]),
+                effect: Effect::Proliferate,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

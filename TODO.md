@@ -1212,18 +1212,19 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
   copy-effect framework — what gets copied when an object becomes a
   copy of another, copy-as-it-enters, and copies of spells. Audit:
-  (a) **707.1** — ✅ (`Effect::CopySpell`
-  resolves at cast time, stamping `StackItem::Spell.is_token = true`
-  for permanent-spell copies per CR 608.3f / 707.10f. The "copy a
-  permanent on the battlefield" half — Clone / Cackling Counterpart /
-  Phantasmal Image — is ⏳ pending an `Effect::CreateCopyToken`
-  primitive that snapshots a target permanent's CardDefinition).
+  (a) **707.1** — ✅ (`Effect::CopySpell` resolves at cast time,
+  stamping `StackItem::Spell.is_token = true` for permanent-spell
+  copies. Permanent copies on the battlefield ship via
+  `Effect::CreateTokenCopyOf` (Cackling Counterpart — token copy) and
+  `Effect::BecomeCopyOf` / the `CardDefinition.enters_as_copy` hook
+  (Clone, Phantasmal Image, Mirror Image, Stunt Double — a one-shot
+  definition rewrite that locks the copiable values in at copy time).
   (b) **707.2** copiable values = printed name, mana cost, color
   indicator, types, rules text, P/T, loyalty (modified by other copy
-  effects) — ✅ for spell copies (the existing copy reads the
-  printed CardDefinition); ⏳ for permanent copies on the battlefield
-  (no copy primitive yet). Counters / stickers / status not copied —
-  ✅ for spell copies (no battlefield primitive yet).
+  effects) — ✅ for spell and permanent copies (the rewrite reads the
+  source's current `CardDefinition`; counters / damage / status are
+  instance state and stay with the copier, not copied).
+  Test: `cr_707_2_clone_copies_printed_pt_not_counters`.
   (c) **707.2a** copies acquire color from cost and abilities from
   text — ✅ (the spell copy reads its CardDefinition.cost.colors and
   CardDefinition.{triggered,activated,static}_abilities).
@@ -1237,9 +1238,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   — ⏳ (no in-place copy primitive; Unstable Shapeshifter, Cytoshape
   not in catalog).
   (h) **707.5** "enters as a copy" picks up ETB-replacement effects
-  + ETB triggers of the copied object — ⏳ (Clone-style ETB-as-copy
-  not modeled; the `is_token = true` stamp from CR 608.3f is the only
-  copy-related ETB handling today).
+  + ETB triggers of the copied object — 🟡 (the `enters_as_copy` hook
+  applies the copy *before* the first SBA sweep, so a 0/0 copier never
+  dies first; but the copied object's own ETB triggers don't re-fire —
+  they were collected from the pre-copy definition. Copied
+  enters-with-counters / ETB triggers are the remaining gap).
   (i) **707.6** copying doesn't snapshot "as it enters" choices — ⏳
   (Clone-on-Adaptive-Automaton creature-type prompt deferred to copy
   controller; Adaptive Automaton not in catalog).
@@ -1249,9 +1252,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   permanent copies; the engine's `back_face` is consulted on cast but
   not on copy).
   (l) **707.9** copy modifications/exceptions ("except its color is
-  black", "except it has flying") — ⏳ (no copy primitive supports
-  parameterised exceptions today; same gap as the permanent-copy
-  primitive).
+  black", "except it has flying") — 🟡 (`EntersAsCopy` carries
+  `extra_creature_types` / `extra_keywords` / `extra_triggered`, so
+  Phantasmal Image's "Illusion + sacrifice-when-targeted" and Stunt
+  Double's "has flash" exceptions are modeled; color/P-T/supertype
+  exceptions and the spell-copy path don't take exceptions yet).
   (m) **707.10** copies of spells: not cast, no targets re-chosen
   (unless effect says "you may choose new targets") — ✅ (see CR
   707.10c row earlier: `Effect::CopySpell` resolves under controller =
@@ -1264,11 +1269,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Tests: spell copies exercised via `prismari_command_loots_one_copies_spell`,
   `galvanic_iteration_copies_target_instant`,
   `prismari_vortexweaver_etb_copies_target_instant_you_control`, and
-  the Choreographed Sparks two-mode trial. Permanent-copy primitives
-  (Clone, Echocasting Symposium body, Applied Geometry body) all
-  remain ⏳ and are tracked separately in the
-  "Card — Verdant Mastery alt-cost mode" / Permanent-copy primitive
-  rows. Promote to ✅ when `Effect::CreateCopyToken` lands.
+  the Choreographed Sparks two-mode trial; permanent copies via
+  `clone_enters_as_a_copy_of_a_creature`, `mirror_image_*`,
+  `stunt_double_*`, `cackling_counterpart_*`, and the 707.2 test.
+  Remaining ⏳: in-place copy (707.4), copied ETB triggers re-firing
+  (707.5), MDFC-face copy (707.8), and static copy effects (707.2c).
 
 - ⏳ **CR 709 — Split Cards** (push claude/modern_decks batch 102
   audit, claude/modern_decks branch — `MagicCompRules_20260417.txt`):

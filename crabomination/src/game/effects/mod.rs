@@ -314,14 +314,19 @@ impl GameState {
         ) {
             events.extend(evs);
         }
-        // Layer the copy-exception triggered abilities on top of the
+        // Layer the copy-exception abilities/keywords on top of the
         // copiable characteristics (e.g. Phantasmal Image's sacrifice rider).
-        if !spec.extra_triggered.is_empty()
+        if (!spec.extra_triggered.is_empty() || !spec.extra_keywords.is_empty())
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
-            std::sync::Arc::make_mut(&mut c.definition)
-                .triggered_abilities
+            let def = std::sync::Arc::make_mut(&mut c.definition);
+            def.triggered_abilities
                 .extend(spec.extra_triggered.iter().cloned());
+            for kw in &spec.extra_keywords {
+                if !def.keywords.contains(kw) {
+                    def.keywords.push(kw.clone());
+                }
+            }
         }
     }
 

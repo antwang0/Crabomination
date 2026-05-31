@@ -1251,6 +1251,13 @@ pub enum Effect {
     /// When you do, move X +1/+1 counters from this creature onto
     /// another target creature" combat trigger.
     MoveCounter   { from: Selector, to: Selector, kind: CounterType, amount: Value },
+    /// CR 701.34a — Proliferate. "Choose any number of permanents and/or
+    /// players that have a counter, then give each another counter of a
+    /// kind already there." The auto-decider implements a strategic
+    /// baseline: grow good counters (+1/+1, Loyalty, Charge, Page) on the
+    /// controller's permanents, grow bad counters (-1/-1, Stun) on enemy
+    /// permanents, any other kind by default, and add one poison to each
+    /// opponent already poisoned. (No multi-select UI yet.)
     Proliferate,
     GainControl { what: Selector, duration: Duration },
     /// Create `count` copies of the given token under `who`'s control.
