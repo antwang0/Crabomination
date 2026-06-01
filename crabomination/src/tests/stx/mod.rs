@@ -34,6 +34,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
             sides: 6,
             count: Value::Const(1),
             modifier: Value::Const(0),
+            reroll_at_most: 0,
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
                 (3, 6, Effect::LoseLife {
@@ -79,6 +80,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
             sides: 6,
             count: Value::Const(1),
             modifier: Value::Const(0),
+            reroll_at_most: 0,
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
                 (3, 6, Effect::LoseLife {
@@ -124,6 +126,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
             sides: 6,
             count: Value::Const(1),
             modifier: Value::Const(0),
+            reroll_at_most: 0,
             results: vec![
                 (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
                 // 4-6 intentionally unmapped.
@@ -167,6 +170,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
             sides: 6,
             count: Value::Const(1),
             modifier: Value::Const(modifier),
+            reroll_at_most: 0,
             results: vec![
                 (1, 6, Effect::LoseLife { who: Selector::You, amount: Value::Const(1) }),
                 (7, 255, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
@@ -187,6 +191,30 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+    }
+}
+
+/// Test-only fixture for CR 706.2b: "roll a d6, rerolling a result of
+/// `reroll_at_most` or less once. 4-6: gain 5 life. 1-3: gain 1 life."
+fn test_card_die_roll_d6_reroll(reroll_at_most: u8) -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::{Effect, Selector, Value};
+    use crate::mana::{cost, generic};
+    CardDefinition {
+        name: "Test Die Roll d6 Reroll",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RollDie {
+            sides: 6,
+            count: Value::Const(1),
+            modifier: Value::Const(0),
+            reroll_at_most,
+            results: vec![
+                (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
+                (4, 6, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+            ],
+        },
+        ..Default::default()
     }
 }
 

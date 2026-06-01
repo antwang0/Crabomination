@@ -1281,6 +1281,7 @@ fn roll_die_serde_round_trip() {
         sides: 20,
         count: Value::Const(2),
         modifier: Value::Const(0),
+        reroll_at_most: 0,
         results: vec![
             (1, 1, Effect::Discard {
                 who: Selector::You, amount: Value::Const(1), random: false,
@@ -1292,8 +1293,9 @@ fn roll_die_serde_round_trip() {
     let json = serde_json::to_string(&original).expect("serialize");
     let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
     match parsed {
-        Effect::RollDie { sides, count, modifier, results } => {
+        Effect::RollDie { sides, count, modifier, reroll_at_most, results } => {
             assert!(matches!(modifier, Value::Const(0)));
+            assert_eq!(reroll_at_most, 0);
             assert_eq!(sides, 20);
             assert!(matches!(count, Value::Const(2)));
             assert_eq!(results.len(), 3);
@@ -1356,6 +1358,46 @@ fn cr_706_2_negative_modifier_floors_at_one() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, you_before - 1,
         "1 - 5 floors at 1, still in the 1-6 arm");
+}
+
+#[test]
+fn cr_706_2b_low_natural_roll_is_rerolled_once() {
+    // Natural 2 (≤ reroll_at_most 3) is rerolled once → 5, landing in the
+    // 4-6 arm (gain 5) instead of the 1-3 arm (gain 1).
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(2),
+        DecisionAnswer::DieRoll(5),
+    ]));
+    let you_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_reroll(3));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you_before + 5, "reroll of a 2 → 5 reaches the 4-6 arm");
+}
+
+#[test]
+fn cr_706_2b_high_natural_roll_is_not_rerolled() {
+    // Control: natural 5 (> reroll_at_most 3) is kept, landing in the 4-6
+    // arm (gain 5) — the queued second face is never consumed.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(5),
+        DecisionAnswer::DieRoll(1),
+    ]));
+    let you_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_reroll(3));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you_before + 5, "natural 5 is kept (no reroll)");
 }
 
 // ── Batch 126 — 26 new STX cards across all 5 schools + new shortcut helpers

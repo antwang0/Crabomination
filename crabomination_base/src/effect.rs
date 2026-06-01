@@ -984,6 +984,15 @@ pub enum Effect {
         /// what the decider returns; the modifier is applied on top.
         #[serde(default = "crate::effect::zero_value")]
         modifier: Value,
+        /// CR 706.2b — reroll threshold. When greater than 0, any natural
+        /// result `<= reroll_at_most` is rerolled exactly once and the new
+        /// natural face is kept (even if it's also low — a single reroll
+        /// per die, per the "reroll … once" pattern). The modifier is
+        /// applied after the (re)roll. Models cards like "if you roll a 1,
+        /// reroll" / "you may reroll any die that rolled a 1-N". Defaults
+        /// to 0 (never reroll) for snapshot back-compat.
+        #[serde(default)]
+        reroll_at_most: u8,
         /// CR 706.3a — the results table. Each arm is `(low, high,
         /// effect)`; the first arm with `low <= rolled <= high` fires
         /// for that die. Use `(low, sides, effect)` for an "N+" arm,

@@ -1409,7 +1409,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   table, flooring the modified result at 1 (a die result is never
   reduced below 1) and allowing it to exceed `sides` so a top "N+" arm
   catches boosted rolls — the canonical "roll a d20 and add N" shape.
-  Reroll (706.2b) is still ⏳. Tests:
+  (b2) **706.2b** — ✅ (push claude/modern_decks): `Effect::RollDie`
+  carries `reroll_at_most: u8` (serde-defaulted 0). When > 0, a natural
+  result ≤ `reroll_at_most` is rerolled exactly once and the new face
+  kept (modifier applied after). Tests:
+  `cr_706_2b_low_natural_roll_is_rerolled_once`,
+  `cr_706_2b_high_natural_roll_is_not_rerolled`. Reroll-until /
+  multi-reroll is still ⏳. Tests:
   `cr_706_2_positive_modifier_reaches_high_arm` (natural 6 + 2 → 7+
   arm), `cr_706_2_no_modifier_stays_in_low_arm` (control),
   `cr_706_2_negative_modifier_floors_at_one` (1 − 5 floors at 1).

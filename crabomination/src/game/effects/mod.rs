@@ -482,24 +482,30 @@ impl GameState {
             // range covers `rolled`. AutoDecider returns the midpoint;
             // ScriptedDecider can script any face. Mirrors FlipCoin's
             // resolver shape.
-            Effect::RollDie { sides, count, modifier, results } => {
+            Effect::RollDie { sides, count, modifier, reroll_at_most, results } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 let sides = (*sides).max(2);
                 // CR 706.2 — the flat result modifier applied to every die
                 // this resolution.
                 let modifier = self.evaluate_value(modifier, ctx);
-                for _ in 0..n {
-                    let answer = self.decider.decide(&crate::decision::Decision::DieRoll {
+                let roll_one = |s: &mut Self| -> u8 {
+                    match s.decider.decide(&crate::decision::Decision::DieRoll {
                         player: ctx.controller,
                         sides,
-                    });
-                    let natural = match answer {
+                    }) {
                         crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
                         // Decider returned the wrong shape — degrade to
                         // midpoint rather than panicking. Real clients
                         // should always return DieRoll(n).
                         _ => (sides as u32).div_ceil(2) as u8,
-                    };
+                    }
+                };
+                for _ in 0..n {
+                    let mut natural = roll_one(self);
+                    // CR 706.2b — reroll a low natural result exactly once.
+                    if *reroll_at_most > 0 && natural <= *reroll_at_most {
+                        natural = roll_one(self);
+                    }
                     // CR 706.2 — add the modifier, flooring the modified
                     // result at 1 (a die result is never reduced below 1).
                     // The result may exceed `sides`, letting a top "N+"
