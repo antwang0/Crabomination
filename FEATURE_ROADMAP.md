@@ -339,9 +339,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   add survive-don't-chump, gang-block lethal, deathtouch/trample awareness.
   Highest-value single-player improvement.
 - ⏳ **Better sequencing** (land drops, hold-up interaction, when to cast).
-- 🟡 **Mulligan decisions** — `RandomBot` now ships flooded/screwed opening
-  hands via a land-count heuristic (`decide_mulligan`: keep 2–5 lands, stop
-  after two mulligans). Remaining: curve/color-aware keeps.
+- 🟡 **Mulligan decisions** — `RandomBot` ships flooded/screwed opening
+  hands via `decide_mulligan`: keep 2–5 lands **and** at least one nonland
+  spell castable early (mana value ≤ lands + 1), stop after two mulligans.
+  Remaining: color-screw awareness (lands that can't cast the spells).
 - ⏳ **Targeting / mode / X-value choices** by evaluation, not first-legal.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over the
   deterministic engine + snapshot cloning).

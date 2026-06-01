@@ -363,7 +363,15 @@ fn decide_mulligan(
     use crate::decision::DecisionAnswer;
     let hand = &state.players[seat].hand;
     let lands = hand.iter().filter(|c| c.definition.is_land()).count();
-    let keepable = (2..=5).contains(&lands) || hand.len() <= 3;
+    // Curve check: a 2–5-land hand is only worth keeping if it has at least
+    // one nonland spell cheap enough to cast in the first few turns — three
+    // lands plus four 7-drops is a screwed keep. "Castable early" means a
+    // spell whose mana value is within `lands + 1` (a generous early-curve
+    // window that still trusts a couple of draws).
+    let has_early_play = hand.iter().any(|c| {
+        !c.definition.is_land() && c.definition.cost.cmc() as usize <= lands + 1
+    });
+    let keepable = ((2..=5).contains(&lands) && has_early_play) || hand.len() <= 3;
     if keepable || mulligans_taken >= 2 {
         DecisionAnswer::Keep
     } else {
@@ -1222,6 +1230,19 @@ mod tests {
         for _ in 0..3 { g2.add_card_to_hand(0, catalog::island()); }
         for _ in 0..4 { g2.add_card_to_hand(0, catalog::grizzly_bears()); }
         assert!(matches!(decide_mulligan(&g2, 0, 0), DecisionAnswer::Keep));
+    }
+
+    /// Curve screen: a hand with enough lands but only spells too expensive
+    /// to cast early is a screwed keep — ship it on the first mulligan.
+    #[test]
+    fn bot_mulligans_lands_with_no_early_play() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        // 3 lands + four {6} Obsianus Golems → no spell castable by turn ~4.
+        for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
+        for _ in 0..4 { g.add_card_to_hand(0, catalog::obsianus_golem()); }
+        assert!(matches!(decide_mulligan(&g, 0, 0), DecisionAnswer::TakeMulligan),
+            "no early play despite enough lands → mulligan");
     }
 
     /// Sac-cost mana abilities (Lotus Petal) are NOT auto-activated — they
