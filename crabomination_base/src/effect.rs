@@ -367,6 +367,11 @@ pub enum Value {
     /// always read the spell's controller instead of the iterated
     /// player.
     PermanentCountControlledBy(PlayerRef),
+    /// Number of creatures controlled by the resolved player. Sibling of
+    /// `PermanentCountControlledBy` filtered to creatures. Powers
+    /// Biorhythm's "each player's life total becomes the number of
+    /// creatures they control" inside a `ForEach` over each player.
+    CreatureCountControlledBy(PlayerRef),
     /// Number of loyalty counters on the first permanent the selector
     /// resolves to. Used by Strixhaven's **Confront the Past** mode 2
     /// ("Confront the Past deals damage to target planeswalker equal to

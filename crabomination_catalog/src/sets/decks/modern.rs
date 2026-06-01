@@ -5177,58 +5177,23 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
 }
 
 /// Biorhythm — {6}{G}{G} Sorcery. Each player's life total becomes the
-/// number of creatures they control.
+/// number of creatures they control (CR 119.5).
 ///
-/// The "set life total to N" primitive doesn't exist directly, but we can
-/// approximate it as a `Seq` of two `LoseLife` calls — one for each player
-/// — that drops their life by `current_life - creatures_they_control`.
-/// Since `Value::count` over each player's creatures returns the live
-/// count, and we don't have a `Value::CurrentLife` primitive, we instead
-/// model the most common gameplay outcome: the caster gains life equal to
-/// their creature count, and each opponent loses to 1 life. For the cube
-/// this approximates "cast Biorhythm with a wide board, opponent dies".
-///
-/// Concrete wiring: `LoseLife(EachOpponent, 20)` (cap by current life via
-/// SBA — life can't go negative without dying). Caster's creature count is
-/// represented via `count(each_your_creature)` going to `GainLife(You)`.
+/// `ForEach(Player(EachPlayer))` setting each player's life to
+/// `Value::CreatureCountControlledBy(Triggerer)` — faithful for any number
+/// of players, including multiplayer where every seat gets their own count.
 pub fn biorhythm() -> CardDefinition {
-    use crate::effect::shortcut::count;
-    // Printed Oracle: "Each player's life total becomes the number of
-    // creatures they control."
-    //
-    // Push (modern_decks): Now wired faithfully via the new
-    // `Effect::SetLifeTotal { who, amount: Value::CountOf(creatures
-    // they control) }` primitive (CR 119.5). Walks all players in
-    // turn; for each one sets their life to the count of creatures
-    // they control. Replaces the prior approximation that drained
-    // opp to ≤ 0 and gained you life equal to creature count.
-    let creatures_you_control = Selector::EachPermanent(
-        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-    );
-    let creatures_opp_controls = Selector::EachPermanent(
-        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-    );
     CardDefinition {
         name: "Biorhythm",
         cost: cost(&[generic(6), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            // Set your life total to the number of creatures you control.
-            Effect::SetLifeTotal {
-                who: Selector::You,
-                amount: count(creatures_you_control),
-            },
-            // Set each opponent's life total to the number of creatures
-            // they control. (Approximated as "each opp" — multi-opp
-            // games would need per-opponent counts, which we collapse
-            // to the single-opp typical 1v1 case via EachOpponent +
-            // ControlledByOpponent which from each opp's perspective
-            // reads "creatures they control".)
-            Effect::SetLifeTotal {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: count(creatures_opp_controls),
-            },
-        ]),
+        effect: Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachPlayer),
+            body: Box::new(Effect::SetLifeTotal {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::CreatureCountControlledBy(PlayerRef::Triggerer),
+            }),
+        },
         ..Default::default()
     }
 }

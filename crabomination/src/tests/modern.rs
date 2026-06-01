@@ -8958,6 +8958,24 @@ fn biorhythm_sets_life_to_creature_count_per_cr_119_5() {
 }
 
 #[test]
+fn biorhythm_sets_each_player_to_own_count_in_multiplayer() {
+    // Three players, distinct creature counts → each seat's own count.
+    let mut g = crate::game::multi_player_game(3);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::biorhythm());
+    for _ in 0..8 { g.players[0].mana_pool.add(Color::Green, 1); }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Biorhythm castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 2, "P0 → 2 creatures");
+    assert_eq!(g.players[1].life, 0, "P1 → 0 creatures");
+    assert_eq!(g.players[2].life, 1, "P2 → 1 creature");
+}
+
+#[test]
 fn karn_scion_of_urza_minus_two_creates_a_construct_token() {
     let mut g = two_player_game();
     let karn = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
