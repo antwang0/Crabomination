@@ -9048,6 +9048,23 @@ fn balefire_dragon_combat_damage_burns_each_opp_creature() {
 }
 
 #[test]
+fn balefire_dragon_sweep_scales_with_its_power() {
+    // The sweep reads the Dragon's current power. A 7/7 Pelakka Wurm
+    // survives the base 6 but a +1/+1-countered (7-power) Dragon kills it.
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::balefire_dragon());
+    g.battlefield.iter_mut().find(|c| c.id == dragon).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1); // now 7/7
+    let wurm = g.add_card_to_battlefield(1, catalog::pelakka_wurm()); // 7/7
+    let trig = catalog::balefire_dragon().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(dragon, 0, None, 0);
+    let _ = g.resolve_effect(&trig, &ctx);
+    assert!(g.battlefield_find(wurm).is_none(),
+        "a 7-power Balefire deals 7 → the 7-toughness Wurm dies");
+}
+
+#[test]
 fn greasewrench_goblin_creates_treasure_on_death() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::greasewrench_goblin());

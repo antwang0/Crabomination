@@ -5446,12 +5446,9 @@ pub fn pentad_prism() -> CardDefinition {
 /// Whenever this deals combat damage to a player, it deals that much damage
 /// to each creature that player controls.
 ///
-/// Approximation: a hardcoded "deal 6 damage to each creature each opponent
-/// controls" trigger when we attack and connect (`DealsCombatDamageToPlayer`
-/// + `SelfSource`). The "that much damage" → "6 damage" collapse holds
-///   for the unscaled play pattern; pump effects on Balefire Dragon don't
-///   retroactively boost the trigger payload (which matches Oracle for
-///   fixed-power triggers, just at a fixed value rather than its current power).
+/// "That much damage" reads the Dragon's current power
+/// (`Value::PowerOf(This)`), so anthem/pump effects scale the sweep — its
+/// combat damage equals its power on the connecting hit.
 pub fn balefire_dragon() -> CardDefinition {
     CardDefinition {
         name: "Balefire Dragon",
@@ -5476,7 +5473,7 @@ pub fn balefire_dragon() -> CardDefinition {
                 ),
                 body: Box::new(Effect::DealDamage {
                     to: Selector::TriggerSource,
-                    amount: Value::Const(6),
+                    amount: Value::PowerOf(Box::new(Selector::This)),
                 }),
             },
         }],
