@@ -4266,3 +4266,59 @@ pub fn bloodfray_giant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Abzan Battle Priest — {3}{W} 3/2 Human Cleric, Outlast {2}{W}. Creatures
+/// you control with a +1/+1 counter have lifelink.
+pub fn abzan_battle_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Abzan Battle Priest",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(2), w()]))],
+        static_abilities: vec![counter_anthem(
+            Keyword::Lifelink,
+            "Each creature you control with a +1/+1 counter on it has lifelink.",
+        )],
+        ..Default::default()
+    }
+}
+
+/// Disowned Ancestor — {1}{B} 1/4 Spirit Warrior, Renown 1.
+pub fn disowned_ancestor() -> CardDefinition {
+    CardDefinition {
+        name: "Disowned Ancestor",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![crate::effect::shortcut::renown(1)],
+        ..Default::default()
+    }
+}
+
+/// Citadel Castellan — {1}{G}{W} 2/4 Human Knight, Renown 3.
+pub fn citadel_castellan() -> CardDefinition {
+    CardDefinition {
+        name: "Citadel Castellan",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![crate::effect::shortcut::renown(3)],
+        ..Default::default()
+    }
+}

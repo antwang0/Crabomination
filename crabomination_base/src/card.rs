@@ -94,6 +94,8 @@ pub enum CreatureType {
     Juggernaut,
     // Ravnica Simic graft creature subtype (Cytoplast Root-Kin).
     Mutant,
+    // Mirrodin Slith creature subtype (Arcbound Slith).
+    Slith,
 }
 
 /// Land subtypes (basic land types + others).

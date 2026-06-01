@@ -311,6 +311,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         arcbound_ravager,
         arcbound_hybrid,
         arcbound_bruiser,
+        arcbound_slith,
     ]
 }
 
@@ -506,6 +507,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         abzan_falconer,
         knight_of_the_pilgrims_road,
         consuls_lieutenant,
+        abzan_battle_priest,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -513,6 +515,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(lush_portico);
         // ── Cube expansion: GW cards ──
         v.push(growing_ranks);
+        v.push(citadel_castellan);
     }
     if pair_contains(pair, Color::Red) {
         v.push(lightning_helix);
@@ -930,8 +933,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         corpse_dance,
         // ── modern_decks-17 ──
         tasigur_the_golden_fang,
-        // ── Outlast (CR 702.97) ──
+        // ── Outlast (CR 702.97) / Renown (CR 702.111) ──
         mer_ek_nightblade,
+        disowned_ancestor,
     ];
     if pair_contains(pair, Color::Red) {
         v.push(terminate);

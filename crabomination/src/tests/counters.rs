@@ -417,3 +417,51 @@ fn bloodthirst_flag_resets_at_turn_start() {
     g.do_untap();
     assert!(!g.players[1].was_dealt_damage_this_turn, "flag clears at the turn boundary");
 }
+
+// ── Additional Modular / Outlast / Renown bodies ──────────────────────────
+
+#[test]
+fn arcbound_slith_grows_on_combat_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::arcbound_slith());
+    // add_card bypasses ETB, so stamp the Modular 1 counter (it's a 2/2).
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.clear_sickness(id);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..12 {
+        if g.battlefield_find(id).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap_or(0) > 1 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "connecting adds a second +1/+1 counter");
+}
+
+#[test]
+fn abzan_battle_priest_grants_lifelink_to_countered_creatures() {
+    let mut g = two_player_game();
+    let priest = g.add_card_to_battlefield(0, catalog::abzan_battle_priest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let computed = g.compute_battlefield();
+    assert!(computed.iter().find(|v| v.id == bear).unwrap().keywords.contains(&Keyword::Lifelink));
+    assert!(!computed.iter().find(|v| v.id == priest).unwrap().keywords.contains(&Keyword::Lifelink),
+        "the priest itself has no counter yet");
+}
+
+#[test]
+fn disowned_ancestor_and_citadel_castellan_renown_bodies() {
+    let mut g = two_player_game();
+    let anc = g.add_card_to_battlefield(0, catalog::disowned_ancestor());
+    let cas = g.add_card_to_battlefield(0, catalog::citadel_castellan());
+    let computed = g.compute_battlefield();
+    let av = computed.iter().find(|v| v.id == anc).unwrap();
+    let cv = computed.iter().find(|v| v.id == cas).unwrap();
+    assert_eq!((av.power, av.toughness), (1, 4));
+    assert_eq!((cv.power, cv.toughness), (2, 4));
+}

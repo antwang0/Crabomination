@@ -918,6 +918,36 @@ pub fn arcbound_ravager() -> CardDefinition {
     }
 }
 
+/// Arcbound Slith — {1} Artifact Creature — Slith, 1/1, Modular 1.
+/// "Whenever this deals combat damage to a player, put a +1/+1 counter on it."
+pub fn arcbound_slith() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType};
+    CardDefinition {
+        name: "Arcbound Slith",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Slith],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            crate::effect::shortcut::modular_dies(),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Arcbound Hybrid — {3} Artifact Creature — Beast, 0/0, Haste, Modular 2.
 pub fn arcbound_hybrid() -> CardDefinition {
     use crate::card::{CounterType, CreatureType};
