@@ -181,8 +181,6 @@ work is listed below.
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
-| Cloudpost | 🟡 | Locus land. ETB tapped, `{T}: Add {C}`. The per-Locus mana scaling collapses to a flat colorless source (no per-source mana scaling primitive yet). Test: `cloudpost_etbs_tapped_and_taps_for_colorless`. |
-| Glimmerpost | 🟡 | Locus land. ETB tapped + gain 1 life, `{T}: Add {C}`. The "1 life for each Locus you control" scaling collapses to a flat 1 (gameplay-relevant on a normal board, where Locus density is at most 2). Tests: `glimmerpost_etbs_tapped_and_grants_one_life`, `glimmerpost_taps_for_colorless_after_untap`. |
 | Lotus Field | 🟡 | ETB tapped + Sacrifice 2 lands. `{T}: Add 3 mana of one color`. The "untapped" qualifier on the ETB sac is collapsed (Sacrifice filter doesn't expose tapped state). Tests: `lotus_field_etb_sacrifices_two_lands`, `lotus_field_taps_for_three_of_one_color`. |
 | Planar Nexus | 🟡 | Land, ETB tapped, `{T}`: Add one mana of any color — a rainbow tapland. The basic-land-type / fetch riders collapse. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
@@ -211,7 +209,6 @@ are listed in `DECK_FEATURES.md`.
 | Hideaway lands | ⏳ | Shelldock Isle. |
 | Horizon-canopy "pay 1 + life to draw" lands | ⏳ | Horizon Canopy, Sunbaked Canyon, Waterlogged Grove. |
 | Verge / surveil land family expansion | ⏳ | Each color pair's `*verge` and surveil-land entry. |
-| Locus mana scaling | 🟡 | Cloudpost / Glimmerpost present as ETB-tapped colorless lands; the per-Locus mana scaling rider is dropped (no per-source-count mana payload). Glimmerpost's lifegain is wired (flat 1 life). |
 | ETB-replacement effects (suppress entirely) | ⏳ | Containment Priest, Static Prison-adjacent, Gather Specimens. |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | 🟡 | Damping Sphere wired (`AdditionalCostAfterFirstSpell`); Trinisphere needs a "minimum cost" flavor. Elite Spellbinder reuses the existing tax static. |
 | "Cast spells without paying mana" static | ⏳ | Omniscience, Maelstrom Archangel (combat-damage variant), Aluren (free-cast under-3 creatures). |

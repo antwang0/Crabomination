@@ -7633,7 +7633,33 @@ fn glimmerpost_etbs_tapped_and_grants_one_life() {
     let card = g.battlefield_find(id).expect("Glimmerpost on the battlefield");
     assert!(card.tapped, "Glimmerpost has the etb-tap trigger");
     assert_eq!(g.players[0].life, life_before + 1,
-        "ETB should grant 1 life (Locus scaling collapsed to flat 1)");
+        "ETB grants 1 life per Locus — just itself here");
+}
+
+#[test]
+fn glimmerpost_etb_lifegain_scales_with_locus_count() {
+    let mut g = two_player_game();
+    // Already control a Cloudpost (a Locus); Glimmerpost makes two.
+    g.add_card_to_battlefield(0, catalog::cloudpost());
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::glimmerpost());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2,
+        "two Loci → gain 2 life");
+}
+
+#[test]
+fn cloudpost_mana_scales_with_locus_count() {
+    let mut g = two_player_game();
+    // Two Loci (a Cloudpost + a Glimmerpost) → Cloudpost taps for {C}{C}.
+    g.add_card_to_battlefield(0, catalog::glimmerpost());
+    let id = g.add_card_to_battlefield(0, catalog::cloudpost());
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).unwrap();
+    assert_eq!(g.players[0].mana_pool.total(), 2,
+        "Cloudpost adds {{C}} per Locus you control");
 }
 
 #[test]
@@ -8642,7 +8668,7 @@ fn glimpse_the_unthinkable_mills_ten_from_target() {
 }
 
 #[test]
-fn cling_to_dust_exiles_creature_card_and_gains_two_life() {
+fn cling_to_dust_exiles_creature_card_and_gains_three_life() {
     let mut g = two_player_game();
     // Seed a creature card in opp's graveyard.
     let card_id = g.add_card_to_graveyard(1, catalog::grizzly_bears());
@@ -8661,18 +8687,20 @@ fn cling_to_dust_exiles_creature_card_and_gains_two_life() {
     assert!(g.exile.iter().any(|c| c.id == card_id),
         "Card moves from graveyard to exile");
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == card_id));
-    assert_eq!(g.players[0].life, life_before + 2,
-        "Caster gains 2 life when a creature is exiled");
+    assert_eq!(g.players[0].life, life_before + 3,
+        "Caster gains 3 life when a creature is exiled");
 }
 
 #[test]
-fn cling_to_dust_no_lifegain_for_noncreature_card() {
+fn cling_to_dust_draws_for_noncreature_card() {
     let mut g = two_player_game();
     // Seed a non-creature (instant) card in opp's graveyard.
     let card_id = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::cling_to_dust());
     g.players[0].mana_pool.add(Color::Black, 1);
     let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -8686,6 +8714,44 @@ fn cling_to_dust_no_lifegain_for_noncreature_card() {
         "Card still moves to exile");
     assert_eq!(g.players[0].life, life_before,
         "No lifegain when the exiled card isn't a creature");
+    // The spell itself left hand (-1) and a draw added one (+1) → net even,
+    // but the drawn card is a different id than the cast Cling to Dust.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Non-creature branch draws a card");
+}
+
+#[test]
+fn cling_to_dust_escapes_from_graveyard_exiling_five_cards() {
+    let mut g = two_player_game();
+    // Cling to Dust sits in P0's graveyard alongside five fodder cards to
+    // exile for the escape cost, plus a creature in P1's graveyard to hit.
+    let cling = g.add_card_to_graveyard(0, catalog::cling_to_dust());
+    let fodder: Vec<_> = (0..5)
+        .map(|_| g.add_card_to_graveyard(0, catalog::lightning_bolt()))
+        .collect();
+    let target = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastEscape {
+        card_id: cling,
+        exile_cards: fodder.clone(),
+        target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Cling to Dust escapable for {3}{B} + exile five");
+    drain_stack(&mut g);
+
+    // Escape cost paid: the five fodder cards left the graveyard for exile.
+    for f in &fodder {
+        assert!(g.exile.iter().any(|c| c.id == *f), "fodder card exiled as cost");
+    }
+    assert!(g.exile.iter().any(|c| c.id == target), "target moved to exile");
+    assert_eq!(g.players[0].life, life_before + 3, "creature → gain 3 life");
+    // Instant/sorcery escape resolves back to the graveyard (re-escapable).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == cling),
+        "escaped instant returns to its owner's graveyard");
 }
 
 // ── modern_decks-13: 12 new cards ───────────────────────────────────────────

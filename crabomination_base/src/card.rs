@@ -337,6 +337,12 @@ pub enum Keyword {
     Echo(crate::mana::ManaCost),
     CumulativeUpkeep(crate::mana::ManaCost),
     Retrace,
+    /// CR 702.139 — Escape. Cast this card from your graveyard by paying
+    /// its escape mana cost plus exiling N other cards from your
+    /// graveyard. `Escape(cost, n)`. Instants/sorceries resolve to the
+    /// graveyard normally (re-escapable); permanents enter the
+    /// battlefield as usual.
+    Escape(crate::mana::ManaCost, u32),
     Phasing,
     Dredge(u32),
     Annihilator(u32),
@@ -979,6 +985,13 @@ impl CardDefinition {
     /// graveyard for its mana cost plus discarding a land card.
     pub fn has_retrace(&self) -> bool {
         self.keywords.contains(&Keyword::Retrace)
+    }
+    /// CR 702.139 — the escape mana cost and the number of other
+    /// graveyard cards that must be exiled, if this card has Escape.
+    pub fn has_escape(&self) -> Option<(&ManaCost, u32)> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Escape(cost, n) = kw { Some((cost, *n)) } else { None }
+        })
     }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {

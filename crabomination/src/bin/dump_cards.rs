@@ -72,6 +72,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Phasing => "Phasing",
         Keyword::Banding => "Banding",
         Keyword::Retrace => "Retrace",
+        Keyword::Escape(_, _) => "Escape",
         Keyword::Shadow => "Shadow",
         Keyword::Horsemanship => "Horsemanship",
         Keyword::Intimidate => "Intimidate",

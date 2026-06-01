@@ -11,7 +11,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
+use crate::effect::shortcut::{etb, target_filtered};
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
@@ -4010,13 +4010,9 @@ fn modern_etb_tap() -> TriggeredAbility {
     }
 }
 
-/// Glimmerpost — Land — Locus. Glimmerpost enters tapped. When Glimmerpost
-/// enters, you gain 1 life for each Locus you control. {T}: Add {C}.
-///
-/// Approximation: the per-Locus scaling is collapsed to a flat 1 life on
-/// ETB. Locus-typed lands are rare in our cube (only Cloudpost shares the
-/// type), so the gameplay-relevant outcome on a normal board state is the
-/// flat 1. The ETB-tapped + {T}: Add {C} halves are exact.
+/// Glimmerpost — Land — Locus. Glimmerpost enters tapped. When it enters,
+/// you gain 1 life for each Locus you control (`locus_count_value`).
+/// {T}: Add {C}.
 pub fn glimmerpost() -> CardDefinition {
     use crate::card::{ActivatedAbility, LandType};
     CardDefinition {
@@ -4045,20 +4041,28 @@ pub fn glimmerpost() -> CardDefinition {
         }],
         triggered_abilities: vec![
             modern_etb_tap(),
-            etb_gain_life(1),
+            crate::effect::shortcut::etb(Effect::GainLife {
+                who: Selector::You,
+                amount: locus_count_value(),
+            }),
         ],
         ..Default::default()
     }
 }
 
+/// Number of Loci you control — `{T}: Add {C} for each Locus you control`
+/// reads this so 12-post engines scale correctly. The tapped Locus counts
+/// itself, so the value is at least 1.
+fn locus_count_value() -> Value {
+    use crate::card::{LandType, SelectionRequirement};
+    Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(LandType::Locus)
+            .and(SelectionRequirement::ControlledByYou),
+    )))
+}
+
 /// Cloudpost — Land — Locus. Cloudpost enters tapped. {T}: Add {C} for
-/// each Locus you control.
-///
-/// Approximation: the per-Locus mana scaling collapses to a flat
-/// {T}: Add {C}. With at most a couple of Loci in the cube pool and no
-/// per-source mana scaling primitive, the simplified version is closer
-/// to a vanilla colorless source than to "12-post" engines, which is
-/// fine for cube purposes.
+/// each Locus you control (`locus_count_value`).
 pub fn cloudpost() -> CardDefinition {
     use crate::card::{ActivatedAbility, LandType};
     CardDefinition {
@@ -4073,7 +4077,7 @@ pub fn cloudpost() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(1)),
+                pool: ManaPayload::Colorless(locus_count_value()),
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -4914,24 +4918,21 @@ pub fn glimpse_the_unthinkable() -> CardDefinition {
     }
 }
 
-/// Cling to Dust — {B} Instant. Exile target card from a graveyard. If a
-/// creature card was exiled this way, you gain 2 life.
+/// Cling to Dust — {B} Instant. Exile target card from a graveyard. If it
+/// was a creature card you gain 3 life, otherwise you draw a card.
+/// Escape—{3}{B}, exile five other cards from your graveyard (CR 702.139).
 ///
-/// Targeted graveyard hate with a creature-rider lifegain payoff. Uses
-/// `Effect::Move(target → Exile)` (not `Effect::Exile`) so the auto-target
-/// heuristic walks graveyards first via `prefers_graveyard_target`. The
-/// "creature exiled this way" check runs after the move via
-/// `Predicate::EntityMatches` against the captured target — the predicate
-/// resolver walks battlefield → graveyards → exile so it still finds the
-/// card after it lands in exile. The escape mode (`{2}{B}`, exile five
-/// other cards from your graveyard, gain 2 life and draw a card) is
-/// omitted — no escape-cost primitive yet.
+/// Uses `Effect::Move(target → Exile)` so the auto-target heuristic walks
+/// graveyards first; the creature/else branch reads the captured target
+/// post-move via `Predicate::EntityMatches`. `Keyword::Escape` makes the
+/// instant recurring from the graveyard.
 pub fn cling_to_dust() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
         name: "Cling to Dust",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Escape(cost(&[generic(3), b()]), 5)],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: target_filtered(SelectionRequirement::Any),
@@ -4944,9 +4945,12 @@ pub fn cling_to_dust() -> CardDefinition {
                 },
                 then: Box::new(Effect::GainLife {
                     who: Selector::You,
-                    amount: Value::Const(2),
+                    amount: Value::Const(3),
                 }),
-                else_: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
             },
         ]),
         ..Default::default()

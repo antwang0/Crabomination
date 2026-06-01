@@ -50,7 +50,6 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Tear Asunder | {1}{B}{G} | 🟡 | `Destroy(Artifact ∨ Enchantment)`. Kicker {2} "destroy any nonland permanent" mode collapsed (alt-cost can't yet swap target filters at cast time). |
 | Assassin's Trophy | {B}{G} | 🟡 | `Destroy(Permanent ∧ Nonland ∧ ControlledByOpponent)`. The "owner searches their library for a basic land" downside is omitted (Search always targets the caster). |
 | Rout | {3}{W}{W} | 🟡 | `ForEach(Creature) + Destroy` — DoJ at +1 mana. Flash mode collapsed. |
-| Cling to Dust | {B} | 🟡 | `Seq([Move(target Any → Exile), If(EntityMatches Creature, GainLife 2)])`. Escape mode ({2}{B}, exile five other graveyard cards) collapsed (no escape-cost primitive). |
 | Chaos Warp | {2}{R} | 🟡 | `Move(target Permanent → Library(OwnerOf, Shuffled))`. The library actually reshuffles via the new `LibraryPosition::Shuffled` engine path. The "reveal top, cast if permanent" half is collapsed. Test: `chaos_warp_sends_target_permanent_to_owners_library`. |
 | Elvish Reclaimer | {1}{G} | 🟡 | 1/2 Human Druid. `{T}, sac a land: Search(Land → BF)`. Sac-as-cost folded into resolution. Threshold-pump rider omitted. Test: `elvish_reclaimer_sacrifices_land_to_search_for_one`. |
 | Biorhythm | {4}{G}{G}{G} | 🟡 | `LoseLife(EachOpponent, 20) + GainLife(You, count(your creatures))`. Set-life-equal-to-X primitive doesn't exist, so each opponent loses a giant chunk and the caster gains life equal to their creature count. Test: `biorhythm_drops_each_opponent_to_zero_or_below`. |

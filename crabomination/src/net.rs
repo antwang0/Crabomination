@@ -375,6 +375,11 @@ pub struct GraveyardCardView {
     /// the graveyard via `GameAction::CastRetrace` (cost + discard a land).
     #[serde(default)]
     pub retrace: bool,
+    /// Escape (CR 702.139) cost + count of other graveyard cards to exile,
+    /// if this card can be cast from the graveyard via
+    /// `GameAction::CastEscape`. `None` otherwise.
+    #[serde(default)]
+    pub escape: Option<(crate::mana::ManaCost, u32)>,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so

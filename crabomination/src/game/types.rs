@@ -125,6 +125,11 @@ pub enum GameAction {
     /// mana cost plus discarding a land card from hand. Unlike Flashback,
     /// the spell returns to the graveyard after resolving (no exile).
     CastRetrace { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a graveyard card with `Keyword::Escape` (CR 702.139) for its
+    /// escape mana cost plus exiling `exile_cards` (exactly N other cards
+    /// from the caster's graveyard). Instants/sorceries resolve to the
+    /// graveyard (re-escapable); permanents enter the battlefield.
+    CastEscape { card_id: CardId, exile_cards: Vec<CardId>, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// Cast a graveyard card with `Keyword::FlashbackTap(N)` by tapping
     /// `tap_creatures` (must list exactly N untapped creatures the
     /// caster controls). Used by Group Project ("Flashback—Tap three

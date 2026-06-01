@@ -1729,6 +1729,105 @@ impl GameState {
         Ok(events)
     }
 
+    /// Cast a graveyard card with `Keyword::Escape` (CR 702.139): pay its
+    /// escape mana cost plus exiling `exile_cards` (exactly N other cards
+    /// from the caster's graveyard). Instants/sorceries resolve back to
+    /// the graveyard (so they can be escaped again); permanents enter the
+    /// battlefield normally.
+    pub(crate) fn cast_escape(
+        &mut self,
+        card_id: CardId,
+        exile_cards: &[CardId],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard[graveyard_pos].clone();
+        let (escape_cost, exile_count) = card
+            .definition
+            .has_escape()
+            .map(|(c, n)| (c.clone(), n))
+            .ok_or(GameError::SorcerySpeedOnly)?;
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        // The exile set must be exactly N distinct *other* graveyard cards.
+        if exile_cards.len() as u32 != exile_count {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+        for cid in exile_cards {
+            if *cid == card_id
+                || !self.players[p].graveyard.iter().any(|c| c.id == *cid)
+            {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+        let mut seen = exile_cards.to_vec();
+        seen.sort_unstable();
+        seen.dedup();
+        if seen.len() != exile_cards.len() {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality(tgt, p)?;
+        }
+        // Pay the escape mana cost (with X substitution + reductions).
+        let mut cost = if escape_cost.has_x() {
+            escape_cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            escape_cost
+        };
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
+        apply_spell_cost_floor(self, &mut cost);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        // Pay the additional cost: exile the chosen graveyard cards.
+        let mut events = Vec::new();
+        for cid in exile_cards {
+            if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid) {
+                let exiled = self.players[p].graveyard.remove(pos);
+                events.push(GameEvent::CardLeftGraveyard { player: p, card_id: *cid });
+                self.exile.push(exiled);
+            }
+        }
+        // Lift the escaping card from the graveyard and cast it normally —
+        // no `cast_via_flashback`, so an instant/sorcery returns to the
+        // graveyard on resolution and can be escaped again.
+        let pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard.remove(pos);
+        self.players[p].cards_left_graveyard_this_turn =
+            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent,
+        );
+        Ok(events)
+    }
+
     /// Cast a graveyard card with `Keyword::FlashbackTap(N)` by tapping
     /// `tap_creatures` (must be exactly N untapped creatures the caster
     /// controls). The spell costs no mana — the tap is the entire

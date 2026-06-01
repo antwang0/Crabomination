@@ -1848,6 +1848,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_retrace(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastEscape {
+                card_id,
+                exile_cards,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_escape(card_id, &exile_cards, target, additional_targets, mode, x_value),
             GameAction::CastFlashbackTap {
                 card_id,
                 tap_creatures,

@@ -146,7 +146,9 @@ feature; sweep card-batch by card-batch.
 
 - **High frequency / modern staples:** ✅ Madness (`Keyword::Madness`,
   discard→exile→offer-cast in `discard_card`/`offer_madness_cast`, CR
-  702.35), ⏳ Escape, ⏳ Adventure,
+  702.35), ✅ Escape (`Keyword::Escape(cost, n)` + `GameAction::CastEscape`,
+  CR 702.139 — cast from graveyard for escape cost + exile N other gy cards;
+  instants/sorceries re-escape), ⏳ Adventure,
   ⏳ Soulbond, ⏳ Mutate, ⏳ Companion, ⏳ Foretell, ⏳ Disturb,
   ⏳ Daybound/Nightbound, ⏳ Blitz, 🟡 Casualty, ⏳ Connive, ⏳ Backup,
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,

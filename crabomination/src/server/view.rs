@@ -314,6 +314,7 @@ fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {
         toughness: card.definition.base_toughness(),
         flashback_cost: card.definition.has_flashback().cloned(),
         retrace: card.definition.has_retrace(),
+        escape: card.definition.has_escape().map(|(c, n)| (c.clone(), n)),
     }
 }
 
