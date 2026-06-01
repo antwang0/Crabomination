@@ -116,7 +116,6 @@ work is listed below.
 | Coalition Relic | 🟡 | {3} Artifact. `{T}: Add one mana of any color`. The charge-counter rider ("{T}: put a charge counter; remove three to add WUBRG") is omitted — no charge-to-mana-burst primitive yet. Tap-for-any-color half is fully functional. Test: `coalition_relic_taps_for_one_mana_of_any_color`. |
 | Nettlecyst | ⏳ | Living-equipment + token. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
-| Trinisphere | 🟡 | Push (claude/modern_decks batch 102): {3} Artifact body wired as a vanilla 3-mana artifact. The "spells cost at least {3}" minimum-cost static is engine-wide ⏳ (the engine has `AdditionalCostAfterFirstSpell` for cost-tax, but no minimum-cost-floor primitive yet). Ships in the colorless pool. Test: `trinisphere_is_a_three_mana_artifact`. |
 | Helm of the Host | ⏳ | Equipment that token-copies on attack. |
 | The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
 | Coveted Jewel | 🟡 | {6} Artifact; ETB Draw 3; `{T}`: Add 3 mana of any color. The "steal on combat damage / must-attack" control mechanic is omitted. |
