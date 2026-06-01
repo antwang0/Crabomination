@@ -19902,6 +19902,20 @@ fn rabid_bite_deals_your_creatures_power_to_an_enemy() {
     assert!(g.battlefield.iter().any(|c| c.id == mine), "your creature takes no damage back");
 }
 
+/// The auto-target picker fills *both* of Rabid Bite's slots — slot 0
+/// (your creature, hidden inside `Value::PowerOf`) and slot 1 (the
+/// opponent's creature) — so the bot can cast it unaided.
+#[test]
+fn rabid_bite_auto_targets_both_slots() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eff = catalog::rabid_bite().effect;
+    let (slot0, additional) = g.auto_targets_for_effect_all_slots(&eff, 0, None);
+    assert_eq!(slot0, Some(Target::Permanent(mine)), "slot 0 = your creature");
+    assert_eq!(additional, vec![Target::Permanent(theirs)], "slot 1 = opponent's creature");
+}
+
 #[test]
 fn oust_tucks_creature_and_owner_gains_five() {
     let mut g = two_player_game();

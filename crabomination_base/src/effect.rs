@@ -2192,7 +2192,12 @@ impl Effect {
             }
         }
         match self {
-            Effect::DealDamage { to, .. } => sel_filter(to),
+            // Prefer the damage target's own filter; fall back to a filter
+            // hidden in the damage amount (Rabid Bite: `PowerOf(slot 0)`).
+            Effect::DealDamage { to, amount } => sel_filter(to).or_else(|| match amount {
+                Value::CountOf(s) | Value::PowerOf(s) | Value::ToughnessOf(s) => sel_filter(s),
+                _ => None,
+            }),
             Effect::DealDamageDivided { filter, .. } => Some(filter),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
@@ -2647,6 +2652,20 @@ impl Effect {
                 _ => None,
             }
         }
+        // A target slot can hide inside a `Value` sub-tree — Rabid Bite
+        // deals damage equal to `Value::PowerOf(TargetFiltered{slot:0})`.
+        // Descend so slot 0's filter is discoverable for cast/auto-target.
+        fn val_find(v: &Value, slot: u8) -> Option<&SelectionRequirement> {
+            match v {
+                Value::CountOf(s)
+                | Value::PowerOf(s)
+                | Value::ToughnessOf(s)
+                | Value::ManaValueOf(s)
+                | Value::LoyaltyOf(s) => sel_find(s, slot),
+                Value::CountersOn { what, .. } => sel_find(what, slot),
+                _ => None,
+            }
+        }
         fn eff_find(
             e: &Effect,
             slot: u8,
@@ -2698,7 +2717,9 @@ impl Effect {
                 Effect::RollDie { results, .. } => results
                     .iter()
                     .find_map(|(_, _, e)| eff_find(e, slot, mode)),
-                Effect::DealDamage { to, .. } => sel_find(to, slot),
+                Effect::DealDamage { to, amount } => {
+                    sel_find(to, slot).or_else(|| val_find(amount, slot))
+                }
                 // Each of slots 0..max_targets carries the divide filter, so
                 // the cast/auto-target machinery collects "up to N targets".
                 Effect::DealDamageDivided { filter, max_targets, .. } => {

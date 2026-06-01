@@ -315,10 +315,19 @@ impl GameState {
         controller: usize,
         mode: Option<usize>,
     ) -> (Option<Target>, Vec<Target>) {
-        // Slot 0 — use the existing source-aware picker.
-        let slot_0 = self.auto_target_for_effect_avoiding(eff, controller, None);
+        // Slot 0 — if it carries its own numbered `TargetFiltered` filter
+        // (Rabid Bite's friendly-creature power source lives in slot 0,
+        // inside `Value::PowerOf`), pick it by that filter in the loop
+        // below. Otherwise (bare `Target(0)` effects like Lightning Bolt)
+        // use the source-aware heuristic picker.
+        let slot0_has_filter = eff.target_filter_for_slot_in_mode(0, mode).is_some();
+        let mut slot_0 = if slot0_has_filter {
+            None
+        } else {
+            self.auto_target_for_effect_avoiding(eff, controller, None)
+        };
         let mut additional = Vec::new();
-        let mut slot: u8 = 1;
+        let mut slot: u8 = if slot0_has_filter { 0 } else { 1 };
         // Cap at 16 slots — no real card uses more than 4, but cap defensively.
         while slot < 16 {
             let req = match eff.target_filter_for_slot_in_mode(slot, mode) {
@@ -383,6 +392,7 @@ impl GameState {
                 found
             };
             match pick {
+                Some(t) if slot == 0 => slot_0 = Some(t),
                 Some(t) => additional.push(t),
                 // Slot has a filter but no legal target — stop here.
                 // "Up to N target" effects resolve cleanly with whatever

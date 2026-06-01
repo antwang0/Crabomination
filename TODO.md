@@ -52,11 +52,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `EffectContext` (e.g. `EffectContext.named_card`) so a following Seq step
   (reveal-until-find by name, hand-discard-by-name) can read it. Pair with a
   `SelectionRequirement::HasNamedCardInContext`.
-- **Rabid Bite bot targeting** — the slot-0 filter lives inside
-  `Value::PowerOf(TargetFiltered { slot: 0 })`; `auto_targets_for_effect_all_
-  slots` walks the effect tree but not Value sub-trees, so the bot may fill
-  only slot 1. Functionally correct with explicit targets (tests pass); extend
-  the slot enumerator to descend into `Value` for full bot coverage.
+- **Rabid Bite bot targeting** — ✅ done (claude/modern_decks). `eff_find`
+  / `primary_target_filter` now descend into `Value` sub-trees
+  (`PowerOf`/`ToughnessOf`/`CountOf`/`CountersOn`/…) so the slot-0 filter
+  hidden inside `Value::PowerOf(TargetFiltered{slot:0})` is discoverable, and
+  `auto_targets_for_effect_all_slots` picks slot 0 by its numbered filter when
+  present (falling back to the source-aware heuristic for bare `Target(0)`).
+  Test: `rabid_bite_auto_targets_both_slots`.
 - **"Name a card"** primitive — ✅ base shipped: `Decision::NameCard`,
   `DecisionAnswer::NamedCard`, `Effect::NameCard`, `CardInstance.named_card`,
   and `activate_ability` ability-suppression for matching sources (Pithing
