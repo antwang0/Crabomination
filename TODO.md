@@ -26,23 +26,32 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (e.g. Stadium Tidalmage's `MayDo`, the SOS placeholder-copy cards vs
   `CreateTokenCopyOf`). A reconciliation pass would shrink both trackers.
 - **Remaining 🟡 cube/deck partials are primitive- or data-blocked.** The
-  cleanly-completable ones were finished this run. What's left needs new
-  engine primitives — split cards (Wear // Tear), name-a-card (Pithing Needle,
-  Crumble to Dust), loyalty-set (Geyadrone), `GainControlBy { who: opp }`
-  (Wishclaw), energy (Amped Raptor), divided damage / "any number of targets"
+  cleanly-completable ones were finished this run (Cryptic Command,
+  Kolaghan's Command, Master of Cruelties, Lotus Field, Coalition Relic,
+  Wishclaw Talisman). What's left needs new engine primitives — split cards
+  (Wear // Tear), name-a-card (Pithing Needle, Crumble to Dust), loyalty-set
+  (Geyadrone), energy (Amped Raptor), divided damage / "any number of targets"
   (Pyrokinesis, the STX Outburst/Snow Day cycle), escalate (Collective
-  Brutality) — or are synthesized bodies whose exact text can't be verified
-  while Scryfall is off-allowlist (Mossborn Hydra, Torsten, Messenger Falcons
-  cost, Kozilek's Command).
+  Brutality), multi-player choice (Indulgent Tormentor) — or are synthesized
+  bodies whose exact text can't be verified while Scryfall is off-allowlist.
+- **Flashback with an additional cost** — Dread Return ("sacrifice three
+  creatures") and Lava Dart ("sacrifice a Mountain") both have a *flashback*
+  cost that's more than mana. `cast_flashback` only pays the mana
+  `flashback_cost` today; it ignores `additional_cast_cost` (which is honored
+  on the hand-cast path). Wiring a `flashback_additional_cost` (validated +
+  paid in `cast_flashback`, distinct from the hand-cast additional cost)
+  would promote both cards. Currently Lava Dart's flashback is `{0}` and
+  Dread Return's flashback is dropped.
 - **Card sourcing is data-blocked** — api.scryfall.com is outside the network
   allowlist and `scripts/cards_dump.json` (319-card pool) is fully implemented,
   so brand-new cards can only be added for staples whose exact stats/text are
   known cold. This run added 24 classic core-set bodies (`lea`); further bulk
   card work needs a Scryfall-equivalent data source in the sandbox.
-- **Multi-target "choose two"** — `Effect::ChooseN` now allocates a target
-  slot per chosen mode (Steal the Show's "one or both" ships). Remaining:
-  bundled multi-mode cards still wired as a single `ChooseMode` of pairs
-  (Cryptic Command), and *divided* targeting within one mode/effect (Vibrant
+- **Multi-target "choose two"** — `Effect::ChooseN` allocates a target slot
+  per chosen mode; Cryptic Command (counter/bounce) and Kolaghan's Command
+  (reanimate/any-target) now ship the faithful "choose two". Remaining:
+  cast-time mode *selection* so a non-default pick routes its targets (see
+  CR 700.2d below), and *divided* targeting within one mode/effect (Vibrant
   Outburst, Snow Day, Crackle with Power — split-N / divided-damage slots).
 - **Dynamic P/T CDA generalization** — characteristic-defining `*/*` P/T
   (Nightmare = Swamps you control, Master of Etherium) is hand-wired per card in
