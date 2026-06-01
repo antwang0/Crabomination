@@ -14410,6 +14410,19 @@ fn sulfuric_vortex_deals_damage_at_upkeep() {
         "Sulfuric Vortex should deal 2 to the active player at upkeep");
 }
 
+#[test]
+fn sulfuric_vortex_locks_out_lifegain_for_everyone() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sulfuric_vortex());
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    // Both players' lifegain is suppressed while the Vortex is in play.
+    g.adjust_life(0, 5);
+    g.adjust_life(1, 5);
+    assert_eq!(g.players[0].life, p0, "controller can't gain life");
+    assert_eq!(g.players[1].life, p1, "opponent can't gain life either");
+}
+
 // ── Kari Zev, Skyship Raider ───────────────────────────────────────────────
 
 #[test]

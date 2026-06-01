@@ -11834,15 +11834,21 @@ pub fn three_tree_city() -> CardDefinition {
 }
 
 /// Sulfuric Vortex — {1}{R}{R} Enchantment. At the beginning of each
-/// player's upkeep, Sulfuric Vortex deals 2 damage to that player.
-///
-/// The "players can't gain life" rider is omitted (no replacement-effect
-/// primitive for blanket life-gain prevention).
+/// player's upkeep, Sulfuric Vortex deals 2 damage to that player. Players
+/// can't gain life (`StaticEffect::PlayerCannotGainLife`, CR 119.7).
 pub fn sulfuric_vortex() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{PlayerStaticTarget, StaticEffect};
     CardDefinition {
         name: "Sulfuric Vortex",
         cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Players can't gain life.",
+            effect: StaticEffect::PlayerCannotGainLife {
+                target: PlayerStaticTarget::EachPlayer,
+            },
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(crate::game::TurnStep::Upkeep),
