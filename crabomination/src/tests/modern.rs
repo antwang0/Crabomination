@@ -3197,6 +3197,46 @@ fn pyrokinesis_alt_cost_exiles_red_card_and_deals_four_damage() {
         "Serra Angel should die to 4 damage");
 }
 
+/// A free 2/2 carrying Fabricate 2. AutoDecider takes the counter mode
+/// (→ 4/4); a scripted decider takes the Servo-token mode (CR 702.122).
+fn fabricator_body() -> crate::card::CardDefinition {
+    crate::card::CardDefinition {
+        name: "Test Fabricator",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::fabricate(2)],
+        ..Default::default()
+    }
+}
+
+#[test]
+fn fabricate_counter_mode_grows_the_creature() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, fabricator_body());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for free");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4), "Fabricate 2 (counter mode) → 4/4");
+}
+
+#[test]
+fn fabricate_token_mode_mints_two_servos() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+    let id = g.add_card_to_hand(0, fabricator_body());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for free");
+    drain_stack(&mut g);
+    let servos = g.battlefield.iter().filter(|c| c.definition.name == "Servo").count();
+    assert_eq!(servos, 2, "Fabricate 2 (token mode) → two 1/1 Servos");
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (2, 2), "token mode leaves the body 2/2");
+}
+
 /// Augury Owl is a 1/1 flyer whose ETB scry resolves cleanly (no draw).
 #[test]
 fn augury_owl_scries_on_etb() {

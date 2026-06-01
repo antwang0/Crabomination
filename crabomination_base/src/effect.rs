@@ -4625,6 +4625,42 @@ pub mod shortcut {
         ])
     }
 
+    /// Fabricate N (CR 702.122) — an ETB triggered ability: "put N +1/+1
+    /// counters on this creature, or create N 1/1 colorless Servo artifact
+    /// creature tokens." Modeled as `etb(ChooseMode([AddCounter, CreateToken]))`;
+    /// AutoDecider takes mode 0 (counters), a scripted decider can pick the
+    /// Servos. Used by Cultivator of Blades, Angel of Invention-style cards.
+    pub fn fabricate(n: i32) -> TriggeredAbility {
+        use crate::card::CounterType;
+        let servo = crate::card::TokenDefinition {
+            name: "Servo".into(),
+            power: 1,
+            toughness: 1,
+            keywords: vec![],
+            card_types: vec![crate::card::CardType::Artifact, crate::card::CardType::Creature],
+            colors: vec![],
+            supertypes: vec![],
+            subtypes: crate::card::Subtypes {
+                creature_types: vec![crate::card::CreatureType::Servo],
+                ..Default::default()
+            },
+            activated_abilities: vec![],
+            triggered_abilities: vec![],
+        };
+        etb(Effect::ChooseMode(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(n),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(n),
+                definition: servo,
+            },
+        ]))
+    }
+
     /// ETB-Mint-Token-With-Counters shortcut: "When this creature
     /// enters, create `count` copies of `definition`, then put
     /// `counter_amount` +1/+1 counters on each." Wraps [`etb`] with

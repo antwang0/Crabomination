@@ -84,8 +84,10 @@ pub enum CreatureType {
     Ninja,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
-    // Artifact-creature token subtype (Hangarback Walker's Thopters).
+    // Artifact-creature token subtypes (Hangarback Walker's Thopters,
+    // Kaladesh Fabricate Servos).
     Thopter,
+    Servo,
     // Theros devotion gods (Nylea, Thassa, Erebos, ...).
     God,
     // Artifact creature subtype (Juggernaut).

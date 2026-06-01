@@ -153,6 +153,11 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.122 — Fabricate** (claude/modern_decks). `shortcut::fabricate(n)`
+  — ETB `ChooseMode([AddCounter +1/+1 ×n, CreateToken n Servo])`; AutoDecider
+  picks counters, scripted picks Servos. New `CreatureType::Servo`. Tests:
+  `fabricate_counter_mode_*`, `fabricate_token_mode_*`.
+
 - ✅ **CR 702.108 — Adapt** (claude/modern_decks). `shortcut::adapt(n)` —
   `If(Not(EntityMatches{This, WithCounter(+1/+1)})) → AddCounter n`. Wired
   as Pteramander's `{7}: Adapt 4`. Test: `pteramander_adapt_four_*`.

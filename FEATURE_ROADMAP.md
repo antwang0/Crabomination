@@ -186,7 +186,8 @@ feature; sweep card-batch by card-batch.
   ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
   ⏳ Enlist, ⏳ Mobilize, ⏳ Myriad.
 - **Value/ETB:** ⏳ Investigate (verb) + sac-Clue payoff (🟡 Clue tokens
-  exist), ⏳ Fabricate, ⏳ Riot,
+  exist), ✅ Fabricate (`shortcut::fabricate` — CR 702.122, ETB
+  `ChooseMode([+1/+1 counters, 1/1 Servo tokens])`), ⏳ Riot,
   ✅ Afterlife (`shortcut::afterlife` — CR 702.135), ⏳ Squad, ⏳ Forage,
   ⏳ Exploit, ⏳ Extort, ⏳ Cohort, ⏳ Support.
 - **Spell-matters:** ⏳ Splice, ⏳ Replicate, ⏳ Overload, ⏳ Cipher,
