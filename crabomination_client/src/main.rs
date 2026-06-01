@@ -185,18 +185,28 @@ fn main() {
                     file_path: cfg.paths.asset_dir,
                     ..default()
                 })
-                // Clamp how small the window can get. The HUD anchors
-                // fixed-pixel panels to all four corners (turn/log ~280px
-                // on the right, player panel ~260px on the left, stack
-                // ~420px centred), so below roughly 1024×640 they start
-                // to overlap. A resize floor is the cheapest guard — the
-                // resolution-aware `UiScale` hook is a deliberate no-op
-                // (see `pick_ui_scale`).
+                // Open sized to the display rather than at winit's tiny
+                // 1280×720 default: `maximize_window` (a Startup system)
+                // maximizes the primary window to fill whatever monitor
+                // it's on, so the full HUD — including the bottom hand fan,
+                // which clips below ~800px tall — is always visible. The
+                // resolution below is only the "restore" size if the user
+                // un-maximizes. The HUD anchors fixed-pixel panels to all
+                // four corners (turn/log ~280px right, player panel ~260px
+                // left, stack ~420px centred) and the hand needs vertical
+                // room, so the resize floor is raised to 1024×768 — below
+                // that the corner panels overlap and the hand clips. (The
+                // resolution-aware `UiScale` hook stays a no-op; see
+                // `pick_ui_scale`.)
                 .set(WindowPlugin {
                     primary_window: Some(Window {
+                        resolution: bevy::window::WindowResolution::new(1600, 1000),
+                        position: bevy::window::WindowPosition::Centered(
+                            bevy::window::MonitorSelection::Primary,
+                        ),
                         resize_constraints: bevy::window::WindowResizeConstraints {
                             min_width: 1024.0,
-                            min_height: 640.0,
+                            min_height: 768.0,
                             ..default()
                         },
                         ..default()
@@ -252,6 +262,7 @@ fn main() {
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .insert_resource(menu::CliBootHint(load_state_arg))
         .add_systems(Startup, setup)
+        .add_systems(Startup, maximize_window)
         // Resolution-driven hand zoom + 2-D UI scale — both run every
         // frame but only write when the chosen tier flips, so they're
         // effectively free.
@@ -758,6 +769,16 @@ fn pick_hand_zoom(logical_height: f32) -> f32 {
         1.15
     } else {
         1.30
+    }
+}
+
+/// Maximize the primary window on startup so the client opens sized to the
+/// user's actual display instead of winit's fixed ~1280×720 default.
+/// `set_maximized` records a request the winit backend applies on the next
+/// frame, filling the monitor's work area — adapts to any resolution.
+fn maximize_window(mut windows: Query<&mut Window, With<bevy::window::PrimaryWindow>>) {
+    if let Ok(mut window) = windows.single_mut() {
+        window.set_maximized(true);
     }
 }
 
