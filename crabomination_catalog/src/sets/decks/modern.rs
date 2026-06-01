@@ -3521,6 +3521,55 @@ pub fn otepec_huntmaster() -> CardDefinition {
     }
 }
 
+/// Kinjalli's Caller — {W} 1/1 Bird Cleric. Dinosaur spells you cast cost
+/// {1} less to cast.
+pub fn kinjallis_caller() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Kinjalli's Caller",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Dinosaur spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Territorial Hammerskull — {2}{W} 3/3 Dinosaur. Whenever it attacks, tap
+/// target creature defending player controls.
+pub fn territorial_hammerskull() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Territorial Hammerskull",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![on_attack(Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Grazing Whiptail — {4}{G} 3/4 Dinosaur with reach.
 pub fn grazing_whiptail() -> CardDefinition {
     CardDefinition {

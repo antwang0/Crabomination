@@ -333,6 +333,9 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: white Ixalan dinosaurs ──
+        kinjallis_caller,
+        territorial_hammerskull,
         // ── training body (claude/modern_decks) ──
         pridemalkin,
         // ── classic core-set bodies (claude/modern_decks) ──

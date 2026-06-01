@@ -20474,3 +20474,32 @@ fn otepec_huntmaster_discounts_dinosaurs() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == dino), "discounted Dinosaur resolved");
 }
+
+#[test]
+fn kinjallis_caller_discounts_dinosaurs() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kinjallis_caller());
+    let dino = g.add_card_to_hand(0, catalog::charging_monstrosaur()); // {3}{R}{R}
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2); // {2}{R}{R} after the {1} discount
+    g.perform_action(GameAction::CastSpell {
+        card_id: dino, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("discounted Dinosaur castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dino));
+}
+
+#[test]
+fn territorial_hammerskull_taps_on_attack() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let hammer = g.add_card_to_battlefield(0, catalog::territorial_hammerskull());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(hammer);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: hammer, target: AttackTarget::Player(1) }])
+        .expect("attack declared");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).unwrap().tapped, "attack trigger tapped the blocker");
+}
