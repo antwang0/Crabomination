@@ -55,11 +55,12 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
   deck-build path (cube, formats, **and draft**) seats the standard Lessons
   sideboard, so Learn fetches resolve in all game modes.
 - **Multi-target prompts on instants/sorceries** — "choose one or both"
-  with a target per chosen mode now works via `Effect::ChooseN`'s per-mode
-  target slots (Steal the Show). The remaining gap is *divided* targeting
-  within a single mode/effect (Vibrant Outburst, Snow Day, Devious
-  Cover-Up, Crackle with Power, Magma Opus — divided-damage / split-N
-  slots), distinct from the bag-of-targets primitives.
+  with a target per chosen mode works via `Effect::ChooseN`'s per-mode
+  target slots (Steal the Show). **Divided damage** ("deal N damage divided
+  as you choose among 1+ targets") is now wired via `Effect::DealDamageDivided`
+  + `Decision::DivideDamage` (Forked Bolt, Pyrokinesis, Crackle with Power,
+  Magma Opus; AutoDecider spreads evenly). The remaining gap is *non-damage*
+  split-N riders (Snow Day's divided tap/scry, Devious Cover-Up's split-mill).
 
 All printed SOS cards are now ✅, and the Learn / Lessons-sideboard mechanic
 is wired end-to-end (engine + every Learn card + cube/format/draft sideboards

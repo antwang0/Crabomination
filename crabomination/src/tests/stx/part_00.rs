@@ -3280,6 +3280,28 @@ fn crackle_with_power_deals_five_x_damage_to_target_player() {
 }
 
 #[test]
+fn crackle_with_power_divides_damage_among_two_targets() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::crackle_with_power());
+    // X=1 → 5 damage, split 3 (target 0) / 2 (target 1) by the even-split
+    // front-loaded policy: opp player takes 3, bear takes 2 and dies.
+    g.players[0].mana_pool.add(Color::Red, 5);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: Some(1),
+    }).expect("Crackle castable for {X=1}{R}{R}{R}{R}{R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 20 - 3, "player gets 3 of the 5 (front-loaded)");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear dies to its 2");
+}
+
+#[test]
 fn mentors_guidance_mode_zero_damages_target_creature() {
     let mut g = two_player_game();
     // P0 controls 3 creatures.

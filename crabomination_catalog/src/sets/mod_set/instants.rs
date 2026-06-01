@@ -526,11 +526,9 @@ pub fn isolate() -> CardDefinition {
 /// hand rather than pay this spell's mana cost. Pyrokinesis deals 4
 /// damage divided as you choose among any number of target creatures.
 ///
-/// Wires the existing pitch alt-cost (same shape as Force of Will). The
-/// "divide 4 damage among any number of creatures" half is approximated
-/// as 4 damage to a single creature target — the engine has no
-/// damage-distribution primitive yet. AutoDecider picks the highest-
-/// toughness opponent creature first.
+/// Wires the existing pitch alt-cost (same shape as Force of Will) and the
+/// `DealDamageDivided` primitive: 4 damage split among up to four target
+/// creatures (AutoDecider spreads evenly; a UI/test decider chooses).
 pub fn pyrokinesis() -> CardDefinition {
     use crate::card::AlternativeCost;
     CardDefinition {
@@ -541,9 +539,10 @@ pub fn pyrokinesis() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(4),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(4),
+            filter: SelectionRequirement::Creature,
+            max_targets: 4,
         },
         triggered_abilities: vec![],
         alternative_cost: Some(AlternativeCost {

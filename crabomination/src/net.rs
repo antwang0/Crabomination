@@ -771,6 +771,13 @@ pub enum DecisionWire {
         player: usize,
         triggers: Vec<(CardId, String)>,
     },
+    /// CR 601.2d — divide `total` damage among `targets`. Decider answers
+    /// `DamageDivision(amounts)` parallel to `targets`.
+    DivideDamage {
+        source: CardId,
+        total: u32,
+        targets: Vec<Target>,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -865,6 +872,11 @@ impl From<&Decision> for DecisionWire {
             Decision::OrderTriggers { player, triggers } => DecisionWire::OrderTriggers {
                 player: *player,
                 triggers: triggers.clone(),
+            },
+            Decision::DivideDamage { source, total, targets } => DecisionWire::DivideDamage {
+                source: *source,
+                total: *total,
+                targets: targets.clone(),
             },
         }
     }

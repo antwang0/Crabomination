@@ -1864,12 +1864,10 @@ pub fn manifestation_sage() -> CardDefinition {
 /// any number of targets."
 ///
 /// ✅ The 5X scaling wires faithfully via `Value::Times(Const(5),
-/// XFromCost)` against a Creature ∨ Player ∨ Planeswalker target. The
-/// printed five-quintuple-pip {RRRRR} cost is honored exactly via the
-/// ordered `ManaCost` builder. The "divided among any number of
-/// targets" rider collapses to a single target absorbing the full 5X —
-/// the engine-wide multi-target prompt gap shared with Vibrant Outburst
-/// ✅, Snow Day ✅, Spell Satchel, Devious Cover-Up. Tracked in TODO.md.
+/// XFromCost)` and `DealDamageDivided` splits it among up to five
+/// Creature ∨ Player ∨ Planeswalker targets (AutoDecider spreads evenly).
+/// The printed five-quintuple-pip {RRRRR} cost is honored exactly via the
+/// ordered `ManaCost` builder.
 pub fn crackle_with_power() -> CardDefinition {
     use crate::mana::ManaSymbol;
     let mut crackle_cost = cost(&[r(), r(), r(), r(), r()]);
@@ -1883,16 +1881,15 @@ pub fn crackle_with_power() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Times(
+        effect: Effect::DealDamageDivided {
+            total: Value::Times(
                 Box::new(Value::Const(5)),
                 Box::new(Value::XFromCost),
             ),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 5,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -2192,18 +2189,13 @@ pub fn expressive_iteration() -> CardDefinition {
 /// Create a 4/4 blue and red Elemental creature token. Draw two cards.
 /// / {U/R}{U/R}, Discard Magma Opus: Create a Treasure token."
 ///
-/// ✅ The main `Seq` ships all four printed primary clauses (damage +
-/// tap + 4/4 token + draw 2). The "divided as you choose" damage
-/// collapses to 4-to-one-creature — the engine-wide multi-target
-/// gap shared with Crackle with Power ✅ and Lorehold Command's
-/// 4-to-opp mode. The tap rider strict-upgrades from "up to two
-/// creatures" to "all opponent creatures" (favors the caster; the
-/// printed restriction matters only when there are 3+ opp creatures,
-/// rare given that the spell costs nine mana). The {U/R}{U/R}-and-
+/// ✅ The main `Seq` ships all four printed primary clauses: 4 damage
+/// divided (`DealDamageDivided`) among up to four creatures/planeswalkers,
+/// tap, a 4/4 Elemental token, and draw 2. The tap rider strict-upgrades
+/// from "up to two creatures" to "all opponent creatures" (favors the
+/// caster; matters only with 3+ opp creatures). The {U/R}{U/R}-and-
 /// discard-self → Treasure alt mode is a doc-tracked engine-wide gap
-/// (no discard-as-activation-cost primitive yet); Magma Opus is
-/// usually cast for its body, with the discard-mode ramp being a
-/// nice-to-have. Tracked in TODO.md.
+/// (no discard-as-activation-cost primitive yet). Tracked in TODO.md.
 pub fn magma_opus() -> CardDefinition {
     let elemental = crate::catalog::sets::sos::elemental_token();
     CardDefinition {
@@ -2216,9 +2208,11 @@ pub fn magma_opus() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Const(4),
+            Effect::DealDamageDivided {
+                total: Value::Const(4),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker),
+                max_targets: 4,
             },
             Effect::Tap {
                 what: Selector::EachPermanent(

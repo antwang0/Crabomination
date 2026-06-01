@@ -194,6 +194,17 @@ pub enum Decision {
         player: usize,
         triggers: Vec<(CardId, String)>,
     },
+
+    /// CR 601.2d — divide `total` damage among the chosen `targets` (Forked
+    /// Bolt, Pyrokinesis, Crackle with Power). The decider answers
+    /// `DamageDivision(amounts)` parallel to `targets`, each ≥1 and summing
+    /// to `total`. `AutoDecider` spreads as evenly as possible (front-loaded
+    /// remainder).
+    DivideDamage {
+        source: CardId,
+        total: u32,
+        targets: Vec<Target>,
+    },
 }
 
 /// The decider's answer to a `Decision::Learn`.
@@ -253,6 +264,25 @@ pub enum DecisionAnswer {
     /// from a partial answer keep their original relative order at the end;
     /// an empty answer keeps the engine default.
     TriggerOrder(Vec<CardId>),
+    /// CR 601.2d — per-target damage amounts, parallel to the matching
+    /// `Decision::DivideDamage { targets }`. A malformed answer (wrong
+    /// length / wrong sum) is renormalized to an even split by the engine.
+    DamageDivision(Vec<u32>),
+}
+
+/// Spread `total` damage across `n` targets as evenly as possible, with the
+/// remainder front-loaded (target 0 gets the extra point first). Used by
+/// `AutoDecider` and as the engine's fallback when a decider returns a
+/// malformed `DamageDivision`.
+pub fn even_damage_split(total: u32, n: usize) -> Vec<u32> {
+    if n == 0 {
+        return vec![];
+    }
+    let base = total / n as u32;
+    let rem = (total % n as u32) as usize;
+    (0..n)
+        .map(|i| base + if i < rem { 1 } else { 0 })
+        .collect()
 }
 
 pub trait Decider {
@@ -367,6 +397,10 @@ impl Decider for AutoDecider {
             ),
             // CR 603.3b — keep the engine's default order (empty answer).
             Decision::OrderTriggers { .. } => DecisionAnswer::TriggerOrder(vec![]),
+            // CR 601.2d — spread the damage as evenly as possible.
+            Decision::DivideDamage { total, targets, .. } => {
+                DecisionAnswer::DamageDivision(even_damage_split(*total, targets.len()))
+            }
         }
     }
 }

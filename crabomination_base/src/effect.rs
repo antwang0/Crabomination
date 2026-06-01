@@ -1082,6 +1082,17 @@ pub enum Effect {
 
     // ── Damage / life ────────────────────────────────────────────────────────
     DealDamage { to: Selector, amount: Value },
+    /// "Deal N damage divided as you choose among one or more / any number
+    /// of targets." Targets are chosen at cast time across slots
+    /// `0..max_targets` (each filtered by `filter`); the per-target split
+    /// is decided at resolution via `Decision::DivideDamage` (AutoDecider
+    /// spreads as evenly as possible). Used by Forked Bolt, Pyrokinesis,
+    /// Fiery Cannonade-adjacent "divide" spells, Crackle with Power.
+    DealDamageDivided {
+        total: Value,
+        filter: SelectionRequirement,
+        max_targets: u8,
+    },
     /// Two creatures fight: each deals damage equal to its current
     /// power to the other simultaneously. Both creatures take damage
     /// and die simultaneously to SBA. `attacker` is typically
@@ -1942,6 +1953,8 @@ impl Effect {
                 then.requires_target() || else_.requires_target()
             }
             Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
+            // Divided damage always targets (one or more chosen targets).
+            Effect::DealDamageDivided { .. } => true,
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
@@ -2122,6 +2135,7 @@ impl Effect {
         }
         match self {
             Effect::DealDamage { to, .. } => sel_filter(to),
+            Effect::DealDamageDivided { filter, .. } => Some(filter),
             // Fight surfaces the *defender's* filter (the opp creature
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
@@ -2332,6 +2346,10 @@ impl Effect {
                 Value::Const(n) => format!("deal {n} damage to target"),
                 _ => "deal damage to target".into(),
             },
+            Effect::DealDamageDivided { total, .. } => match total {
+                Value::Const(n) => format!("deal {n} damage divided among targets"),
+                _ => "deal damage divided among targets".into(),
+            },
             Effect::AddCounter { kind, amount, .. } => match amount {
                 Value::Const(n) => format!("put {n} {kind:?} counter(s) on target"),
                 _ => format!("put {kind:?} counter(s) on target"),
@@ -2452,6 +2470,10 @@ impl Effect {
             | Effect::Draw { .. }
             | Effect::Mill { .. }
             | Effect::AddPoison { .. } => true,
+            // Divided damage allows player targets only when its filter can
+            // match a player (Crackle with Power "any target"); creature-only
+            // divide spells (Forked Bolt, Pyrokinesis) reject players.
+            Effect::DealDamageDivided { filter, .. } => filter.can_match_player(),
             // Stack-targeted counter spells take a permanent slot but the
             // target is a stack item, not a player. Reject player target.
             Effect::CounterSpell { .. }
@@ -2619,6 +2641,11 @@ impl Effect {
                     .iter()
                     .find_map(|(_, _, e)| eff_find(e, slot, mode)),
                 Effect::DealDamage { to, .. } => sel_find(to, slot),
+                // Each of slots 0..max_targets carries the divide filter, so
+                // the cast/auto-target machinery collects "up to N targets".
+                Effect::DealDamageDivided { filter, max_targets, .. } => {
+                    if slot < *max_targets { Some(filter) } else { None }
+                }
                 Effect::PreventNextDamage { target, .. }
                 | Effect::PreventAllDamageThisTurn { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {

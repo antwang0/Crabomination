@@ -686,6 +686,50 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 601.2d — deal `total` damage divided among the chosen
+            // targets. Targets were collected into `ctx.targets` across
+            // slots `0..max_targets` at cast time; the split is decided
+            // here so a wants-UI controller / scripted test can choose it
+            // (AutoDecider spreads evenly).
+            Effect::DealDamageDivided { total, .. } => {
+                let amt = self.evaluate_value(total, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                // Only still-present targets receive damage.
+                let targets: Vec<Target> = ctx
+                    .targets
+                    .iter()
+                    .filter(|t| match t {
+                        Target::Player(p) => *p < self.players.len(),
+                        Target::Permanent(id) => self.battlefield_find(*id).is_some(),
+                    })
+                    .cloned()
+                    .collect();
+                if targets.is_empty() { return Ok(()); }
+                let answer = self.decider.decide(&Decision::DivideDamage {
+                    source: ctx.source.unwrap_or(CardId(0)),
+                    total: amt,
+                    targets: targets.clone(),
+                });
+                let mut division = match answer {
+                    crate::decision::DecisionAnswer::DamageDivision(v) => v,
+                    _ => vec![],
+                };
+                // Renormalize a malformed answer (wrong length / sum) to an
+                // even split so a buggy decider can't drop or duplicate damage.
+                if division.len() != targets.len()
+                    || division.iter().sum::<u32>() != amt
+                {
+                    division = crate::decision::even_damage_split(amt, targets.len());
+                }
+                for (t, n) in targets.iter().zip(division) {
+                    if n == 0 { continue; }
+                    self.deal_damage_to_from(target_to_entity(t), n, ctx.source, events);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::Fight { attacker, defender } => {
                 // Two creatures simultaneously deal damage equal to
                 // their power to each other. Snapshot powers up-front

@@ -97,8 +97,11 @@ not how Magic works" moments.
   Remaining: a server-side *suspend* path so a networked human is actually
   prompted (today the dispatch consults the decider inline, so a remote
   seat degrades to the default order). Tracked in TODO.md.
-- ⏳ **"Choose targets as it resolves" / divided damage** across N targets
-  (Fireball, Forked Bolt, Cryptic-style "tap up to N").
+- 🟡 **Divided damage** across N targets — `Effect::DealDamageDivided` +
+  `Decision::DivideDamage` ship Forked Bolt, Pyrokinesis, Crackle with Power,
+  Magma Opus (AutoDecider spreads evenly; UI/scripted deciders choose the
+  split). Remaining: divided *non-damage* riders ("tap up to N", split-mill)
+  and true "choose targets as it resolves".
 - ⏳ **Targeting refinements:** "up to N targets", "target each", "another
   target", same-target-twice rules, protection re-check on resolution.
 - ⏳ **Continuous-effect breadth:** characteristic-defining abilities,

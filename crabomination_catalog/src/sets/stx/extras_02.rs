@@ -681,10 +681,8 @@ pub fn enthusiastic_study() -> CardDefinition {
 /// originally Saviors of Kamigawa). "Forked Bolt deals 2 damage divided as
 /// you choose among one or two target creatures and/or players."
 ///
-/// ✅ Single-target body wired via `DealDamage 2 → Creature/Player/PW`.
-/// The "divided among one or two targets" rider collapses to a single
-/// target — the engine-wide multi-target gap shared with Magma Opus,
-/// Crackle with Power, Electrolyze.
+/// ✅ Wired via `DealDamageDivided`: 2 damage split among up to two
+/// Creature ∨ Player ∨ Planeswalker targets (AutoDecider spreads evenly).
 pub fn forked_bolt() -> CardDefinition {
     CardDefinition {
         name: "Forked Bolt",
@@ -695,13 +693,12 @@ pub fn forked_bolt() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(2),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(2),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 2,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

@@ -596,6 +596,21 @@ impl SelectionRequirement {
     pub fn negate(self) -> Self {
         Self::Not(Box::new(self))
     }
+
+    /// Whether a *player* entity could satisfy this requirement — used by
+    /// targeting heuristics that decide whether to consider player targets
+    /// (e.g. "deal N damage divided among any target" allows players, but
+    /// "among target creatures" does not). Conservative: an `And` requires
+    /// both halves to admit a player; `Or`/`Not` are permissive.
+    pub fn can_match_player(&self) -> bool {
+        match self {
+            Self::Any | Self::Player => true,
+            Self::And(a, b) => a.can_match_player() && b.can_match_player(),
+            Self::Or(a, b) => a.can_match_player() || b.can_match_player(),
+            Self::Not(_) => true,
+            _ => false,
+        }
+    }
 }
 
 // ── Token definition ──────────────────────────────────────────────────────────

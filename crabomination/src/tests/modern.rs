@@ -3197,6 +3197,52 @@ fn pyrokinesis_alt_cost_exiles_red_card_and_deals_four_damage() {
         "Serra Angel should die to 4 damage");
 }
 
+/// Forked Bolt divides 2 damage among two targets (here both players, 1 each).
+#[test]
+fn forked_bolt_divides_two_among_two_players() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::forked_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(0)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Forked Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent takes 1");
+    assert_eq!(g.players[0].life, 19, "caster takes the other 1");
+}
+
+/// Pyrokinesis divides its 4 damage among two target creatures. AutoDecider
+/// spreads evenly (2 + 2), killing two 2/2 bears.
+#[test]
+fn pyrokinesis_divides_four_damage_among_two_creatures() {
+    let mut g = two_player_game();
+    let bear_a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let red_card = g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    let id = g.add_card_to_hand(0, catalog::pyrokinesis());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: Some(red_card),
+        target: Some(Target::Permanent(bear_a)),
+        additional_targets: vec![Target::Permanent(bear_b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pyrokinesis castable with two creature targets");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear_a),
+        "first bear should die to its 2 damage");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear_b),
+        "second bear should die to its 2 damage");
+}
+
 /// Pyrokinesis's alt cost requires a red card — pitching a non-red card
 /// should be rejected by the engine's `exile_filter` check.
 #[test]
