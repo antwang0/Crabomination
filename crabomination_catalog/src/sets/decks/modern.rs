@@ -3417,6 +3417,87 @@ pub fn regisaur_alpha() -> CardDefinition {
     }
 }
 
+/// Grazing Whiptail — {4}{G} 3/4 Dinosaur with reach.
+pub fn grazing_whiptail() -> CardDefinition {
+    CardDefinition {
+        name: "Grazing Whiptail",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Frilled Deathspitter — {1}{R} 2/2 Dinosaur. Enrage — whenever it's dealt
+/// damage, it deals 2 damage to each opponent.
+pub fn frilled_deathspitter() -> CardDefinition {
+    CardDefinition {
+        name: "Frilled Deathspitter",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Raptor Hatchling — {1}{R} 1/1 Dinosaur with trample. Enrage — whenever
+/// it's dealt damage, create a 3/3 red Dinosaur token.
+pub fn raptor_hatchling() -> CardDefinition {
+    CardDefinition {
+        name: "Raptor Hatchling",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Dinosaur".into(),
+                    power: 3,
+                    toughness: 3,
+                    keywords: vec![Keyword::Trample],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Dinosaur],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Farhaven Elf — {2}{G} 1/1 Elf. ETB: search your library for a basic land
 /// and put it onto the battlefield tapped.
 pub fn farhaven_elf() -> CardDefinition {

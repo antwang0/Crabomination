@@ -2447,6 +2447,36 @@ impl GameState {
                 }
             }
         }
+        // CR 702.130a / 603.10a — Enrage on lethal damage. A creature that
+        // dies from the same damage that would trigger its "whenever this is
+        // dealt damage" ability still triggers (the ability uses last-known
+        // information). Such a creature is no longer on the battlefield by
+        // dispatch time, so walk the just-died snapshots for SelfSource
+        // `DealtDamage` triggers matching a `DamageDealt` event in this batch.
+        // (Other SelfSource trigger kinds — die/leave — are handled via their
+        // own dedicated paths, so this is scoped to DealtDamage only.)
+        for snap in self.died_card_snapshots.values() {
+            for ta in &snap.definition.triggered_abilities {
+                if ta.event.kind != crate::effect::EventKind::DealtDamage
+                    || ta.event.scope != crate::effect::EventScope::SelfSource
+                {
+                    continue;
+                }
+                for ev in events {
+                    if crate::game::effects::event_matches_spec(self, ev, &ta.event, snap) {
+                        candidates.push(TriggerCandidate {
+                            source: snap.id,
+                            effect: ta.effect.clone(),
+                            controller: snap.controller,
+                            filter: ta.event.filter.clone(),
+                            subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                            event_amount: event_amount(ev),
+                            triggered_by_etb: false,
+                        });
+                    }
+                }
+            }
+        }
         // Also walk every player's graveyard for triggers scoped
         // `FromYourGraveyard` — recursion creatures (Bloodghast,
         // Ichorid, Silversmote Ghoul) fire from there. The trigger's

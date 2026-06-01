@@ -236,7 +236,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   its own creature count (multiplayer-correct). Test:
   `biorhythm_sets_each_player_to_own_count_in_multiplayer`.
 
-- ✅ **CR 702.130 — Enrage**
+- ✅ **CR 702.130 — Enrage** (+ claude/modern_decks: now fires on **lethal**
+  damage — `dispatch_triggers_for_events` walks `died_card_snapshots` for
+  SelfSource `DealtDamage` triggers, so a creature that dies to the same
+  damage still triggers via last-known info; CR 603.10a). Ripjaw Raptor,
+  Frilled Deathspitter, Raptor Hatchling.
 
 - ✅ **CR 702.68 — Frenzy** (claude/modern_decks). `shortcut::frenzy(n)` —
   `AttacksAndIsntBlocked / SelfSource` pump of `This` +n/+0 EOT (built on

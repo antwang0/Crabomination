@@ -20310,3 +20310,91 @@ fn farhaven_elf_fetches_a_basic_land_tapped() {
     assert!(forest.is_some(), "fetched a Forest onto the battlefield");
     assert!(forest.unwrap().tapped, "land entered tapped");
 }
+
+#[test]
+fn tishanas_wayfinder_explores_on_etb() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tishanas_wayfinder());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tishana's Wayfinder castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let w = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((w.power, w.toughness), (3, 3), "ETB explore grew it");
+}
+
+#[test]
+fn ill_tempered_cyclops_monstrosity() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ill_tempered_cyclops());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Monstrosity 2 activatable for {3}{R}");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let c = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "3/3 + two +1/+1 counters");
+}
+
+#[test]
+fn charging_monstrosaur_has_trample_and_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::charging_monstrosaur());
+    let view = g.compute_battlefield();
+    let c = view.iter().find(|c| c.id == id).unwrap();
+    assert!(c.keywords.contains(&crate::card::Keyword::Trample));
+    assert!(c.keywords.contains(&crate::card::Keyword::Haste));
+    assert_eq!((c.power, c.toughness), (5, 5));
+}
+
+#[test]
+fn grazing_whiptail_has_reach() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::grazing_whiptail());
+    let view = g.compute_battlefield();
+    let c = view.iter().find(|c| c.id == id).unwrap();
+    assert!(c.keywords.contains(&crate::card::Keyword::Reach));
+}
+
+#[test]
+fn frilled_deathspitter_enrage_burns_opponent() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::frilled_deathspitter()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Permanent(dino)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Dino dies to 3, but enrage fires first (dealt damage) → 2 to each opp.
+    assert_eq!(g.players[1].life, opp_life - 2, "enrage dealt 2 to the opponent");
+}
+
+#[test]
+fn raptor_hatchling_enrage_makes_a_token() {
+    let mut g = two_player_game();
+    let dino = g.add_card_to_battlefield(0, catalog::raptor_hatchling()); // 1/1
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Permanent(dino)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Hatchling dies, but enrage made a 3/3 Dinosaur token.
+    let tokens = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Dinosaur" && c.controller == 0).count();
+    assert_eq!(tokens, 1, "enrage created a 3/3 Dinosaur token");
+}
