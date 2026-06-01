@@ -182,7 +182,11 @@ feature; sweep card-batch by card-batch.
   tap-to-grow + `AllWithCounter` anthems; Abzan Falconer, Ainok Bond-Kin,
   Tuskguard Captain, Mer-Ek Nightblade), ✅ Renown (`shortcut::renown` —
   CR 702.111, +N on first combat damage; Topan Freeblade, Stalwart Aven,
-  Skyraker Giant), ⏳ Monstrosity, ⏳ Devour, ⏳ Bloodthirst, ⏳ Amass.
+  Skyraker Giant),
+  ✅ Bloodthirst (`shortcut::bloodthirst` — CR 702.54, ETB-`If` gated on
+  `Predicate::PlayerDamagedThisTurn` + `Player.was_dealt_damage_this_turn`;
+  Scab-Clan Mauler, Gorehorn Minotaurs, Bloodfray Giant),
+  ⏳ Monstrosity, ⏳ Devour, ⏳ Amass.
 - **Cast-from-elsewhere:** ⏳ cast-from-top (Mind's Desire / Amped Raptor /
   Robber of the Rich), ⏳ Suspend (+ time counters), ⏳ Forecast,
   ⏳ Hideaway, ⏳ Aftermath.

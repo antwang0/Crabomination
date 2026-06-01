@@ -97,6 +97,14 @@ pub struct Player {
     /// for snapshot back-compat.
     #[serde(default)]
     pub creatures_died_this_turn: u32,
+    /// True if this player has been dealt damage so far this turn. Set in
+    /// `deal_damage_to_from`'s player branch (combat or non-combat, incl.
+    /// infect/poison), reset for *all* players at the active player's
+    /// `do_untap` so it reflects "damaged since this turn began" — the
+    /// Bloodthirst (CR 702.54) window. Defaults to false for snapshot
+    /// back-compat.
+    #[serde(default)]
+    pub was_dealt_damage_this_turn: bool,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -227,6 +235,7 @@ impl Player {
             cards_drawn_this_turn: 0,
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
+            was_dealt_damage_this_turn: false,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             creatures_cast_this_turn: 0,

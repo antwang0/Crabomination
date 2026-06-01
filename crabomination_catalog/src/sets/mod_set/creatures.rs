@@ -4212,3 +4212,57 @@ pub fn consuls_lieutenant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Bloodthirst (CR 702.54) ───────────────────────────────────────────────
+
+/// Scab-Clan Mauler — {1}{R} 2/2 Human Warrior, Bloodthirst 2.
+pub fn scab_clan_mauler() -> CardDefinition {
+    CardDefinition {
+        name: "Scab-Clan Mauler",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
+        ..Default::default()
+    }
+}
+
+/// Gorehorn Minotaurs — {2}{R} 3/3 Minotaur Warrior, Bloodthirst 2.
+pub fn gorehorn_minotaurs() -> CardDefinition {
+    CardDefinition {
+        name: "Gorehorn Minotaurs",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
+        ..Default::default()
+    }
+}
+
+/// Bloodfray Giant — {3}{R} 3/2 Giant Warrior with Trample, Bloodthirst 1.
+pub fn bloodfray_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodfray Giant",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(1)],
+        ..Default::default()
+    }
+}

@@ -8,9 +8,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee
-  this run): **Bloodthirst** needs a "an opponent was dealt damage this turn"
-  predicate (none exists yet); **Monstrosity** needs a `monstrous` flag (or a
+- **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee/
+  Bloodthirst this run): **Monstrosity** needs a `monstrous` flag (or a
   dedicated counter) to gate the once-only counter add + a "becomes monstrous"
   event; **Devour/Amass** need sac-as-ETB and an Army token. **Melee** is a
   flat +1/+1 — wants a per-combat attacked-opponent tally for multiplayer.
@@ -171,6 +170,10 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.54 — Bloodthirst** (claude/modern_decks). `shortcut::bloodthirst(n)`
+  — ETB `If(Predicate::PlayerDamagedThisTurn{EachOpponent} → AddCounter n)`;
+  new `Player.was_dealt_damage_this_turn` (set in `deal_damage_to_from`, reset
+  for all players in `do_untap`). Tests in `tests_counters`.
 - ✅ **CR 702.43 — Modular** (claude/modern_decks). `shortcut::modular_dies`
   pairs with `enters_with_counters`; the dies-trigger adds the source's
   *last-known* +1/+1 count to a target artifact creature (the source is in

@@ -310,6 +310,10 @@ impl GameState {
                     .map(|p| self.players[p].life_gained_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::PlayerDamagedThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].was_dealt_damage_this_turn),
             Predicate::CardsLeftGraveyardThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

@@ -452,6 +452,11 @@ pub enum Predicate {
     /// Backed by `Player.life_gained_this_turn`. Used by Strixhaven's
     /// **Infusion** rider — "If you gained life this turn, …".
     LifeGainedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// True if any player matched by `who` has been dealt damage this turn.
+    /// Backed by `Player.was_dealt_damage_this_turn`. Powers Bloodthirst
+    /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
+    /// dealt damage this turn."
+    PlayerDamagedThisTurn { who: PlayerRef },
     /// `who` has had at least `at_least` cards leave their graveyard
     /// this turn. Backed by `Player.cards_left_graveyard_this_turn`.
     /// Used by Lorehold "if a card left your graveyard this turn"
@@ -4608,6 +4613,24 @@ pub mod shortcut {
             }),
             else_: Box::new(Effect::Noop),
         }
+    }
+
+    /// Bloodthirst N (CR 702.54) — an ETB trigger standing in for the
+    /// printed static "this creature enters with N +1/+1 counters on it if
+    /// an opponent was dealt damage this turn." Modeled as `etb(If(an
+    /// opponent was dealt damage this turn → AddCounter This N))` — the
+    /// counters add to the printed (positive) base P/T.
+    pub fn bloodthirst(n: i32) -> TriggeredAbility {
+        use crate::card::CounterType;
+        etb(Effect::If {
+            cond: Predicate::PlayerDamagedThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(n),
+            }),
+            else_: Box::new(Effect::Noop),
+        })
     }
 
     /// Renown N (CR 702.111) — a combat trigger: "Whenever this creature

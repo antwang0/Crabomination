@@ -374,3 +374,46 @@ fn knight_and_consuls_lieutenant_are_renown_one_drops() {
             "Renown 1 on connect");
     }
 }
+
+// ── Bloodthirst (CR 702.54) ────────────────────────────────────────────────
+
+#[test]
+fn bloodthirst_enters_bigger_when_an_opponent_was_damaged() {
+    let mut g = two_player_game();
+    // Deal damage to the opponent first this turn.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the opponent");
+    drain_stack(&mut g);
+    assert!(g.players[1].was_dealt_damage_this_turn);
+    // Now Scab-Clan Mauler enters with Bloodthirst 2 → 4/4.
+    let id = g.add_card_to_hand(0, catalog::scab_clan_mauler());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+    assert_eq!((view.power, view.toughness), (4, 4), "2/2 + Bloodthirst 2 counters");
+}
+
+#[test]
+fn bloodthirst_enters_vanilla_when_no_opponent_damaged() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gorehorn_minotaurs());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+    assert_eq!((view.power, view.toughness), (3, 3), "no damage dealt → no Bloodthirst counters");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+#[test]
+fn bloodthirst_flag_resets_at_turn_start() {
+    let mut g = two_player_game();
+    g.players[1].was_dealt_damage_this_turn = true;
+    g.do_untap();
+    assert!(!g.players[1].was_dealt_damage_this_turn, "flag clears at the turn boundary");
+}

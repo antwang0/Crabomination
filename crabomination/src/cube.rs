@@ -1209,6 +1209,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         greasewrench_goblin,
         // ── Renown (CR 702.111) ──
         skyraker_giant,
+        // ── Bloodthirst (CR 702.54) ──
+        scab_clan_mauler,
+        gorehorn_minotaurs,
+        bloodfray_giant,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);

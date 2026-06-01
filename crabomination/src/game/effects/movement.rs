@@ -108,6 +108,10 @@ impl GameState {
             .unwrap_or(false);
         match ent {
             EntityRef::Player(p) => {
+                // Bloodthirst (CR 702.54) window: any damage to a player
+                // (combat or not, incl. infect→poison) marks them damaged
+                // this turn.
+                self.players[p].was_dealt_damage_this_turn = true;
                 if source_has_infect {
                     self.players[p].poison_counters =
                         self.players[p].poison_counters.saturating_add(amount);
