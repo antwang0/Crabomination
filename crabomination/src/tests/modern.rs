@@ -5605,17 +5605,18 @@ fn talisman_of_dominance_taps_for_blue_costing_one_life() {
     assert_eq!(g.players[0].life, life_before - 1);
 }
 
-/// Elvish Spirit Guide: vanilla 2/2 body. (Hand-activated alt-mana
-/// ability is gated on a future hand-activation primitive.)
+/// Elvish Spirit Guide: "Exile this from your hand: Add {G}." pitches for
+/// a green mana and leaves play (exiled, not discarded).
 #[test]
-fn elvish_spirit_guide_is_a_two_two_elf_spirit() {
+fn elvish_spirit_guide_pitches_from_hand_for_green() {
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::elvish_spirit_guide());
-    let card = g.battlefield_find(id).expect("on battlefield");
-    assert_eq!(card.power(), 2);
-    assert_eq!(card.toughness(), 2);
-    assert!(card.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Elf));
-    assert!(card.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+    let id = g.add_card_to_hand(0, catalog::elvish_spirit_guide());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pitch ability activates from hand");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added one green");
+    assert!(g.exile.iter().any(|c| c.id == id), "pitched card is exiled");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == id), "no longer in hand");
 }
 
 // ── New cube cards (this branch) ───────────────────────────────────────────
@@ -17747,6 +17748,19 @@ fn simian_spirit_guide_is_a_two_two_ape_spirit() {
     let d = catalog::simian_spirit_guide();
     assert_eq!((d.power, d.toughness), (2, 2));
     assert!(d.has_creature_type(crate::card::CreatureType::Ape));
+}
+
+/// Simian Spirit Guide: "Exile this from your hand: Add {R}." pitches for
+/// a red mana and exiles itself.
+#[test]
+fn simian_spirit_guide_pitches_from_hand_for_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::simian_spirit_guide());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pitch ability activates from hand");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red");
+    assert!(g.exile.iter().any(|c| c.id == id), "pitched card is exiled");
 }
 
 #[test]

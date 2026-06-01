@@ -92,7 +92,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -707,7 +707,7 @@ pub fn dragonsguard_elite() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::This,
@@ -761,7 +761,7 @@ pub fn quandrix_crystallizer() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2123,7 +2123,7 @@ pub fn quandrix_aether_adept() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::Creature),
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
-                    tap_other_filter: None,
+                    tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -6637,7 +6637,7 @@ pub fn quandrix_mistwarden() -> CardDefinition {
             condition: None,
             once_per_turn: false,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             effect: Effect::Scry {
                 who: PlayerRef::You,
                 amount: Value::Const(1),

@@ -360,7 +360,7 @@ pub fn burrog_banemaker() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -400,7 +400,7 @@ pub fn noxious_newt() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -442,7 +442,7 @@ pub fn mindful_biomancer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![etb_gain_life(1)],
         ..Default::default()
@@ -760,7 +760,7 @@ pub fn shattered_acolyte() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -806,7 +806,7 @@ pub fn summoned_dromedary() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1310,7 +1310,7 @@ pub fn teachers_pest() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -1521,7 +1521,7 @@ pub fn hardened_academic() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
@@ -1832,7 +1832,7 @@ pub fn charging_strifeknight() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2407,7 +2407,7 @@ pub fn eternal_student() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: true, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2464,7 +2464,7 @@ pub fn postmortem_professor() -> CardDefinition {
                 1,
             )),
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -2741,7 +2741,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![increment_self_plus_one()],
         ..Default::default()
@@ -2857,7 +2857,7 @@ pub fn sundering_archaic() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2970,7 +2970,7 @@ pub fn hydro_channeler() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -2990,7 +2990,7 @@ pub fn hydro_channeler() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             },
         ],
         triggered_abilities: vec![],
@@ -3085,7 +3085,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
@@ -4106,7 +4106,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![
             // Increment (push XVII): "Whenever you cast a spell, if the
@@ -4420,7 +4420,7 @@ pub fn rubble_rouser() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: Some((SelectionRequirement::Any, 1)),
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4838,7 +4838,7 @@ pub fn stone_docent() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: true, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -4921,7 +4921,7 @@ pub fn page_loose_leaf() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None,
+                tap_other_filter: None, from_hand: false,
             },
         ],
         triggered_abilities: vec![],
@@ -5231,7 +5231,7 @@ pub fn nita_forum_conciliator() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you cast a spell you don't own, put a +1/+1

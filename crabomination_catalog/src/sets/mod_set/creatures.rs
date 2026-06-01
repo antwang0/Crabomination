@@ -310,7 +310,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -449,7 +449,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -580,7 +580,7 @@ pub fn cathar_commando() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -625,7 +625,7 @@ pub fn haywire_mite() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -827,7 +827,7 @@ pub fn bloodtithe_harvester() -> CardDefinition {
                 SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
                 1,
             )),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![blood_etb, blood_attack],
         ..Default::default()
@@ -988,7 +988,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
                     .and(SelectionRequirement::HasLandType(LandType::Forest)),
                 1,
             )),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1040,7 +1040,7 @@ pub fn grim_lavamancer() -> CardDefinition {
             // Additional cost: exile two cards from your graveyard.
             exile_other_filter: Some((SelectionRequirement::Any, 2)),
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1802,6 +1802,8 @@ pub fn mockingbird() -> CardDefinition {
 /// zone (tracked in TODO.md).
 pub fn simian_spirit_guide() -> CardDefinition {
     use crate::card::CreatureType as CT;
+    use crate::effect::shortcut::add_mana;
+    use crate::mana::Color;
     CardDefinition {
         name: "Simian Spirit Guide",
         cost: cost(&[generic(2), r()]),
@@ -1812,9 +1814,13 @@ pub fn simian_spirit_guide() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
+        // Exile this card from your hand: Add {R}.
+        activated_abilities: vec![ActivatedAbility {
+            effect: add_mana(vec![Color::Red]),
+            from_hand: true,
+            exile_self_cost: true,
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -1883,7 +1889,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you gain life, put a +1/+1 counter on target
@@ -3119,7 +3125,7 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
             tap_cost: false,
             mana_cost: ManaCost::default(),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             effect: Effect::Seq(vec![
                 Effect::Tap {
                     what: target_filtered(SelectionRequirement::Permanent),
@@ -3954,7 +3960,7 @@ pub fn prodigal_pyromancer() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         ..Default::default()
     }
@@ -4009,7 +4015,7 @@ pub fn spore_frog() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         ..Default::default()
     }

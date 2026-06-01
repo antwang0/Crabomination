@@ -707,7 +707,7 @@ impl GameState {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None,
+                tap_other_filter: None, from_hand: false,
             });
             std::sync::Arc::make_mut(&mut card.definition).activated_abilities = kept;
         }
@@ -3494,27 +3494,41 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
-        // Source zone: battlefield by default, or the controller's graveyard
-        // when the ability is flagged `from_graveyard`. We scan battlefield
-        // first; if missing, fall back to graveyards (any player's; we
-        // verify ownership/controller match below).
-        let (source_in_gy, source_owner) = {
+        // Source zone: battlefield by default, the controller's graveyard
+        // when the ability is flagged `from_graveyard`, or the controller's
+        // hand when flagged `from_hand` (Spirit Guides' exile-to-pitch mana
+        // abilities). We scan battlefield first; if missing, fall back to
+        // graveyards then hands (any player's; ownership is verified below).
+        let (source_in_gy, source_in_hand, source_owner) = {
             let on_bf = self.battlefield.iter().any(|c| c.id == card_id);
             if on_bf {
-                (false, None)
+                (false, false, None)
+            } else if let Some(o) = self
+                .players
+                .iter()
+                .position(|pl| pl.graveyard.iter().any(|c| c.id == card_id))
+            {
+                (true, false, Some(o))
+            } else if let Some(o) = self
+                .players
+                .iter()
+                .position(|pl| pl.hand.iter().any(|c| c.id == card_id))
+            {
+                (false, true, Some(o))
             } else {
-                let owner = self.players.iter().position(|pl|
-                    pl.graveyard.iter().any(|c| c.id == card_id));
-                match owner {
-                    Some(o) => (true, Some(o)),
-                    None => return Err(GameError::CardNotOnBattlefield(card_id)),
-                }
+                return Err(GameError::CardNotOnBattlefield(card_id));
             }
         };
 
         let ability: crate::effect::ActivatedAbility = if source_in_gy {
             let owner = source_owner.unwrap();
             self.players[owner].graveyard.iter()
+                .find(|c| c.id == card_id)
+                .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
+                .ok_or(GameError::AbilityIndexOutOfBounds)?
+        } else if source_in_hand {
+            let owner = source_owner.unwrap();
+            self.players[owner].hand.iter()
                 .find(|c| c.id == card_id)
                 .and_then(|c| c.definition.activated_abilities.get(ability_index).cloned())
                 .ok_or(GameError::AbilityIndexOutOfBounds)?
@@ -3567,15 +3581,18 @@ impl GameState {
             }
         };
 
-        // For graveyard activations, reject if the ability isn't flagged
-        // `from_graveyard`. This prevents activating a card's printed
-        // battlefield-only ability from the graveyard accidentally.
+        // For graveyard/hand activations, reject if the ability isn't flagged
+        // for that zone. This prevents activating a card's printed
+        // battlefield-only ability from another zone accidentally.
         if source_in_gy && !ability.from_graveyard {
             return Err(GameError::CardNotOnBattlefield(card_id));
         }
+        if source_in_hand && !ability.from_hand {
+            return Err(GameError::CardNotOnBattlefield(card_id));
+        }
 
-        // Only the controller (or graveyard owner) can activate abilities.
-        if source_in_gy {
+        // Only the controller (or graveyard/hand owner) can activate abilities.
+        if source_in_gy || source_in_hand {
             if source_owner != Some(p) {
                 return Err(GameError::NotYourPriority);
             }
@@ -3612,7 +3629,7 @@ impl GameState {
         // payments / illegal targets don't burn the per-turn budget.
         // (Graveyard activations don't track per-card once-per-turn state
         // since the card may move between zones; the gate is no-op.)
-        if !source_in_gy && ability.once_per_turn {
+        if !source_in_gy && !source_in_hand && ability.once_per_turn {
             let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
             if self.battlefield[pos].once_per_turn_used.contains(&ability_index) {
                 return Err(GameError::AbilityAlreadyUsedThisTurn);
@@ -3797,7 +3814,7 @@ impl GameState {
         // a permanent), so we reject any `tap_cost: true` ability from a
         // graveyard source as a guard against malformed card definitions.
         if ability.tap_cost {
-            if source_in_gy {
+            if source_in_gy || source_in_hand {
                 return Err(GameError::CardIsTapped(card_id));
             }
             let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
@@ -3995,6 +4012,22 @@ impl GameState {
                 events.push(GameEvent::CardLeftGraveyard { player: owner, card_id });
                 self.players[owner].cards_left_graveyard_this_turn = self.players[owner]
                     .cards_left_graveyard_this_turn
+                    .saturating_add(1);
+            }
+        }
+
+        // Exile-self-as-cost (hand activations): the "Exile this card from
+        // your hand:" cost line of the Spirit Guides. Exile happens after
+        // the (typically empty) mana cost is paid, before the mana ability
+        // resolves.
+        if ability.exile_self_cost && source_in_hand {
+            let owner = source_owner.unwrap();
+            if let Some(idx) = self.players[owner].hand.iter().position(|c| c.id == card_id) {
+                let mut card = self.players[owner].hand.remove(idx);
+                card.controller = owner;
+                self.exile.push(card);
+                self.players[owner].cards_exiled_this_turn = self.players[owner]
+                    .cards_exiled_this_turn
                     .saturating_add(1);
             }
         }

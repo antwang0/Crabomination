@@ -339,7 +339,7 @@ pub fn witherbloom_bonesplitter_b123() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1716,7 +1716,7 @@ pub fn opposition() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
-            tap_other_filter: Some(SelectionRequirement::Creature),
+            tap_other_filter: Some(SelectionRequirement::Creature), from_hand: false,
             effect: Effect::Tap {
                 what: target_filtered(
                     SelectionRequirement::Artifact

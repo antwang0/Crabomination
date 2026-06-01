@@ -68,7 +68,6 @@ work is listed below.
 | Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves + "whenever a Dwarf you control becomes tapped, create a Treasure" (via the new `EventKind::Tapped` + CR 508.1f attack-tap event). Only the five-Treasure-sacrifice Dragon/artifact tutor is omitted. |
 | Robber of the Rich | 🟡 | 2/2 Reach + Haste body. The attack-trigger exile + cast-from-opponent's-library clause is omitted. |
 | Detective's Phoenix | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{R} 2/2 Phoenix with Flying + Haste. Dies trigger schedules a `DelayUntil(NextEndStep)` body that returns Self to its owner's hand. Approximation of the printed "return from gy at end step if you control a Detective" — the conditional gate is collapsed (always returns). Test: `detectives_phoenix_dies_schedules_delayed_return`. |
-| Simian Spirit Guide | 🟡 | `{2}{R}` 2/2 Ape Spirit. Body wired; the alt-cost "exile from hand to add {R}" half is still ⏳ — the existing `AlternativeCost` path replaces the entire spell's resolution, so an alt-cost mana ability would need a new "alt cast = mana ability" mode. Available in any red pool. |
 | Goldspan Dragon | 🟡 | 4/4 Flying Haste; attack-trigger Treasure (using the now-functional Treasure mana ability). "Becomes target of a spell" trigger and the Treasure-2-mana static rider are omitted. |
 | Chaos Warp | 🟡 | {2}{R} Instant. `Move(target Permanent → Library(OwnerOf, Shuffled))` — the new `LibraryPosition::Shuffled` engine path actually reshuffles the library. The "reveal top, cast if permanent" half is collapsed (info-only without a cast-from-top pipeline). Test: `chaos_warp_sends_target_permanent_to_owners_library`. |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
@@ -79,7 +78,6 @@ work is listed below.
 |---|---|---|
 | Collector Ouphe | 🟡 | 2/2 Ouphe body. Artifact-ability-lock static omitted. |
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
-| Elvish Spirit Guide | 🟡 | {2}{G} 2/2 Elf Spirit body wired. The "exile from hand: add {G}" alt-mana ability needs a hand-activated-ability primitive (`activate_ability` only walks the battlefield today); promote to ✅ once that lands. Test: `elvish_spirit_guide_is_a_two_two_elf_spirit`. |
 | Enduring Vitality | ⏳ | Roomba-style return on death + creature mana untap. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mossborn Hydra | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {X}{G} 0/0 Hydra. Enters with X +1/+1 counters via `enters_with_counters: Some((PlusOnePlusOne, XFromCost))`. The "double counters if X ≥ 4" rider is collapsed (no counter-multiplier-on-cast primitive). Test: `mossborn_hydra_enters_with_x_counters`. |

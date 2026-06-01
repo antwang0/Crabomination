@@ -110,7 +110,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -257,7 +257,7 @@ pub fn birds_of_paradise() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -357,7 +357,7 @@ pub fn samite_healer() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         ..Default::default()
     }

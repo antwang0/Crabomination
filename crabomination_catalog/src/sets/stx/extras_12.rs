@@ -1364,7 +1364,7 @@ pub fn witherbloom_cultivator_b120() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             effect: drain(1),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1456,7 +1456,7 @@ pub fn pest_cultmaster_b121() -> CardDefinition {
                 amount: Value::Const(1),
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1506,7 +1506,7 @@ pub fn witherbloom_sapdrinker_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1555,7 +1555,7 @@ pub fn witherbloom_bonechanter_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1599,7 +1599,7 @@ pub fn pest_ringleader_b121() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: drain(2),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1649,7 +1649,7 @@ pub fn witherbloom_reaper_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1709,7 +1709,7 @@ pub fn pest_cultcaller_b122() -> CardDefinition {
             mana_cost: cost(&[b()]),
             effect: drain(1),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -1812,7 +1812,7 @@ pub fn witherbloom_composter_b122() -> CardDefinition {
                 },
             ]),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            tap_other_filter: None,
+            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
         triggered_abilities: vec![],

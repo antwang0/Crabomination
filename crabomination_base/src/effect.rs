@@ -3168,6 +3168,17 @@ pub struct ActivatedAbility {
     /// when nothing matches. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub tap_other_filter: Option<SelectionRequirement>,
+    /// True if this ability is activated from the controller's hand
+    /// rather than the battlefield. The activation walker searches the
+    /// hand for the source instead of the battlefield. Pairs with
+    /// `exile_self_cost: true` for the "Exile this card from your hand:"
+    /// cost line — the pitch mana abilities of Elvish Spirit Guide
+    /// (`Exile this from your hand: Add {G}.`) and Simian Spirit Guide
+    /// (`… Add {R}.`). Tap costs are illegal from hand and rejected.
+    ///
+    /// Defaults to false via `#[serde(default)]`.
+    #[serde(default)]
+    pub from_hand: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
