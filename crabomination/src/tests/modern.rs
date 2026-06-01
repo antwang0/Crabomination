@@ -16927,6 +16927,26 @@ fn golgari_grave_troll_enters_with_x_plus_one_counters() {
 }
 
 #[test]
+fn golgari_grave_troll_removes_four_counters_to_regenerate() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let troll = g.add_card_to_battlefield(0, catalog::golgari_grave_troll());
+    // Seed five +1/+1 counters (enters_with_counters is bypassed for a
+    // battlefield-placed card, so add them directly).
+    if let Some(c) = g.battlefield_find_mut(troll) {
+        c.add_counters(CounterType::PlusOnePlusOne, 5);
+    }
+    g.clear_sickness(troll);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: troll, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate ability activatable with 5 counters");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(troll).expect("troll still here");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "four counters removed");
+    assert_eq!(c.regeneration_shields, 1, "gained a regeneration shield");
+}
+
+#[test]
 fn rancor_buffs_plus_two_zero_and_grants_trample() {
     let mut g = two_player_game();
     let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());

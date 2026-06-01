@@ -9494,6 +9494,8 @@ pub fn golgari_brownscale() -> CardDefinition {
 /// regenerate" ability is omitted (tracked in TODO.md); the X-body +
 /// Dredge 6 ship.
 pub fn golgari_grave_troll() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::Predicate;
     CardDefinition {
         name: "Golgari Grave-Troll",
         cost: cost(&[generic(0), b(), b()]),
@@ -9505,7 +9507,27 @@ pub fn golgari_grave_troll() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Dredge(6)],
-        enters_with_counters: Some((crate::card::CounterType::PlusOnePlusOne, Value::XFromCost)),
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        // {T}, Remove four +1/+1 counters: Regenerate this creature.
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                Value::Const(4),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(4),
+                },
+                Effect::Regenerate { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
