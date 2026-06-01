@@ -59,10 +59,18 @@ pub fn init_shared_assets(
         cull_mode: None,
         ..default()
     });
+    // Red "will die in combat" border.
+    let dying_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.95, 0.12, 0.12),
+        unlit: true,
+        cull_mode: None,
+        ..default()
+    });
     commands.insert_resource(CardHighlightAssets {
         border_mesh: border_mesh_handle,
         border_material,
         castable_material,
+        dying_material,
     });
     commands.insert_resource(CardMeshAssets {
         card_mesh: card_mesh_handle.clone(),

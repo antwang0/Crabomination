@@ -15,8 +15,9 @@ pub use buttons::{
     update_attack_button_label, update_pass_button,
 };
 pub use player_stats::{
-    sync_player_hud_seat, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
-    update_player_chip_target_outline, update_player_stats_chips,
+    animate_life_flash, sync_player_hud_seat, trigger_life_flash, update_mana_pips,
+    update_opponent_panel_tint, update_opponent_stats_rows, update_player_chip_target_outline,
+    update_player_stats_chips, LifeFlashTracker,
 };
 pub use popups::{
     handle_ability_menu, handle_alt_cast_buttons, spawn_ability_menu, spawn_alt_cast_modal,

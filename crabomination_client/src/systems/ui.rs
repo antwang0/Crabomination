@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use crate::card::{
-    Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
-    CastableHighlight, DeckCard, DeckPile, GameCardId, GraveyardPile, HandCard, PileHovered,
-    CARD_THICKNESS,
+    BattlefieldCard, Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
+    CastableHighlight, DeckCard, DeckPile, DyingHighlight, GameCardId, GraveyardPile, HandCard,
+    PileHovered, CARD_THICKNESS,
 };
 use crate::game::GraveyardBrowserState;
 use crate::net_plugin::CurrentView;
@@ -166,6 +166,78 @@ pub fn update_castable_highlights(
                 commands.entity(h.back).despawn();
                 commands.entity(h.front).despawn();
                 commands.entity(entity).remove::<CastableHighlight>();
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Spawn / despawn a red "will die in combat" border around each
+/// battlefield creature in the view's `combat_preview.dying_creatures`
+/// set. The engine computes that set from the *current* attacker/blocker
+/// assignment, so the markers update live as the player declares attacks
+/// and blocks — letting them read every projected trade at a glance
+/// before committing. Mirrors `update_castable_highlights`.
+#[allow(clippy::type_complexity)]
+pub fn update_dying_highlights(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    highlight_assets: Option<Res<CardHighlightAssets>>,
+    bf_cards: Query<(Entity, &GameCardId, Option<&DyingHighlight>), With<BattlefieldCard>>,
+    // A creature that actually dies keeps its entity while it animates to
+    // the graveyard (BattlefieldCard is removed, not despawned — see
+    // `sync_game_visuals`), so strip the border from anything that left
+    // the battlefield still wearing it.
+    left_bf: Query<(Entity, &DyingHighlight), Without<BattlefieldCard>>,
+) {
+    let Some(assets) = highlight_assets else { return };
+
+    for (entity, h) in &left_bf {
+        commands.entity(h.back).despawn();
+        commands.entity(h.front).despawn();
+        commands.entity(entity).remove::<DyingHighlight>();
+    }
+
+    let dying: std::collections::HashSet<crabomination::card::CardId> = view
+        .0
+        .as_ref()
+        .and_then(|cv| cv.combat_preview.as_ref())
+        .map(|cp| cp.dying_creatures.iter().copied().collect())
+        .unwrap_or_default();
+
+    for (entity, gid, marker) in &bf_cards {
+        let should = dying.contains(&gid.0);
+        match (should, marker) {
+            (true, None) => {
+                // Offset between the hover gold (0.001) and castable green
+                // (0.0018) borders so a doomed, hovered creature shows all
+                // its rings without z-fighting.
+                let offset = CARD_THICKNESS / 2.0 + 0.0015;
+                let back = commands
+                    .spawn((
+                        Mesh3d(assets.border_mesh.clone()),
+                        MeshMaterial3d(assets.dying_material.clone()),
+                        Transform::from_xyz(0.0, 0.0, -offset),
+                        Pickable::IGNORE,
+                    ))
+                    .id();
+                let front = commands
+                    .spawn((
+                        Mesh3d(assets.border_mesh.clone()),
+                        MeshMaterial3d(assets.dying_material.clone()),
+                        Transform::from_xyz(0.0, 0.0, offset),
+                        Pickable::IGNORE,
+                    ))
+                    .id();
+                commands
+                    .entity(entity)
+                    .insert(DyingHighlight { back, front })
+                    .add_children(&[back, front]);
+            }
+            (false, Some(h)) => {
+                commands.entity(h.back).despawn();
+                commands.entity(h.front).despawn();
+                commands.entity(entity).remove::<DyingHighlight>();
             }
             _ => {}
         }

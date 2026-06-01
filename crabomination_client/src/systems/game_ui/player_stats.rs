@@ -13,7 +13,8 @@ use crate::systems::kb_cursor::{KbSelection, KeyboardCursor};
 use crate::theme::{self, UiFonts};
 
 use super::{
-    ManaPipRow, OpponentStatsContainer, OpponentStatusPanel, PlayerHudPanel, PlayerStatsRow,
+    InGameRoot, ManaPipRow, OpponentStatsContainer, OpponentStatusPanel, PlayerHudPanel,
+    PlayerStatsRow,
 };
 
 // ── Stat chips ───────────────────────────────────────────────────────────────
@@ -612,4 +613,122 @@ pub fn update_opponent_stats_rows(
             });
         }
     });
+}
+
+// ── Life-change flash ─────────────────────────────────────────────────────────
+
+/// Tracks each seat's last-seen life so [`trigger_life_flash`] fires a
+/// floating delta only on an actual change. Primes silently on the first
+/// view so connecting mid-game doesn't flash the starting totals.
+#[derive(Resource, Default)]
+pub struct LifeFlashTracker {
+    last: std::collections::HashMap<usize, i32>,
+    primed: bool,
+}
+
+/// A floating "+N" / "−N" life-change numeral that rises and fades next to
+/// a player's HUD corner. Driven by [`animate_life_flash`].
+#[derive(Component)]
+pub struct LifeFlash {
+    remaining: f32,
+    total: f32,
+    /// Spawn-time `top` in px; the numeral rises from here as it fades.
+    base_top: f32,
+}
+
+const LIFE_FLASH_SECS: f32 = 1.3;
+/// How far (px) the numeral floats upward over its lifetime.
+const LIFE_FLASH_RISE: f32 = 30.0;
+
+/// Spawn a floating life-delta numeral whenever a player's life total
+/// changes between views — restoring the change feedback that the removed
+/// 3-D life crest used to give, as a 2-D element anchored to each seat's
+/// HUD corner (viewer top-left, opponents stacked top-right).
+pub fn trigger_life_flash(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    mut tracker: ResMut<LifeFlashTracker>,
+    ui_fonts: Res<UiFonts>,
+) {
+    if !view.is_changed() {
+        return;
+    }
+    let Some(cv) = &view.0 else { return };
+
+    // Opponent ordering, for vertical stagger in the top-right strip.
+    let mut opponents: Vec<usize> =
+        cv.players.iter().map(|p| p.seat).filter(|s| *s != cv.your_seat).collect();
+    opponents.sort_unstable();
+
+    let was_primed = tracker.primed;
+    let mut deltas: Vec<(usize, i32)> = Vec::new();
+    for p in &cv.players {
+        let prev = tracker.last.insert(p.seat, p.life);
+        if was_primed && prev.is_some_and(|prev| prev != p.life) {
+            deltas.push((p.seat, p.life - prev.unwrap()));
+        }
+    }
+    tracker.primed = true;
+
+    for (seat, delta) in deltas {
+        let (text, color) = if delta < 0 {
+            (format!("{delta}"), theme::TEXT_DANGER)
+        } else {
+            (format!("+{delta}"), theme::TEXT_GOOD)
+        };
+        let base_top = if seat == cv.your_seat {
+            36.0
+        } else {
+            let idx = opponents.iter().position(|s| *s == seat).unwrap_or(0);
+            36.0 + idx as f32 * 52.0
+        };
+        let mut node = Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(base_top),
+            ..default()
+        };
+        // Anchor just outside the seat's corner panel.
+        if seat == cv.your_seat {
+            node.left = Val::Px(276.0);
+        } else {
+            node.right = Val::Px(286.0);
+        }
+        commands
+            .spawn((
+                node,
+                Pickable::IGNORE,
+                InGameRoot,
+                LifeFlash { remaining: LIFE_FLASH_SECS, total: LIFE_FLASH_SECS, base_top },
+            ))
+            .with_children(|p| {
+                p.spawn((Text::new(text), ui_fonts.tf(30.0), TextColor(color), Pickable::IGNORE));
+            });
+    }
+}
+
+/// Float each life-flash numeral upward and fade it out, despawning when
+/// elapsed.
+pub fn animate_life_flash(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut flashes: Query<(Entity, &mut LifeFlash, &mut Node, &Children)>,
+    mut texts: Query<&mut TextColor>,
+) {
+    for (entity, mut flash, mut node, children) in &mut flashes {
+        flash.remaining -= time.delta_secs();
+        if flash.remaining <= 0.0 {
+            commands.entity(entity).despawn();
+            continue;
+        }
+        let frac = (flash.remaining / flash.total).clamp(0.0, 1.0); // 1 → 0
+        node.top = Val::Px(flash.base_top - (1.0 - frac) * LIFE_FLASH_RISE);
+        // Hold full opacity, then ease out over the final 60%.
+        let alpha = (frac / 0.6).min(1.0);
+        for child in children.iter() {
+            if let Ok(mut tc) = texts.get_mut(child) {
+                let c = tc.0.to_srgba();
+                tc.0 = Color::srgba(c.red, c.green, c.blue, alpha);
+            }
+        }
+    }
 }

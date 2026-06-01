@@ -377,6 +377,10 @@ pub struct CardHighlightAssets {
     /// the gold `border_material` (hover / valid-target / put-on-library)
     /// so a castable card reads differently from a targeting candidate.
     pub castable_material: Handle<StandardMaterial>,
+    /// Red border for battlefield creatures the current combat preview
+    /// projects to die. Distinct from gold/green so a doomed creature
+    /// reads as a warning, not a candidate.
+    pub dying_material: Handle<StandardMaterial>,
 }
 
 /// Links a viewer hand card to its spawned "castable now" green border
@@ -385,6 +389,15 @@ pub struct CardHighlightAssets {
 /// than by pointer hover.
 #[derive(Component)]
 pub struct CastableHighlight {
+    pub back: Entity,
+    pub front: Entity,
+}
+
+/// Links a battlefield card to its spawned red "will die in combat" border
+/// meshes (back, front). Driven by `update_dying_highlights` off the
+/// view's `combat_preview.dying_creatures` set.
+#[derive(Component)]
+pub struct DyingHighlight {
     pub back: Entity,
     pub front: Entity,
 }

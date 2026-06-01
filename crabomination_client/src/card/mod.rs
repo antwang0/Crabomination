@@ -7,7 +7,7 @@ pub mod spawn;
 pub use components::{
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CastableHighlight,
-    CombatLurch,
+    CombatLurch, DyingHighlight,
     CommandZoneCard, DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, FlippedFace,
     FrontFaceMesh, GameCardId, GraveyardPile, HandCard, HandSlideAnimation, HandZoom,
     MdfcFlipAnimation, OpponentHandCard, PileHovered, PlayCardAnimation,

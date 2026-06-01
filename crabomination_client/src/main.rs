@@ -52,6 +52,7 @@ use systems::game_ui::{
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
     update_attack_button_label,
     animate_phase_banner, trigger_phase_banner, PhaseBannerTracker,
+    animate_life_flash, trigger_life_flash, LifeFlashTracker,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
     update_player_stats_chips, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
@@ -68,8 +69,8 @@ use systems::quality::{
 };
 use systems::ui::{
     graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards,
-    toggle_shortcut_help, update_castable_highlights, peek_popup, pile_tooltip, reveal_popup,
-    RevealPopupState,
+    toggle_shortcut_help, update_castable_highlights, update_dying_highlights, peek_popup,
+    pile_tooltip, reveal_popup, RevealPopupState,
 };
 use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_learn_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, DecisionUiState};
 
@@ -223,6 +224,7 @@ fn main() {
         .add_message::<ChangeQuality>()
         .insert_resource(GameLog::default())
         .insert_resource(PhaseBannerTracker::default())
+        .insert_resource(LifeFlashTracker::default())
         .insert_resource(FastForward::default())
         .insert_resource(TargetingState::default())
         .insert_resource(game::LegalTargets::default())
@@ -418,9 +420,12 @@ fn main() {
             (
                 draw_attack_plan_gizmos,
                 update_castable_highlights,
+                update_dying_highlights,
                 toggle_shortcut_help,
                 trigger_phase_banner,
                 animate_phase_banner,
+                trigger_life_flash,
+                animate_life_flash,
             )
                 .run_if(in_state(AppState::InGame)),
         )
