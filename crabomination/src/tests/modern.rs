@@ -8319,6 +8319,21 @@ fn hieroglyphic_illumination_draws_two_cards() {
 }
 
 #[test]
+fn hieroglyphic_illumination_cycles_for_blue() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::hieroglyphic_illumination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: id })
+        .expect("Cycling {U}");
+    // Discarded the card (-1) + drew (+1) → net even; card is in graveyard.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "cycled card goes to the graveyard");
+}
+
+#[test]
 fn mortify_destroys_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

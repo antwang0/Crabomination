@@ -4720,16 +4720,14 @@ pub fn bone_splinters() -> CardDefinition {
     }
 }
 
-/// Hieroglyphic Illumination — {2}{U} Instant. Draw two cards.
-///
-/// The cycling half ({U}: discard, draw 1) is omitted (no Cycling
-/// activation primitive yet). The full-cost cast — instant-speed Divination
-/// — is the gameplay-relevant default.
+/// Hieroglyphic Illumination — {3}{U} Instant. Draw two cards.
+/// Cycling {U} (`Keyword::Cycling`).
 pub fn hieroglyphic_illumination() -> CardDefinition {
     CardDefinition {
         name: "Hieroglyphic Illumination",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[u()]))],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
         ..Default::default()
     }
