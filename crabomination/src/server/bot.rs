@@ -752,8 +752,18 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             } else if kills_attacker && dies_to_attacker {
                 500 + *a_pow
             } else if life_threatened {
-                // Chump-block to stop lethal damage.
-                100 + *a_pow
+                // Chump-block to stop lethal damage. A trampler tramples
+                // over a chump (CR 702.19e), so a lone chump only stops
+                // `blocker_toughness` of its damage — score by the actual
+                // damage saved so the bot prefers fully blocking a
+                // non-trampler over partially blocking a trampler.
+                let a_trample = state
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == *a_id)
+                    .is_some_and(|a| a.has_keyword(&Keyword::Trample));
+                let saved = if a_trample { b_tough.min(*a_pow) } else { *a_pow };
+                100 + saved
             } else {
                 continue;
             };
@@ -1233,6 +1243,38 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never produced a CastSpell action");
+    }
+
+    /// When forced to chump (life threatened, no clean kill), the bot
+    /// prefers fully blocking a non-trampler over a trampler — a chump
+    /// against a trampler only stops `blocker_toughness` of its damage
+    /// (CR 702.19e). Push (claude/modern_decks).
+    #[test]
+    fn bot_chumps_non_trampler_over_trampler_when_threatened() {
+        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::game::types::{Attack, AttackTarget};
+        fn beater(name: &'static str, kws: Vec<Keyword>) -> CardDefinition {
+            CardDefinition {
+                name, card_types: vec![CardType::Creature], subtypes: Subtypes::default(),
+                power: 4, toughness: 4, keywords: kws, ..Default::default()
+            }
+        }
+        let mut g = two_player_game();
+        let vanilla = g.add_card_to_battlefield(0, beater("Brute", vec![]));
+        let trampler = g.add_card_to_battlefield(0, beater("Stomper", vec![Keyword::Trample]));
+        // One 0/3 wall that can't kill either — only a chump is possible.
+        let wall = g.add_card_to_battlefield(1, beater("Wall", vec![]));
+        if let Some(w) = g.battlefield_find_mut(wall) { w.definition = std::sync::Arc::new(
+            CardDefinition { name: "Wall", card_types: vec![CardType::Creature],
+                power: 0, toughness: 3, ..Default::default() }); }
+        g.players[1].life = 3; // 8 incoming ≫ 3 → life threatened
+        g.attacking = vec![
+            Attack { attacker: vanilla, target: AttackTarget::Player(1) },
+            Attack { attacker: trampler, target: AttackTarget::Player(1) },
+        ];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(wall, vanilla)],
+            "chump the non-trampler (saves 4) over the trampler (saves only 3)");
     }
 
     /// Color-choice mana abilities (Ornithopter of Paradise's `{T}: Add one

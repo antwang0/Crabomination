@@ -186,6 +186,21 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         kw_strs.sort();
         kw_strs.dedup();
         lines.push(kw_strs.join(", "));
+        // Reminder text for the evergreen keywords on this permanent — one
+        // dim line per keyword that has reminder text, deduped, so newer
+        // players don't have to look up what "Deathtouch" or "Trample"
+        // does. (Roadmap Tier 8 — reminder-text tooltips.)
+        let mut reminders: Vec<String> = p
+            .keywords
+            .iter()
+            .filter_map(keyword_reminder)
+            .map(|r| format!("· {r}"))
+            .collect();
+        reminders.sort();
+        reminders.dedup();
+        for r in reminders {
+            lines.push(r);
+        }
     }
 
     // Activated abilities — show the cost + effect label so players
@@ -389,6 +404,34 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
 /// Render a `Keyword` as a short human string for the tooltip. Keeps
 /// the labels short ("Lifelink", "First Strike") so a card with several
 /// granted keywords doesn't blow out the tooltip line.
+/// Short reminder text for the evergreen keywords. `None` for keywords
+/// whose name is self-explanatory or that carry their own cost label
+/// (Ward, Cycling, Flashback, …), so the reminder block stays compact.
+fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
+    use crabomination::card::Keyword as K;
+    Some(match kw {
+        K::Flying => "Can only be blocked by creatures with flying or reach.",
+        K::Reach => "Can block creatures with flying.",
+        K::FirstStrike => "Deals combat damage before creatures without first strike.",
+        K::DoubleStrike => "Deals both first-strike and regular combat damage.",
+        K::Deathtouch => "Any amount of damage it deals to a creature is lethal.",
+        K::Trample => "Excess combat damage is dealt to the player or planeswalker.",
+        K::Lifelink => "Damage it deals also gains you that much life.",
+        K::Vigilance => "Doesn't tap when attacking.",
+        K::Menace => "Can only be blocked by two or more creatures.",
+        K::Defender => "Can't attack.",
+        K::Haste => "Can attack and tap the turn it comes under your control.",
+        K::Indestructible => "Can't be destroyed by damage or \"destroy\" effects.",
+        K::Hexproof => "Can't be the target of spells or abilities opponents control.",
+        K::Shroud => "Can't be the target of any spells or abilities.",
+        K::Infect => "Damages creatures with -1/-1 counters and players with poison.",
+        K::Wither => "Damages creatures as -1/-1 counters instead.",
+        K::Persist => "Returns with a -1/-1 counter when it dies (if it had none).",
+        K::Undying => "Returns with a +1/+1 counter when it dies (if it had none).",
+        _ => return None,
+    })
+}
+
 fn keyword_label(kw: &crabomination::card::Keyword) -> String {
     use crabomination::card::Keyword as K;
     use crabomination::mana::Color;
@@ -442,6 +485,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBlock => "Can't block".into(),
         K::CantAttack => "Can't attack".into(),
         K::AttacksAlone => "Attacks only alone".into(),
+        K::DealsNoCombatDamage => "Deals no combat damage".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
         K::Skulk => "Skulk".into(),
         K::Fear => "Fear".into(),
