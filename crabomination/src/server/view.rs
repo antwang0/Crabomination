@@ -363,6 +363,8 @@ fn project_permanent(
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
         has_prevention_shield,
+        goaded: !card.goaded_by.is_empty(),
+        monstrous: card.monstrous,
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
@@ -991,6 +993,19 @@ mod tests {
         assert!(!v.players[1].has_prevention_shield, "P1 is not");
         assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().has_prevention_shield);
         assert!(v.damage_cant_be_prevented_this_turn);
+    }
+
+    #[test]
+    fn goaded_and_monstrous_surface_in_the_view() {
+        let mut state = two_player_game();
+        let a = state.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let b = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        state.battlefield_find_mut(a).unwrap().goaded_by = vec![0];
+        state.battlefield_find_mut(b).unwrap().monstrous = true;
+        let v = project(&state, 0);
+        assert!(v.battlefield.iter().find(|p| p.id == a).unwrap().goaded);
+        assert!(v.battlefield.iter().find(|p| p.id == b).unwrap().monstrous);
+        assert!(!v.battlefield.iter().find(|p| p.id == a).unwrap().monstrous);
     }
 
     #[test]

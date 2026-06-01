@@ -617,6 +617,8 @@ mod tests {
             has_finality_counters: false,
             has_shield_counters: false,
             has_prevention_shield: false,
+            goaded: false,
+            monstrous: false,
             pt_modified: false,
             mana_cost_display: String::new(),
             creature_types: vec![],

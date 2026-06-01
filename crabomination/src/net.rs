@@ -494,6 +494,15 @@ pub struct PermanentView {
     /// this turn. Populated by `project_permanent`.
     #[serde(default)]
     pub has_prevention_shield: bool,
+    /// True when this creature is goaded (CR 701.38) — a UI hint so the
+    /// client can badge it as "must attack." Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub goaded: bool,
+    /// True when this permanent is monstrous (CR 701.31). Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub monstrous: bool,
     /// True when the permanent's computed power or toughness differs
     /// from its base (printed) values — a UI hint for rendering
     /// modified P/T in a distinct color. Always false for non-creatures.
