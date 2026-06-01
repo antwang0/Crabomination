@@ -1041,6 +1041,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         chandras_pyrohelix,
         // ── claude/modern_decks: Goad (CR 701.38) ──
         disrupt_decorum,
+        // ── claude/modern_decks: Monstrosity (CR 701.31) ──
+        ember_swallower,
         // ── classic core-set bodies (claude/modern_decks) ──
         gray_ogre,
         mons_goblin_raiders,
@@ -1327,6 +1329,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         merfolk_branchwalker,
         jadelight_ranger,
         wildgrowth_walker,
+        // ── claude/modern_decks: Monstrosity (CR 701.31) ──
+        nessian_wilds_ravager,
         // sentinel_of_the_nameless_city 🟡 — Ward 2 not enforced;
         // Plant subtype dropped (Merfolk Warrior Scout is preserved).
         // The ETB/attack-trigger Map token still works.

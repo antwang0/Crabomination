@@ -861,6 +861,10 @@ pub enum EventKind {
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.
     Explored,
+    /// CR 701.31 — a permanent became monstrous (Fleecemane Lion, Nessian
+    /// Wilds Ravager "when this becomes monstrous" triggers). The permanent
+    /// is the event subject; matched to `GameEvent::BecameMonstrous`.
+    BecameMonstrous,
 }
 
 /// Whose events does this trigger listen for?
@@ -1191,6 +1195,10 @@ pub enum Effect {
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },
+    /// CR 701.31 — *monstrosity N*. If the source isn't already monstrous,
+    /// put N +1/+1 counters on it and it becomes monstrous (emitting
+    /// `GameEvent::BecameMonstrous`). Once monstrous, this is a no-op.
+    Monstrosity { n: Value },
     /// CR 701.38 — *goad* each creature `what` resolves to: the resolving
     /// effect's controller is added to the creature's `goaded_by` list.
     /// Goaded creatures attack each combat if able and attack a player other
@@ -2021,6 +2029,7 @@ impl Effect {
             }
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),
+            Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
             Effect::ShuffleGraveyardIntoLibrary { who } => player_has_target(who),
@@ -3972,6 +3981,25 @@ pub mod shortcut {
     /// +1/+1 counter on the exploring permanent.
     pub fn explore() -> Effect {
         Effect::Explore { who: Selector::This }
+    }
+
+    /// CR 701.31 — "`cost`: Monstrosity `n`." A sorcery-speed activated
+    /// ability that grows the source to monstrous once.
+    pub fn monstrosity(cost: crate::mana::ManaCost, n: i32) -> ActivatedAbility {
+        ActivatedAbility {
+            mana_cost: cost,
+            effect: Effect::Monstrosity { n: Value::Const(n) },
+            sorcery_speed: true,
+            ..Default::default()
+        }
+    }
+
+    /// "When this becomes monstrous, …" trigger (CR 701.31).
+    pub fn on_becomes_monstrous(effect: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameMonstrous, EventScope::SelfSource),
+            effect,
+        }
     }
 
     /// ETB-explore: "When this creature enters, it explores." Merfolk

@@ -186,7 +186,9 @@ feature; sweep card-batch by card-batch.
   ✅ Bloodthirst (`shortcut::bloodthirst` — CR 702.54, ETB-`If` gated on
   `Predicate::PlayerDamagedThisTurn` + `Player.was_dealt_damage_this_turn`;
   Scab-Clan Mauler, Gorehorn Minotaurs, Bloodfray Giant),
-  ⏳ Monstrosity, ⏳ Devour, ⏳ Amass.
+  ✅ Monstrosity (`shortcut::monstrosity` + `Effect::Monstrosity` +
+  `CardInstance.monstrous` + `EventKind::BecameMonstrous`; Nessian Wilds
+  Ravager, Ember Swallower), ⏳ Devour, ⏳ Amass.
 - **Cast-from-elsewhere:** ⏳ cast-from-top (Mind's Desire / Amped Raptor /
   Robber of the Rich), ⏳ Suspend (+ time counters), ⏳ Forecast,
   ⏳ Hideaway, ⏳ Aftermath.

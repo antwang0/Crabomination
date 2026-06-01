@@ -9,9 +9,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 ## Follow-ups noticed (not yet done)
 
 - **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee/
-  Bloodthirst this run): **Monstrosity** needs a `monstrous` flag (or a
-  dedicated counter) to gate the once-only counter add + a "becomes monstrous"
-  event; **Devour/Amass** need sac-as-ETB and an Army token. **Melee** is a
+  Bloodthirst this run): **Monstrosity** ✅ (`CardInstance.monstrous` +
+  `Effect::Monstrosity` + `EventKind::BecameMonstrous`; Nessian Wilds Ravager,
+  Ember Swallower); **Devour/Amass** need sac-as-ETB and an Army token.
+  **Melee** is a
   flat +1/+1 — wants a per-combat attacked-opponent tally for multiplayer.
   **Renown** is gated on "no +1/+1 counters" as a renowned-once proxy; a real
   `renowned` flag would be more faithful for creatures that gain counters

@@ -1227,6 +1227,11 @@ pub struct CardInstance {
     /// majority of creatures. Round-trips through `CardInstanceWire` with a
     /// `#[serde(default)]` for snapshot back-compat.
     pub goaded_by: Vec<usize>,
+    /// CR 701.31 — true once this permanent has become monstrous. Persistent
+    /// (never cleared); gates the once-only `Effect::Monstrosity` counter add
+    /// and any "as long as ~ is monstrous" state. Round-trips through
+    /// `CardInstanceWire` with `#[serde(default)]`.
+    pub monstrous: bool,
 }
 
 impl CardInstance {
@@ -1271,6 +1276,7 @@ impl CardInstance {
             granted_alt_cast_cost_eot: None,
             named_card: None,
             goaded_by: Vec::new(),
+            monstrous: false,
         }
     }
 
@@ -1448,6 +1454,10 @@ struct CardInstanceWire {
     /// `#[serde(default)]` so older snapshots load as empty.
     #[serde(default)]
     goaded_by: Vec<usize>,
+    /// CR 701.31 monstrous flag. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    monstrous: bool,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1484,6 +1494,7 @@ impl serde::Serialize for CardInstance {
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             named_card: self.named_card.clone(),
             goaded_by: self.goaded_by.clone(),
+            monstrous: self.monstrous,
         };
         wire.serialize(ser)
     }
@@ -1520,6 +1531,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.named_card = wire.named_card;
         c.goaded_by = wire.goaded_by;
+        c.monstrous = wire.monstrous;
         Ok(c)
     }
 }

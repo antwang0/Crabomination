@@ -3124,6 +3124,62 @@ pub fn wildgrowth_walker() -> CardDefinition {
     }
 }
 
+// ── Monstrosity (CR 701.31) ─────────────────────────────────────────────────
+
+/// Nessian Wilds Ravager — {4}{G} 6/6 Hydra. {6}{G}{G}: Monstrosity 5. When
+/// it becomes monstrous, you may have it fight target creature you don't
+/// control.
+pub fn nessian_wilds_ravager() -> CardDefinition {
+    use crate::effect::shortcut::{monstrosity, on_becomes_monstrous};
+    CardDefinition {
+        name: "Nessian Wilds Ravager",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hydra],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        activated_abilities: vec![monstrosity(cost(&[generic(6), g(), g()]), 5)],
+        triggered_abilities: vec![on_becomes_monstrous(Effect::MayDo {
+            description: "have it fight target creature you don't control".into(),
+            body: Box::new(Effect::Fight {
+                attacker: Selector::This,
+                defender: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ember Swallower — {2}{R} 4/4 Elemental. {3}{R}{R}: Monstrosity 3. When it
+/// becomes monstrous, each player sacrifices three lands.
+pub fn ember_swallower() -> CardDefinition {
+    use crate::effect::shortcut::{monstrosity, on_becomes_monstrous};
+    CardDefinition {
+        name: "Ember Swallower",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![monstrosity(cost(&[generic(3), r(), r()]), 3)],
+        triggered_abilities: vec![on_becomes_monstrous(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            count: Value::Const(3),
+            filter: SelectionRequirement::Land,
+        })],
+        ..Default::default()
+    }
+}
+
 // ── Goad (CR 701.38) ────────────────────────────────────────────────────────
 
 /// Disrupt Decorum — {3}{R}{R} Sorcery. Goad all creatures you don't control.

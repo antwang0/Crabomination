@@ -547,6 +547,8 @@ pub enum GameEvent {
     /// permanent; `controller` is its controller (whose library was
     /// revealed).
     Explored { card_id: CardId, controller: usize },
+    /// CR 701.31 — a permanent became monstrous.
+    BecameMonstrous { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },

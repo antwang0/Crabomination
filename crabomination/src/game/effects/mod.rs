@@ -1149,6 +1149,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Monstrosity { n } => {
+                // CR 701.31 — if the source isn't monstrous, add N +1/+1
+                // counters and mark it monstrous (firing BecameMonstrous).
+                let count = self.evaluate_value(n, ctx).max(0) as u32;
+                let Some(src) = ctx.source else { return Ok(()); };
+                let already = self.battlefield_find(src).map(|c| c.monstrous).unwrap_or(true);
+                if already {
+                    return Ok(());
+                }
+                if let Some(c) = self.battlefield_find_mut(src) {
+                    c.monstrous = true;
+                    if count > 0 {
+                        c.add_counters(CounterType::PlusOnePlusOne, count);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: src,
+                            counter_type: CounterType::PlusOnePlusOne,
+                            count,
+                        });
+                        self.permanents_gained_counter_this_turn.insert(src);
+                    }
+                }
+                events.push(GameEvent::BecameMonstrous { card_id: src });
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::Goad { what } => {
                 // CR 701.38 — add the resolving controller to each target
                 // creature's goaded_by list. The grant expires when the

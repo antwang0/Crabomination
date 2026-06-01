@@ -20098,3 +20098,68 @@ fn goad_expires_at_goaders_next_turn() {
     assert!(g.battlefield_find(c).unwrap().goaded_by.is_empty(),
         "goad lifted once the goader's turn began");
 }
+
+// ── Monstrosity (CR 701.31) ──────────────────────────────────────────────────
+
+/// Nessian Wilds Ravager's monstrosity grows it by five +1/+1 counters and
+/// marks it monstrous.
+#[test]
+fn nessian_wilds_ravager_becomes_monstrous() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::nessian_wilds_ravager());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Monstrosity 5 activatable for {6}{G}{G}");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let r = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((r.power, r.toughness), (11, 11), "6/6 + five +1/+1 counters");
+    assert!(g.battlefield_find(id).unwrap().monstrous, "flagged monstrous");
+}
+
+/// Monstrosity is once-only (CR 701.31) — a second activation does nothing.
+#[test]
+fn monstrosity_is_once_only() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::nessian_wilds_ravager());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    g.players[0].mana_pool.add_colorless(12);
+    g.priority.player_with_priority = 0;
+    for _ in 0..2 {
+        let _ = g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, x_value: None,
+        });
+        drain_stack(&mut g);
+    }
+    let view = g.compute_battlefield();
+    let r = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((r.power, r.toughness), (11, 11), "second activation adds no more counters");
+}
+
+/// Ember Swallower's become-monstrous trigger makes each player sacrifice
+/// three lands.
+#[test]
+fn ember_swallower_monstrous_trigger_sacrifices_lands() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ember_swallower());
+    for p in 0..2 {
+        for _ in 0..3 {
+            g.add_card_to_battlefield(p, catalog::mountain());
+        }
+    }
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Monstrosity 3 activatable for {3}{R}{R}");
+    drain_stack(&mut g);
+    for p in 0..2 {
+        let lands = g.battlefield.iter()
+            .filter(|c| c.controller == p && c.definition.is_land()).count();
+        assert_eq!(lands, 0, "player {p} sacrificed all three lands");
+    }
+}
