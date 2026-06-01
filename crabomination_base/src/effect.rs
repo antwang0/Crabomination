@@ -2886,6 +2886,10 @@ pub enum StaticEffect {
     /// front-face of MDFCs (which have only one ability) and on basic
     /// lands (single-color, single-mana already).
     LandsTapColorlessOnly,
+    /// Collector Ouphe / Karn-style lock: "Activated abilities of artifacts
+    /// can't be activated unless they're mana abilities." Checked globally
+    /// in `activate_ability` (affects every player). Mana abilities pass.
+    ArtifactActivatedAbilitiesLocked,
     /// Teferi, Time Raveler-style: each opponent can cast spells only any
     /// time they could cast a sorcery. Checked at cast time on the
     /// opponent's side.

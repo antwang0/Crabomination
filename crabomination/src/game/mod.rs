@@ -4249,6 +4249,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::AdditionalCost { .. }
             | StaticEffect::ControllerHasHexproof
             | StaticEffect::LandsTapColorlessOnly
+            // ArtifactActivatedAbilitiesLocked — consulted in
+            // `activate_ability` (Collector Ouphe); no layer effect.
+            | StaticEffect::ArtifactActivatedAbilitiesLocked
             // Teferi statics — handled at cast time via dedicated checks
             // (`player_locked_to_sorcery_timing` etc.); not modeled as
             // continuous-layer modifications here.

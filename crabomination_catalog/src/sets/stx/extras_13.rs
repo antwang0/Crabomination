@@ -1639,23 +1639,13 @@ pub fn collector_ouphe() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        // "Activated abilities of artifacts can't be activated unless
+        // they're mana abilities."
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Activated abilities of artifacts can't be activated unless they're mana abilities.",
+            effect: crate::effect::StaticEffect::ArtifactActivatedAbilitiesLocked,
+        }],
+        ..Default::default()
     }
 }
 

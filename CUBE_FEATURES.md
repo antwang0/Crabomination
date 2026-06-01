@@ -76,7 +76,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Collector Ouphe | 🟡 | 2/2 Ouphe body. Artifact-ability-lock static omitted. |
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
 | Enduring Vitality | ⏳ | Roomba-style return on death + creature mana untap. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |

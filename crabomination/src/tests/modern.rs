@@ -19916,6 +19916,27 @@ fn rabid_bite_auto_targets_both_slots() {
     assert_eq!(additional, vec![Target::Permanent(theirs)], "slot 1 = opponent's creature");
 }
 
+/// Collector Ouphe locks non-mana artifact abilities (Millstone) but
+/// leaves mana abilities (Sol Ring) alone.
+#[test]
+fn collector_ouphe_locks_artifact_abilities_but_not_mana() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::collector_ouphe());
+    let mill = g.add_card_to_battlefield(0, catalog::millstone());
+    let sol = g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: mill, ability_index: 0,
+        target: Some(Target::Player(1)), x_value: None,
+    });
+    assert!(err.is_err(), "Millstone's non-mana ability is locked under Collector Ouphe: {err:?}");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sol, ability_index: 0, target: None, x_value: None,
+    }).expect("Sol Ring's mana ability still works under the lock");
+    assert!(g.players[0].mana_pool.total() >= 2, "Sol Ring added mana");
+}
+
 #[test]
 fn oust_tucks_creature_and_owner_gains_five() {
     let mut g = two_player_game();

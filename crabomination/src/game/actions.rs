@@ -3623,6 +3623,32 @@ impl GameState {
             }
         }
 
+        // Collector Ouphe / Karn lock: non-mana activated abilities of
+        // artifacts can't be activated while a `ArtifactActivatedAbilitiesLocked`
+        // static is in play (global — affects every player). A source on the
+        // battlefield is checked for its artifact type; gy/hand sources of an
+        // artifact (rare) are caught the same way.
+        if !is_mana_ability(&ability.effect) {
+            let src_is_artifact = if source_in_gy {
+                self.players[source_owner.unwrap()].graveyard.iter()
+                    .find(|c| c.id == card_id)
+                    .is_some_and(|c| c.definition.is_artifact())
+            } else if source_in_hand {
+                self.players[source_owner.unwrap()].hand.iter()
+                    .find(|c| c.id == card_id)
+                    .is_some_and(|c| c.definition.is_artifact())
+            } else {
+                self.battlefield_find(card_id).is_some_and(|c| c.definition.is_artifact())
+            };
+            if src_is_artifact
+                && self.battlefield.iter().flat_map(|c| &c.definition.static_abilities).any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::ArtifactActivatedAbilitiesLocked)
+                })
+            {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
         // Once-per-turn: reject if this ability index has already been
         // used since the most recent turn-cleanup. The ability is recorded
         // as "used" *after* successful activation below so failed mana
