@@ -7870,58 +7870,40 @@ fn coalition_relic_taps_to_add_charge_counter() {
 }
 
 #[test]
-fn coalition_relic_removes_three_charge_counters_for_wubrg() {
+fn coalition_relic_precombat_burst_removes_all_charges_for_mana() {
     use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::TurnStep;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
-    // Pre-seed three charge counters (skip the three turn cycles a real
-    // game would need to deposit them).
-    {
-        let relic = g.battlefield_find_mut(id).expect("relic on battlefield");
-        relic.add_counters(CounterType::Charge, 3);
-    }
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 2, target: None, x_value: None })
-    .expect("Coalition Relic's WUBRG burst ability");
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    // Accept the optional "remove all charges, add a mana each" trigger.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::PreCombatMain);
     drain_stack(&mut g);
-    let relic = g.battlefield_find(id).expect("relic still on battlefield");
-    assert_eq!(relic.counter_count(CounterType::Charge), 0,
-        "All three charge counters consumed by the burst");
-    assert_eq!(g.players[0].mana_pool.total(), 5,
-        "WUBRG = one mana of each of the five colors");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 0,
+        "all charge counters removed");
+    assert_eq!(g.players[0].mana_pool.total(), 4,
+        "one mana of any color per charge removed");
 }
 
 #[test]
-fn coalition_relic_wubrg_burst_rejects_activation_without_three_counters() {
-    // The activation must be rejected at the gate, not silently resolve
-    // to zero mana — the `condition: ValueAtLeast(CountersOn(Charge), 3)`
-    // on ability #2 prevents the activation from ever reaching the
-    // stack when the counter pool is empty.
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
-    let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 2, target: None, x_value: None });
-    assert!(result.is_err(),
-        "WUBRG burst rejected at activation gate without 3 charge counters");
-    assert_eq!(g.players[0].mana_pool.total(), 0,
-        "No mana produced — burst never resolved");
-}
-
-#[test]
-fn coalition_relic_wubrg_burst_rejects_with_two_charge_counters() {
-    // Boundary check: even one shy of three counters, the activation
-    // gate must reject — strict `≥ 3` semantics.
+fn coalition_relic_precombat_burst_can_be_declined() {
     use crate::card::CounterType;
+    use crate::game::types::TurnStep;
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
-    {
-        let relic = g.battlefield_find_mut(id).expect("relic on battlefield");
-        relic.add_counters(CounterType::Charge, 2);
-    }
-    let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 2, target: None, x_value: None });
-    assert!(result.is_err(),
-        "Two charge counters is one short of the gate — activation rejected");
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    // AutoDecider declines the MayDo by default.
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 2,
+        "declined — charges kept");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no mana when declined");
 }
 
 #[test]

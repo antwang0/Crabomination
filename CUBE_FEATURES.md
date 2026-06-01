@@ -110,7 +110,6 @@ work is listed below.
 | Pithing Needle | 🟡 | {1} Artifact body-only stub. Name-a-card + ability suppression static omitted. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
 | Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
-| Coalition Relic | 🟡 | {3} Artifact. `{T}: Add one mana of any color`. The charge-counter rider ("{T}: put a charge counter; remove three to add WUBRG") is omitted — no charge-to-mana-burst primitive yet. Tap-for-any-color half is fully functional. Test: `coalition_relic_taps_for_one_mana_of_any_color`. |
 | Nettlecyst | ⏳ | Living-equipment + token. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
 | Helm of the Host | ⏳ | Equipment that token-copies on attack. |
@@ -170,7 +169,6 @@ work is listed below.
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
-| Lotus Field | 🟡 | ETB tapped + Sacrifice 2 lands. `{T}: Add 3 mana of one color`. The "untapped" qualifier on the ETB sac is collapsed (Sacrifice filter doesn't expose tapped state). Tests: `lotus_field_etb_sacrifices_two_lands`, `lotus_field_taps_for_three_of_one_color`. |
 | Planar Nexus | 🟡 | Land, ETB tapped, `{T}`: Add one mana of any color — a rainbow tapland. The basic-land-type / fetch riders collapse. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
 | Talon Gates of Madara | ⏳ | TBD. |
@@ -210,7 +208,7 @@ are listed in `DECK_FEATURES.md`.
 | Split / DFC modal cards (`Wear // Tear`) | ⏳ | Wear // Tear, Sundering Eruption (sorcery side), most "// Land" DFCs in the cube. |
 | Living-weapon-on-ETB token | ⏳ | Nettlecyst, Sword-of-Body-and-Mind-adjacent. |
 | Protection-from-color (more colors) | 🟡 | Engine has `Keyword::Protection(Color)`. Cards like Stillmoon Cavalier need toggle abilities + multi-color protection. |
-| Charge counters as mana storage | 🟡 | Gemstone Mine wires charge counters + sac-on-empty. Coalition Relic, Power Depot, Pentad Prism, Chalice of the Void all reuse the same primitive. |
+| Charge counters as mana storage | 🟡 | Gemstone Mine wires charge counters + sac-on-empty. Coalition Relic now does the faithful precombat-main "remove all charges → 1 mana of any color each" burst (`MayDo` + `AddMana(AnyColors(CountersOn))` + `RemoveCounter(CountersOn)`). Power Depot, Pentad Prism, Chalice of the Void reuse the same charge primitive. |
 
 ## Plan
 

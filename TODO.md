@@ -1138,9 +1138,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `stack.rs:362+` AFTER the card is pushed onto bf but BEFORE the
   next SBA pass, so printed 0/0 bodies — Pterafractyl, Symmathematics,
   Quandrix Calligrapher — survive ETB).
-  (p) **122.7** — ⏳ (no
-  threshold-counter trigger; the engine emits one CounterAdded per
-  add operation, but no "you went from 4 → 5 counters" notification).
+  (p) **122.7** — ✅ (push claude/modern_decks: an "Nth counter"
+  threshold trigger is expressible with the existing
+  `EventKind::CounterAdded` trigger + an intervening-`if` (CR 603.4)
+  on `Value::CountersOn(This, kind)` — the trigger fires on every
+  counter add but the body only runs when the total hits the
+  threshold. No dedicated "went from 4 → 5" event is needed. Test:
+  `cr_122_7_nth_counter_threshold_trigger`).
   (q) **122.8** dies-with-counters → counters move to replacement —
   ✅ (counters persist on zone-out, so the Felisa pattern + Ambitious
   Augmenter "creature dies with counters → Fractal token with same
@@ -1157,9 +1161,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `cr_122_6_etb_with_counters_doesnt_die_to_zero_toughness_sba`
   (122.6/a counters-applied-before-SBA: Fractal Caller's 0/0 token
   ETBs with 2 +1/+1 counters via `etb_mint_token_with_counters` and
-  survives the 0-toughness SBA). Promote to ✅ when 122.1b (keyword
-  counters), 122.4 (cap), 122.5 (general move), and 122.7 (Nth-counter
-  threshold trigger) all land.
+  survives the 0-toughness SBA). 122.1b (keyword counters), 122.4
+  (cap), 122.5 (general move) and 122.7 (Nth-counter threshold) are all
+  wired now; remaining gaps before ✅ are 122.1g (defense counters /
+  Battle type), 122.1i (rad counters), and 122.2-strict counter
+  clearing on zone change.
 
 - ✅ **CR 405 — Stack**
 
@@ -1583,11 +1589,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   counters on each creature you control"), Symmathematics Magecraft
   ("double the number of +1/+1 counters"), Practical Research,
   Master Symmetrist, Doubling Season (cube). The P/T-doubling form
-  (701.10b: "Double target creature's power") is **not wired** as a
-  first-class primitive — would need `Effect::DoublePower { target }`
-  reading `PowerOf` and emitting `PumpPT { power: PowerOf(target),
-  toughness: 0, duration: EOT }` (since 701.10a says it's a continuous
-  effect, not a base-P/T rewrite). Mana-doubling (701.10f: "double
+  (701.10b: "Double target creature's power") needs no dedicated
+  primitive — it's the continuous `PumpPT { power: PowerOf(target),
+  toughness: 0, duration: EOT }` form (701.10a — a +X/+0 effect, not a
+  base-P/T rewrite), and stacks correctly when applied twice. Locked in
+  by `cr_701_10b_double_power_is_plus_x_zero`. Mana-doubling (701.10f: "double
   the amount of a type of mana") and life-doubling (701.10d: "double
   a player's life total") aren't wired today and aren't tracked
   against current catalog cards. Tests:

@@ -5797,3 +5797,88 @@ fn rampage_pumps_attacker_per_extra_blocker() {
     assert_eq!(a.power(), 4);
     assert_eq!(a.toughness(), 4);
 }
+
+/// CR 122.7 — "Nth counter" threshold trigger, expressed with the existing
+/// `CounterAdded` trigger + an intervening-`if` (CR 603.4) on the counter
+/// total. No new engine primitive needed: the draw fires only when the
+/// third +1/+1 counter lands.
+#[test]
+fn cr_122_7_nth_counter_threshold_trigger() {
+    use crate::card::{CardType, CounterType, EventKind, EventScope, EventSpec,
+        Subtypes, TriggeredAbility};
+    use crate::effect::Predicate;
+    let watcher = crate::card::CardDefinition {
+        name: "Counter Watcher",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes::default(),
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::SelfSource,
+            ),
+            effect: Effect::If {
+                cond: Predicate::ValueEquals(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(3),
+                ),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, watcher);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let ctx = EffectContext::for_ability(id, 0, None);
+    let mut draws = 0usize;
+    for expect in [false, false, true] {
+        let before = g.players[0].hand.len();
+        let events = g.resolve_effect(&Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        }, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&events);
+        drain_stack(&mut g);
+        let drew = g.players[0].hand.len() > before;
+        assert_eq!(drew, expect, "draw should fire only on the 3rd counter");
+        if drew { draws += 1; }
+    }
+    assert_eq!(draws, 1, "exactly one draw, when the count reaches 3");
+}
+
+/// CR 701.10b — "double target creature's power" is the continuous
+/// +X/+0 form (X = its power as the effect resolves), expressible with
+/// `PumpPT { power: PowerOf(target) }`. A 3/3 becomes 6/3 until end of
+/// turn; a second doubling stacks to 12/3.
+#[test]
+fn cr_701_10b_double_power_is_plus_x_zero() {
+    use crate::effect::Duration;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(bear).unwrap().add_counters(
+        crate::card::CounterType::PlusOnePlusOne, 1); // now 3/3
+    let double_power = Effect::PumpPT {
+        what: Selector::TargetFiltered {
+            slot: 0,
+            filter: crate::card::SelectionRequirement::Creature,
+        },
+        power: Value::PowerOf(Box::new(Selector::Target(0))),
+        toughness: Value::Const(0),
+        duration: Duration::EndOfTurn,
+    };
+    let ctx = EffectContext::for_spell(0, Some(crate::game::Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(&double_power, &ctx).unwrap();
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (6, 3), "3 power doubled to 6, toughness unchanged");
+    // Double again → reads the current 6 power, +6/+0 → 12/3.
+    g.resolve_effect(&double_power, &ctx).unwrap();
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (12, 3), "doubling stacks as continuous +X/+0");
+}

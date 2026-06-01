@@ -4098,14 +4098,8 @@ pub fn cloudpost() -> CardDefinition {
     }
 }
 
-/// Lotus Field — Land. Lotus Field enters tapped. When Lotus Field enters,
-/// sacrifice two untapped lands. {T}: Add three mana of one color.
-///
-/// The "untapped" qualifier on the sacrifice is collapsed (the engine's
-/// `Sacrifice` filter doesn't expose tapped/untapped state at sacrifice
-/// time without target picking, which would complicate the auto-decider).
-/// Net gameplay: ETB sacrifices two of *your* lands then taps for triple
-/// mana of any one color — the headline combo line is preserved.
+/// Lotus Field — Land. Enters tapped, Hexproof. When it enters, sacrifice
+/// two lands. {T}: Add three mana of one color.
 pub fn lotus_field() -> CardDefinition {
     use crate::card::ActivatedAbility;
     let etb = TriggeredAbility {
@@ -4272,6 +4266,7 @@ pub fn rustvale_bridge() -> CardDefinition {
 /// the ability out of the activation candidate list).
 pub fn coalition_relic() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
+    use crate::game::types::TurnStep;
     CardDefinition {
         name: "Coalition Relic",
         cost: cost(&[generic(3)]),
@@ -4312,47 +4307,39 @@ pub fn coalition_relic() -> CardDefinition {
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None,
             },
-            ActivatedAbility {
-                tap_cost: false,
-                mana_cost: ManaCost::default(),
-                effect: Effect::Seq(vec![
+        ],
+        // CR 701.x charge→mana burst: at the beginning of your precombat
+        // main phase you may remove all charge counters and add one mana of
+        // any color for each. `AddMana` reads the count before the
+        // `RemoveCounter` strips them (Seq order), so the mana matches the
+        // charges removed. `MayDo` keeps it optional (AutoDecider declines).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::PreCombatMain),
+                EventScope::YourControl,
+            ),
+            effect: Effect::MayDo {
+                description: "Remove all charge counters; add a mana of any color for each"
+                    .to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyColors(Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Charge,
+                        }),
+                    },
                     Effect::RemoveCounter {
                         what: Selector::This,
                         kind: CounterType::Charge,
-                        amount: Value::Const(3),
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Charge,
+                        },
                     },
-                    Effect::AddMana {
-                        who: PlayerRef::You,
-                        pool: ManaPayload::Colors(vec![
-                            Color::White,
-                            Color::Blue,
-                            Color::Black,
-                            Color::Red,
-                            Color::Green,
-                        ]),
-                    },
-                ]),
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                // Activation gate: source must have ≥ 3 charge counters.
-                // Without this, the engine would let the activation onto
-                // the stack and then resolve the AddMana even though
-                // RemoveCounter silently no-ops when the pool is empty.
-                condition: Some(crate::card::Predicate::ValueAtLeast(
-                    Value::CountersOn {
-                        what: Box::new(Selector::This),
-                        kind: CounterType::Charge,
-                    },
-                    Value::Const(3),
-                )),
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false, exile_other_filter: None,
-                self_counter_cost_reduction: None, sac_other_filter: None,
-                tap_other_filter: None,
+                ])),
             },
-        ],
+        }],
         ..Default::default()
     }
 }

@@ -147,3 +147,34 @@ fn cr_702_135_afterlife_mints_spirits_on_death() {
     assert_eq!(spirits.len(), 2, "afterlife 2 mints two Spirit tokens");
     assert!(spirits.iter().all(|s| s.has_keyword(&Keyword::Flying)), "Spirits have flying");
 }
+
+// ── CR 702.19 Trample (with Deathtouch) ──────────────────────────────────────
+
+#[test]
+fn cr_702_19_deathtouch_trample_assigns_one_then_tramples_rest() {
+    // CR 702.19e + 702.2c: a deathtouch+trample attacker need only assign 1
+    // (lethal) to each blocker, tramping the remainder to the player.
+    use crate::card::{CardType, Keyword, Subtypes};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Wurm", card_types: vec![CardType::Creature], subtypes: Subtypes::default(),
+        power: 5, toughness: 5,
+        keywords: vec![Keyword::Trample, Keyword::Deathtouch],
+        ..Default::default()
+    });
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    let life = g.players[1].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, life - 4,
+        "1 lethal to the 2/2 (deathtouch), 4 trample to the player");
+    assert!(g.battlefield_find(blk).is_none(), "the blocker died to deathtouch");
+}
