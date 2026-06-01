@@ -6,3 +6,10 @@ rustflags = ["-C", "link-arg=-fuse-ld=lld"]
 # for Windows
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld.exe"
+
+[alias]
+# Fast iterative run with Bevy dynamic linking (debug only — see the
+# `dynamic_linking` feature note in crabomination_client/Cargo.toml).
+# Use `cargo dev` instead of `cargo run` for quicker re-links while
+# developing; release builds must NOT enable this feature.
+dev = "run -p crabomination_client --features dynamic_linking"
