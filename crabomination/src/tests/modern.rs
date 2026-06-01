@@ -19281,7 +19281,6 @@ fn juggernaut_must_be_declared_as_attacker() {
 
 #[test]
 fn juggernaut_tapped_is_exempt_from_must_attack() {
-    use crate::game::{Attack, AttackTarget};
     let mut g = two_player_game();
     let jug = g.add_card_to_battlefield(0, catalog::juggernaut());
     g.battlefield_find_mut(jug).unwrap().tapped = true; // can't attack → exempt
