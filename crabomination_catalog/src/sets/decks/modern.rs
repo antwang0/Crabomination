@@ -5082,13 +5082,11 @@ pub fn chaos_warp() -> CardDefinition {
 /// {T}, Sacrifice a land: Search your library for a land card and put it
 /// onto the battlefield.
 ///
-/// Land-tutor activated ability. The "Sacrifice a land" cost is now a
-/// proper pre-resolution activation cost (`sac_other_filter: Some((Land,
-/// 1))`), with the body just `Search(Land → BF)`; activation is rejected
-/// when the controller has no land to sacrifice. The Oracle "Threshold
-/// pump" rider (P/T 3/4 with seven-or-more cards in your graveyard) is
-/// dropped — the cube runs Reclaimer for the activated ability, not the
-/// body.
+/// Land-tutor activated ability. The "Sacrifice a land" cost is a proper
+/// pre-resolution activation cost (`sac_other_filter: Some((Land, 1))`),
+/// with the body `Search(Land → BF)`; activation is rejected with no land
+/// to sacrifice. The Threshold rider (gets +2/+2 → 3/4 with seven or more
+/// cards in your graveyard) rides `graveyard_threshold_selfpump_for_name`.
 pub fn elvish_reclaimer() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {

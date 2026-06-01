@@ -84,7 +84,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Elvish Reclaimer | 🟡 | {1}{G} 1/2 Human Druid. `{T}, sac a land: Search(Land → BF)`. Sac-as-cost folded into resolution. Threshold-pump rider (3/4 with 7+ in graveyard) is omitted. Test: `elvish_reclaimer_sacrifices_land_to_search_for_one`. |
 | Collector Ouphe | 🟡 | 2/2 Ouphe body. Artifact-ability-lock static omitted. |
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
 | Elvish Spirit Guide | 🟡 | {2}{G} 2/2 Elf Spirit body wired. The "exile from hand: add {G}" alt-mana ability needs a hand-activated-ability primitive (`activate_ability` only walks the battlefield today); promote to ✅ once that lands. Test: `elvish_spirit_guide_is_a_two_two_elf_spirit`. |

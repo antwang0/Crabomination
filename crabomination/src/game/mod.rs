@@ -1355,6 +1355,23 @@ impl GameState {
                     });
                 }
             }
+            // "As long as there are N+ cards in your graveyard, this gets
+            // +P/+T" self-pump (Elvish Reclaimer's Threshold rider). Lookup
+            // table at `graveyard_threshold_selfpump_for_name`; gate is the
+            // controller's graveyard size, re-evaluated every recompute.
+            if let Some((threshold, p, t)) = graveyard_threshold_selfpump_for_name(name)
+                && self.players[card.controller].graveyard.len() >= threshold
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(p, t),
+                });
+            }
             // "Infusion — Creatures you control get +P/+T [and gain
             // keyword] as long as you gained life this turn." anthem
             // table: lookup at `lifegain_anthem_for_name`. Applies to
@@ -3929,6 +3946,21 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
 /// Current entries:
 /// - Honor Troll (STX): +2/+0 and Lifelink
 /// - Ulna Alley Shopkeep (SOS Infusion): +2/+0 (no keyword)
+/// Threshold-style self-pump table: cards reading "As long as there are N
+/// or more cards in your graveyard, this creature gets +P/+T." Returns
+/// `(graveyard_size_threshold, +power, +toughness)`. The gate is the
+/// controller's graveyard size, re-evaluated every `compute_battlefield`.
+///
+/// Current entries:
+/// - Elvish Reclaimer (MH1): +2/+2 (→ 3/4) with seven or more cards in
+///   your graveyard.
+fn graveyard_threshold_selfpump_for_name(name: &'static str) -> Option<(usize, i32, i32)> {
+    match name {
+        "Elvish Reclaimer" => Some((7, 2, 2)),
+        _ => None,
+    }
+}
+
 fn lifegain_selfpump_for_name(
     name: &'static str,
 ) -> Option<(i32, i32, &'static [crate::card::Keyword])> {

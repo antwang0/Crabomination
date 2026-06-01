@@ -8881,6 +8881,23 @@ fn elvish_reclaimer_sacrifices_land_to_search_for_one() {
 }
 
 #[test]
+fn elvish_reclaimer_threshold_pumps_to_three_four() {
+    let mut g = two_player_game();
+    let reclaimer = g.add_card_to_battlefield(0, catalog::elvish_reclaimer());
+    // Base 1/2 with an empty graveyard.
+    let c = g.compute_battlefield();
+    let r = c.iter().find(|c| c.id == reclaimer).unwrap();
+    assert_eq!((r.power, r.toughness), (1, 2), "base 1/2 below Threshold");
+    // Seven cards in your graveyard → Threshold pump to 3/4.
+    for _ in 0..7 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    let c = g.compute_battlefield();
+    let r = c.iter().find(|c| c.id == reclaimer).unwrap();
+    assert_eq!((r.power, r.toughness), (3, 4), "+2/+2 with seven+ in graveyard");
+}
+
+#[test]
 fn rofellos_taps_for_green_per_forest() {
     let mut g = two_player_game();
     // Put 3 Forests on the battlefield
