@@ -20163,3 +20163,150 @@ fn ember_swallower_monstrous_trigger_sacrifices_lands() {
         assert_eq!(lands, 0, "player {p} sacrificed all three lands");
     }
 }
+
+// ── More explore / dinosaurs (claude/modern_decks) ───────────────────────────
+
+#[test]
+fn seekers_squire_explores_on_etb() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::seekers_squire());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Seekers' Squire castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let s = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((s.power, s.toughness), (2, 3), "nonland explore grew it");
+}
+
+#[test]
+fn emperors_vanguard_explores_on_attack() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::emperors_vanguard());
+    g.clear_sickness(id);
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }])
+        .expect("attack declared");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let v = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((v.power, v.toughness), (4, 3), "attack-trigger explore grew it");
+}
+
+#[test]
+fn path_of_discovery_explores_each_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::path_of_discovery());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let bear = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((bear.power, bear.toughness), (3, 3), "entering creature explored (nonland → counter)");
+}
+
+#[test]
+fn arbor_colossus_monstrous_destroys_a_flier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::arbor_colossus());
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel()); // flying
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Monstrosity 3 activatable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    assert_eq!(view.iter().find(|c| c.id == id).unwrap().power, 9, "6/6 + 3 = 9/9");
+    assert!(!g.battlefield.iter().any(|c| c.id == flier), "flier destroyed on becoming monstrous");
+}
+
+#[test]
+fn ripjaw_raptor_enrage_draws() {
+    let mut g = two_player_game();
+    let raptor = g.add_card_to_battlefield(0, catalog::ripjaw_raptor()); // 4/5
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Permanent(raptor)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt (-1 hand) + enrage draw (+1) = net 0; Ripjaw (4/5) survives 3 damage.
+    assert_eq!(g.players[0].hand.len(), hand_before, "enrage drew a card to offset the Bolt");
+    assert!(g.battlefield.iter().any(|c| c.id == raptor), "Ripjaw survives 3 damage");
+}
+
+#[test]
+fn thrashing_brontodon_sacrifices_to_destroy_artifact() {
+    let mut g = two_player_game();
+    let bronto = g.add_card_to_battlefield(0, catalog::thrashing_brontodon());
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bronto, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(art)), x_value: None,
+    }).expect("sac ability activatable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == art), "artifact destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == bronto), "Brontodon sacrificed");
+}
+
+#[test]
+fn regisaur_alpha_makes_a_token_and_grants_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::regisaur_alpha());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Regisaur Alpha castable");
+    drain_stack(&mut g);
+    // ETB made a 3/3 Dinosaur token.
+    let token = g.battlefield.iter()
+        .find(|c| c.definition.name == "Dinosaur" && c.controller == 0)
+        .expect("3/3 Dinosaur token created");
+    let tok_id = token.id;
+    // The token (another Dinosaur) has haste from Regisaur's static.
+    let view = g.compute_battlefield();
+    let tok = view.iter().find(|c| c.id == tok_id).unwrap();
+    assert!(tok.keywords.contains(&crate::card::Keyword::Haste), "other Dinosaurs gain haste");
+}
+
+#[test]
+fn farhaven_elf_fetches_a_basic_land_tapped() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::farhaven_elf());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Farhaven Elf castable");
+    drain_stack(&mut g);
+    let forest = g.battlefield.iter().find(|c| c.definition.name == "Forest" && c.controller == 0);
+    assert!(forest.is_some(), "fetched a Forest onto the battlefield");
+    assert!(forest.unwrap().tapped, "land entered tapped");
+}

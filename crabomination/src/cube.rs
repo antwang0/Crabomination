@@ -779,6 +779,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: Explore (CR 701.40) ──
+        seekers_squire,
         // ── classic core-set bodies (claude/modern_decks) ──
         royal_assassin,
         scathe_zombies,
@@ -1043,6 +1045,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         disrupt_decorum,
         // ── claude/modern_decks: Monstrosity (CR 701.31) ──
         ember_swallower,
+        ill_tempered_cyclops,
+        charging_monstrosaur,
         // ── classic core-set bodies (claude/modern_decks) ──
         gray_ogre,
         mons_goblin_raiders,
@@ -1329,8 +1333,17 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         merfolk_branchwalker,
         jadelight_ranger,
         wildgrowth_walker,
+        tishanas_wayfinder,
+        emperors_vanguard,
+        path_of_discovery,
         // ── claude/modern_decks: Monstrosity (CR 701.31) ──
         nessian_wilds_ravager,
+        arbor_colossus,
+        // ── claude/modern_decks: Ixalan dinosaurs / green value ──
+        ripjaw_raptor,
+        thrashing_brontodon,
+        farhaven_elf,
+        regisaur_alpha,
         // sentinel_of_the_nameless_city 🟡 — Ward 2 not enforced;
         // Plant subtype dropped (Merfolk Warrior Scout is preserved).
         // The ETB/attack-trigger Map token still works.

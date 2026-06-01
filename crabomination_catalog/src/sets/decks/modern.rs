@@ -3124,6 +3124,78 @@ pub fn wildgrowth_walker() -> CardDefinition {
     }
 }
 
+/// Seekers' Squire — {1}{B} 1/2 Human Pirate. ETB: it explores.
+pub fn seekers_squire() -> CardDefinition {
+    CardDefinition {
+        name: "Seekers' Squire",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb_explore()],
+        ..Default::default()
+    }
+}
+
+/// Tishana's Wayfinder — {2}{G} 2/2 Merfolk Scout. ETB: it explores.
+pub fn tishanas_wayfinder() -> CardDefinition {
+    CardDefinition {
+        name: "Tishana's Wayfinder",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb_explore()],
+        ..Default::default()
+    }
+}
+
+/// Emperor's Vanguard — {2}{G} 3/2 Human Scout. Whenever it attacks, it
+/// explores.
+pub fn emperors_vanguard() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Emperor's Vanguard",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(explore())],
+        ..Default::default()
+    }
+}
+
+/// Path of Discovery — {2}{G} Enchantment. Whenever a creature you control
+/// enters, it explores.
+pub fn path_of_discovery() -> CardDefinition {
+    CardDefinition {
+        name: "Path of Discovery",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::Explore { who: Selector::TriggerSource },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Monstrosity (CR 701.31) ─────────────────────────────────────────────────
 
 /// Nessian Wilds Ravager — {4}{G} 6/6 Hydra. {6}{G}{G}: Monstrosity 5. When
@@ -3175,6 +3247,193 @@ pub fn ember_swallower() -> CardDefinition {
             who: Selector::Player(PlayerRef::EachPlayer),
             count: Value::Const(3),
             filter: SelectionRequirement::Land,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Arbor Colossus — {4}{G} 6/6 Reach. {6}{G}: Monstrosity 3. When it becomes
+/// monstrous, destroy target creature with flying.
+pub fn arbor_colossus() -> CardDefinition {
+    use crate::effect::shortcut::{monstrosity, on_becomes_monstrous};
+    CardDefinition {
+        name: "Arbor Colossus",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Reach],
+        activated_abilities: vec![monstrosity(cost(&[generic(6), g()]), 3)],
+        triggered_abilities: vec![on_becomes_monstrous(Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ill-Tempered Cyclops — {2}{R}{R} 3/3 Cyclops with trample.
+/// {3}{R}: Monstrosity 2.
+pub fn ill_tempered_cyclops() -> CardDefinition {
+    use crate::effect::shortcut::monstrosity;
+    CardDefinition {
+        name: "Ill-Tempered Cyclops",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cyclops],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![monstrosity(cost(&[generic(3), r()]), 2)],
+        ..Default::default()
+    }
+}
+
+// ── Ixalan dinosaurs / green value (existing primitives) ─────────────────────
+
+/// Charging Monstrosaur — {3}{R}{R} 5/5 Dinosaur with trample and haste.
+pub fn charging_monstrosaur() -> CardDefinition {
+    CardDefinition {
+        name: "Charging Monstrosaur",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Ripjaw Raptor — {2}{G}{G} 4/5 Dinosaur. Enrage — whenever it's dealt
+/// damage, draw a card.
+pub fn ripjaw_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Ripjaw Raptor",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thrashing Brontodon — {1}{G}{G} 3/4 Dinosaur.
+/// {1}, Sacrifice: Destroy target artifact or enchantment.
+pub fn thrashing_brontodon() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Thrashing Brontodon",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Regisaur Alpha — {3}{R}{G} 7/6 Dinosaur with trample. Other Dinosaurs you
+/// control have haste. ETB: create a 3/3 green Dinosaur token.
+pub fn regisaur_alpha() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Regisaur Alpha",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Other Dinosaurs you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Dinosaur))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Dinosaur".into(),
+                power: 3,
+                toughness: 3,
+                keywords: vec![],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Dinosaur],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Farhaven Elf — {2}{G} 1/1 Elf. ETB: search your library for a basic land
+/// and put it onto the battlefield tapped.
+pub fn farhaven_elf() -> CardDefinition {
+    CardDefinition {
+        name: "Farhaven Elf",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
         })],
         ..Default::default()
     }
