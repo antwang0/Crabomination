@@ -28,7 +28,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crabomination::cube::build_cube_state;
-use crabomination::demo::build_demo_state;
+use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
 use crabomination::server::{run_match, tcp_seat, RandomBot, SeatOccupant};
 
@@ -39,6 +39,7 @@ enum Format {
     Demo,
     Cube,
     Sos,
+    Commander,
 }
 
 impl Format {
@@ -46,11 +47,12 @@ impl Format {
         match env::var("CRAB_FORMAT").ok().as_deref() {
             Some("cube") => Self::Cube,
             Some("sos") | Some("strixhaven") => Self::Sos,
+            Some("commander") | Some("edh") => Self::Commander,
             Some("demo") | None => Self::Demo,
             Some(other) => {
                 eprintln!(
                     "warning: CRAB_FORMAT={other:?} not recognized — \
-                     falling back to demo. Valid: \"demo\" | \"cube\" | \"sos\"."
+                     falling back to demo. Valid: \"demo\" | \"cube\" | \"sos\" | \"commander\"."
                 );
                 Self::Demo
             }
@@ -61,6 +63,7 @@ impl Format {
             Self::Demo => build_demo_state(),
             Self::Cube => build_cube_state(),
             Self::Sos => crabomination::sos_mode::build_sos_state(),
+            Self::Commander => build_commander_state(),
         }
     }
     fn label(&self) -> &'static str {
@@ -68,6 +71,7 @@ impl Format {
             Self::Demo => "demo",
             Self::Cube => "cube",
             Self::Sos => "sos",
+            Self::Commander => "commander",
         }
     }
 }
@@ -237,18 +241,19 @@ struct MatchStats {
 const SEAT_BUCKET_COUNT: usize = 4;
 
 /// Number of buckets in `MatchStats.format_buckets`. Sized to cover the
-/// current `Format` enum variants (Demo, Cube) plus headroom for new
-/// formats added at the top of `main.rs`. New formats slot into the
-/// next free index via `format_index`.
+/// the four current `Format` variants (Demo / Cube / Sos / Commander).
+/// New formats slot into the next free index via `format_index`; bump
+/// this count when adding a fifth.
 const FORMAT_BUCKET_COUNT: usize = 4;
 
-/// Map a local server `Format` (Demo / Cube / Sos) to its bucket index in
+/// Map a local server `Format` (Demo / Cube / Sos / Commander) to its bucket index in
 /// `MatchStats.format_buckets`. Stable ordering — new formats append.
 fn format_index(f: Format) -> usize {
     match f {
         Format::Demo => 0,
         Format::Cube => 1,
         Format::Sos => 2,
+        Format::Commander => 3,
     }
 }
 
@@ -259,6 +264,7 @@ fn format_label_for_bucket(i: usize) -> Option<&'static str> {
         0 => Some(Format::Demo.label()),
         1 => Some(Format::Cube.label()),
         2 => Some(Format::Sos.label()),
+        3 => Some(Format::Commander.label()),
         _ => None,
     }
 }
@@ -1120,6 +1126,15 @@ mod tests {
     fn format_from_env_picks_cube_when_set() {
         let f = with_env("CRAB_FORMAT", Some("cube"), Format::from_env);
         assert_eq!(f.label(), "cube");
+    }
+
+    #[test]
+    fn format_from_env_picks_commander_and_edh_alias() {
+        assert_eq!(with_env("CRAB_FORMAT", Some("commander"), Format::from_env).label(), "commander");
+        assert_eq!(with_env("CRAB_FORMAT", Some("edh"), Format::from_env).label(), "commander");
+        // Commander maps to its own stats bucket (index 3).
+        assert_eq!(format_index(Format::Commander), 3);
+        assert_eq!(format_label_for_bucket(3), Some("commander"));
     }
 
     #[test]
