@@ -3197,6 +3197,33 @@ fn pyrokinesis_alt_cost_exiles_red_card_and_deals_four_damage() {
         "Serra Angel should die to 4 damage");
 }
 
+/// Merfolk Skydiver's `{1}{U}: Adapt 1` makes it 2/2 and proliferates —
+/// a co-counter on another creature ticks up too.
+#[test]
+fn merfolk_skydiver_adapts_and_proliferates() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let diver = g.add_card_to_battlefield(0, catalog::merfolk_skydiver());
+    let ally = g.add_card_to_battlefield(0, catalog::pteramander());
+    // Seed a +1/+1 counter on the ally so proliferate has something to grow.
+    if let Some(c) = g.battlefield_find_mut(ally) {
+        c.add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: diver, ability_index: 0, target: None, x_value: None,
+    }).expect("Adapt activatable");
+    drain_stack(&mut g);
+    // Adapt 1 → one counter, then proliferate adds another to the diver
+    // itself (and to the ally) → 3/3.
+    let d = g.battlefield_find(diver).unwrap();
+    assert_eq!((d.power(), d.toughness()), (3, 3), "adapt 1 then proliferate-self → 3/3");
+    let a = g.battlefield_find(ally).unwrap();
+    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferate added a second +1/+1 to the ally");
+}
+
 /// Pteramander's `{7}: Adapt 4` puts four +1/+1 counters on it (1/1 → 5/5)
 /// when it has none; a second activation is a no-op (CR 702.108).
 #[test]
@@ -3221,6 +3248,51 @@ fn pteramander_adapt_four_then_noop_when_already_adapted() {
     }).expect("Adapt re-activatable (resolves to nothing)");
     drain_stack(&mut g);
     assert_eq!(count(&g), (5, 5), "still 5/5 — adapt no-ops with counters present");
+}
+
+/// Forked Lightning splits 4 damage among two creatures (2 each via even
+/// split → two 2/2s die).
+#[test]
+fn forked_lightning_divides_four_among_two_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::forked_lightning());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    }).expect("Forked Lightning castable for {3}{R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == a), "first 2/2 dies");
+    assert!(!g.battlefield.iter().any(|c| c.id == b), "second 2/2 dies");
+}
+
+/// Arc Lightning splits 3 damage among three 1/1 creatures (1 each → all die).
+#[test]
+fn arc_lightning_divides_three_among_three_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::pteramander());
+    let b = g.add_card_to_battlefield(1, catalog::pteramander());
+    let c = g.add_card_to_battlefield(1, catalog::pteramander());
+    let id = g.add_card_to_hand(0, catalog::arc_lightning());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b), Target::Permanent(c)],
+        mode: None,
+        x_value: None,
+    }).expect("Arc Lightning castable for {2}{R}");
+    drain_stack(&mut g);
+    for id in [a, b, c] {
+        assert!(!g.battlefield.iter().any(|c| c.id == id), "each 1/1 dies to its 1 damage");
+    }
 }
 
 /// Forked Bolt divides 2 damage among two targets (here both players, 1 each).

@@ -107,6 +107,47 @@ pub fn pridemalkin() -> CardDefinition {
     }
 }
 
+/// Merfolk Skydiver — {1}{U}, 1/1 Merfolk with Flying. `{1}{U}: Adapt 1`
+/// (CR 702.108); "whenever this adapts, proliferate." Since Adapt only puts
+/// a counter on when there are none, the proliferate rides the same
+/// `If(no +1/+1 counter)` branch as the adapt.
+pub fn merfolk_skydiver() -> CardDefinition {
+    CardDefinition {
+        name: "Merfolk Skydiver",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::If {
+                cond: crate::card::Predicate::Not(Box::new(
+                    crate::card::Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                    },
+                )),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Proliferate,
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Pteramander — {U}, 1/1 Salamander Drake with Flying. `{7}: Adapt 4`
 /// (CR 702.108 — put four +1/+1 counters on it if it has none). The
 /// printed "{7} costs {1} less per instant/sorcery in your graveyard"

@@ -55,6 +55,38 @@ pub fn sweltering_suns() -> CardDefinition {
     }
 }
 
+/// Forked Lightning — {3}{R} Sorcery. Deals 4 damage divided as you choose
+/// among one, two, or three target creatures.
+pub fn forked_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Forked Lightning",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(4),
+            filter: SelectionRequirement::Creature,
+            max_targets: 3,
+        },
+        ..Default::default()
+    }
+}
+
+/// Arc Lightning — {2}{R} Sorcery. Deals 3 damage divided as you choose
+/// among one, two, or three targets (creatures and/or players).
+pub fn arc_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Arc Lightning",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(3),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
+            max_targets: 3,
+        },
+        ..Default::default()
+    }
+}
+
 /// Disentomb — {B} Sorcery. Return target creature card from your graveyard
 /// to your hand.
 ///
