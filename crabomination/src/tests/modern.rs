@@ -4543,6 +4543,7 @@ fn snuff_out_destroys_nonblack_creature_via_normal_cost() {
 fn snuff_out_alt_cost_pays_four_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::swamp()); // Swamp gate satisfied
     let id = g.add_card_to_hand(0, catalog::snuff_out());
     let life_before = g.players[0].life;
     // No mana — alt cost must succeed via 4 life.
@@ -4561,6 +4562,25 @@ fn snuff_out_alt_cost_pays_four_life() {
     assert_eq!(g.players[0].life, life_before - 4,
         "Snuff Out alt cost should deduct 4 life");
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn snuff_out_alt_cost_requires_a_swamp() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::snuff_out());
+    // No Swamp controlled → the 4-life alt cost is illegal.
+    let err = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).unwrap_err();
+    assert_eq!(err, GameError::NoAlternativeCost,
+        "alt cost rejected without a Swamp");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear untouched");
 }
 
 /// Teferi -3 rejects a target that doesn't match its

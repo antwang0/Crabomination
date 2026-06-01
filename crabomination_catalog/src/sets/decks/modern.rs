@@ -1322,13 +1322,11 @@ pub fn strip_mine() -> CardDefinition {
 /// be regenerated.
 ///
 /// Alt cost: "If you control a Swamp, you may pay 4 life rather than pay
-/// Snuff Out's mana cost." We approximate the swamp gate by always
-/// allowing the alt cost (the engine has no precondition system tied to
-/// `controls a Swamp`); in practice Snuff Out is only ever in mono- or
-/// dual-black decks where the prerequisite is trivially satisfied.
-/// The "can't be regenerated" rider collapses (no regen primitive).
+/// this spell's mana cost." The Swamp gate rides the alt-cost `condition`
+/// predicate (controls ≥1 Swamp). The "can't be regenerated" rider
+/// collapses (no regen primitive).
 pub fn snuff_out() -> CardDefinition {
-    use crate::card::AlternativeCost;
+    use crate::card::{AlternativeCost, LandType, Predicate};
     CardDefinition {
         name: "Snuff Out",
         cost: cost(&[generic(3), b()]),
@@ -1351,7 +1349,13 @@ pub fn snuff_out() -> CardDefinition {
             evoke_sacrifice: false,
             not_your_turn_only: false,
             target_filter: None,
-            condition: None,
+            condition: Some(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(LandType::Swamp)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            }),
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
                     sacrifice_permanents: None,
