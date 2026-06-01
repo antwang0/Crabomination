@@ -15490,9 +15490,8 @@ pub fn lorehold_battle_chant_b143() -> CardDefinition {
 
 // ── Batch 144 ───────────────────────────────────────────────────────────────
 
-/// Lorehold Ignis (b144) — {2}{R} Sorcery. Deal 3 damage divided among
-/// any number of targets — collapsed to "3 damage to target creature
-/// or player" (split-damage primitive ⏳).
+/// Lorehold Ignis (b144) — {2}{R} Sorcery. 3 damage divided among up to
+/// three targets via `DealDamageDivided` (AutoDecider spreads evenly).
 pub fn lorehold_ignis_b144() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ignis (b144)",
@@ -15503,13 +15502,12 @@ pub fn lorehold_ignis_b144() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(3),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(3),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 3,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -23760,9 +23758,8 @@ pub fn lorehold_stormrider_b196() -> CardDefinition {
     }
 }
 
-/// Lorehold Bookburn (b196) — {2}{R} Sorcery.
-/// Deal 4 damage divided as you choose among any number of target creatures.
-/// (Approximated as 4 damage to a single creature.)
+/// Lorehold Bookburn (b196) — {2}{R} Sorcery. 4 damage divided among up to
+/// four target creatures via `DealDamageDivided` (AutoDecider spreads evenly).
 pub fn lorehold_bookburn_b196() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bookburn (b196)",
@@ -23773,9 +23770,10 @@ pub fn lorehold_bookburn_b196() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(4),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(4),
+            filter: SelectionRequirement::Creature,
+            max_targets: 4,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

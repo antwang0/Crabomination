@@ -763,8 +763,8 @@ pub fn necrotic_studies() -> CardDefinition {
 /// Printed Oracle (synthesised): "Pyromathematics deals 3 damage divided
 /// as you choose among any number of targets."
 ///
-/// Collapsed to "3 damage to any target" at the single-target slot
-/// (engine-wide divided-damage gap). Lesson burn for Lorehold/Prismari.
+/// 3 damage divided among up to three targets via `DealDamageDivided`
+/// (AutoDecider spreads evenly). Lesson burn for Lorehold/Prismari.
 pub fn pyromathematics() -> CardDefinition {
     CardDefinition {
         name: "Pyromathematics",
@@ -778,13 +778,12 @@ pub fn pyromathematics() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(3),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(3),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 3,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

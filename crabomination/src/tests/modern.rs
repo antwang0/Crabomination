@@ -13968,6 +13968,29 @@ fn electrolyze_deals_two_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before, "cast(-1) + draw(+1) = net 0");
 }
 
+/// Electrolyze divides its 2 damage across a creature and a player, then
+/// still draws — exercises the `DealDamageDivided` slot wiring in a `Seq`.
+#[test]
+fn electrolyze_divides_damage_across_creature_and_player_then_draws() {
+    let mut g = two_player_game();
+    let one_one = g.add_card_to_battlefield(1, catalog::pteramander()); // 1/1
+    let id = g.add_card_to_hand(0, catalog::electrolyze());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.add_card_to_library(0, catalog::island());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(one_one)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    }).expect("Electrolyze castable with two targets");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == one_one), "1/1 dies to its 1 damage");
+    assert_eq!(g.players[1].life, 19, "player takes the other 1");
+}
+
 #[test]
 fn collective_brutality_mode_zero_shrinks_creature() {
     let mut g = two_player_game();

@@ -1105,10 +1105,9 @@ pub fn prismari_vandal() -> CardDefinition {
 /// Printed Oracle (synthesised): "Flying. When this creature enters,
 /// deal 2 damage divided as you choose among any number of targets."
 ///
-/// Approximation: collapses to "deal 2 damage to target creature or
-/// player" (engine's `divided_damage` primitive is single-target —
-/// shared gap with Magma Opus). The body still hits the headline play
-/// pattern as 4-mana flying body + 2-damage on ETB.
+/// ETB deals 2 damage divided among up to two targets via
+/// `DealDamageDivided` (AutoDecider spreads evenly) — a 4-mana flying
+/// body with a Forked-Bolt ETB.
 pub fn prismari_flameseeker() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
@@ -1125,13 +1124,12 @@ pub fn prismari_flameseeker() -> CardDefinition {
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(2),
+            effect: Effect::DealDamageDivided {
+                total: Value::Const(2),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+                max_targets: 2,
             },
         }],
         ..Default::default()

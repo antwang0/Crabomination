@@ -293,13 +293,10 @@ pub fn mizzium_mortars() -> CardDefinition {
 /// "Electrolyze deals 2 damage divided as you choose among one or two
 /// targets. Draw a card."
 ///
-/// Push (modern_decks): single-target 2-damage + cantrip wired faithfully.
-/// The "divided as you choose among one or two targets" multi-target
-/// divided-damage rider collapses to a single target (engine-wide gap
-/// shared with Magma Opus ✅, Crackle with Power ✅, Devious Cover-Up ✅).
-/// At a single target this is a Lightning Bolt + cantrip for 3 mana —
-/// efficient interaction in any U/R deck. Targets a Creature, Player, or
-/// Planeswalker via `target_filtered(Creature ∨ Player ∨ Planeswalker)`.
+/// Push (modern_decks): 2 damage divided among up to two Creature ∨ Player
+/// ∨ Planeswalker targets (`DealDamageDivided`, AutoDecider spreads evenly)
+/// then draw a card — a clean Lightning Helix-adjacent cantrip in any U/R
+/// deck.
 pub fn electrolyze() -> CardDefinition {
     CardDefinition {
         name: "Electrolyze",
@@ -311,13 +308,12 @@ pub fn electrolyze() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Player)
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(2),
+            Effect::DealDamageDivided {
+                total: Value::Const(2),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+                max_targets: 2,
             },
             Effect::Draw {
                 who: Selector::You,

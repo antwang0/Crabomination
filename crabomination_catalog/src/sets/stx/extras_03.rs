@@ -1721,12 +1721,9 @@ pub fn curriculum_crab() -> CardDefinition {
 /// divided as you choose among any number of target creatures and/or
 /// planeswalkers."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Body wires the single-
-/// target half — 4 damage to a creature or planeswalker. The
-/// "divided as you choose" multi-target rider collapses to a single
-/// target (engine-wide gap shared with Magma Opus, Crackle with
-/// Power, Electrolyze). Tests:
-/// `pyrotechnics_burns_target_creature_for_four`,
+/// Push (modern_decks): 4 damage divided among up to four creature/
+/// planeswalker targets via `DealDamageDivided` (AutoDecider spreads
+/// evenly). Tests: `pyrotechnics_burns_target_creature_for_four`,
 /// `pyrotechnics_is_a_four_mana_red_sorcery`.
 pub fn pyrotechnics() -> CardDefinition {
     CardDefinition {
@@ -1738,11 +1735,10 @@ pub fn pyrotechnics() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(4),
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(4),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            max_targets: 4,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
