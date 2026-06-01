@@ -2711,6 +2711,22 @@ fn temur_ascendancy_draws_only_for_power_4_plus_etb() {
         "power-4 ETB SHOULD trigger Temur draw");
 }
 
+#[test]
+fn temur_ascendancy_grants_haste_to_all_your_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::temur_ascendancy());
+    // A freshly-arrived creature (summoning sick) can attack thanks to haste.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.compute_battlefield();
+    assert!(c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Haste),
+        "Temur Ascendancy grants haste to your creatures");
+    // Opponent's creature gets no haste.
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c = g.compute_battlefield();
+    assert!(!c.iter().find(|c| c.id == opp).unwrap().keywords.contains(&Keyword::Haste),
+        "opponent's creatures are unaffected");
+}
+
 // ── Engine: token activated abilities (Treasures, Food, Blood, Clue) ────────
 
 #[test]
