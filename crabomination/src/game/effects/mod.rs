@@ -4033,6 +4033,16 @@ impl GameState {
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
 
+            // CR 701.21 — the controller's least-toughness creature.
+            Selector::LeastToughnessYouControl => self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                .min_by_key(|c| c.toughness())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
             Selector::AttachedTo(inner) => self
                 .resolve_selector(inner, ctx)
                 .into_iter()

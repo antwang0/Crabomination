@@ -164,7 +164,9 @@ feature; sweep card-batch by card-batch.
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,
   ⏳ Offspring, ⏳ Impending, ⏳ Ninjutsu, ⏳ Embalm/Eternalize.
 - **Counter / +1+1 matters:** ✅ Proliferate (`Effect::Proliferate` —
-  reducer-wired + tested in `tests::classic`), ⏳ Bolster,
+  reducer-wired + tested in `tests::classic`), ✅ Bolster
+  (`shortcut::bolster` — CR 701.21, +N/+N on the controller's
+  `Selector::LeastToughnessYouControl`),
   ✅ Adapt (`shortcut::adapt` — CR 702.108, +N/+N if no +1/+1 counters;
   Pteramander), ✅ Training (`shortcut::training` — CR 702.149, +1/+1 when
   attacking with a higher-power creature via `PowerGreaterThanSource`;

@@ -107,6 +107,30 @@ pub fn pridemalkin() -> CardDefinition {
     }
 }
 
+/// Aether Adept — {1}{U}{U}, 2/2 Human Wizard. "When this enters, return
+/// target creature to its owner's hand."
+pub fn aether_adept() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Adept",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Augury Owl — {1}{U}, 1/1 Bird with Flying. "When this enters, scry 3."
 pub fn augury_owl() -> CardDefinition {
     CardDefinition {

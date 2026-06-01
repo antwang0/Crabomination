@@ -3237,6 +3237,52 @@ fn fabricate_token_mode_mints_two_servos() {
     assert_eq!((c.power(), c.toughness()), (2, 2), "token mode leaves the body 2/2");
 }
 
+/// Bolster N lands its counters on the controller's least-toughness creature.
+#[test]
+fn bolster_buffs_least_toughness_creature() {
+    let mut g = two_player_game();
+    let runt = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4, higher toughness
+    // A free 3/3 that bolsters 2 on ETB.
+    let body = crate::card::CardDefinition {
+        name: "Test Bolsterer",
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::etb(
+            crate::effect::shortcut::bolster(2),
+        )],
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, body);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for free");
+    drain_stack(&mut g);
+    // The 2/2 has the least toughness, so it gets the two counters → 4/4.
+    let r = g.battlefield_find(runt).unwrap();
+    assert_eq!((r.power(), r.toughness()), (4, 4), "bolster hit the 2/2");
+    let b = g.battlefield_find(big).unwrap();
+    assert_eq!((b.power(), b.toughness()), (4, 4), "the bigger creature is untouched");
+}
+
+/// Aether Adept bounces a target creature to its owner's hand on ETB.
+#[test]
+fn aether_adept_bounces_target_creature_on_etb() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::aether_adept());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Aether Adept castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear left the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bear returned to owner's hand");
+}
+
 /// Augury Owl is a 1/1 flyer whose ETB scry resolves cleanly (no draw).
 #[test]
 fn augury_owl_scries_on_etb() {

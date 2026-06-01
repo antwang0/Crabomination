@@ -153,6 +153,10 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 701.21 — Bolster** (claude/modern_decks). `shortcut::bolster(n)`
+  + `Selector::LeastToughnessYouControl` (the controller's least-toughness
+  creature, first on tie). Test: `bolster_buffs_least_toughness_creature`.
+
 - ✅ **CR 702.122 — Fabricate** (claude/modern_decks). `shortcut::fabricate(n)`
   — ETB `ChooseMode([AddCounter +1/+1 ×n, CreateToken n Servo])`; AutoDecider
   picks counters, scripted picks Servos. New `CreatureType::Servo`. Tests:

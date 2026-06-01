@@ -145,6 +145,12 @@ pub enum Selector {
     EachMatching { zone: ZoneRef, filter: SelectionRequirement },
     /// All permanents on the battlefield matching `filter`.
     EachPermanent(SelectionRequirement),
+    /// The single creature `ctx.controller` controls with the least
+    /// toughness (first in battlefield order on a tie). Resolves to an
+    /// empty set when the controller has no creatures. Powers Bolster
+    /// (CR 701.21 — "choose a creature with the least toughness among
+    /// creatures you control").
+    LeastToughnessYouControl,
     /// The permanent this one is attached to (for Auras/Equipment).
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.
@@ -4623,6 +4629,19 @@ pub mod shortcut {
                 }),
             },
         ])
+    }
+
+    /// Bolster N (CR 701.21) — "put N +1/+1 counters on the creature you
+    /// control with the least toughness." Built from `AddCounter` over the
+    /// `Selector::LeastToughnessYouControl` selector; pair it with whatever
+    /// trigger/ability carries the bolster (ETB, attack, etc.).
+    pub fn bolster(n: i32) -> Effect {
+        use crate::card::CounterType;
+        Effect::AddCounter {
+            what: Selector::LeastToughnessYouControl,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(n),
+        }
     }
 
     /// Fabricate N (CR 702.122) — an ETB triggered ability: "put N +1/+1
