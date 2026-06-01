@@ -11,8 +11,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - **Divided-damage / "any number of targets"** is the single largest remaining
   STX/cube unblock — Crackle with Power, Pyrokinesis, Eldrazi Confluence,
   Kozilek's Command, and Vibrant/Magma Opus's divided modes all collapse to a
-  single target. Needs a `Decision::DivideDamage { total, targets }` +
-  target-amount pairs threaded through the cast path and a client modal.
+  single target. Needs (a) **variadic targeting** ("any number of target
+  creatures" — the engine only does fixed numbered slots today, see
+  `auto_targets_for_effect_all_slots`), (b) a `Decision::DivideDamage { total,
+  targets }` + target-amount pairs threaded through the cast path, and (c) a
+  client modal. The fixed-slot picker covers "one or two targets" cases; only
+  the truly-variadic ones remain.
+- **`Effect::NameCard` for spells** — currently only stamps a *battlefield*
+  permanent (`named_card`). Spoils of the Vault / Cabal Therapy name a card
+  during *spell* resolution; that needs the chosen name captured into
+  `EffectContext` (e.g. `EffectContext.named_card`) so a following Seq step
+  (reveal-until-find by name, hand-discard-by-name) can read it. Pair with a
+  `SelectionRequirement::HasNamedCardInContext`.
+- **Rabid Bite bot targeting** — the slot-0 filter lives inside
+  `Value::PowerOf(TargetFiltered { slot: 0 })`; `auto_targets_for_effect_all_
+  slots` walks the effect tree but not Value sub-trees, so the bot may fill
+  only slot 1. Functionally correct with explicit targets (tests pass); extend
+  the slot enumerator to descend into `Value` for full bot coverage.
 - **"Name a card"** primitive — ✅ base shipped: `Decision::NameCard`,
   `DecisionAnswer::NamedCard`, `Effect::NameCard`, `CardInstance.named_card`,
   and `activate_ability` ability-suppression for matching sources (Pithing
