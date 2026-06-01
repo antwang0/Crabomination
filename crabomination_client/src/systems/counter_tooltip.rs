@@ -428,6 +428,15 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::Wither => "Damages creatures as -1/-1 counters instead.",
         K::Persist => "Returns with a -1/-1 counter when it dies (if it had none).",
         K::Undying => "Returns with a +1/+1 counter when it dies (if it had none).",
+        K::Prowess => "Gets +1/+1 until end of turn when you cast a noncreature spell.",
+        K::Fear => "Can only be blocked by artifact and/or black creatures.",
+        K::Intimidate => "Can only be blocked by artifacts and creatures sharing a color.",
+        K::Skulk => "Can't be blocked by creatures with greater power.",
+        K::Shadow => "Can only block or be blocked by creatures with shadow.",
+        K::Horsemanship => "Can only be blocked by creatures with horsemanship.",
+        K::Unblockable => "Can't be blocked.",
+        K::Changeling => "Is every creature type.",
+        K::Flash => "You may cast it any time you could cast an instant.",
         _ => return None,
     })
 }
@@ -563,7 +572,7 @@ fn counter_label(kind: CounterType) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::build_tooltip_body;
+    use super::{build_tooltip_body, keyword_reminder};
     use crabomination::card::{CardId, CardType, CounterType};
     use crabomination::net::PermanentView;
 
@@ -819,5 +828,16 @@ mod tests {
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(regen ×3: absorbs 3 destructions this turn)"),
             "expected plural regen badge: {body}");
+    }
+
+    #[test]
+    fn evasion_keywords_carry_reminder_text() {
+        use crabomination::card::Keyword;
+        for kw in [Keyword::Prowess, Keyword::Fear, Keyword::Skulk,
+                   Keyword::Shadow, Keyword::Unblockable, Keyword::Changeling,
+                   Keyword::Flash, Keyword::Intimidate, Keyword::Horsemanship] {
+            assert!(keyword_reminder(&kw).is_some(),
+                "expected reminder text for {kw:?}");
+        }
     }
 }

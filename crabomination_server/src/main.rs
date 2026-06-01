@@ -394,6 +394,19 @@ impl MatchStats {
             self.cumulative_win_life_delta / (self.win_life_samples as i64)
         }
     }
+    /// Percent of *resolved* matches (wins + draws) that ended decisively
+    /// (i.e. had a winner). Returns 0 when nothing has resolved yet. A
+    /// sudden drop signals stalemate regressions (mutual lock, no win
+    /// condition reachable). Excludes unresolved/watchdog'd matches from
+    /// the denominator so disconnects don't deflate the rate.
+    fn decisive_pct(&self) -> u64 {
+        let resolved = self.wins + self.draws;
+        if resolved == 0 {
+            0
+        } else {
+            self.wins.saturating_mul(100) / resolved
+        }
+    }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator
     /// rolling-summary line.
@@ -606,7 +619,10 @@ fn format_match_stats(s: &MatchStats) -> String {
     // matches surfaces "stuck" matches (channel disconnect /
     // watchdog) — `total - wins - draws` is the unresolved count.
     if s.wins + s.draws > 0 {
-        out.push_str(&format!(" wins={} draws={}", s.wins, s.draws));
+        out.push_str(&format!(
+            " wins={} draws={} decisive={}%",
+            s.wins, s.draws, s.decisive_pct()
+        ));
         // Alternate-win split: how many of those wins closed via
         // something other than lethal face damage (deckout / poison /
         // mill / win-the-game). Only rendered when at least one such
@@ -1382,6 +1398,14 @@ mod tests {
         assert_eq!(s.draws, 1);
         assert_eq!(s.seat_wins[0], 1);
         assert_eq!(s.seat_wins[1], 1);
+        // 2 decisive of 3 resolved → 66%. Unresolved is excluded.
+        assert_eq!(s.decisive_pct(), 66);
+    }
+
+    #[test]
+    fn decisive_pct_zero_before_any_resolution() {
+        let s = MatchStats::default();
+        assert_eq!(s.decisive_pct(), 0);
     }
 
     #[test]

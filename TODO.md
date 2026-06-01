@@ -297,9 +297,9 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   walks each battlefield card and subtracts `cancel = plus.min(
   minus)` from both counter types; this is the first SBA performed
   per CR 704.5q's "single event" semantics).
-  (t) **704.5r — Bounded counter caps** — ⏳ (no
-  card in the catalog uses this; engine has no `Capped(Counter, N)`
-  static effect primitive).
+  (t) **704.5r — Bounded counter caps** — ✅ (`stack.rs:1040` prunes any
+  counter kind above its `CardDefinition.max_counters_of_kind` cap as
+  an SBA; Helix Pinnacle caps Charge at 100. CR 122.4 / 704.5r.).
   (u) **704.5s — Saga sacrifice** — ⏳ (no Saga card type in the catalog;
   tracked in CUBE_FEATURES.md "Saga lore counters + DFC ⏳").
   (v) **704.5t — Dungeon completion** — ⏳ (no Dungeon card type in
