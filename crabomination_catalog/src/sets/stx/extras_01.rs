@@ -1917,10 +1917,7 @@ pub fn fire_prophecy() -> CardDefinition {
 ///
 /// Push (modern_decks, NEW, `stx::extras`): Quandrix's signature
 /// bounce + Learn instant. Wired via `Seq(Move(target spell-on-stack
-/// OR nonland permanent → owner's hand), Draw 1)` — the Learn half
-/// is approximated as Draw 1 (same approximation as Eyetwitch, Pest
-/// Summoning, Hunt for Specimens, Field Trip, Igneous Inspiration,
-/// Guiding Voice — the Lesson sideboard model is engine-wide ⏳).
+/// OR nonland permanent → owner's hand), Learn)`.
 /// The target filter is `(IsSpellOnStack) ∨ (Permanent & Nonland)`,
 /// so the spell can hit either a spell on the stack or a nonland
 /// permanent on the battlefield — matching the printed flexibility.

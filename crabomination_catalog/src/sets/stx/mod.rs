@@ -4,8 +4,7 @@
 //! engine features that gate full implementations. The cards here are
 //! grouped by college (Silverquill / Witherbloom / Lorehold / Prismari /
 //! Quandrix) and most use the engine's existing primitives (Magecraft via
-//! the new spell-cast filter, Learn approximated as Draw 1 until a Lesson
-//! sideboard model lands).
+//! the spell-cast filter, Learn via `Effect::Learn` + the Lessons sideboard).
 
 pub use super::no_abilities;
 

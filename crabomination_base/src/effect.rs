@@ -4610,6 +4610,48 @@ pub mod shortcut {
         }
     }
 
+    /// Renown N (CR 702.111) — a combat trigger: "Whenever this creature
+    /// deals combat damage to a player, if it isn't renowned, put N +1/+1
+    /// counters on it and it becomes renowned." The "isn't renowned" gate
+    /// is approximated by "has no +1/+1 counters" (same shape as Adapt) —
+    /// it only renowns once because the counters then block re-triggering.
+    pub fn renown(n: i32) -> TriggeredAbility {
+        use crate::card::{CounterType, EventKind, EventScope, EventSpec};
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                })),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(n),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }
+    }
+
+    /// Outlast (CR 702.97) — the activated ability "{cost}, {T}: Put a
+    /// +1/+1 counter on this creature. Activate only as a sorcery." Returns
+    /// the `ActivatedAbility`; pass the (already mana-loaded) cost in.
+    pub fn outlast(mana_cost: crate::mana::ManaCost) -> ActivatedAbility {
+        use crate::card::CounterType;
+        ActivatedAbility {
+            tap_cost: true,
+            mana_cost,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }
+    }
+
     /// Connive N (CR 702.158) — "Draw N cards, then discard N cards. For
     /// each nonland card discarded this way, put a +1/+1 counter on this
     /// creature." Built from `Draw` + `Discard` + an `AddCounter` whose
@@ -5152,5 +5194,69 @@ pub mod shortcut {
                 amount: Value::Const(amount),
             },
         }
+    }
+
+    /// Modular N (CR 702.43) — the *dies* half: "When this creature dies,
+    /// you may put its +1/+1 counters on target artifact creature." Pair it
+    /// with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))` on the
+    /// card def (the "enters with N +1/+1 counters" half). The dying source
+    /// is already in the graveyard, so this adds counters to the target
+    /// equal to the source's *last-known* +1/+1 count (`Value::CountersOn
+    /// { This }`, the same last-known path Hangarback Walker reads) rather
+    /// than a literal move from a permanent that no longer exists.
+    pub fn modular_dies() -> TriggeredAbility {
+        on_dies(Effect::MayDo {
+            description: "Put +1/+1 counters on target artifact creature".into(),
+            body: Box::new(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::Creature),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            }),
+        })
+    }
+
+    /// Graft N (CR 702.57) — the trigger half: "Whenever another creature
+    /// enters, you may move a +1/+1 counter from this creature onto it."
+    /// Pair with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`.
+    /// The counter only moves while this creature still has one (the
+    /// `MoveCounter` is a no-op once empty).
+    pub fn graft() -> TriggeredAbility {
+        use crate::card::{EventKind, EventScope, EventSpec};
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::MayDo {
+                description: "Move a +1/+1 counter from this creature onto it".into(),
+                body: Box::new(Effect::MoveCounter {
+                    from: Selector::This,
+                    to: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        }
+    }
+
+    /// Melee (CR 702.121): "Whenever this creature attacks, it gets +1/+1
+    /// until end of turn for each opponent you attacked this combat."
+    /// Approximated as a flat +1/+1 on attack (one opponent in the common
+    /// 1v1 / single-defender case — the engine has no per-combat
+    /// attacked-opponent tally yet).
+    pub fn melee() -> TriggeredAbility {
+        on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })
     }
 }

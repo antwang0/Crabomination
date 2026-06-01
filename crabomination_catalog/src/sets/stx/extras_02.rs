@@ -3355,10 +3355,9 @@ pub fn awesome_presentation() -> CardDefinition {
 /// Push (modern_decks, NEW, `stx::extras`): Lorehold's premier removal +
 /// reanimator spell. The single-target slot covers the damage half; the
 /// reanimate half is run unconditionally against the controller's
-/// graveyard via `Selector::one_of(...)`. Learn is approximated as Draw 1
-/// (engine-wide Lesson-sideboard gap). The multi-target ("damage one
-/// target, return another") collapses to: damage slot 0 (Creature/PW),
-/// reanimate an auto-picked IS card from the controller's graveyard.
+/// graveyard via `Selector::one_of(...)`. Learn uses `Effect::Learn`.
+/// The multi-target ("damage one target, return another") collapses to:
+/// damage slot 0 (Creature/PW), reanimate an auto-picked IS card.
 /// Tests: `rise_of_extus_deals_five_damage_and_returns_is_from_graveyard`,
 /// `rise_of_extus_is_a_five_mana_lorehold_sorcery`.
 pub fn rise_of_extus() -> CardDefinition {

@@ -193,9 +193,9 @@ pub fn fortifying_draught() -> CardDefinition {
 ///
 /// "Put a +1/+1 counter on target creature. Learn."
 ///
-/// Cheap +1/+1 counter on a creature plus the Learn → `Draw 1`
-/// approximation (no Lesson sideboard model yet). A great early
-/// magecraft enabler that also leaves a body bigger. Wired as the
+/// Cheap +1/+1 counter on a creature plus Learn via `Effect::Learn`.
+/// A great early magecraft enabler that also leaves a body bigger.
+/// Wired as the
 /// canonical AddCounter + Learn `Seq` template used by Hunt for
 /// Specimens / Pest Summoning.
 pub fn guiding_voice() -> CardDefinition {

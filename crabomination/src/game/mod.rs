@@ -47,6 +47,9 @@ mod tests_combat_keywords;
 #[cfg(test)]
 #[path = "../tests/classic.rs"]
 mod tests_classic;
+#[cfg(test)]
+#[path = "../tests/counters.rs"]
+mod tests_counters;
 pub mod types;
 
 #[cfg(test)]

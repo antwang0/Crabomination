@@ -6,10 +6,10 @@
 //!   path with an `EventSpec.filter` predicate that gates on the just-cast
 //!   spell's card type. See `fire_spell_cast_triggers` in
 //!   `crabomination::game::actions`.
-//! - **Learn** (Eyetwitch death trigger, Hunt for Specimens rider). The full
-//!   Oracle searches a Lessons sideboard or discards-then-draws. We don't
-//!   model a sideboard, so Learn is collapsed to `Draw 1` here. See
-//!   `STRIXHAVEN2.md` for the engine TODO.
+//! - **Learn** (Eyetwitch death trigger, Hunt for Specimens rider). Wired via
+//!   `Effect::Learn`: reveal a Lesson from the sideboard into hand, or
+//!   discard-to-draw (falls back to a plain draw when no Lessons sideboard is
+//!   configured). Every deck-build path seats the standard sideboard.
 //!
 //! Many cards also have static abilities or token-creation clauses that need
 //! engine features the engine doesn't have yet (cost-reduction-aware-of-
@@ -66,8 +66,7 @@ pub fn spirited_companion() -> CardDefinition {
 
 /// Eyetwitch — {B}, 1/1 Pest. "When Eyetwitch dies, learn." Set: Strixhaven.
 ///
-/// Learn is approximated as `Draw 1`; see `STRIXHAVEN2.md` for the planned
-/// Lesson sideboard model.
+/// Learn via `Effect::Learn` — reveal a Lesson into hand or discard-to-draw.
 pub fn eyetwitch() -> CardDefinition {
     CardDefinition {
         name: "Eyetwitch",
@@ -386,13 +385,9 @@ pub fn eager_first_year() -> CardDefinition {
 /// Hunt for Specimens — {3}{B} Sorcery. "Create a 1/1 black Pest creature
 /// token with 'When this creature dies, you gain 1 life.' Then learn."
 ///
-/// ✅ Both halves wired faithfully. The spawned Pest token carries the
-/// printed death-trigger lifegain via `TokenDefinition.triggered_
-/// abilities` (SOS-VI). Learn collapses to `Draw 1` — the same
-/// approximation shared by Eyetwitch ✅, Pest Summoning ✅, Igneous
-/// Inspiration ✅, and Field Trip ✅. The full "sideboard search" path
-/// is engine-wide (no Lessons sideboard model yet) and tracked in
-/// TODO.md.
+/// Both halves wired faithfully. The spawned Pest token carries the
+/// printed death-trigger lifegain via `TokenDefinition.triggered_abilities`
+/// (SOS-VI); Learn uses `Effect::Learn` (reveal a Lesson / discard-to-draw).
 pub fn hunt_for_specimens() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     let pest = super::shared::stx_pest_token();

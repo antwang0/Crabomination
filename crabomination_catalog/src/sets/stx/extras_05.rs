@@ -201,8 +201,8 @@ pub fn quill_witch() -> CardDefinition {
 /// Silverquill flavor). "Target creature gets +2/+2 until end of
 /// turn. Learn."
 ///
-/// A combat trick Lesson — pumps a friendly +2/+2 EOT and ticks the
-/// Learn cantrip (Draw 1 approximation). Mirror to Fortifying Draught
+/// A combat trick Lesson — pumps a friendly +2/+2 EOT and Learns via
+/// `Effect::Learn`. Mirror to Fortifying Draught
 /// (which gives +1/+4) and Guiding Voice (+1/+1 counter + Learn);
 /// Lesson in Honor goes wider on the offensive curve. Tests:
 /// `lesson_in_honor_pumps_two_two_and_cantrips`,

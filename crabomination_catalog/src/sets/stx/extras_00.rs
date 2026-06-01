@@ -74,8 +74,7 @@ pub fn bookwurm() -> CardDefinition {
 /// card, put it onto the battlefield, then shuffle. Learn."
 ///
 /// ✅ Faithful single-search wire via `Effect::Search` for a basic land
-/// with the Forest land subtype, plus the standard Learn → `Draw 1`
-/// approximation (no Lesson sideboard model yet).
+/// with the Forest land subtype, plus Learn via `Effect::Learn`.
 pub fn field_trip() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
@@ -264,7 +263,7 @@ pub fn baleful_mastery() -> CardDefinition {
 /// damage to target creature or planeswalker. Learn."
 ///
 /// ✅ Wired faithfully: 3 damage to a creature/planeswalker target,
-/// then Learn (→ Draw 1 approximation, same as Eyetwitch / Pop Quiz).
+/// then Learn via `Effect::Learn`.
 pub fn igneous_inspiration() -> CardDefinition {
     CardDefinition {
         name: "Igneous Inspiration",

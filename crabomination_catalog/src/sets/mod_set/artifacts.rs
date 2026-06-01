@@ -854,6 +854,70 @@ pub fn hangarback_walker() -> CardDefinition {
     }
 }
 
+/// Arcbound Worker — {1} Artifact Creature — Construct, 0/0, Modular 1.
+/// Enters with one +1/+1 counter; on death moves its counters to a target
+/// artifact creature.
+pub fn arcbound_worker() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType};
+    CardDefinition {
+        name: "Arcbound Worker",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
+        ..Default::default()
+    }
+}
+
+/// Arcbound Stinger — {2} Artifact Creature — Insect, 0/0, Flying, Modular 1.
+pub fn arcbound_stinger() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType};
+    CardDefinition {
+        name: "Arcbound Stinger",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flying],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
+        ..Default::default()
+    }
+}
+
+/// Arcbound Ravager — {2} Artifact Creature — Beast, 0/0, Modular 1.
+/// "Sacrifice an artifact: Put a +1/+1 counter on Arcbound Ravager."
+pub fn arcbound_ravager() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType};
+    CardDefinition {
+        name: "Arcbound Ravager",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
+        ..Default::default()
+    }
+}
+
 /// Hedron Archive — {4} Artifact. "{T}: Add {C}{C}." "{T}, Sacrifice this
 /// artifact: Draw two cards."
 pub fn hedron_archive() -> CardDefinition {

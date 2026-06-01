@@ -4014,3 +4014,166 @@ pub fn spore_frog() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Renown (CR 702.111) ───────────────────────────────────────────────────
+
+/// Topan Freeblade — {1}{W} 2/2 Human Soldier with Vigilance, Renown 1.
+pub fn topan_freeblade() -> CardDefinition {
+    CardDefinition {
+        name: "Topan Freeblade",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![crate::effect::shortcut::renown(1)],
+        ..Default::default()
+    }
+}
+
+/// Stalwart Aven — {2}{W} 2/2 Bird Soldier with Flying, Renown 1.
+pub fn stalwart_aven() -> CardDefinition {
+    CardDefinition {
+        name: "Stalwart Aven",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::renown(1)],
+        ..Default::default()
+    }
+}
+
+/// Skyraker Giant — {4}{R} 4/4 Giant Warrior with Reach, Renown 4.
+pub fn skyraker_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Skyraker Giant",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![crate::effect::shortcut::renown(4)],
+        ..Default::default()
+    }
+}
+
+// ── Outlast (CR 702.97) ────────────────────────────────────────────────────
+
+/// "Each creature you control with a +1/+1 counter on it has [keyword]" —
+/// the Khans Outlast lord static, via the layer system's `AllWithCounter`
+/// decomposition.
+fn counter_anthem(keyword: Keyword, description: &'static str) -> StaticAbility {
+    StaticAbility {
+        description,
+        effect: StaticEffect::GrantKeyword {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+            ),
+            keyword,
+        },
+    }
+}
+
+/// Ainok Bond-Kin — {1}{W} 2/2 Hound Soldier, Outlast {1}{W}. Creatures you
+/// control with a +1/+1 counter have first strike.
+pub fn ainok_bond_kin() -> CardDefinition {
+    CardDefinition {
+        name: "Ainok Bond-Kin",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hound, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(1), w()]))],
+        static_abilities: vec![counter_anthem(
+            Keyword::FirstStrike,
+            "Each creature you control with a +1/+1 counter on it has first strike.",
+        )],
+        ..Default::default()
+    }
+}
+
+/// Tuskguard Captain — {2}{G} 2/2 Human Warrior, Outlast {1}{G}. Creatures
+/// you control with a +1/+1 counter have trample.
+pub fn tuskguard_captain() -> CardDefinition {
+    CardDefinition {
+        name: "Tuskguard Captain",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(1), g()]))],
+        static_abilities: vec![counter_anthem(
+            Keyword::Trample,
+            "Each creature you control with a +1/+1 counter on it has trample.",
+        )],
+        ..Default::default()
+    }
+}
+
+/// Abzan Falconer — {2}{W} 2/3 Human Soldier, Outlast {W}. Creatures you
+/// control with a +1/+1 counter have flying.
+pub fn abzan_falconer() -> CardDefinition {
+    CardDefinition {
+        name: "Abzan Falconer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[w()]))],
+        static_abilities: vec![counter_anthem(
+            Keyword::Flying,
+            "Each creature you control with a +1/+1 counter on it has flying.",
+        )],
+        ..Default::default()
+    }
+}
+
+/// Mer-Ek Nightblade — {3}{B} 2/3 Orc Assassin, Outlast {1}{B}. Creatures
+/// you control with a +1/+1 counter have deathtouch.
+pub fn mer_ek_nightblade() -> CardDefinition {
+    CardDefinition {
+        name: "Mer-Ek Nightblade",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        activated_abilities: vec![crate::effect::shortcut::outlast(cost(&[generic(1), b()]))],
+        static_abilities: vec![counter_anthem(
+            Keyword::Deathtouch,
+            "Each creature you control with a +1/+1 counter on it has deathtouch.",
+        )],
+        ..Default::default()
+    }
+}

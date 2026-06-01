@@ -92,6 +92,8 @@ pub enum CreatureType {
     God,
     // Artifact creature subtype (Juggernaut).
     Juggernaut,
+    // Ravnica Simic graft creature subtype (Cytoplast Root-Kin).
+    Mutant,
 }
 
 /// Land subtypes (basic land types + others).
