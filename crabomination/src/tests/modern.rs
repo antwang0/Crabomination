@@ -15533,20 +15533,40 @@ fn three_tree_city_enters_with_charge_and_taps_for_any_color() {
 }
 
 #[test]
-fn wight_of_the_reliquary_sacrifices_to_fetch_a_land() {
+fn wight_of_the_reliquary_sacrifices_a_land_to_fetch_a_land() {
     let mut g = two_player_game();
     let wight = g.add_card_to_battlefield(0, catalog::wight_of_the_reliquary());
     g.clear_sickness(wight);
+    let sac_land = g.add_card_to_battlefield(0, catalog::mountain());
     let forest = g.add_card_to_library(0, catalog::forest());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
     g.perform_action(GameAction::ActivateAbility {
         card_id: wight, ability_index: 0, target: None, x_value: None,
     })
-    .expect("{T}, sacrifice: search a land");
+    .expect("{T}, sacrifice a land: search a land");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == wight), "Wight sacrificed as a cost");
+    assert!(g.battlefield.iter().any(|c| c.id == wight), "Wight survives — a land was the cost");
+    assert!(!g.battlefield.iter().any(|c| c.id == sac_land), "the Mountain was sacrificed");
     let land = g.battlefield_find(forest).expect("fetched land on battlefield");
     assert!(land.tapped, "fetched land enters tapped");
+}
+
+#[test]
+fn wight_of_the_reliquary_grows_with_lands_in_your_graveyard() {
+    let mut g = two_player_game();
+    let wight = g.add_card_to_battlefield(0, catalog::wight_of_the_reliquary());
+    // Base 1/1 with no lands in graveyard.
+    let c = g.compute_battlefield();
+    let w = c.iter().find(|c| c.id == wight).unwrap();
+    assert_eq!((w.power, w.toughness), (1, 1), "base 1/1");
+    // Two lands in your graveyard → 3/3. Opponent's gy lands don't count.
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::mountain());
+    g.add_card_to_graveyard(1, catalog::island());
+    let c = g.compute_battlefield();
+    let w = c.iter().find(|c| c.id == wight).unwrap();
+    assert_eq!((w.power, w.toughness), (3, 3),
+        "1 base + 2 lands in your graveyard (opp's land ignored)");
 }
 
 /// Shared helper for the deck dual-land cycle: play the land, optionally

@@ -11990,15 +11990,10 @@ pub fn pithing_needle() -> CardDefinition {
     }
 }
 
-/// Wight of the Reliquary — {1}{B}{G} Creature — Zombie Knight 0/0.
-/// "Wight of the Reliquary gets +1/+1 for each land card in your
-///  graveyard. / {T}, Sacrifice a land: Search your library for a land
-///  card, put it onto the battlefield tapped, then shuffle."
-///
-/// Approximation: body-only 3/3 (static pump from gy lands unavailable
-/// as `StaticEffect::PumpPT` takes constant i32; the printed dynamic
-/// P/T would need a DynamicPt layer like Tarmogoyf). The sac-land
-/// tutor activation approximates sac-a-land as sac-self.
+/// Wight of the Reliquary — {1}{B}{G} Creature — Zombie Knight 1/1.
+/// Gets +1/+1 for each land card in your graveyard (dynamic P/T via
+/// `DynamicPt::BasePlusLandsInControllerGraveyard`). {T}, Sacrifice a
+/// land: Search your library for a land card onto the battlefield tapped.
 pub fn wight_of_the_reliquary() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -12009,8 +12004,8 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
             creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
+        power: 1,
+        toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),
@@ -12019,7 +12014,7 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
                 filter: SelectionRequirement::Land,
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
             },
-            sac_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
             ..Default::default()
         }],
         ..Default::default()

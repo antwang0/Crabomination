@@ -827,6 +827,10 @@ pub enum DynamicPt {
     /// Knight of the Reliquary (base 2/2; grows +1/+1 per land in any
     /// player's graveyard).
     BasePlusLandsInAllGraveyards { base_p: i32, base_t: i32 },
+    /// Power = toughness = base + land cards in the *controller's*
+    /// graveyard. Wight of the Reliquary (base 1/1, +1/+1 per land in
+    /// your graveyard).
+    BasePlusLandsInControllerGraveyard { base_p: i32, base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

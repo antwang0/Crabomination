@@ -1306,6 +1306,11 @@ impl GameState {
                 crate::card::DynamicPt::BasePlusLandsInAllGraveyards { base_p, base_t } => {
                     (base_p + lands_in_gys, base_t + lands_in_gys)
                 }
+                crate::card::DynamicPt::BasePlusLandsInControllerGraveyard { base_p, base_t } => {
+                    let n = self.players[card.controller].graveyard.iter()
+                        .filter(|c| c.definition.is_land()).count() as i32;
+                    (base_p + n, base_t + n)
+                }
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.id.0 as u64,
@@ -3840,6 +3845,9 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
         "Cruel Somnophage" => Some(DynamicPt::ControllerGraveyardSize),
         "Knight of the Reliquary" => Some(DynamicPt::BasePlusLandsInAllGraveyards {
             base_p: 2, base_t: 2,
+        }),
+        "Wight of the Reliquary" => Some(DynamicPt::BasePlusLandsInControllerGraveyard {
+            base_p: 1, base_t: 1,
         }),
         _ => None,
     }
