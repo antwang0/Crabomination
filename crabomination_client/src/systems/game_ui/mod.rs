@@ -853,10 +853,18 @@ pub fn update_log_text(
     commands.entity(panel).despawn_children();
     commands.entity(panel).with_children(|p| {
         for entry in log.entries.iter().rev() {
+            // Turn dividers get a little breathing room above/below so
+            // each turn reads as its own block in the scrollback.
+            let node = if entry.divider {
+                Node { margin: UiRect::vertical(Val::Px(3.0)), ..default() }
+            } else {
+                Node::default()
+            };
             p.spawn((
                 Text::new(entry.text.clone()),
-                ui_fonts.tf(12.0),
+                ui_fonts.tf(if entry.divider { 11.0 } else { 12.0 }),
                 TextColor(entry.color),
+                node,
                 Pickable::IGNORE,
             ));
         }
@@ -2621,10 +2629,20 @@ pub fn handle_game_input(
         }
     }
 
-    // Update game log from server events.
+    // Update game log from server events. A `TurnStarted` becomes a
+    // turn-divider row (#5); every other event coalesces consecutive
+    // duplicates via `push_event` (#7).
+    let view_ref = view.0.as_ref();
     for ev in &server_events.0 {
         check_reveal_wire(std::slice::from_ref(ev), reveal);
-        log.push_colored(
+        if let crabomination::net::GameEventWire::TurnStarted { player, turn } = ev {
+            let who = view_ref
+                .map(|cv| player_name(cv, *player))
+                .unwrap_or_else(|| format!("P{player}"));
+            log.push_divider(format!("──  Turn {turn} · {who}  ──"));
+            continue;
+        }
+        log.push_event(
             format!("{}{}", event_glyph(ev), format_event(ev, card_names)),
             event_color(ev),
         );

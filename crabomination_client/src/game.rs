@@ -9,6 +9,14 @@ use crate::theme;
 pub struct LogEntry {
     pub text: String,
     pub color: Color,
+    /// Turn-divider row — `update_log_text` renders these with extra
+    /// spacing so each turn is visually separated in the scrollback.
+    pub divider: bool,
+    /// The text *without* any `×N` repeat suffix, plus the current repeat
+    /// count, used to coalesce a run of identical event lines (#7). Kept
+    /// private — callers read `text`.
+    raw: String,
+    count: u32,
 }
 
 /// Maximum number of log entries kept in memory. Older entries are
@@ -34,11 +42,63 @@ impl GameLog {
         self.push_colored(msg, theme::TEXT_BODY);
     }
 
-    /// Push a log entry tinted with the given color. Used by the per-event
-    /// formatter so damage / mana / step / etc. entries are visually
-    /// distinct in the scrollback.
+    /// Push a log entry tinted with the given color. Plain push (no
+    /// coalescing) — used by non-event surfaces (menu, decision modal,
+    /// export prompt, rematch banner).
     pub fn push_colored(&mut self, msg: impl Into<String>, color: Color) {
-        self.entries.push_back(LogEntry { text: msg.into(), color });
+        let text = msg.into();
+        self.entries.push_back(LogEntry {
+            raw: text.clone(),
+            text,
+            color,
+            divider: false,
+            count: 1,
+        });
+        self.trim();
+    }
+
+    /// Push a per-event log line, coalescing a run of identical
+    /// (text + colour) events into a single row with a `×N` multiplier
+    /// instead of flooding the scrollback — token swarms, multi-hit
+    /// combat, repeated pings (#7). A divider or any differing line
+    /// breaks the run.
+    pub fn push_event(&mut self, msg: impl Into<String>, color: Color) {
+        let text = msg.into();
+        if let Some(last) = self.entries.back_mut()
+            && !last.divider
+            && last.color == color
+            && last.raw == text
+        {
+            last.count += 1;
+            last.text = format!("{} ×{}", last.raw, last.count);
+            return;
+        }
+        self.entries.push_back(LogEntry {
+            raw: text.clone(),
+            text,
+            color,
+            divider: false,
+            count: 1,
+        });
+        self.trim();
+    }
+
+    /// Insert a turn-divider row (#5). Always a fresh entry — it breaks
+    /// any in-progress coalescing run, so events from different turns
+    /// never merge across the boundary.
+    pub fn push_divider(&mut self, label: impl Into<String>) {
+        let text = label.into();
+        self.entries.push_back(LogEntry {
+            raw: text.clone(),
+            text,
+            color: theme::TEXT_SECONDARY,
+            divider: true,
+            count: 1,
+        });
+        self.trim();
+    }
+
+    fn trim(&mut self) {
         while self.entries.len() > GAME_LOG_CAP {
             self.entries.pop_front();
         }
@@ -227,5 +287,43 @@ impl AttackingState {
             return true;
         }
         false
+    }
+}
+
+#[cfg(test)]
+mod log_tests {
+    use super::*;
+
+    #[test]
+    fn push_event_coalesces_identical_consecutive_lines() {
+        let mut log = GameLog::default();
+        log.push_event("Bear deals 1", Color::WHITE);
+        log.push_event("Bear deals 1", Color::WHITE);
+        log.push_event("Bear deals 1", Color::WHITE);
+        assert_eq!(log.entries.len(), 1, "three identical events collapse to one row");
+        assert_eq!(log.entries.back().unwrap().text, "Bear deals 1 ×3");
+    }
+
+    #[test]
+    fn push_event_does_not_coalesce_when_text_or_colour_differs() {
+        let mut log = GameLog::default();
+        log.push_event("Bear deals 1", Color::WHITE);
+        log.push_event("Wolf deals 1", Color::WHITE); // different text
+        log.push_event("Bear deals 1", Color::BLACK); // different colour
+        assert_eq!(log.entries.len(), 3);
+        assert!(log.entries.iter().all(|e| !e.text.contains('×')));
+    }
+
+    #[test]
+    fn divider_breaks_a_coalescing_run() {
+        let mut log = GameLog::default();
+        log.push_event("Bear deals 1", Color::WHITE);
+        log.push_divider("── Turn 2 ──");
+        log.push_event("Bear deals 1", Color::WHITE);
+        // The divider sits between two separate single-count rows; the
+        // post-divider event must not merge into the pre-divider one.
+        assert_eq!(log.entries.len(), 3);
+        assert!(log.entries[1].divider);
+        assert_eq!(log.entries.back().unwrap().text, "Bear deals 1");
     }
 }

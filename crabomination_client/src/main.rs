@@ -183,6 +183,24 @@ fn main() {
                 .set(AssetPlugin {
                     file_path: cfg.paths.asset_dir,
                     ..default()
+                })
+                // Clamp how small the window can get. The HUD anchors
+                // fixed-pixel panels to all four corners (turn/log ~280px
+                // on the right, player panel ~260px on the left, stack
+                // ~420px centred), so below roughly 1024×640 they start
+                // to overlap. A resize floor is the cheapest guard — the
+                // resolution-aware `UiScale` hook is a deliberate no-op
+                // (see `pick_ui_scale`).
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        resize_constraints: bevy::window::WindowResizeConstraints {
+                            min_width: 1024.0,
+                            min_height: 640.0,
+                            ..default()
+                        },
+                        ..default()
+                    }),
+                    ..default()
                 }),
             MeshPickingPlugin,
         ))
