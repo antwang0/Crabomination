@@ -3356,6 +3356,31 @@ pub mod shortcut {
         }
     }
 
+    /// Training shortcut (CR 702.149): "Whenever this creature attacks with
+    /// another creature with greater power, put a +1/+1 counter on this
+    /// creature." An `Attacks / SelfSource` trigger gated on the existence
+    /// of another attacking creature with `PowerGreaterThanSource`; the
+    /// counter lands on `This`.
+    pub fn training() -> TriggeredAbility {
+        use crate::card::CounterType;
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::IsAttacking
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::PowerGreaterThanSource),
+                )),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }
+    }
+
     /// Evolve shortcut (CR 702.100): "Whenever a creature enters the
     /// battlefield under your control, if that creature has greater power
     /// or toughness than this creature, put a +1/+1 counter on this
@@ -4556,6 +4581,48 @@ pub mod shortcut {
                 triggered_abilities: vec![],
             },
         })
+    }
+
+    /// Adapt N (CR 702.108) — the *effect* of an Adapt activated ability:
+    /// "If this creature has no +1/+1 counters on it, put N +1/+1 counters
+    /// on it." Built from existing primitives (`If` + `EntityMatches` +
+    /// `AddCounter`); pair it with an `ActivatedAbility` carrying the
+    /// adapt mana cost. Used by Pteramander, Incubation Druid-style cards.
+    pub fn adapt(n: i32) -> Effect {
+        use crate::card::CounterType;
+        Effect::If {
+            cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                what: Selector::This,
+                filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+            })),
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(n),
+            }),
+            else_: Box::new(Effect::Noop),
+        }
+    }
+
+    /// Connive N (CR 702.158) — "Draw N cards, then discard N cards. For
+    /// each nonland card discarded this way, put a +1/+1 counter on this
+    /// creature." Built from `Draw` + `Discard` + an `AddCounter` whose
+    /// amount reads `DiscardedThisResolution { Nonland }` (the discard
+    /// scratch is captured within the same resolution). The discarder
+    /// chooses which cards to pitch (AutoDecider pitches from the front).
+    pub fn connive(n: i32) -> Effect {
+        use crate::card::CounterType;
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(n) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(n), random: false },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::count(Selector::DiscardedThisResolution {
+                    filter: SelectionRequirement::Nonland,
+                }),
+            },
+        ])
     }
 
     /// ETB-Mint-Token-With-Counters shortcut: "When this creature

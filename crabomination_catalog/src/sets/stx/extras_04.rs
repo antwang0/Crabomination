@@ -204,6 +204,33 @@ pub fn soulknife_spy() -> CardDefinition {
     }
 }
 
+// ── Quandrix Cryptomancer (synthesised STX Quandrix Rogue) ────────────────
+
+/// Quandrix Cryptomancer — {2}{U}, 2/2 Vedalken Wizard (synthesised STX
+/// flavor). "Whenever this attacks, connive." (CR 702.158 — draw a card,
+/// discard a card; a +1/+1 counter for each nonland pitched.)
+///
+/// Showcases the new `shortcut::connive` action word built on
+/// Draw + Discard + `DiscardedThisResolution`-counted +1/+1 counters.
+pub fn quandrix_cryptomancer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Cryptomancer",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: crate::effect::shortcut::connive(1),
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Daring Diversion (synthesised STX 2021 Lorehold Sorcery) ──────────────
 
 /// Daring Diversion — {3}{R} Sorcery (synthesised STX Lorehold flavor).

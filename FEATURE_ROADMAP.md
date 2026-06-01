@@ -157,12 +157,18 @@ feature; sweep card-batch by card-batch.
   CR 702.139 — cast from graveyard for escape cost + exile N other gy cards;
   instants/sorceries re-escape), ⏳ Adventure,
   ⏳ Soulbond, ⏳ Mutate, ⏳ Companion, ⏳ Foretell, ⏳ Disturb,
-  ⏳ Daybound/Nightbound, ⏳ Blitz, 🟡 Casualty, ⏳ Connive, ⏳ Backup,
+  ⏳ Daybound/Nightbound, ⏳ Blitz, 🟡 Casualty,
+  ✅ Connive (`shortcut::connive` — CR 702.158, draw/discard +
+  +1/+1-per-nonland via `Selector::DiscardedThisResolution`; Quandrix
+  Cryptomancer), ⏳ Backup,
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,
   ⏳ Offspring, ⏳ Impending, ⏳ Ninjutsu, ⏳ Embalm/Eternalize.
 - **Counter / +1+1 matters:** ✅ Proliferate (`Effect::Proliferate` —
   reducer-wired + tested in `tests::classic`), ⏳ Bolster,
-  ⏳ Adapt, ✅ Evolve (`shortcut::evolve` +
+  ✅ Adapt (`shortcut::adapt` — CR 702.108, +N/+N if no +1/+1 counters;
+  Pteramander), ✅ Training (`shortcut::training` — CR 702.149, +1/+1 when
+  attacking with a higher-power creature via `PowerGreaterThanSource`;
+  Pridemalkin), ✅ Evolve (`shortcut::evolve` +
   `SelectionRequirement::GreaterPowerOrToughnessThanSource` — Cloudfin
   Raptor, Experiment One, Fathom Mage), ✅ Mentor (`shortcut` — Sunhome
   Stalwart, CR 702.135), ⏳ Training, ⏳ Modular, ⏳ Graft,

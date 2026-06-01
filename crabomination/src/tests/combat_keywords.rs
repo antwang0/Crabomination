@@ -69,6 +69,64 @@ fn cr_702_68_frenzy_silent_when_blocked() {
     assert_eq!((s.power(), s.toughness()), (2, 2), "frenzy does NOT fire when blocked");
 }
 
+// ── CR 702.158 Connive ─────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_158_connive_draws_discards_and_counters_per_nonland() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::quandrix_cryptomancer()); // 2/2
+    g.clear_sickness(atk);
+    // Hand + library both nonland so the discard is guaranteed nonland → +1.
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::counterspell());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(atk).unwrap();
+    assert_eq!((s.power(), s.toughness()), (3, 3),
+        "connive drew + pitched a nonland → one +1/+1 counter");
+    assert_eq!(g.players[0].hand.len(), 1, "drew one, discarded one");
+}
+
+// ── CR 702.149 Training ────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_149_training_counters_when_attacking_with_bigger_creature() {
+    let mut g = two_player_game();
+    let trainee = g.add_card_to_battlefield(0, body("Trainee", 2, 2, vec![shortcut::training()]));
+    let mentor = g.add_card_to_battlefield(0, body("Veteran", 3, 3, vec![]));
+    g.clear_sickness(trainee);
+    g.clear_sickness(mentor);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: trainee, target: AttackTarget::Player(1) },
+        Attack { attacker: mentor, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(trainee).unwrap();
+    assert_eq!((s.power(), s.toughness()), (3, 3),
+        "trains off the bigger co-attacker → one +1/+1 counter");
+}
+
+#[test]
+fn cr_702_149_training_silent_without_bigger_co_attacker() {
+    let mut g = two_player_game();
+    let trainee = g.add_card_to_battlefield(0, body("Trainee", 2, 2, vec![shortcut::training()]));
+    let small = g.add_card_to_battlefield(0, body("Runt", 1, 1, vec![]));
+    g.clear_sickness(trainee);
+    g.clear_sickness(small);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: trainee, target: AttackTarget::Player(1) },
+        Attack { attacker: small, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(trainee).unwrap();
+    assert_eq!((s.power(), s.toughness()), (2, 2), "no bigger co-attacker → no counter");
+}
+
 // ── CR 702.131 Afflict ───────────────────────────────────────────────────────
 
 #[test]

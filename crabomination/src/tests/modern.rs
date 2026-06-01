@@ -3197,6 +3197,32 @@ fn pyrokinesis_alt_cost_exiles_red_card_and_deals_four_damage() {
         "Serra Angel should die to 4 damage");
 }
 
+/// Pteramander's `{7}: Adapt 4` puts four +1/+1 counters on it (1/1 → 5/5)
+/// when it has none; a second activation is a no-op (CR 702.108).
+#[test]
+fn pteramander_adapt_four_then_noop_when_already_adapted() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pteramander());
+    let count = |g: &crate::game::GameState| {
+        g.computed_permanent(id).map(|cp| (cp.power, cp.toughness)).unwrap()
+    };
+    assert_eq!(count(&g), (1, 1));
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Adapt activatable");
+    drain_stack(&mut g);
+    assert_eq!(count(&g), (5, 5), "1/1 + four counters = 5/5");
+
+    // Second adapt: it already has counters, so nothing happens.
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Adapt re-activatable (resolves to nothing)");
+    drain_stack(&mut g);
+    assert_eq!(count(&g), (5, 5), "still 5/5 — adapt no-ops with counters present");
+}
+
 /// Forked Bolt divides 2 damage among two targets (here both players, 1 each).
 #[test]
 fn forked_bolt_divides_two_among_two_players() {

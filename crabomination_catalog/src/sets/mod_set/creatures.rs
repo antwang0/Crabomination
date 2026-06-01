@@ -88,6 +88,51 @@ pub fn dark_confidant() -> CardDefinition {
     }
 }
 
+/// Pridemalkin — {1}{W}, 2/2 Cat with Training (CR 702.149). The
+/// "each creature you control with a +1/+1 counter has trample" static
+/// is collapsed (kept as a vanilla Training body).
+pub fn pridemalkin() -> CardDefinition {
+    CardDefinition {
+        name: "Pridemalkin",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::training()],
+        ..Default::default()
+    }
+}
+
+/// Pteramander — {U}, 1/1 Salamander Drake with Flying. `{7}: Adapt 4`
+/// (CR 702.108 — put four +1/+1 counters on it if it has none). The
+/// printed "{7} costs {1} less per instant/sorcery in your graveyard"
+/// rebate is collapsed to the flat {7} (no count-based cost-rebate
+/// primitive yet).
+pub fn pteramander() -> CardDefinition {
+    CardDefinition {
+        name: "Pteramander",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Salamander, CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(7)]),
+            effect: crate::effect::shortcut::adapt(4),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sylvan Caryatid — {1}{G}, 0/3 Plant. Defender, Hexproof. {T}: Add one
 /// mana of any color. Defender is enforced via `can_attack` (CR 702.3b —
 /// a creature with Defender can't attack), Hexproof gates opponent

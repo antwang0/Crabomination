@@ -142,6 +142,24 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.108 — Adapt** (claude/modern_decks). `shortcut::adapt(n)` —
+  `If(Not(EntityMatches{This, WithCounter(+1/+1)})) → AddCounter n`. Wired
+  as Pteramander's `{7}: Adapt 4`. Test: `pteramander_adapt_four_*`.
+
+- ✅ **CR 702.149 — Training** (claude/modern_decks). `shortcut::training()`
+  — `Attacks/SelfSource` trigger gated on a co-attacker with the new
+  `SelectionRequirement::PowerGreaterThanSource`, adds a +1/+1 to `This`.
+  Pridemalkin. Tests: `cr_702_149_training_*`.
+
+- ✅ **CR 702.158 — Connive** (claude/modern_decks). `shortcut::connive(n)`
+  — Draw n, discard n, +1/+1 per nonland pitched (counted via
+  `Selector::DiscardedThisResolution{Nonland}`). Quandrix Cryptomancer.
+  Test: `cr_702_158_connive_*`.
+
+- ✅ **CR 601.2d / divided damage** (claude/modern_decks).
+  `Effect::DealDamageDivided` + `Decision::DivideDamage` — Forked Bolt,
+  Pyrokinesis, Crackle with Power, Magma Opus. AutoDecider spreads evenly.
+
 - ✅ **CR 702.139 — Escape** (claude/modern_decks). `Keyword::Escape(cost, n)`
   + `GameAction::CastEscape`: cast from graveyard for the escape mana cost
   plus exiling N other graveyard cards. Instants/sorceries resolve back to
