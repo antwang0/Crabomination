@@ -19148,3 +19148,78 @@ fn theros_minotaur_bodies() {
     assert_eq!((g.battlefield_find(dr).unwrap().power(), g.battlefield_find(dr).unwrap().toughness()), (3, 1));
     assert_eq!((g.battlefield_find(aw).unwrap().power(), g.battlefield_find(aw).unwrap().toughness()), (1, 1));
 }
+
+// ── Pithing Needle / "name a card" (CR 201.3) ────────────────────────────────
+
+#[test]
+fn pithing_needle_etb_stamps_the_named_card() {
+    // Casting Pithing Needle fires its ETB NameCard trigger; the scripted
+    // decider names Tormod's Crypt, which is stamped onto the artifact.
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Tormod's Crypt".into()),
+    ]));
+    let needle = g.add_card_to_hand(0, catalog::pithing_needle());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: needle, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pithing Needle castable for {1}");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(needle).and_then(|c| c.named_card.as_deref()),
+        Some("Tormod's Crypt"),
+        "ETB stamps the chosen card name");
+}
+
+#[test]
+fn pithing_needle_suppresses_named_sources_nonmana_ability() {
+    // Needle names Tormod's Crypt → the Crypt's {T},Sac: exile-graveyard
+    // (non-mana) ability is shut off. A Crypt naming nothing relevant works.
+    let mut g = two_player_game();
+    let crypt = g.add_card_to_battlefield(0, catalog::tormods_crypt());
+    let needle = g.add_card_to_battlefield(0, catalog::pithing_needle());
+    g.battlefield_find_mut(needle).unwrap().named_card = Some("Tormod's Crypt".into());
+    g.priority.player_with_priority = 0;
+
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: crypt, ability_index: 0, target: None, x_value: None }).unwrap_err();
+    assert!(matches!(err, GameError::AbilitySuppressedByNamedCard),
+        "named source's non-mana ability is suppressed, got {err:?}");
+}
+
+#[test]
+fn pithing_needle_naming_a_different_card_leaves_ability_usable() {
+    let mut g = two_player_game();
+    let crypt = g.add_card_to_battlefield(0, catalog::tormods_crypt());
+    let needle = g.add_card_to_battlefield(0, catalog::pithing_needle());
+    g.battlefield_find_mut(needle).unwrap().named_card = Some("Llanowar Elves".into());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crypt, ability_index: 0, target: None, x_value: None })
+        .expect("an unrelated name doesn't suppress the Crypt");
+}
+
+#[test]
+fn phyrexian_revoker_is_a_two_one_construct_that_names_and_suppresses() {
+    // Body + ETB-name path: cast it, name Tormod's Crypt, then the Crypt's
+    // non-mana ability is shut off.
+    let mut g = two_player_game();
+    let crypt = g.add_card_to_battlefield(1, catalog::tormods_crypt());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::NamedCard("Tormod's Crypt".into()),
+    ]));
+    let rev = g.add_card_to_hand(0, catalog::phyrexian_revoker());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Phyrexian Revoker castable for {2}");
+    drain_stack(&mut g);
+    let body = g.battlefield_find(rev).unwrap();
+    assert_eq!((body.power(), body.toughness()), (2, 1));
+    assert!(body.definition.card_types.contains(&CardType::Artifact));
+
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: crypt, ability_index: 0, target: None, x_value: None }).unwrap_err();
+    assert!(matches!(err, GameError::AbilitySuppressedByNamedCard));
+}

@@ -101,6 +101,18 @@ pub enum Decision {
         source: CardId,
     },
 
+    /// CR 201.3 — "As this enters, choose a card name." Pithing Needle,
+    /// Phyrexian Revoker. Answered with `DecisionAnswer::NamedCard(name)`
+    /// (free text over the catalog; an empty string names nothing).
+    /// `AutoDecider` names nothing (a real client would surface a card
+    /// picker); `ScriptedDecider` supplies the chosen name.
+    NameCard {
+        /// Source permanent that's asking for the name.
+        source: CardId,
+        #[serde(default)]
+        source_name: String,
+    },
+
     /// CR 705 — flip a coin. The decider answers with `Bool(true)` for
     /// heads or `Bool(false)` for tails. `AutoDecider` uses the engine's
     /// rng to pick randomly; `ScriptedDecider` can script the outcome.
@@ -222,6 +234,9 @@ pub enum DecisionAnswer {
     SerumPowder(CardId),
     /// A named creature type (Cavern of Souls).
     CreatureType(crate::card::CreatureType),
+    /// CR 201.3 — a named card (Pithing Needle / Phyrexian Revoker). An
+    /// empty string names nothing.
+    NamedCard(String),
     /// CR 706 — the natural result of a die roll. Must be in
     /// `1..=sides` where `sides` is the die's face count from the
     /// matching `Decision::DieRoll { sides, .. }`.
@@ -321,6 +336,9 @@ impl Decider for AutoDecider {
             Decision::ChooseCreatureType { .. } => {
                 DecisionAnswer::CreatureType(crate::card::CreatureType::Demon)
             }
+            // CR 201.3 — AutoDecider names nothing (no card-pool context to
+            // pick a meaningful target); ScriptedDecider supplies a name.
+            Decision::NameCard { .. } => DecisionAnswer::NamedCard(String::new()),
             // CR 705 — AutoDecider always picks heads. For deterministic
             // tests; a real client would use an rng. ScriptedDecider can
             // override with `DecisionAnswer::Bool(false)` for tails.

@@ -716,6 +716,11 @@ pub enum DecisionWire {
     ChooseCreatureType {
         source: CardId,
     },
+    /// CR 201.3 — "As [card] enters, choose a card name." Pithing Needle.
+    NameCard {
+        source: CardId,
+        source_name: String,
+    },
     /// CR 903.9b commander redirect — owner may send the commander to
     /// the command zone instead of `would_be`.
     CommanderRedirect {
@@ -817,6 +822,10 @@ impl From<&Decision> for DecisionWire {
             Decision::ChooseCreatureType { source } => {
                 DecisionWire::ChooseCreatureType { source: *source }
             }
+            Decision::NameCard { source, source_name } => DecisionWire::NameCard {
+                source: *source,
+                source_name: source_name.clone(),
+            },
             Decision::CommanderRedirect { commander, would_be } => {
                 DecisionWire::CommanderRedirect {
                     commander: *commander,

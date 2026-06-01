@@ -13,10 +13,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Kozilek's Command, and Vibrant/Magma Opus's divided modes all collapse to a
   single target. Needs a `Decision::DivideDamage { total, targets }` +
   target-amount pairs threaded through the cast path and a client modal.
-- **"Name a card"** primitive would unblock Pithing Needle, Crumble to Dust,
-  Spoils of the Vault, Cabal Therapy — a `Decision::NameCard` (free text over
-  the catalog) stamped on the permanent/spell and consulted by ability
-  suppression / same-name exile / reveal-until-find.
+- **"Name a card"** primitive — ✅ base shipped: `Decision::NameCard`,
+  `DecisionAnswer::NamedCard`, `Effect::NameCard`, `CardInstance.named_card`,
+  and `activate_ability` ability-suppression for matching sources (Pithing
+  Needle, Phyrexian Revoker). Remaining consumers that need the named value
+  threaded into resolution: same-name exile (Crumble to Dust), reveal-until-
+  find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy). The
+  client picker UI (free text over the catalog) is also still TODO.
 - **Source-relative MV filter** — Rushed Rebirth's "lesser mana value" fetch
   (and similar) needs a `SelectionRequirement::ManaValueLessThan(Value)` that
   the `Search` resolver evaluates against a captured value.

@@ -11973,19 +11973,21 @@ pub fn kari_zev_skyship_raider() -> CardDefinition {
     }
 }
 
-/// Pithing Needle — {1} Artifact.
-/// "As Pithing Needle enters, choose a card name.
-///  Activated abilities of sources with the chosen name can't be
-///  activated unless they're mana abilities."
-///
-/// Approximation: body-only artifact at {1}. The name-a-card + ability-
-/// suppression static needs the Cavern-of-Souls naming primitive
-/// extended to non-creature targets, plus a static-suppression layer.
+/// Pithing Needle — {1} Artifact. "As ~ enters, choose a card name.
+/// Activated abilities of sources with the chosen name can't be activated
+/// unless they're mana abilities." ETB `Effect::NameCard` stamps the chosen
+/// name; `activate_ability` suppresses non-mana abilities of matching sources.
 pub fn pithing_needle() -> CardDefinition {
+    use crate::card::TriggeredAbility;
+    use crate::effect::{EventKind, EventScope, EventSpec};
     CardDefinition {
         name: "Pithing Needle",
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::NameCard { what: Selector::This },
+        }],
         ..Default::default()
     }
 }
@@ -12552,15 +12554,12 @@ pub fn robber_of_the_rich() -> CardDefinition {
 // ── Push XXIV: a handful of vanilla / near-vanilla bodies ─────────────────
 
 /// Phyrexian Revoker — {2} Artifact Creature — Phyrexian Construct 2/1.
-/// Real Oracle: "As Phyrexian Revoker enters the battlefield, choose
-/// the name of a nonland card. / Activated abilities of sources with
-/// the chosen name can't be activated unless they're mana abilities."
-///
-/// 🟡 Body-only stub: 2/1 colorless artifact creature. The
-/// choose-a-name lockout requires a name-prompt primitive + a per-
-/// source-name ability filter, neither of which exists yet. The
-/// vanilla body still slots into cube as a 2-drop disruption shell.
+/// "As ~ enters, choose a nonland card name. Activated abilities of sources
+/// with the chosen name can't be activated unless they're mana abilities."
+/// Shares Pithing Needle's `Effect::NameCard` + `activate_ability` suppression.
 pub fn phyrexian_revoker() -> CardDefinition {
+    use crate::card::TriggeredAbility;
+    use crate::effect::{EventKind, EventScope, EventSpec};
     CardDefinition {
         name: "Phyrexian Revoker",
         cost: cost(&[generic(2)]),
@@ -12571,7 +12570,10 @@ pub fn phyrexian_revoker() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        keywords: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::NameCard { what: Selector::This },
+        }],
         ..Default::default()
     }
 }

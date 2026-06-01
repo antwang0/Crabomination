@@ -1178,6 +1178,12 @@ pub struct CardInstance {
     /// (cleared together by the expiry sweep and when a cast consumes the
     /// permission). `None` for ordinary free may-play grants.
     pub granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
+    /// CR 201.3 — a card name chosen as this permanent entered (Pithing
+    /// Needle, Phyrexian Revoker "as this enters, choose a card name").
+    /// Persistent state read by `activate_ability` to suppress non-mana
+    /// activated abilities of sources with the chosen name. `None` for the
+    /// vast majority of permanents that never name a card.
+    pub named_card: Option<String>,
 }
 
 impl CardInstance {
@@ -1220,6 +1226,7 @@ impl CardInstance {
             exiled_by: None,
             granted_flashback_eot: None,
             granted_alt_cast_cost_eot: None,
+            named_card: None,
         }
     }
 
@@ -1389,6 +1396,10 @@ struct CardInstanceWire {
     /// back-compat.
     #[serde(default)]
     granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
+    /// CR 201.3 named card (Pithing Needle / Phyrexian Revoker). Persistent
+    /// state; `#[serde(default)]` so older snapshots load as `None`.
+    #[serde(default)]
+    named_card: Option<String>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1423,6 +1434,7 @@ impl serde::Serialize for CardInstance {
             granted_keywords_eot: self.granted_keywords_eot.clone(),
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
+            named_card: self.named_card.clone(),
         };
         wire.serialize(ser)
     }
@@ -1457,6 +1469,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_keywords_eot = wire.granted_keywords_eot;
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
+        c.named_card = wire.named_card;
         Ok(c)
     }
 }

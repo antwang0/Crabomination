@@ -102,7 +102,6 @@ work is listed below.
 | Karn, Scion of Urza | 🟡 | {4} 5-loyalty Karn. **+1**: Draw 1 + mill 1 (the opp-pile-split is information-only at this engine fidelity). **-1**: ForEach Construct creature you control + AddCounter(+1/+1). **-2**: Create a 1/1 Construct artifact creature token (artifact-count scaling rider collapses). Tests: `karn_scion_of_urza_minus_two_creates_a_construct_token`, `karn_plus_one_draws_a_card_and_mills_one`. |
 | Kozilek's Command | 🟡 | {X} Instant wired as a 3-mode `ChooseMode`. The printed "choose two" modal picker collapses to a single mode. |
 | Eldrazi Confluence | 🟡 | {4} Instant wired as a 3-mode `ChooseMode`. The "choose three, modes may repeat" charm structure collapses to one pick. |
-| Pithing Needle | 🟡 | {1} Artifact body-only stub. Name-a-card + ability suppression static omitted. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
 | Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
 | Nettlecyst | ⏳ | Living-equipment + token. |
@@ -194,7 +193,7 @@ are listed in `DECK_FEATURES.md`.
 | ETB-replacement effects (suppress entirely) | ⏳ | Containment Priest, Static Prison-adjacent, Gather Specimens. |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | 🟡 | Damping Sphere wired (`AdditionalCostAfterFirstSpell`); Trinisphere needs a "minimum cost" flavor. Elite Spellbinder reuses the existing tax static. |
 | "Cast spells without paying mana" static | ⏳ | Omniscience, Maelstrom Archangel (combat-damage variant), Aluren (free-cast under-3 creatures). |
-| Name-a-card / name-a-creature-type primitive | 🟡 | Cavern of Souls has the ETB ChooseMode framing but the chosen type doesn't gate mana provenance yet. Pithing Needle would need the same primitive. |
+| Name-a-card primitive | 🟡 | `Effect::NameCard` + `Decision::NameCard` + `CardInstance.named_card` ship Pithing Needle / Phyrexian Revoker (ETB stamps a name; `activate_ability` suppresses non-mana abilities of matching sources). Remaining consumers: same-name exile (Crumble to Dust), reveal-until-find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy). |
 | Token-copy of permanent | ⏳ | Phantasmal Image, Helm of the Host, Mockingbird, Growing Ranks (populate). |
 | Multi-pick decisions over revealed library cards | 🟡 | Atraxa Draw-4 stand-in is wired. Reveal-and-sort by card type, Dig Through Time, Mind's Desire all need a richer multi-pick decision. |
 | Investigate + Clue token | 🟡 | Clue tokens ship (`clue_token()`; Tireless Tracker, Lonis, Loot create them). The Investigate keyword-action naming and "sacrifice a Clue" payoff abilities are still ⏳. |

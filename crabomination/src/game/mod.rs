@@ -3493,6 +3493,17 @@ impl GameState {
                 }
                 Ok(Vec::new())
             }
+            PendingEffectState::NameCardPending { target_id } => {
+                let DecisionAnswer::NamedCard(name) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                if let Some(card) = self.battlefield_find_mut(target_id)
+                    && !name.is_empty()
+                {
+                    card.named_card = Some(name.clone());
+                }
+                Ok(Vec::new())
+            }
         }
     }
 

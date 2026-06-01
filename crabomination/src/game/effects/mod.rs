@@ -3374,6 +3374,37 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NameCard { what } => {
+                // CR 201.3 — "as this enters, choose a card name." Mirrors
+                // NameCreatureType: stamp the chosen name onto the source
+                // permanent's `named_card`. Suspends for UI players; bots /
+                // AutoDecider resolve synchronously (and name nothing).
+                use crate::decision::Decision;
+                let candidate = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    });
+                let Some(target_id) = candidate else { return Ok(()); };
+                let source_name = self
+                    .battlefield_find(target_id)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                let decision = Decision::NameCard { source: target_id, source_name };
+                let pending = PendingEffectState::NameCardPending { target_id };
+                let chooser = ctx.controller;
+                if self.players[chooser].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::PreventAllCombatDamageThisTurn => {
                 // CR 615.1 — set the engine-wide flag the combat damage
                 // resolver consults. Cleared in `do_cleanup` (CR 514.2).

@@ -3571,6 +3571,26 @@ impl GameState {
             }
         }
 
+        // CR 201.3 — Pithing Needle / Phyrexian Revoker: a permanent that
+        // named this source's card name shuts off its activated abilities
+        // unless they're mana abilities. The suppression is global (affects
+        // every player's matching sources), so we scan the whole battlefield
+        // for a `named_card` matching this source's printed name.
+        if !is_mana_ability(&ability.effect) {
+            let source_name = if source_in_gy {
+                self.players[source_owner.unwrap()].graveyard.iter()
+                    .find(|c| c.id == card_id)
+                    .map(|c| c.definition.name)
+            } else {
+                self.battlefield.iter().find(|c| c.id == card_id).map(|c| c.definition.name)
+            };
+            if let Some(name) = source_name
+                && self.battlefield.iter().any(|c| c.named_card.as_deref() == Some(name))
+            {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
         // Once-per-turn: reject if this ability index has already been
         // used since the most recent turn-cleanup. The ability is recorded
         // as "used" *after* successful activation below so failed mana

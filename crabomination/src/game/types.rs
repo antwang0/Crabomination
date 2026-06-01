@@ -454,6 +454,10 @@ pub enum PendingEffectState {
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.
     ChooseCreatureTypePending { target_id: CardId },
+    /// Suspended on a `NameCard` decision for `Effect::NameCard` (Pithing
+    /// Needle, Phyrexian Revoker). The chooser names a card and the engine
+    /// stamps it onto `target_id.named_card`.
+    NameCardPending { target_id: CardId },
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
@@ -762,6 +766,8 @@ pub enum GameError {
     AbilityAlreadyUsedThisTurn,
     #[error("Activated ability's `activate only if` condition is not met")]
     AbilityConditionNotMet,
+    #[error("Activated abilities of this source are shut off (Pithing Needle / Phyrexian Revoker)")]
+    AbilitySuppressedByNamedCard,
     #[error("Target does not meet the selection requirement for this effect")]
     SelectionRequirementViolated,
     #[error("The game is already over")]

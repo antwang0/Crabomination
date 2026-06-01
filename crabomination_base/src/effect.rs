@@ -1699,6 +1699,14 @@ pub enum Effect {
     /// Cavern protects (only those that share the named type).
     NameCreatureType { what: Selector },
 
+    /// CR 201.3 — "As [this] enters, choose a card name." Pithing Needle,
+    /// Phyrexian Revoker. Asks the controller via the `NameCard` decision and
+    /// stores the chosen name on the source permanent's `named_card` field;
+    /// `activate_ability` then suppresses non-mana activated abilities of
+    /// sources with that name. `what` selects the permanent to stamp
+    /// (typically `Selector::This`).
+    NameCard { what: Selector },
+
     /// "[Player] skips their next `count` turns." Bumps the affected
     /// player's `skip_turns` counter; the turn-advance logic in
     /// `do_cleanup` decrements and bypasses each scheduled-skip turn.
@@ -2064,6 +2072,7 @@ impl Effect {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
+            Effect::NameCard { what } => sel_has_target(what),
             Effect::WinGame { who } => player_has_target(who),
             Effect::SkipTurns { who, count } => {
                 player_has_target(who) || value_has_target(count)
