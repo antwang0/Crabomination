@@ -12673,3 +12673,221 @@ pub fn juggernaut() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Spellbomb cycle + cheap utility (claude/modern_decks) ────────────────────
+
+/// Nihil Spellbomb — {1} Artifact. "{T}, Sacrifice this: Exile target
+/// player's graveyard. / {B}, Sacrifice this: Draw a card."
+pub fn nihil_spellbomb() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Zone};
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Nihil Spellbomb",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Move {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::EachOpponent,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Any,
+                    },
+                    to: ZoneDest::Exile,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[b()]),
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Pyrite Spellbomb — {1} Artifact. "{T}, Sacrifice this: deals 2 damage to
+/// any target. / {R}, Sacrifice this: Draw a card."
+pub fn pyrite_spellbomb() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Pyrite Spellbomb",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[r()]),
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Seal of Removal — {U} Enchantment. "Sacrifice Seal of Removal: Return
+/// target creature to its owner's hand."
+pub fn seal_of_removal() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Seal of Removal",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vendetta — {B} Instant. "Destroy target nonblack creature. You lose life
+/// equal to that creature's toughness." (Toughness captured before destroy.)
+pub fn vendetta() -> CardDefinition {
+    CardDefinition {
+        name: "Vendetta",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(Color::Black).negate()),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sylvan Spellbomb — {1} Artifact. "{T}, Sacrifice this: Search your library
+/// for a basic land card, reveal it, put it into your hand, then shuffle. /
+/// {G}, Sacrifice this: Draw a card."
+pub fn sylvan_spellbomb() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Sylvan Spellbomb",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Horizon Spellbomb — {1} Artifact. "{T}, Sacrifice this: Search your library
+/// for a basic land card, reveal it, put it into your hand, then shuffle. /
+/// {W}, Sacrifice this: Draw a card."
+pub fn horizon_spellbomb() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Horizon Spellbomb",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[w()]),
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Expedition Map — {1} Artifact. "{2}, {T}, Sacrifice this: Search your
+/// library for a land card, reveal it, put it into your hand, then shuffle."
+pub fn expedition_map() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Expedition Map",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Executioner's Capsule — {B} Artifact. "{1}{B}, Sacrifice this: Destroy
+/// target nonblack creature."
+pub fn executioners_capsule() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Executioner's Capsule",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(Color::Black).negate()),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

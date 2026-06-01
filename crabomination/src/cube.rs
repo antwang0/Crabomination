@@ -231,6 +231,12 @@ fn colorless_pool() -> Vec<CardFactory> {
         fellwar_stone,
         millstone,
         aether_spellbomb,
+        nihil_spellbomb,
+        pyrite_spellbomb,
+        sylvan_spellbomb,
+        horizon_spellbomb,
+        expedition_map,
+        executioners_capsule,
         damping_sphere,
         zuran_orb,
         soul_conduit,
@@ -632,6 +638,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         stroke_of_genius,
         // ── modern_decks batch 103 (mono-blue cube expansion) ──
         tempest_angler,
+        seal_of_removal,
         // ── SOS (Secrets of Strixhaven) ──
         chase_inspiration,
         banishing_betrayal,
@@ -838,6 +845,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         black_suns_zenith,
         // ── modern_decks batch 103 (mono-black cube expansion) ──
         mai_scornful_striker,
+        vendetta,
         // ── modern_decks batch 102: cube expansion ──
         // murderous_cut — ✅ Delve (CR 702.66) wired via Keyword::Delve +
         //                  GameAction::CastSpellDelve; {4}{B} destroy.

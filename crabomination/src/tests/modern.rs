@@ -19290,3 +19290,123 @@ fn juggernaut_tapped_is_exempt_from_must_attack() {
     g.priority.player_with_priority = 0;
     g.declare_attackers(vec![]).expect("a tapped Juggernaut isn't forced to attack");
 }
+
+// ── Spellbomb cycle + utility (claude/modern_decks) ──────────────────────────
+
+#[test]
+fn nihil_spellbomb_exiles_opponent_graveyard() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::nihil_spellbomb());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: None, x_value: None })
+        .expect("{T},Sac: exile opp graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.is_empty(), "opponent graveyard exiled");
+    assert!(!g.battlefield.iter().any(|c| c.id == bomb), "spellbomb sacrificed");
+}
+
+#[test]
+fn pyrite_spellbomb_deals_two_to_a_player() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::pyrite_spellbomb());
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: Some(Target::Player(1)), x_value: None })
+        .expect("{T},Sac: 2 damage to any target");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+}
+
+#[test]
+fn seal_of_removal_bounces_a_creature() {
+    let mut g = two_player_game();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_removal());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None })
+        .expect("Sac: bounce target creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear left the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bear returned to owner's hand");
+}
+
+#[test]
+fn vendetta_destroys_nonblack_creature_and_loses_life_equal_to_toughness() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 green
+    let vend = g.add_card_to_hand(0, catalog::vendetta());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: vend, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Vendetta castable for {B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "nonblack creature destroyed");
+    assert_eq!(g.players[0].life, life - 2, "lose life equal to its toughness (2)");
+}
+
+#[test]
+fn sylvan_spellbomb_fetches_a_basic_land_to_hand() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::sylvan_spellbomb());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 0, target: None, x_value: None })
+        .expect("{T},Sac: fetch a basic land");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "Forest goes to hand");
+}
+
+#[test]
+fn expedition_map_fetches_any_land_to_hand() {
+    let mut g = two_player_game();
+    let map = g.add_card_to_battlefield(0, catalog::expedition_map());
+    let land = g.add_card_to_library(0, catalog::watery_grave()); // nonbasic
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(land))]));
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: map, ability_index: 0, target: None, x_value: None })
+        .expect("{2},{T},Sac: fetch any land");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "nonbasic land goes to hand");
+}
+
+#[test]
+fn executioners_capsule_destroys_nonblack_creature() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::executioners_capsule());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cap, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None })
+        .expect("{1}{B},Sac: destroy nonblack creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "nonblack creature destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == cap), "Capsule sacrificed");
+}
+
+#[test]
+fn horizon_spellbomb_draw_mode_works() {
+    let mut g = two_player_game();
+    let bomb = g.add_card_to_battlefield(0, catalog::horizon_spellbomb());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bomb, ability_index: 1, target: None, x_value: None })
+        .expect("{W},Sac: draw a card");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+}
