@@ -281,6 +281,14 @@ impl GameState {
             .find(|c| c.id == card_id)
             .and_then(|c| c.definition.enters_as_copy.clone());
         let Some(spec) = spec else { return false };
+        // Capture the copier's own printed name before the copy rewrite, for
+        // the CR 707.2 name-retention exception (Mockingbird).
+        let original_name: &'static str = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.name)
+            .unwrap_or("");
         // Best legal copy source: highest power among matching permanents,
         // never the copier itself.
         let source = self
@@ -315,8 +323,13 @@ impl GameState {
             events.extend(evs);
         }
         // Layer the copy-exception abilities/keywords on top of the
-        // copiable characteristics (e.g. Phantasmal Image's sacrifice rider).
-        if (!spec.extra_triggered.is_empty() || !spec.extra_keywords.is_empty())
+        // copiable characteristics (e.g. Phantasmal Image's sacrifice rider),
+        // and restore the copier's own name for the CR 707.2 name-retention
+        // exception (Mockingbird). `original_name` was captured before the
+        // copy rewrite stamped the source's name over it.
+        if (!spec.extra_triggered.is_empty()
+            || !spec.extra_keywords.is_empty()
+            || spec.keep_name)
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
             let def = std::sync::Arc::make_mut(&mut c.definition);
@@ -326,6 +339,9 @@ impl GameState {
                 if !def.keywords.contains(kw) {
                     def.keywords.push(kw.clone());
                 }
+            }
+            if spec.keep_name {
+                def.name = original_name;
             }
         }
         true

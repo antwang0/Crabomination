@@ -59,10 +59,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   trigger shortcuts; Melee (CR 702.121, needs an "opponents attacked this
   combat" Value), Provoke, Dash, Boast remain ⏳.
 - **"Becomes a copy" continuous layer-1 effects** — the one-shot copiers
-  (Clone, Phantasmal Image, Mirror Image, Stunt Double, Spark Double) ship via
-  `Effect::BecomeCopyOf`. Still open: continuous layer-1 "becomes a copy"
-  effects (Helm of the Host loop, Mirrorform), copied enters-with-counters,
-  Mockingbird's name-retention exception, and a real copy-target picker
+  (Clone, Phantasmal Image, Mirror Image, Stunt Double, Spark Double,
+  Mockingbird) ship via `Effect::BecomeCopyOf`. Mockingbird's name-retention
+  exception (CR 707.2) is wired via `EntersAsCopy.keep_name`. Still open:
+  continuous layer-1 "becomes a copy" effects (Helm of the Host loop,
+  Mirrorform), copied enters-with-counters, and a real copy-target picker
   (auto-picks highest power today).
 - **Overload (CR 702.96)** — Cyclonic Rift's `{6}{U}` mode. Needs an
   alt-cost that rewrites "target X" → "each X" at cast time (the alt-cost

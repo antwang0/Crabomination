@@ -1179,6 +1179,7 @@ pub fn spark_double() -> CardDefinition {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             extra_creature_types: vec![],
             extra_keywords: vec![],
+            keep_name: false,
             extra_triggered: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::AddCounter {
@@ -1489,6 +1490,7 @@ pub fn clone_card() -> CardDefinition {
             extra_creature_types: vec![],
             extra_triggered: vec![],
             extra_keywords: vec![],
+            keep_name: false,
         }),
         ..Default::default()
     }
@@ -1513,6 +1515,7 @@ pub fn mirror_image() -> CardDefinition {
             extra_creature_types: vec![],
             extra_triggered: vec![],
             extra_keywords: vec![],
+            keep_name: false,
         }),
         ..Default::default()
     }
@@ -1538,6 +1541,7 @@ pub fn stunt_double() -> CardDefinition {
             extra_creature_types: vec![],
             extra_triggered: vec![],
             extra_keywords: vec![Keyword::Flash],
+            keep_name: false,
         }),
         ..Default::default()
     }
@@ -1568,6 +1572,33 @@ pub fn phantasmal_image() -> CardDefinition {
                 },
             }],
             extra_keywords: vec![],
+            keep_name: false,
+        }),
+        ..Default::default()
+    }
+}
+
+/// Mockingbird — {1}{U}, 0/0 Shapeshifter. Flash. May enter as a copy of a
+/// creature you control, except its name stays "Mockingbird" (CR 707.2
+/// name-retention via `EntersAsCopy.keep_name`).
+pub fn mockingbird() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Mockingbird",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Flash],
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou),
+            extra_creature_types: vec![],
+            extra_triggered: vec![],
+            extra_keywords: vec![],
+            keep_name: true,
         }),
         ..Default::default()
     }

@@ -18324,6 +18324,25 @@ fn phantasmal_image_copies_and_keeps_illusion_plus_sacrifice_rider() {
 }
 
 #[test]
+fn mockingbird_copies_your_creature_but_keeps_its_name() {
+    let mut g = two_player_game();
+    // A creature you control to copy.
+    g.add_card_to_battlefield(0, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::mockingbird());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mockingbird castable for {1}{U}");
+    drain_stack(&mut g);
+    let mb = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    // Copies the body (4/4 flier) but keeps its own name (CR 707.2).
+    assert_eq!((mb.definition.power, mb.definition.toughness), (4, 4));
+    assert!(mb.definition.keywords.contains(&Keyword::Flying), "copied Flying");
+    assert_eq!(mb.definition.name, "Mockingbird", "name retained per CR 707.2");
+}
+
+#[test]
 fn culling_ritual_destroys_small_nonland_permanents() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2

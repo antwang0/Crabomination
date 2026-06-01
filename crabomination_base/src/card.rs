@@ -781,6 +781,11 @@ pub struct EntersAsCopy {
     /// flash" — though flash matters at cast time; Sakashima-style riders).
     #[serde(default)]
     pub extra_keywords: Vec<Keyword>,
+    /// CR 707.2 name-retention exception ("except its name is still ~").
+    /// When true the copier keeps its own printed name instead of the
+    /// copied object's. Used by Mockingbird.
+    #[serde(default)]
+    pub keep_name: bool,
 }
 
 fn one_u32() -> u32 { 1 }

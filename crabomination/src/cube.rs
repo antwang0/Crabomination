@@ -375,6 +375,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         phantasmal_image,
         mirror_image,
         stunt_double,
+        mockingbird,
         cackling_counterpart,
         sunhome_stalwart,
         // Proliferate (CR 701.27) suite — grows the controller's counters
