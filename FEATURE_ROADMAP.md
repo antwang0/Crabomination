@@ -88,11 +88,13 @@ not how Magic works" moments.
 
 ## Tier 2 — Engine rules fidelity (beyond Tier 1)
 
-- 🟡 **APNAP trigger ordering** — inter-player APNAP is wired and tested
-  (`game/mod.rs` apnap_rank sort, CR 603.3b; test
-  `apnap_orders_simultaneous_triggers_active_pushed_first`). Remaining: let
-  a controller order their *own* simultaneous triggers via a
-  `Decision::OrderTriggers` prompt (today same-controller order is fixed).
+- ✅ **APNAP trigger ordering** — inter-player APNAP (`game/mod.rs`
+  apnap_rank sort, CR 603.3b) plus same-controller ordering: a `wants_ui`
+  controller orders their own simultaneous triggers via
+  `Decision::OrderTriggers` (`order_same_controller_triggers`); AutoDecider
+  keeps the default order. Remaining: a client modal to surface the prompt
+  in networked human play (engine + wire type are in place; the seat
+  currently degrades to the default order).
 - ⏳ **"Choose targets as it resolves" / divided damage** across N targets
   (Fireball, Forked Bolt, Cryptic-style "tap up to N").
 - ⏳ **Targeting refinements:** "up to N targets", "target each", "another

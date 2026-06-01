@@ -170,6 +170,18 @@ pub enum Decision {
         lessons: Vec<(CardId, String)>,
         hand: Vec<(CardId, String)>,
     },
+
+    /// CR 603.3b — when several of one player's abilities trigger off the
+    /// same event batch, that player puts them on the stack in any order
+    /// they choose. `triggers` lists the simultaneous same-controller
+    /// triggers (source id + label) in the engine's default order. The
+    /// decider answers `TriggerOrder(ids)` giving the desired *stack-push*
+    /// order (since the stack is LIFO, the last id listed resolves first).
+    /// `AutoDecider` returns an empty answer = keep the default order.
+    OrderTriggers {
+        player: usize,
+        triggers: Vec<(CardId, String)>,
+    },
 }
 
 /// The decider's answer to a `Decision::Learn`.
@@ -222,6 +234,10 @@ pub enum DecisionAnswer {
     Modes(Vec<u8>),
     /// CR 701.45 — the chosen Learn action.
     Learn(LearnChoice),
+    /// CR 603.3b — same-controller trigger stack-push order. Ids omitted
+    /// from a partial answer keep their original relative order at the end;
+    /// an empty answer keeps the engine default.
+    TriggerOrder(Vec<CardId>),
 }
 
 pub trait Decider {
@@ -331,6 +347,8 @@ impl Decider for AutoDecider {
                     .map(|(id, _)| LearnChoice::FetchLesson(*id))
                     .unwrap_or(LearnChoice::Decline),
             ),
+            // CR 603.3b — keep the engine's default order (empty answer).
+            Decision::OrderTriggers { .. } => DecisionAnswer::TriggerOrder(vec![]),
         }
     }
 }

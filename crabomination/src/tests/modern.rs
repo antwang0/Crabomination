@@ -17221,6 +17221,53 @@ fn soul_warden_gains_life_when_another_creature_enters() {
     assert_eq!(g.players[0].life, life + 1, "Soul Warden gained 1 when the bear entered");
 }
 
+/// Helper: cast a Grizzly Bears for P0 and resolve only the bear (two
+/// priority passes), leaving any ETB triggers sitting on the stack.
+#[cfg(test)]
+fn cast_bear_and_resolve_only_it(g: &mut GameState) {
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+}
+
+fn stack_trigger_sources(g: &GameState) -> Vec<crate::card::CardId> {
+    g.stack.iter().filter_map(|si| match si {
+        crate::game::types::StackItem::Trigger { source, .. } => Some(*source),
+        _ => None,
+    }).collect()
+}
+
+#[test]
+fn same_controller_triggers_keep_default_order_for_bots() {
+    // Two Soul Wardens (P0). A bot/AutoDecider controller doesn't get a
+    // CR 603.3b ordering prompt, so the triggers push in battlefield order.
+    let mut g = two_player_game();
+    let w1 = g.add_card_to_battlefield(0, catalog::soul_warden());
+    let w2 = g.add_card_to_battlefield(0, catalog::soul_warden());
+    cast_bear_and_resolve_only_it(&mut g);
+    assert_eq!(stack_trigger_sources(&g), vec![w1, w2],
+        "default same-controller order is battlefield order");
+}
+
+#[test]
+fn wants_ui_controller_orders_own_simultaneous_triggers() {
+    // CR 603.3b — a wants_ui controller chooses the stack-push order of
+    // their two simultaneous Soul Warden triggers via Decision::OrderTriggers.
+    let mut g = two_player_game();
+    let w1 = g.add_card_to_battlefield(0, catalog::soul_warden());
+    let w2 = g.add_card_to_battlefield(0, catalog::soul_warden());
+    g.players[0].wants_ui = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::TriggerOrder(vec![w2, w1])]));
+    cast_bear_and_resolve_only_it(&mut g);
+    assert_eq!(stack_trigger_sources(&g), vec![w2, w1],
+        "controller's chosen push order is applied (w1 on top → resolves first)");
+}
+
 /// Cloudfin Raptor evolves (CR 702.100) when a creature with greater
 /// power or toughness enters under your control.
 #[test]

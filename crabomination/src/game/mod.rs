@@ -2351,18 +2351,6 @@ impl GameState {
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
         // and call `&self.evaluate_predicate` to gate each candidate by
         // the optional `EventSpec::filter`.
-        struct TriggerCandidate {
-            source: CardId,
-            effect: Effect,
-            controller: usize,
-            filter: Option<crate::effect::Predicate>,
-            subject: Option<crate::game::effects::EntityRef>,
-            event_amount: u32,
-            /// True if the originating event was an ETB (PermanentEntered).
-            /// Strict Proctor's CR 614 tax only applies to ETB-triggered
-            /// abilities — this flag is read at push-time to gate the tax.
-            triggered_by_etb: bool,
-        }
         let mut candidates: Vec<TriggerCandidate> = Vec::new();
         // Resolve per-permanent layer state once so the dispatcher can
         // honour `Modification::RemoveAllAbilities` (Turn to Frog,
@@ -2596,6 +2584,16 @@ impl GameState {
             }
         }
 
+        // CR 603.3b — let a `wants_ui` controller order their own
+        // simultaneous triggers. After the APNAP regroup (stable so the
+        // prowess pumps appended above rejoin their controller's run), we
+        // walk each contiguous same-controller run of length ≥2 and ask
+        // that player's decider for a stack-push order. Gated on `wants_ui`
+        // so AutoDecider/bot games (and the bulk of the test suite) are
+        // untouched; AutoDecider would keep the default order anyway.
+        candidates.sort_by_key(|c| apnap_rank(c.controller));
+        candidates = self.order_same_controller_triggers(candidates);
+
         // Phase 2: enforce the optional `EventSpec::filter` predicate now
         // that we're free to call `&self.evaluate_predicate`. The trigger's
         // source permanent is bound as `ctx.source`, and the event's
@@ -2664,6 +2662,69 @@ impl GameState {
         // that cycle's die-time, so stale entries from prior batches
         // can't leak into later trigger resolution.
         self.died_card_snapshots.clear();
+    }
+
+    /// CR 603.3b — reorder each contiguous run of same-controller triggers
+    /// per the controller's chosen stack-push order. Only consults the
+    /// decider for a `wants_ui` controller whose run has ≥2 triggers; every
+    /// other run is returned unchanged (AutoDecider keeps the default order
+    /// regardless). The decider's `TriggerOrder(ids)` lists the desired
+    /// push order; ids it omits keep their original relative order at the
+    /// end, so a partial or empty answer is always legal.
+    fn order_same_controller_triggers(
+        &mut self,
+        candidates: Vec<TriggerCandidate>,
+    ) -> Vec<TriggerCandidate> {
+        let mut out: Vec<TriggerCandidate> = Vec::with_capacity(candidates.len());
+        let mut i = 0;
+        while i < candidates.len() {
+            let ctrl = candidates[i].controller;
+            let mut j = i + 1;
+            while j < candidates.len() && candidates[j].controller == ctrl {
+                j += 1;
+            }
+            let run = &candidates[i..j];
+            if run.len() < 2 || !self.players.get(ctrl).is_some_and(|p| p.wants_ui) {
+                out.extend_from_slice(run);
+            } else {
+                let labels: Vec<(CardId, String)> = run
+                    .iter()
+                    .map(|c| {
+                        let name = self
+                            .battlefield_find(c.source)
+                            .map(|b| b.definition.name.to_string())
+                            .unwrap_or_else(|| "Triggered ability".to_string());
+                        (c.source, name)
+                    })
+                    .collect();
+                let answer = self.decider.decide(&crate::decision::Decision::OrderTriggers {
+                    player: ctrl,
+                    triggers: labels,
+                });
+                let order = match answer {
+                    crate::decision::DecisionAnswer::TriggerOrder(ids) => ids,
+                    _ => vec![],
+                };
+                // Apply the requested order: take run entries in `order`,
+                // then append any not named (stable) so the answer can be
+                // partial or empty.
+                let mut remaining: Vec<Option<TriggerCandidate>> =
+                    run.iter().cloned().map(Some).collect();
+                for id in order {
+                    if let Some(pos) = remaining
+                        .iter()
+                        .position(|c| c.as_ref().is_some_and(|c| c.source == id))
+                    {
+                        out.push(remaining[pos].take().unwrap());
+                    }
+                }
+                for slot in remaining.into_iter().flatten() {
+                    out.push(slot);
+                }
+            }
+            i = j;
+        }
+        out
     }
 
     /// Walk a queue of pending triggers, pushing each onto the stack.

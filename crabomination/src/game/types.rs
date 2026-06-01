@@ -280,6 +280,24 @@ impl PendingDecision {
 /// bloat `ResumeContext` past the threshold the Clippy
 /// `large_enum_variant` lint trips on, but kept inline here because
 /// the existing variants in `ResumeContext` are already this size.
+/// A triggered ability gathered during event dispatch, before APNAP
+/// ordering (CR 603.3) and `EventSpec::filter` gating. Lives at module
+/// scope so the same-controller ordering pass can take ownership of the
+/// collected vector.
+#[derive(Clone)]
+pub(crate) struct TriggerCandidate {
+    pub source: CardId,
+    pub effect: Effect,
+    pub controller: usize,
+    pub filter: Option<crate::effect::Predicate>,
+    pub subject: Option<crate::game::effects::EntityRef>,
+    pub event_amount: u32,
+    /// True if the originating event was an ETB (PermanentEntered). Strict
+    /// Proctor's CR 614 tax only applies to ETB-triggered abilities — this
+    /// flag is read at push-time to gate the tax.
+    pub triggered_by_etb: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingTriggerPush {
     pub source: CardId,

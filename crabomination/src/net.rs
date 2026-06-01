@@ -753,6 +753,13 @@ pub enum DecisionWire {
         lessons: Vec<(CardId, String)>,
         hand: Vec<(CardId, String)>,
     },
+    /// CR 603.3b — order your own simultaneous triggers. `triggers` lists
+    /// the simultaneous same-controller triggers in the engine's default
+    /// order; the client answers with the desired stack-push order.
+    OrderTriggers {
+        player: usize,
+        triggers: Vec<(CardId, String)>,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -839,6 +846,10 @@ impl From<&Decision> for DecisionWire {
                 player: *player,
                 lessons: lessons.clone(),
                 hand: hand.clone(),
+            },
+            Decision::OrderTriggers { player, triggers } => DecisionWire::OrderTriggers {
+                player: *player,
+                triggers: triggers.clone(),
             },
         }
     }
