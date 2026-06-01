@@ -8,6 +8,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Divided-damage / "any number of targets"** is the single largest remaining
+  STX/cube unblock — Crackle with Power, Pyrokinesis, Eldrazi Confluence,
+  Kozilek's Command, and Vibrant/Magma Opus's divided modes all collapse to a
+  single target. Needs a `Decision::DivideDamage { total, targets }` +
+  target-amount pairs threaded through the cast path and a client modal.
+- **"Name a card"** primitive would unblock Pithing Needle, Crumble to Dust,
+  Spoils of the Vault, Cabal Therapy — a `Decision::NameCard` (free text over
+  the catalog) stamped on the permanent/spell and consulted by ability
+  suppression / same-name exile / reveal-until-find.
+- **Source-relative MV filter** — Rushed Rebirth's "lesser mana value" fetch
+  (and similar) needs a `SelectionRequirement::ManaValueLessThan(Value)` that
+  the `Search` resolver evaluates against a captured value.
+- **Stale "two-target prompt ⏳" notes** — several catalog doc-comments still
+  claim multi-target sorcery prompts are unavailable; the slot-1+ picker
+  (`auto_targets_for_effect_all_slots`) is wired and the bot uses it. Sweep
+  and update the remaining notes (Channeled Force done this run).
+
 - **OrderTriggers server suspend** — CR 603.3b same-controller trigger
   ordering is wired engine-side (`order_same_controller_triggers` consults
   the decider synchronously) and the client modal exists
