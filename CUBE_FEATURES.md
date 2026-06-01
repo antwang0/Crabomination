@@ -96,7 +96,6 @@ work is listed below.
 | Ouroboroid | ⏳ | TBD. |
 | Golgari Grave-Troll | 🟡 (was ⏳) | Push (claude/modern_decks): {X}{B}{B} 0/0 Skeleton Troll, enters with X +1/+1 counters (`Value::XFromCost`), Dredge 6. The "{T}, remove four +1/+1 counters: regenerate" ability is omitted. Test: `golgari_grave_troll_enters_with_x_plus_one_counters`. |
 | Railway Brawler | ⏳ | Train (vehicle-like). |
-| Conclave Sledge-Captain | 🟡 | 6/6 Trample Elephant Soldier. ETB puts +1/+1 counter on each creature you control. Static grants trample to creatures with +1/+1 counters. |
 | Zopandrel, Hunger Dominus | 🟡 | 4/6 Reach Legendary Phyrexian Horror. Begin-combat +4/+4 pump to each creature you control (approximation of double-power). Phyrexian-mana sac activation omitted. |
 | Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |

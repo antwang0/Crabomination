@@ -13625,6 +13625,23 @@ fn conclave_sledge_captain_etb_puts_counters_on_each_creature() {
 }
 
 #[test]
+fn conclave_sledge_captain_grants_trample_to_countered_creatures() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::conclave_sledge_captain());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Without a counter the bear has no trample.
+    let c = g.compute_battlefield();
+    assert!(!c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Trample));
+    // Give it a +1/+1 counter → the static grants trample.
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    let c = g.compute_battlefield();
+    assert!(c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Trample),
+        "countered creature gains trample from Conclave Sledge-Captain");
+}
+
+#[test]
 fn trenchpost_taps_for_two_colorless() {
     let mut g = two_player_game();
     let tp = g.add_card_to_battlefield(0, catalog::trenchpost());
