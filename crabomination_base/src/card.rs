@@ -583,6 +583,13 @@ pub enum SelectionRequirement {
     /// `static_str_serde` adapter — the catalog passes a one-time
     /// `.to_string()` at definition time, negligible overhead.
     HasName(String),
+    /// True when the candidate's mana value is ≤ the number of permanents
+    /// the evaluating player controls that match the inner filter. Powers
+    /// "with mana value less than or equal to the number of [X] you
+    /// control" gates — Lay Down Arms ("…number of Plains you control").
+    /// Battlefield/zone candidate; the count walks the battlefield for
+    /// permanents matching `inner` under the evaluating controller.
+    ManaValueAtMostControlledCount(Box<SelectionRequirement>),
     /// True when the candidate has a back-face `CardDefinition` —
     /// i.e. it's a double-faced card (MDFC). Used by the SOS Prepare
     /// mechanic, whose printed reminder text reads "(Only creatures

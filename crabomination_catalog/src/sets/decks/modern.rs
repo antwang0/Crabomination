@@ -7,7 +7,7 @@
 //! supplement** section.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword,
+    ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword, LandType,
     SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
@@ -3049,12 +3049,20 @@ pub fn lay_down_arms() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Exile {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(4)),
-            ),
-        },
-        triggered_abilities: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(3),
+            },
+            Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature.and(
+                    SelectionRequirement::ManaValueAtMostControlledCount(Box::new(
+                        SelectionRequirement::HasLandType(LandType::Plains)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                )),
+            },
+        ]),
         ..Default::default()
     }
 }

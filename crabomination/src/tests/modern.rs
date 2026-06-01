@@ -6986,15 +6986,20 @@ fn languish_sweeps_small_but_leaves_big_creatures() {
         "Serra (4/4) should survive — 4-2 = 2 toughness left");
 }
 
-/// Lay Down Arms exiles low-power creatures, rejects power-4+.
+/// Lay Down Arms exiles a creature whose MV ≤ Plains you control, the
+/// exiled creature's controller gains 3 life, and it rejects higher-MV
+/// targets.
 #[test]
-fn lay_down_arms_exiles_low_power_but_rejects_high_power() {
+fn lay_down_arms_exiles_by_plains_count_and_gains_life() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
-    let craw = g.add_card_to_battlefield(1, catalog::craw_wurm()); // 6/4
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::plains()); // 2 Plains → MV cap 2
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // CMC 2
+    let craw = g.add_card_to_battlefield(1, catalog::craw_wurm()); // CMC 6
     let id_ok = g.add_card_to_hand(0, catalog::lay_down_arms());
     let id_bad = g.add_card_to_hand(0, catalog::lay_down_arms());
     g.players[0].mana_pool.add(Color::White, 2);
+    let life_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
         card_id: id_ok,
@@ -7003,8 +7008,8 @@ fn lay_down_arms_exiles_low_power_but_rejects_high_power() {
         mode: None, x_value: None,
     }).expect("Lay Down Arms castable for {W}");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Bear should leave battlefield");
-    assert!(g.exile.iter().any(|c| c.id == bear), "Bear should be exiled, not in graveyard");
+    assert!(g.exile.iter().any(|c| c.id == bear), "Bear (CMC 2 ≤ 2 Plains) should be exiled");
+    assert_eq!(g.players[1].life, life_before + 3, "bear's controller gains 3 life");
 
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id_bad,
@@ -7012,8 +7017,7 @@ fn lay_down_arms_exiles_low_power_but_rejects_high_power() {
         additional_targets: vec![],
         mode: None, x_value: None,
     });
-    assert!(err.is_err(),
-        "Lay Down Arms should reject power-6 Craw Wurm: {:?}", err);
+    assert!(err.is_err(), "Lay Down Arms should reject CMC-6 Craw Wurm with only 2 Plains: {:?}", err);
 }
 
 /// Smelt destroys an artifact.

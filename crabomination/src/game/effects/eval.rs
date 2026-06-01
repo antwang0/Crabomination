@@ -800,6 +800,21 @@ impl GameState {
                         })
                     }
                     R::HasName(name) => card.definition.name == name.as_str(),
+                    R::ManaValueAtMostControlledCount(inner) => {
+                        let count = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                self.evaluate_requirement_static(
+                                    inner,
+                                    &Target::Permanent(c.id),
+                                    controller,
+                                    source,
+                                )
+                            })
+                            .count() as u32;
+                        card.definition.cost.cmc() <= count
+                    }
                     R::HasBackFace => card.definition.back_face.is_some(),
                     _ => unreachable!("handled above"),
                 }
@@ -890,6 +905,23 @@ impl GameState {
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
             R::HasName(name) => card.definition.name == name.as_str(),
+            // Count walks the battlefield for the evaluating controller's
+            // matching permanents; the candidate's own zone is irrelevant.
+            R::ManaValueAtMostControlledCount(inner) => {
+                let count = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        self.evaluate_requirement_static(
+                            inner,
+                            &Target::Permanent(c.id),
+                            controller,
+                            None,
+                        )
+                    })
+                    .count() as u32;
+                card.definition.cost.cmc() <= count
+            }
             // Back-face check is a static property of the card
             // definition — same answer in any zone.
             R::HasBackFace => card.definition.back_face.is_some(),
