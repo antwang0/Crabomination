@@ -12185,6 +12185,44 @@ fn yarok_the_desecrated_is_a_three_five_deathtouch_lifelink() {
 }
 
 #[test]
+fn yarok_doubles_your_own_etb_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::yarok_the_desecrated());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    // Elvish Visionary's own ETB "draw a card" fires twice under Yarok.
+    let viz = g.add_card_to_hand(0, catalog::elvish_visionary());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: viz, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Visionary castable");
+    drain_stack(&mut g);
+    // Cast (-1) + two draws (+2) = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Yarok doubles Elvish Visionary's ETB draw");
+}
+
+#[test]
+fn yarok_under_opponent_control_does_not_double_or_suppress_yours() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::yarok_the_desecrated()); // opponent's Yarok
+    g.add_card_to_library(0, catalog::island());
+    let viz = g.add_card_to_hand(0, catalog::elvish_visionary());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: viz, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Visionary castable");
+    drain_stack(&mut g);
+    // Opp's Yarok doubles *their* ETBs, not yours — and never suppresses.
+    // Cast (-1) + one draw (+1) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "your ETB draw fires exactly once");
+}
+
+#[test]
 fn hellrider_attack_pings_each_opponent_for_one() {
     let mut g = two_player_game();
     let hellrider = g.add_card_to_battlefield(0, catalog::hellrider());

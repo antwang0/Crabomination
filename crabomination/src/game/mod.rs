@@ -4118,9 +4118,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // ExtraEtbCountersForCreatureCasts — read at creature-spell
             // resolution time in `stack.rs::resolve_spell`; no layer effect.
             | StaticEffect::ExtraEtbCountersForCreatureCasts { .. }
-            // EtbTriggerSpotlight — read at ETB trigger dispatch via
-            // `etb_trigger_multiplier`; no layer effect.
+            // EtbTriggerSpotlight / DoubleControllerEtbTriggers — read at ETB
+            // trigger dispatch via `etb_trigger_multiplier`; no layer effect.
             | StaticEffect::EtbTriggerSpotlight
+            | StaticEffect::DoubleControllerEtbTriggers
             // UncounterableCreaturesOfChosenType — read at cast time by
             // `caster_grants_uncounterable_with_x`; no layer effect.
             | StaticEffect::UncounterableCreaturesOfChosenType

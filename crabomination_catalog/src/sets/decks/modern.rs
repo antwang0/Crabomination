@@ -5503,12 +5503,15 @@ pub fn anguished_unmaking() -> CardDefinition {
 /// causes a triggered ability of a permanent you control to trigger,
 /// that ability triggers an additional time."
 ///
-/// Cube-style approximation: the "doubles your ETB triggers" static
-/// is engine-wide ⏳ (no trigger-multiplication primitive). Ships as
-/// a 3/5 deathtouch + lifelink Horror body — strictly weaker than
-/// printed, but the body alone is a midgame value engine.
+/// Your permanents' own ETB triggers fire an additional time via
+/// `StaticEffect::DoubleControllerEtbTriggers` (read by
+/// `etb_trigger_multiplier`), without suppressing opponents' triggers. (As
+/// with Elesh Norn, the multiplier currently covers each entering
+/// permanent's own `SelfSource` ETB triggers; "another permanent entered"
+/// reaction triggers aren't yet doubled.)
 pub fn yarok_the_desecrated() -> CardDefinition {
-    use crate::card::Supertype as Sup;
+    use crate::card::{StaticAbility, Supertype as Sup};
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Yarok, the Desecrated",
         cost: cost(&[generic(2), u(), b(), g()]),
@@ -5521,6 +5524,12 @@ pub fn yarok_the_desecrated() -> CardDefinition {
         power: 3,
         toughness: 5,
         keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If a permanent entering causes a triggered ability \
+                          of a permanent you control to trigger, that ability \
+                          triggers an additional time.",
+            effect: StaticEffect::DoubleControllerEtbTriggers,
+        }],
         ..Default::default()
     }
 }

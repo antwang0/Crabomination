@@ -2790,6 +2790,13 @@ pub enum StaticEffect {
     /// permanent with this static suppresses your ETB triggers
     /// (multiplier = 0); each of your own adds one extra fire.
     EtbTriggerSpotlight,
+    /// CR 603.x — "If a permanent entering the battlefield causes a
+    /// triggered ability of a permanent you control to trigger, that
+    /// ability triggers an additional time." Yarok / Panharmonicon. Unlike
+    /// `EtbTriggerSpotlight` this only *adds* fires for the controller's own
+    /// ETB triggers — it never suppresses opponents'. Read at ETB-trigger
+    /// dispatch via `etb_trigger_multiplier`.
+    DoubleControllerEtbTriggers,
     /// CR 702.x — "Creature spells you cast of the chosen type can't be
     /// countered." Cavern of Souls. The chosen creature type lives on
     /// the permanent's `chosen_creature_type` field (set at ETB) — the
