@@ -164,6 +164,21 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
     }
 }
 
+/// Leading glyph for a log entry, so the red/green colour coding in
+/// [`event_color`] isn't the *only* signal distinguishing harm from
+/// benefit (colour-blind accessibility). `▼` = damage / life loss,
+/// `✖` = a permanent died, `▲` = life gained / damage prevented. Empty
+/// for everything else — the colour + text already carry those.
+fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static str {
+    use crabomination::net::GameEventWire as E;
+    match ev {
+        E::DamageDealt { .. } | E::LifeLost { .. } | E::PoisonAdded { .. } => "▼ ",
+        E::CreatureDied { .. } | E::PlaneswalkerDied { .. } => "✖ ",
+        E::LifeGained { .. } | E::DamagePrevented { .. } => "▲ ",
+        _ => "",
+    }
+}
+
 /// Pretty-print a `GameEventWire` for the in-game log, resolving any
 /// CardId via the running `CardNames` map so the player sees real card
 /// names instead of `CardId(N)` debug strings. Thin wrapper around the
@@ -900,6 +915,125 @@ pub fn update_phase_chart(
     }
 }
 
+// ── Phase banner ──────────────────────────────────────────────────────────────
+
+/// Remembers the last turn/step the banner system reacted to, so it only
+/// flashes a banner on a genuine transition (not every view refresh).
+#[derive(Resource, Default)]
+pub struct PhaseBannerTracker {
+    last_turn: u32,
+    last_step: Option<TurnStep>,
+    /// `false` until the first view is observed — priming the tracker on
+    /// that first view avoids flashing a banner for whatever state the
+    /// client happens to connect into (e.g. mid-mulligan).
+    primed: bool,
+}
+
+/// A transient, fading center-screen banner ("Your Turn", "Combat", …).
+/// `animate_phase_banner` counts `remaining` down and fades the text,
+/// despawning at zero.
+#[derive(Component)]
+pub struct PhaseBanner {
+    remaining: f32,
+    total: f32,
+}
+
+const PHASE_BANNER_SECS: f32 = 1.5;
+
+/// Flash a banner on milestone transitions: the start of a turn ("Your
+/// Turn" / "<name>'s Turn") and entry into combat ("Combat"). Deliberately
+/// not every step — a banner per step would be noise.
+pub fn trigger_phase_banner(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    mut tracker: ResMut<PhaseBannerTracker>,
+    ui_fonts: Res<UiFonts>,
+    existing: Query<Entity, With<PhaseBanner>>,
+) {
+    if !view.is_changed() {
+        return;
+    }
+    let Some(cv) = &view.0 else { return };
+    if cv.game_over.is_some() {
+        return;
+    }
+
+    let prev_step = tracker.last_step;
+    let prev_turn = tracker.last_turn;
+    let was_primed = tracker.primed;
+    tracker.last_turn = cv.turn;
+    tracker.last_step = Some(cv.step);
+    tracker.primed = true;
+    if !was_primed {
+        return;
+    }
+
+    let banner: Option<(String, Color)> = if cv.turn != prev_turn {
+        Some(if cv.active_player == cv.your_seat {
+            ("Your Turn".to_string(), theme::ACCENT_GOLD)
+        } else {
+            (format!("{}'s Turn", player_name(cv, cv.active_player)), theme::TEXT_DANGER)
+        })
+    } else if prev_step != Some(cv.step) && cv.step == TurnStep::DeclareAttackers {
+        Some(("Combat".to_string(), theme::ACCENT_ORANGE))
+    } else {
+        None
+    };
+
+    let Some((text, color)) = banner else { return };
+    // Replace any in-flight banner so rapid transitions don't stack.
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Percent(20.0),
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            Pickable::IGNORE,
+            InGameRoot,
+            PhaseBanner { remaining: PHASE_BANNER_SECS, total: PHASE_BANNER_SECS },
+        ))
+        .with_children(|p| {
+            p.spawn((
+                Text::new(text),
+                ui_fonts.tf(46.0),
+                TextColor(color),
+                Pickable::IGNORE,
+            ));
+        });
+}
+
+/// Count the banner down and fade its text out over the last ~40% of its
+/// life; despawn when elapsed.
+pub fn animate_phase_banner(
+    mut commands: Commands,
+    time: Res<Time>,
+    mut banners: Query<(Entity, &mut PhaseBanner, &Children)>,
+    mut texts: Query<&mut TextColor>,
+) {
+    for (entity, mut banner, children) in &mut banners {
+        banner.remaining -= time.delta_secs();
+        if banner.remaining <= 0.0 {
+            commands.entity(entity).despawn();
+            continue;
+        }
+        let frac = (banner.remaining / banner.total).clamp(0.0, 1.0);
+        // Hold full opacity, then ease out over the final 40%.
+        let alpha = (frac / 0.4).min(1.0);
+        for child in children.iter() {
+            if let Ok(mut tc) = texts.get_mut(child) {
+                let c = tc.0.to_srgba();
+                tc.0 = Color::srgba(c.red, c.green, c.blue, alpha);
+            }
+        }
+    }
+}
 
 pub fn update_hint(
     view: Res<CurrentView>,
@@ -2490,7 +2624,10 @@ pub fn handle_game_input(
     // Update game log from server events.
     for ev in &server_events.0 {
         check_reveal_wire(std::slice::from_ref(ev), reveal);
-        log.push_colored(format_event(ev, card_names), event_color(ev));
+        log.push_colored(
+            format!("{}{}", event_glyph(ev), format_event(ev, card_names)),
+            event_color(ev),
+        );
     }
 
     let Some(cv) = &view.0 else { return };

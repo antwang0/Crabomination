@@ -51,6 +51,7 @@ use systems::game_ui::{
     handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons, sync_player_hud_seat,
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
     update_attack_button_label,
+    animate_phase_banner, trigger_phase_banner, PhaseBannerTracker,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
     update_player_stats_chips, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
@@ -203,6 +204,7 @@ fn main() {
         .insert_resource(RenderQuality::default())
         .add_message::<ChangeQuality>()
         .insert_resource(GameLog::default())
+        .insert_resource(PhaseBannerTracker::default())
         .insert_resource(FastForward::default())
         .insert_resource(TargetingState::default())
         .insert_resource(game::LegalTargets::default())
@@ -399,6 +401,8 @@ fn main() {
                 draw_attack_plan_gizmos,
                 update_castable_highlights,
                 toggle_shortcut_help,
+                trigger_phase_banner,
+                animate_phase_banner,
             )
                 .run_if(in_state(AppState::InGame)),
         )
