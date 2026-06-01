@@ -326,6 +326,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── training body (claude/modern_decks) ──
+        pridemalkin,
         // ── classic core-set bodies (claude/modern_decks) ──
         eager_cadet,
         youthful_knight,
@@ -560,6 +562,14 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── ETB-value + adapt/connive creatures (claude/modern_decks) ──
+        aether_adept,
+        augury_owl,
+        cloudkin_seer,
+        merfolk_skydiver,
+        benthic_biomancer,
+        pteramander,
+        quandrix_cryptomancer,
         // ── classic core-set bodies (claude/modern_decks) ──
         air_elemental,
         snapping_drake,
@@ -1006,6 +1016,10 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── divided-damage burn (claude/modern_decks) ──
+        arc_lightning,
+        forked_lightning,
+        chandras_pyrohelix,
         // ── classic core-set bodies (claude/modern_decks) ──
         gray_ogre,
         mons_goblin_raiders,

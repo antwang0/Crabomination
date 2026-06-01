@@ -24,10 +24,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   high-confidence staples. The Verge / Landscape / Horizon-canopy land cycles
   and other cube ⏳ entries still want Scryfall-verified definitions before
   wiring — re-run with network access.
-- **Pool registration** — new `mod_set` cards (Adapt/Connive creatures,
-  Arc/Forked Lightning, Chandra's Pyrohelix, Cloudkin Seer, Augury Owl) are
-  defined + tested but not yet added to any cube/draft pool list; wire them
-  into the relevant factory list so they appear in real games.
+- **Pool registration** — this run's new cards are wired into `cube.rs`
+  color pools (blue: Aether Adept, Augury Owl, Cloudkin Seer, Merfolk Skydiver,
+  Benthic Biomancer, Pteramander, Quandrix Cryptomancer; white: Pridemalkin;
+  red: Arc/Forked Lightning, Chandra's Pyrohelix). Pridemalkin's "trample for
+  countered creatures" static and the Verge/Landscape land cycles still want
+  Scryfall-verified definitions.
 - **`Effect::NameCard` for spells** — currently only stamps a *battlefield*
   permanent (`named_card`). Spoils of the Vault / Cabal Therapy name a card
   during *spell* resolution; that needs the chosen name captured into
