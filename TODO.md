@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee
+  this run): **Bloodthirst** needs a "an opponent was dealt damage this turn"
+  predicate (none exists yet); **Monstrosity** needs a `monstrous` flag (or a
+  dedicated counter) to gate the once-only counter add + a "becomes monstrous"
+  event; **Devour/Amass** need sac-as-ETB and an Army token. **Melee** is a
+  flat +1/+1 — wants a per-combat attacked-opponent tally for multiplayer.
+  **Renown** is gated on "no +1/+1 counters" as a renowned-once proxy; a real
+  `renowned` flag would be more faithful for creatures that gain counters
+  by other means.
+- **Mulligan color-screw** — `decide_mulligan` now checks land count *and*
+  early-curve castability; it still can't tell that a hand's lands produce
+  the wrong colors for its spells. Wants a produced-colors helper on lands.
+- **Client build (this env)** — `crabomination_client` can't compile here
+  (`wayland-sys` build script fails: no system `wayland-client`). UI changes
+  this run (keyword reminder-text additions in `counter_tooltip.rs`) are
+  additive `&'static str` data and weren't compile-verified in this sandbox.
 - **Divided damage** — ✅ shipped: `Effect::DealDamageDivided { total, filter,
   max_targets }` + `Decision::DivideDamage` (AutoDecider spreads evenly; UI/
   scripted deciders choose the split). Wired Forked Bolt, Pyrokinesis, Crackle
