@@ -155,6 +155,23 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.43 — Modular** (claude/modern_decks). `shortcut::modular_dies`
+  pairs with `enters_with_counters`; the dies-trigger adds the source's
+  *last-known* +1/+1 count to a target artifact creature (the source is in
+  the graveyard, so `MoveCounter` can't read it — mirrors Hangarback's
+  last-known path). Tests in `tests_counters`.
+- ✅ **CR 702.57 — Graft** (claude/modern_decks). `shortcut::graft` —
+  `EntersBattlefield/YourControl` trigger moving a +1/+1 counter to the
+  entering creature (no-op once empty). Tests in `tests_counters`.
+- ✅ **CR 702.97 — Outlast** (claude/modern_decks). `shortcut::outlast(cost)`
+  — sorcery-speed `{cost},{T}: +1/+1 counter`; counter-anthems ride the
+  layer system's `AllWithCounter` decomposition. Tests in `tests_counters`.
+- ✅ **CR 702.111 — Renown** (claude/modern_decks). `shortcut::renown(n)` —
+  combat-damage trigger gated on "no +1/+1 counters" (renown-once
+  approximation). Tests in `tests_counters`.
+- ✅ **CR 702.121 — Melee** (claude/modern_decks). `shortcut::melee` — flat
+  +1/+1 on attack (per-opponent tally collapses to one). Test in
+  `tests_counters`.
 - ✅ **CR 701.21 — Bolster** (claude/modern_decks). `shortcut::bolster(n)`
   + `Selector::LeastToughnessYouControl` (the controller's least-toughness
   creature, first on tie). Test: `bolster_buffs_least_toughness_creature`.

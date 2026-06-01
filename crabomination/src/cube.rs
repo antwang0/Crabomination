@@ -305,6 +305,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         phyrexian_revoker,
         solemn_simulacrum,
         inquisitive_puppet,
+        // ── Modular (CR 702.43) artifact creatures ──
+        arcbound_worker,
+        arcbound_stinger,
+        arcbound_ravager,
     ]
 }
 
@@ -493,6 +497,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Exalted (CR 702.83) ──
         akrasan_squire,
         aven_squire,
+        // ── Renown (CR 702.111) / Outlast (CR 702.97) ──
+        topan_freeblade,
+        stalwart_aven,
+        ainok_bond_kin,
+        abzan_falconer,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -917,6 +926,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         corpse_dance,
         // ── modern_decks-17 ──
         tasigur_the_golden_fang,
+        // ── Outlast (CR 702.97) ──
+        mer_ek_nightblade,
     ];
     if pair_contains(pair, Color::Red) {
         v.push(terminate);
@@ -1192,6 +1203,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         kari_zev_skyship_raider,
         // ── New cube cards ──
         greasewrench_goblin,
+        // ── Renown (CR 702.111) ──
+        skyraker_giant,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -1398,6 +1411,11 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         scavenging_ooze,
         // ── New cube cards ──
         esikas_chariot,
+        // ── Outlast (CR 702.97) / Graft (CR 702.57) ──
+        tuskguard_captain,
+        aquastrand_spider,
+        plaxcaster_frogling,
+        cytoplast_root_kin,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

@@ -173,8 +173,16 @@ feature; sweep card-batch by card-batch.
   Pridemalkin), ✅ Evolve (`shortcut::evolve` +
   `SelectionRequirement::GreaterPowerOrToughnessThanSource` — Cloudfin
   Raptor, Experiment One, Fathom Mage), ✅ Mentor (`shortcut` — Sunhome
-  Stalwart, CR 702.135), ⏳ Training, ⏳ Modular, ⏳ Graft,
-  ⏳ Outlast, ⏳ Monstrosity, ⏳ Devour, ⏳ Bloodthirst, ⏳ Amass.
+  Stalwart, CR 702.135),
+  ✅ Modular (`shortcut::modular_dies` — CR 702.43, enters with N +1/+1
+  counters + last-known-info counter transfer on death; Arcbound cycle),
+  ✅ Graft (`shortcut::graft` — CR 702.57, move-a-counter when another
+  creature enters; Aquastrand Spider, Plaxcaster Frogling, Cytoplast
+  Root-Kin), ✅ Outlast (`shortcut::outlast` — CR 702.97, sorcery-speed
+  tap-to-grow + `AllWithCounter` anthems; Abzan Falconer, Ainok Bond-Kin,
+  Tuskguard Captain, Mer-Ek Nightblade), ✅ Renown (`shortcut::renown` —
+  CR 702.111, +N on first combat damage; Topan Freeblade, Stalwart Aven,
+  Skyraker Giant), ⏳ Monstrosity, ⏳ Devour, ⏳ Bloodthirst, ⏳ Amass.
 - **Cast-from-elsewhere:** ⏳ cast-from-top (Mind's Desire / Amped Raptor /
   Robber of the Rich), ⏳ Suspend (+ time counters), ⏳ Forecast,
   ⏳ Hideaway, ⏳ Aftermath.
@@ -184,7 +192,9 @@ feature; sweep card-batch by card-batch.
   ✅ Battle Cry (`shortcut::battle_cry` — Goblin Wardriver),
   ✅ Exalted (`shortcut::exalted` — Akrasan/Aven Squire, Silverquill
   Duelmaster), ✅ Frenzy (`shortcut::frenzy` — CR 702.68),
-  ⏳ Melee, ⏳ Dash, ⏳ Boast,
+  ✅ Melee (`shortcut::melee` — CR 702.121, +1/+1 on attack; per-opponent
+  tally collapses to one in the common single-defender case),
+  ⏳ Dash, ⏳ Boast,
   ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
   ⏳ Enlist, ⏳ Mobilize, ⏳ Myriad.
 - **Value/ETB:** ⏳ Investigate (verb) + sac-Clue payoff (🟡 Clue tokens
