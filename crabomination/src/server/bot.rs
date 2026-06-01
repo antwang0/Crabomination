@@ -72,7 +72,14 @@ impl Bot for RandomBot {
         // Any pending decision addressed to us: auto-answer it.
         if let Some(pending) = &state.pending_decision {
             if pending.acting_player() == seat {
-                let answer = AutoDecider.decide(&pending.decision);
+                let answer = match &pending.decision {
+                    // Smarter mulligan than AutoDecider's blanket Keep:
+                    // ship hands that are flooded or screwed on lands.
+                    crate::decision::Decision::Mulligan { mulligans_taken, .. } => {
+                        decide_mulligan(state, seat, *mulligans_taken)
+                    }
+                    other => AutoDecider.decide(other),
+                };
                 return Some(GameAction::SubmitDecision(answer));
             }
             return None;
@@ -339,6 +346,28 @@ impl Bot for RandomBot {
             }
             _ => Some(GameAction::PassPriority),
         }
+    }
+}
+
+/// Land-count mulligan heuristic. A keepable opening hand wants roughly
+/// 2–5 lands out of seven; 0–1 (screw) or 6–7 (flood) are shipped. We stop
+/// digging after two mulligans (a London mulligan past that bottoms too
+/// many cards to be worth chasing a perfect curve) and always keep a hand
+/// of three or fewer cards. Reads land counts off the live hand zone since
+/// the `Decision::Mulligan` payload only carries names.
+fn decide_mulligan(
+    state: &GameState,
+    seat: usize,
+    mulligans_taken: usize,
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::DecisionAnswer;
+    let hand = &state.players[seat].hand;
+    let lands = hand.iter().filter(|c| c.definition.is_land()).count();
+    let keepable = (2..=5).contains(&lands) || hand.len() <= 3;
+    if keepable || mulligans_taken >= 2 {
+        DecisionAnswer::Keep
+    } else {
+        DecisionAnswer::TakeMulligan
     }
 }
 
@@ -1173,6 +1202,26 @@ mod tests {
             }
             _ => panic!("bot should activate Sol Ring's mana ability"),
         }
+    }
+
+    /// Mulligan heuristic: ship a 1-land seven, keep a 3-land seven, and
+    /// stop digging once two mulligans have been taken.
+    #[test]
+    fn bot_mulligans_land_light_hands_but_keeps_balanced_ones() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        // 1 land + 6 spells → mulligan.
+        g.add_card_to_hand(0, catalog::island());
+        for _ in 0..6 { g.add_card_to_hand(0, catalog::grizzly_bears()); }
+        assert!(matches!(decide_mulligan(&g, 0, 0), DecisionAnswer::TakeMulligan));
+        // Stop digging after two mulligans even on a bad hand.
+        assert!(matches!(decide_mulligan(&g, 0, 2), DecisionAnswer::Keep));
+
+        // 3 lands + 4 spells → keep.
+        let mut g2 = two_player_game();
+        for _ in 0..3 { g2.add_card_to_hand(0, catalog::island()); }
+        for _ in 0..4 { g2.add_card_to_hand(0, catalog::grizzly_bears()); }
+        assert!(matches!(decide_mulligan(&g2, 0, 0), DecisionAnswer::Keep));
     }
 
     /// Sac-cost mana abilities (Lotus Petal) are NOT auto-activated — they

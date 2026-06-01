@@ -248,7 +248,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
    creatures die on declared attacks/blocks.
 4. ⏳ **Undo / mana-tap rollback** — undo un-committed taps before a spell
    locks in (`ManualTapRequired` already signals partial manual-tap model).
-5. ⏳ **Targeting arrows on the stack** — source→target lines.
+5. 🟡 **Targeting arrows on the stack** — `KnownStackItem` now carries
+   `additional_targets` (all slots, not just slot 0), so the client can draw
+   an arrow to every target of a multi-target spell. Arrow rendering itself
+   still ⏳.
 6. ⏳ **Hold-priority toggle** ("F" key auto-pass; shift-hold to keep
    priority after your spell resolves).
 7. ⏳ **Stack visualization** with response affordances and "respond / let
@@ -323,7 +326,9 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   add survive-don't-chump, gang-block lethal, deathtouch/trample awareness.
   Highest-value single-player improvement.
 - ⏳ **Better sequencing** (land drops, hold-up interaction, when to cast).
-- ⏳ **Mulligan decisions** (keep/ship heuristic).
+- 🟡 **Mulligan decisions** — `RandomBot` now ships flooded/screwed opening
+  hands via a land-count heuristic (`decide_mulligan`: keep 2–5 lands, stop
+  after two mulligans). Remaining: curve/color-aware keeps.
 - ⏳ **Targeting / mode / X-value choices** by evaluation, not first-legal.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over the
   deterministic engine + snapshot cloning).

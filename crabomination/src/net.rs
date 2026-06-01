@@ -636,6 +636,13 @@ pub struct KnownStackItem {
     pub controller: usize,
     pub name: String,
     pub target: Option<Target>,
+    /// Additional targets (slots 1+) for multi-target spells/abilities —
+    /// divided-damage burn (Forked Bolt, Crackle with Power), Snow Day,
+    /// "choose one or both" modes. Lets the client draw a targeting arrow
+    /// to *every* target, not just slot 0. Empty for single-target items;
+    /// `#[serde(default)]` for view back-compat.
+    #[serde(default)]
+    pub additional_targets: Vec<Target>,
     /// Whether this stack item is a `Spell` (caster cast a card) or a
     /// `Trigger` (an ability fired). Defaulted to `Trigger` for
     /// backwards compat with older serialized views.

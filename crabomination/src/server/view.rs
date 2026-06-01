@@ -891,13 +891,16 @@ fn is_mana_ability(effect: &Effect) -> bool {
 
 fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> StackItemView {
     match item {
-        StackItem::Spell { card, caster, target, .. } => StackItemView::Known(KnownStackItem {
-            source: card.id,
-            controller: *caster,
-            name: card.definition.name.to_string(),
-            target: target.clone(),
-            kind: StackItemKind::Spell,
-        }),
+        StackItem::Spell { card, caster, target, additional_targets, .. } => {
+            StackItemView::Known(KnownStackItem {
+                source: card.id,
+                controller: *caster,
+                name: card.definition.name.to_string(),
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                kind: StackItemKind::Spell,
+            })
+        }
         StackItem::Trigger { source, controller, target, .. } => {
             let name = state
                 .battlefield
@@ -910,6 +913,7 @@ fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> St
                 controller: *controller,
                 name,
                 target: target.clone(),
+                additional_targets: vec![],
                 kind: StackItemKind::Trigger,
             })
         }
@@ -1065,6 +1069,36 @@ mod tests {
         }
         match &v.stack[1] {
             StackItemView::Known(k) => assert_eq!(k.kind, StackItemKind::Trigger),
+            _ => panic!("expected Known"),
+        }
+    }
+
+    #[test]
+    fn stack_view_surfaces_all_targets_for_multi_target_spell() {
+        use crate::game::StackItem;
+        use crate::game::types::Target;
+        let mut g = two_player_game();
+        let bolt_id = g.add_card_to_battlefield(0, catalog::lightning_bolt());
+        let bolt = g.battlefield_find(bolt_id).cloned().unwrap();
+        g.battlefield.retain(|c| c.id != bolt_id);
+        g.stack.push(StackItem::Spell {
+            card: Box::new(bolt),
+            caster: 0,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![Target::Player(0)],
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+            mana_spent: 0,
+            uncounterable: false,
+        });
+        let v = project(&g, 0);
+        match &v.stack[0] {
+            StackItemView::Known(k) => {
+                assert_eq!(k.target, Some(Target::Player(1)));
+                assert_eq!(k.additional_targets, vec![Target::Player(0)],
+                    "view must surface slots 1+ so the UI can arrow every target");
+            }
             _ => panic!("expected Known"),
         }
     }
