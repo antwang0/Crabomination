@@ -89,6 +89,23 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.139 — Escape** (claude/modern_decks). `Keyword::Escape(cost, n)`
+  + `GameAction::CastEscape`: cast from graveyard for the escape mana cost
+  plus exiling N other graveyard cards. Instants/sorceries resolve back to
+  the graveyard (re-escapable). Ships Cling to Dust. Tests in `tests/modern`.
+
+- ✅ **CR 603.3b — Same-controller trigger ordering** (claude/modern_decks).
+  `order_same_controller_triggers` lets a `wants_ui` controller order their
+  own simultaneous triggers via `Decision::OrderTriggers`; AutoDecider keeps
+  the default. Client modal wired. Server suspend path still ⏳ (see
+  Follow-ups). Tests: `same_controller_triggers_*`, `wants_ui_controller_*`.
+
+- ✅ **CR 119.5 — Set life total** (claude/modern_decks). Biorhythm now uses
+  `Effect::SetLifeTotal` over `ForEach(EachPlayer)` with
+  `Value::CreatureCountControlledBy(Triggerer)`, so every seat's life becomes
+  its own creature count (multiplayer-correct). Test:
+  `biorhythm_sets_each_player_to_own_count_in_multiplayer`.
+
 - ✅ **CR 702.130 — Enrage**
 
 - ✅ **CR 702.68 — Frenzy** (claude/modern_decks). `shortcut::frenzy(n)` —
