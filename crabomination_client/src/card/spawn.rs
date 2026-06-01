@@ -50,9 +50,19 @@ pub fn init_shared_assets(
         cull_mode: None,
         ..default()
     });
+    // Green "castable now" border — visually distinct from the gold
+    // hover / targeting border so the two highlights don't read as the
+    // same affordance.
+    let castable_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.20, 0.90, 0.35),
+        unlit: true,
+        cull_mode: None,
+        ..default()
+    });
     commands.insert_resource(CardHighlightAssets {
         border_mesh: border_mesh_handle,
         border_material,
+        castable_material,
     });
     commands.insert_resource(CardMeshAssets {
         card_mesh: card_mesh_handle.clone(),

@@ -100,6 +100,14 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub combat_preview: Option<CombatPreview>,
+    /// CardIds in the viewer's own hand they could begin casting (or play,
+    /// for lands) right now — computed server-side via the engine's
+    /// `would_accept` dry-run so it already accounts for timing,
+    /// auto-tappable mana, cost taxes, and target availability. Drives the
+    /// client's "castable" hand-card highlight. Empty when the viewer
+    /// doesn't hold priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub castable_hand: Vec<CardId>,
 }
 
 /// A projected combat-damage summary, computed from the currently

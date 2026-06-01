@@ -2,7 +2,8 @@ use bevy::prelude::*;
 
 use crate::card::{
     Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
-    DeckCard, DeckPile, GraveyardPile, PileHovered, CARD_THICKNESS,
+    CastableHighlight, DeckCard, DeckPile, GameCardId, GraveyardPile, HandCard, PileHovered,
+    CARD_THICKNESS,
 };
 use crate::game::GraveyardBrowserState;
 use crate::net_plugin::CurrentView;
@@ -88,6 +89,85 @@ pub fn highlight_hovered_cards(
             commands.entity(border.0).despawn();
             commands.entity(border.1).despawn();
             commands.entity(card_entity).remove::<CardBorderHighlight>();
+        }
+    }
+}
+
+/// Spawn / despawn a green "castable now" border around each viewer hand
+/// card listed in the view's `castable_hand` set (computed server-side via
+/// the engine's `would_accept` dry-run, so it already reflects timing,
+/// mana, taxes, and target availability). Mirrors the hover-border /
+/// put-on-library highlight pattern.
+///
+/// Suppressed while the targeting cursor is active — there the gold
+/// valid-target borders own the hand visuals and a second border set would
+/// only stack and z-fight. The set is also naturally empty when the viewer
+/// lacks priority (you can't cast then anyway).
+#[allow(clippy::type_complexity)]
+pub fn update_castable_highlights(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    targeting: Res<crate::game::TargetingState>,
+    highlight_assets: Option<Res<CardHighlightAssets>>,
+    hand_cards: Query<(Entity, &GameCardId, Option<&CastableHighlight>), With<HandCard>>,
+    // A card played/discarded mid-highlight keeps its entity (HandCard is
+    // *removed*, not despawned — see `sync_game_visuals`), so its green
+    // border would otherwise linger on the battlefield/graveyard. Strip the
+    // highlight from anything that left the hand still wearing it.
+    left_hand: Query<(Entity, &CastableHighlight), Without<HandCard>>,
+) {
+    let Some(assets) = highlight_assets else { return };
+
+    for (entity, h) in &left_hand {
+        commands.entity(h.back).despawn();
+        commands.entity(h.front).despawn();
+        commands.entity(entity).remove::<CastableHighlight>();
+    }
+
+    let castable: std::collections::HashSet<crabomination::card::CardId> = if targeting.active {
+        std::collections::HashSet::new()
+    } else {
+        view.0
+            .as_ref()
+            .map(|cv| cv.castable_hand.iter().copied().collect())
+            .unwrap_or_default()
+    };
+
+    for (entity, gid, marker) in &hand_cards {
+        let should = castable.contains(&gid.0);
+        match (should, marker) {
+            (true, None) => {
+                // Sits slightly proud of the hover border (0.001) so a card
+                // that is both castable and hovered shows both rings without
+                // z-fighting.
+                let offset = CARD_THICKNESS / 2.0 + 0.0018;
+                let back = commands
+                    .spawn((
+                        Mesh3d(assets.border_mesh.clone()),
+                        MeshMaterial3d(assets.castable_material.clone()),
+                        Transform::from_xyz(0.0, 0.0, -offset),
+                        Pickable::IGNORE,
+                    ))
+                    .id();
+                let front = commands
+                    .spawn((
+                        Mesh3d(assets.border_mesh.clone()),
+                        MeshMaterial3d(assets.castable_material.clone()),
+                        Transform::from_xyz(0.0, 0.0, offset),
+                        Pickable::IGNORE,
+                    ))
+                    .id();
+                commands
+                    .entity(entity)
+                    .insert(CastableHighlight { back, front })
+                    .add_children(&[back, front]);
+            }
+            (false, Some(h)) => {
+                commands.entity(h.back).despawn();
+                commands.entity(h.front).despawn();
+                commands.entity(entity).remove::<CastableHighlight>();
+            }
+            _ => {}
         }
     }
 }

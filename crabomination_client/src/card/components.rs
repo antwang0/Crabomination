@@ -373,6 +373,20 @@ pub struct RevealPeekAnimation {
 pub struct CardHighlightAssets {
     pub border_mesh: Handle<Mesh>,
     pub border_material: Handle<StandardMaterial>,
+    /// Green border for the "castable now" hand highlight. Distinct from
+    /// the gold `border_material` (hover / valid-target / put-on-library)
+    /// so a castable card reads differently from a targeting candidate.
+    pub castable_material: Handle<StandardMaterial>,
+}
+
+/// Links a viewer hand card to its spawned "castable now" green border
+/// meshes (back, front). Mirrors [`CardBorderHighlight`] but driven by
+/// `update_castable_highlights` off the view's `castable_hand` set rather
+/// than by pointer hover.
+#[derive(Component)]
+pub struct CastableHighlight {
+    pub back: Entity,
+    pub front: Entity,
 }
 
 /// Resource holding shared mesh/material handles for dynamically spawning cards.

@@ -481,6 +481,52 @@ fn would_accept_dry_runs_without_mutating_caller_state() {
     assert_eq!(g.battlefield.len(), battlefield_before + 1);
 }
 
+/// `castable_hand_cards` reports a land in hand as playable, gates a
+/// creature on available mana, and respects priority.
+#[test]
+fn castable_hand_cards_reflects_mana_timing_and_lands() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    // A land in hand is "castable" (playable) at sorcery speed; a {1}{G}
+    // creature with no mana available is not yet castable.
+    let forest_in_hand = g.add_card_to_hand(0, catalog::forest());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+
+    let castable = g.castable_hand_cards(0);
+    assert!(castable.contains(&forest_in_hand), "land should be playable");
+    assert!(
+        !castable.contains(&bears),
+        "creature unaffordable with no mana sources"
+    );
+
+    // Two untapped Forests cover {1}{G} via auto-tap → bears now castable.
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    assert!(
+        g.castable_hand_cards(0).contains(&bears),
+        "bears castable off two untapped Forests"
+    );
+
+    // Sorcery-speed gating: the same creature is NOT castable on the
+    // opponent's turn (still our priority, but not a main phase we own).
+    g.active_player_idx = 1;
+    assert!(
+        !g.castable_hand_cards(0).contains(&bears),
+        "creature not castable at instant speed on opponent's turn"
+    );
+
+    // Without priority, nothing is castable.
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 1;
+    assert!(
+        g.castable_hand_cards(0).is_empty(),
+        "no priority → empty castable set"
+    );
+}
+
 /// Symmetric: untap step should untap creatures the active player
 /// CONTROLS, not just those they originally owned. A stolen creature
 /// untaps on the new controller's turn, never the original owner's.

@@ -1690,6 +1690,70 @@ impl GameState {
         probe.perform_action(action).is_ok()
     }
 
+    /// CardIds in `caster`'s hand they could begin casting (or play, for
+    /// lands) **right now**. Drives the client's "castable" hand-card
+    /// highlight.
+    ///
+    /// Authoritative: every candidate is dry-run through [`would_accept`],
+    /// so the result already reflects timing (sorcery vs. instant speed,
+    /// remaining land drops), auto-tappable mana, cost taxes, and target
+    /// availability — exactly the gates the real cast would hit. Mirrors
+    /// the bot's candidate construction in `server::bot`, but only probes
+    /// each card's default mode at X = 0, so a card castable *only* in a
+    /// non-default mode (or at higher X) may be omitted — acceptable for a
+    /// visual hint.
+    ///
+    /// Returns empty unless `caster` currently holds priority: you can't
+    /// cast without it, and short-circuiting skips the per-card state
+    /// clones on everyone else's priority, keeping view projection cheap.
+    ///
+    /// [`would_accept`]: Self::would_accept
+    pub fn castable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        // Snapshot what each probe needs up front so the immutable borrow
+        // of `self.players[caster].hand` is released before the cloning
+        // probes run. The effect is cloned only for targeted non-lands.
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .map(|c| {
+                let is_land = c.definition.is_land();
+                let needs_target = !is_land && c.definition.effect.requires_target();
+                (c.id, is_land, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+
+        let mut out = Vec::new();
+        for (id, is_land, targeted_effect) in &hand {
+            let accepted = if *is_land {
+                self.would_accept(GameAction::PlayLand(*id))
+            } else {
+                // Auto-pick targets the way the bot does so a targeted
+                // removal spell isn't reported uncastable merely for lack
+                // of a target argument. A spell that needs a target but has
+                // no legal one stays `target: None`, which `would_accept`
+                // correctly rejects (CR 601.2c).
+                let (target, additional_targets) = match targeted_effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                };
+                self.would_accept(GameAction::CastSpell {
+                    card_id: *id,
+                    target,
+                    additional_targets,
+                    mode: None,
+                    x_value: None,
+                })
+            };
+            if accepted {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// Extra generic mana the caster owes on top of `card`'s printed
     /// cost — Damping Sphere's "+1 after the first spell each turn,"
     /// Chancellor of the Annex's first-spell tax, etc. Public so the

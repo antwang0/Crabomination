@@ -198,6 +198,7 @@ mod tests {
             game_over: None,
             damage_cant_be_prevented_this_turn: false,
             combat_preview: None,
+            castable_hand: vec![],
         }
     }
 

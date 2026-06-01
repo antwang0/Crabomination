@@ -636,6 +636,7 @@ mod tests {
             equippable: false,
             crew_value: 0,
             marked_lethal: false,
+            named_card: None,
         }
     }
 
