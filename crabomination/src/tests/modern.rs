@@ -9229,10 +9229,12 @@ fn cruel_somnophage_pt_scales_with_your_graveyard() {
 }
 
 #[test]
-fn pentad_prism_etb_with_two_charge_counters() {
+fn pentad_prism_sunburst_counts_colors_of_mana_spent() {
+    // Paid with White + Blue → Sunburst gives 2 charge counters.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::pentad_prism());
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pentad Prism castable for {2}");
@@ -9240,14 +9242,30 @@ fn pentad_prism_etb_with_two_charge_counters() {
 
     let card = g.battlefield_find(id).unwrap();
     let charge = card.counters.get(&crate::card::CounterType::Charge).copied().unwrap_or(0);
-    assert_eq!(charge, 2, "Pentad Prism enters with 2 charge counters");
+    assert_eq!(charge, 2, "Sunburst: two colors spent → two charge counters");
+}
+
+#[test]
+fn pentad_prism_sunburst_zero_when_paid_colorless() {
+    // Paid with two colorless → no colors spent → 0 charge counters.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pentad_prism());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pentad Prism castable for {2}");
+    drain_stack(&mut g);
+    let charge = g.battlefield_find(id).unwrap()
+        .counters.get(&crate::card::CounterType::Charge).copied().unwrap_or(0);
+    assert_eq!(charge, 0, "Sunburst: colorless cast → no charge counters");
 }
 
 #[test]
 fn pentad_prism_removes_counter_to_add_one_mana_of_any_color() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::pentad_prism());
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pentad Prism castable");

@@ -111,7 +111,6 @@ work is listed below.
 | Pithing Needle | 🟡 | {1} Artifact body-only stub. Name-a-card + ability suppression static omitted. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
 | Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
-| Pentad Prism | 🟡 | {2} Artifact. ETB with 2 charge counters; remove a charge counter to add one mana of any color. Sunburst's "one counter per color of mana spent" collapses to a flat 2. Tests: `pentad_prism_etb_with_two_charge_counters`, `pentad_prism_removes_counter_to_add_one_mana_of_any_color`. |
 | Coalition Relic | 🟡 | {3} Artifact. `{T}: Add one mana of any color`. The charge-counter rider ("{T}: put a charge counter; remove three to add WUBRG") is omitted — no charge-to-mana-burst primitive yet. Tap-for-any-color half is fully functional. Test: `coalition_relic_taps_for_one_mana_of_any_color`. |
 | Nettlecyst | ⏳ | Living-equipment + token. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |

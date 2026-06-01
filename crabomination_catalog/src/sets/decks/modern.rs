@@ -5367,18 +5367,14 @@ pub fn cruel_somnophage() -> CardDefinition {
     }
 }
 
-/// Pentad Prism — {2} Artifact. Sunburst (this enters with one charge
-/// counter for each color of mana spent on its cost). Remove a charge
-/// counter from this: Add one mana of any color.
+/// Pentad Prism — {2} Artifact. Sunburst (enters with one charge counter
+/// for each color of mana spent on its cost). Remove a charge counter:
+/// Add one mana of any color.
 ///
-/// Approximation: full Sunburst counter-tracking would require
-/// `Value::ColorsSpentOnCost` (which doesn't exist yet). Instead we model
-/// the most common play pattern: the card enters with 2 charge counters
-/// (the typical "two colors" cast), and each activation removes one to
-/// add one mana of any color. The activated ability folds the
-/// counter-removal cost into resolution (Gemstone-Mine pattern), and the
-/// "no counters → can't activate" gate is enforced by the engine's
-/// counter-removal failing when the counter pool is empty.
+/// Sunburst reads `Value::ConvergedValue` (distinct colors of mana spent),
+/// threaded from the cast onto the ETB trigger. Each activation removes a
+/// counter to add a mana of any color (Gemstone-Mine cost-as-resolution);
+/// an empty counter pool fails the removal and the ability fizzles.
 pub fn pentad_prism() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
@@ -5390,7 +5386,7 @@ pub fn pentad_prism() -> CardDefinition {
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::Charge,
-                amount: Value::Const(2),
+                amount: Value::ConvergedValue,
             },
         }],
         activated_abilities: vec![ActivatedAbility {
