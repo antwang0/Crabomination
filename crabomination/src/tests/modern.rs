@@ -3197,6 +3197,83 @@ fn pyrokinesis_alt_cost_exiles_red_card_and_deals_four_damage() {
         "Serra Angel should die to 4 damage");
 }
 
+/// Augury Owl is a 1/1 flyer whose ETB scry resolves cleanly (no draw).
+#[test]
+fn augury_owl_scries_on_etb() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::augury_owl());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Augury Owl castable");
+    drain_stack(&mut g);
+    // Scry looks but doesn't draw — library size unchanged.
+    assert_eq!(g.players[0].library.len(), lib_before, "scry does not change library size");
+    let c = g.battlefield.iter().find(|c| c.definition.name == "Augury Owl").unwrap();
+    assert!(c.has_keyword(&crate::card::Keyword::Flying));
+}
+
+/// Cloudkin Seer is a 2/2 flyer that draws a card on ETB.
+#[test]
+fn cloudkin_seer_draws_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::cloudkin_seer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cloudkin Seer castable");
+    drain_stack(&mut g);
+    // cast(-1) + ETB draw(+1) = net 0 vs before.
+    assert_eq!(g.players[0].hand.len(), before, "ETB drew a card");
+    let c = g.battlefield.iter().find(|c| c.definition.name == "Cloudkin Seer").unwrap();
+    assert!(c.has_keyword(&crate::card::Keyword::Flying));
+    assert_eq!((c.definition.power, c.definition.toughness), (2, 2));
+}
+
+/// Benthic Biomancer's `{1}{U}: Adapt 1` makes it 2/2 and loots (draw+discard).
+#[test]
+fn benthic_biomancer_adapts_and_loots() {
+    let mut g = two_player_game();
+    let bio = g.add_card_to_battlefield(0, catalog::benthic_biomancer());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bio, ability_index: 0, target: None, x_value: None,
+    }).expect("Adapt activatable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bio).unwrap();
+    assert_eq!((b.power(), b.toughness()), (2, 2), "adapt 1 → 2/2");
+    assert_eq!(g.players[0].hand.len(), hand_before, "draw(+1) + discard(-1) = net 0");
+}
+
+/// Chandra's Pyrohelix splits 2 damage among two players (1 each).
+#[test]
+fn chandras_pyrohelix_divides_two_among_two_players() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::chandras_pyrohelix());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Player(0)],
+        mode: None,
+        x_value: None,
+    }).expect("Pyrohelix castable for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+    assert_eq!(g.players[0].life, 19);
+}
+
 /// Merfolk Skydiver's `{1}{U}: Adapt 1` makes it 2/2 and proliferates —
 /// a co-counter on another creature ticks up too.
 #[test]

@@ -55,6 +55,24 @@ pub fn sweltering_suns() -> CardDefinition {
     }
 }
 
+/// Chandra's Pyrohelix — {1}{R} Sorcery. Deals 2 damage divided as you
+/// choose among one or two targets.
+pub fn chandras_pyrohelix() -> CardDefinition {
+    CardDefinition {
+        name: "Chandra's Pyrohelix",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(2),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 2,
+        },
+        ..Default::default()
+    }
+}
+
 /// Forked Lightning — {3}{R} Sorcery. Deals 4 damage divided as you choose
 /// among one, two, or three target creatures.
 pub fn forked_lightning() -> CardDefinition {

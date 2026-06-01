@@ -8,15 +8,26 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Divided-damage / "any number of targets"** is the single largest remaining
-  STX/cube unblock — Crackle with Power, Pyrokinesis, Eldrazi Confluence,
-  Kozilek's Command, and Vibrant/Magma Opus's divided modes all collapse to a
-  single target. Needs (a) **variadic targeting** ("any number of target
-  creatures" — the engine only does fixed numbered slots today, see
-  `auto_targets_for_effect_all_slots`), (b) a `Decision::DivideDamage { total,
-  targets }` + target-amount pairs threaded through the cast path, and (c) a
-  client modal. The fixed-slot picker covers "one or two targets" cases; only
-  the truly-variadic ones remain.
+- **Divided damage** — ✅ shipped: `Effect::DealDamageDivided { total, filter,
+  max_targets }` + `Decision::DivideDamage` (AutoDecider spreads evenly; UI/
+  scripted deciders choose the split). Wired Forked Bolt, Pyrokinesis, Crackle
+  with Power, Magma Opus, Electrolyze, Pyrotechnics, Pyromathematics,
+  Lorehold Ignis/Bookburn, Arc/Forked Lightning, Chandra's Pyrohelix.
+  Remaining: (a) a **client modal** so a networked human picks the split
+  (today the inline decider resolves it — fine for bots/tests/AutoDecider;
+  no resolution-time *suspend* path for `DivideDamage` yet), and (b)
+  divided *non-damage* riders ("tap up to N", split-mill — Snow Day, Devious
+  Cover-Up).
+- **Network note (this run):** Scryfall (`scripts/fetch_cards.py`) returns
+  HTTP 403 under the sandbox network policy, so new cards this run were limited
+  to ones whose definitions are already in the repo (comments/md) or
+  high-confidence staples. The Verge / Landscape / Horizon-canopy land cycles
+  and other cube ⏳ entries still want Scryfall-verified definitions before
+  wiring — re-run with network access.
+- **Pool registration** — new `mod_set` cards (Adapt/Connive creatures,
+  Arc/Forked Lightning, Chandra's Pyrohelix, Cloudkin Seer, Augury Owl) are
+  defined + tested but not yet added to any cube/draft pool list; wire them
+  into the relevant factory list so they appear in real games.
 - **`Effect::NameCard` for spells** — currently only stamps a *battlefield*
   permanent (`named_card`). Spoils of the Vault / Cabal Therapy name a card
   during *spell* resolution; that needs the chosen name captured into

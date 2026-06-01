@@ -107,6 +107,89 @@ pub fn pridemalkin() -> CardDefinition {
     }
 }
 
+/// Augury Owl — {1}{U}, 1/1 Bird with Flying. "When this enters, scry 3."
+pub fn augury_owl() -> CardDefinition {
+    CardDefinition {
+        name: "Augury Owl",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cloudkin Seer — {2}{U}, 2/2 Elemental with Flying. "When this enters,
+/// draw a card."
+pub fn cloudkin_seer() -> CardDefinition {
+    CardDefinition {
+        name: "Cloudkin Seer",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Benthic Biomancer — {U}, 1/1 Merfolk Wizard. `{1}{U}: Adapt 1`
+/// (CR 702.108); "whenever this adapts, draw a card, then discard a card."
+/// The loot rides the same `If(no +1/+1 counter)` branch as the adapt.
+pub fn benthic_biomancer() -> CardDefinition {
+    CardDefinition {
+        name: "Benthic Biomancer",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::If {
+                cond: crate::card::Predicate::Not(Box::new(
+                    crate::card::Predicate::EntityMatches {
+                        what: Selector::This,
+                        filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                    },
+                )),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Merfolk Skydiver — {1}{U}, 1/1 Merfolk with Flying. `{1}{U}: Adapt 1`
 /// (CR 702.108); "whenever this adapts, proliferate." Since Adapt only puts
 /// a counter on when there are none, the proliferate rides the same
