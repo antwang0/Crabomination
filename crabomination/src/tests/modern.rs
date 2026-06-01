@@ -18616,7 +18616,13 @@ fn master_of_cruelties_attacks_alone_and_sets_life_to_one() {
         Attack { attacker: moc, target: AttackTarget::Player(1) },
     ])).expect("attacking alone is fine");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 1, "attack sets the defender's life to 1");
+    // The life-set rides AttacksAndIsntBlocked, so it fires once the
+    // defender declares no blockers.
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 1, "unblocked attack sets the defender's life to 1");
 }
 
 #[test]

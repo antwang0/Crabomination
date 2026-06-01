@@ -8434,11 +8434,11 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
 /// total becomes 1. Master of Cruelties deals no combat damage this
 /// turn."
 ///
-/// "Can attack only alone" is wired via `Keyword::AttacksAlone` (CR 508.0)
-/// — declaring it alongside any other attacker is rejected. The attack
-/// trigger sets the defending opponent's life to 1. The "deals no combat
-/// damage this turn" rider is still dropped, so its deathtouch ping lands
-/// on top — net play is the printed kill condition.
+/// "Can attack only alone" is wired via `Keyword::AttacksAlone` (CR 508.0).
+/// The life-set rides the `AttacksAndIsntBlocked` event (CR 509.3g), so a
+/// blocked Master no longer sets the defender to 1. The "deals no combat
+/// damage this turn" rider is still dropped, so its first-strike deathtouch
+/// ping lands on top — net play is the printed kill condition.
 pub fn master_of_cruelties() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -8454,7 +8454,7 @@ pub fn master_of_cruelties() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch, Keyword::AttacksAlone],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
             effect: Effect::SetLifeTotal {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
