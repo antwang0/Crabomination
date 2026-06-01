@@ -355,6 +355,52 @@ impl Bot for RandomBot {
 /// many cards to be worth chasing a perfect curve) and always keep a hand
 /// of three or fewer cards. Reads land counts off the live hand zone since
 /// the `Decision::Mulligan` payload only carries names.
+/// Colors a land card could tap for, for mulligan color-screw checks.
+/// Reads basic land types (Plains→W, …) plus `AddMana` effects on its
+/// activated abilities; "any color" payloads yield the full WUBRG set.
+fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
+    use crate::card::LandType;
+    use crate::mana::{Color, ColorSet};
+    let mut set = ColorSet::empty();
+    for lt in &card.subtypes.land_types {
+        match lt {
+            LandType::Plains => set.insert(Color::White),
+            LandType::Island => set.insert(Color::Blue),
+            LandType::Swamp => set.insert(Color::Black),
+            LandType::Mountain => set.insert(Color::Red),
+            LandType::Forest => set.insert(Color::Green),
+            _ => {}
+        }
+    }
+    for ab in &card.activated_abilities {
+        accumulate_mana_colors(&ab.effect, &mut set);
+    }
+    set
+}
+
+fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
+    match eff {
+        Effect::AddMana { pool, .. } => accumulate_payload_colors(pool, set),
+        Effect::Seq(v) => v.iter().for_each(|e| accumulate_mana_colors(e, set)),
+        _ => {}
+    }
+}
+
+fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet) {
+    match pool {
+        ManaPayload::Colors(cs) | ManaPayload::OfColors(cs, _) => {
+            cs.iter().for_each(|c| set.insert(*c))
+        }
+        ManaPayload::OfColor(c, _) => set.insert(*c),
+        ManaPayload::AnyOneColor(_)
+        | ManaPayload::AnyColors(_)
+        | ManaPayload::AnyColorOpponentCouldProduce
+        | ManaPayload::DevotionOfChosenColor => *set = crate::mana::ColorSet::all(),
+        ManaPayload::Colorless(_) => {}
+        ManaPayload::Restricted(inner, _) => accumulate_payload_colors(inner, set),
+    }
+}
+
 fn decide_mulligan(
     state: &GameState,
     seat: usize,
@@ -368,8 +414,24 @@ fn decide_mulligan(
     // lands plus four 7-drops is a screwed keep. "Castable early" means a
     // spell whose mana value is within `lands + 1` (a generous early-curve
     // window that still trusts a couple of draws).
+    // Color-screw awareness: an early play only counts if the hand's lands
+    // can actually produce its colored pips. Three Forests + a hand of blue
+    // spells is a screwed keep even though the curve looks fine.
+    let producible = hand
+        .iter()
+        .filter(|c| c.definition.is_land())
+        .fold(crate::mana::ColorSet::empty(), |acc, c| {
+            acc.union(land_color_output(&c.definition))
+        });
     let has_early_play = hand.iter().any(|c| {
-        !c.definition.is_land() && c.definition.cost.cmc() as usize <= lands + 1
+        if c.definition.is_land() || c.definition.cost.cmc() as usize > lands + 1 {
+            return false;
+        }
+        let mut need = crate::mana::ColorSet::empty();
+        for col in c.definition.cost.colors() {
+            need.insert(col);
+        }
+        need.is_subset_of(producible)
     });
     let keepable = ((2..=5).contains(&lands) && has_early_play) || hand.len() <= 3;
     if keepable || mulligans_taken >= 2 {
@@ -1225,11 +1287,23 @@ mod tests {
         // Stop digging after two mulligans even on a bad hand.
         assert!(matches!(decide_mulligan(&g, 0, 2), DecisionAnswer::Keep));
 
-        // 3 lands + 4 spells → keep.
+        // 3 lands + 4 spells, colors aligned (Forests for green bears) → keep.
         let mut g2 = two_player_game();
-        for _ in 0..3 { g2.add_card_to_hand(0, catalog::island()); }
+        for _ in 0..3 { g2.add_card_to_hand(0, catalog::forest()); }
         for _ in 0..4 { g2.add_card_to_hand(0, catalog::grizzly_bears()); }
         assert!(matches!(decide_mulligan(&g2, 0, 0), DecisionAnswer::Keep));
+    }
+
+    /// Color-screw: enough lands and a fine curve, but the lands can't make
+    /// the spells' colors (3 Islands + green {1}{G} Grizzly Bears) → ship it.
+    #[test]
+    fn bot_mulligans_color_screwed_hands() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
+        for _ in 0..4 { g.add_card_to_hand(0, catalog::grizzly_bears()); }
+        assert!(matches!(decide_mulligan(&g, 0, 0), DecisionAnswer::TakeMulligan),
+            "no green source for the green spells → color screw → mulligan");
     }
 
     /// Curve screen: a hand with enough lands but only spells too expensive

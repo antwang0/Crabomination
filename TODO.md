@@ -17,9 +17,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   **Renown** is gated on "no +1/+1 counters" as a renowned-once proxy; a real
   `renowned` flag would be more faithful for creatures that gain counters
   by other means.
-- **Mulligan color-screw** — `decide_mulligan` now checks land count *and*
-  early-curve castability; it still can't tell that a hand's lands produce
-  the wrong colors for its spells. Wants a produced-colors helper on lands.
+- **Mulligan color-screw** — ✅ done (claude/modern_decks). `decide_mulligan`
+  now unions the producible colors of the hand's lands (`land_color_output`:
+  basic land types + `AddMana` payloads; "any color" → WUBRG) and only counts
+  an early play whose colored pips are a subset. Test:
+  `bot_mulligans_color_screwed_hands`. Remaining: dual/fetch lands that fetch
+  off-color sources aren't followed transitively (a lone fetchland reads as
+  colorless).
 - **Client build (this env)** — `crabomination_client` can't compile here
   (`wayland-sys` build script fails: no system `wayland-client`). UI changes
   this run (keyword reminder-text additions in `counter_tooltip.rs`) are

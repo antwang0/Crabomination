@@ -354,8 +354,10 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 - ⏳ **Better sequencing** (land drops, hold-up interaction, when to cast).
 - 🟡 **Mulligan decisions** — `RandomBot` ships flooded/screwed opening
   hands via `decide_mulligan`: keep 2–5 lands **and** at least one nonland
-  spell castable early (mana value ≤ lands + 1), stop after two mulligans.
-  Remaining: color-screw awareness (lands that can't cast the spells).
+  spell castable early (mana value ≤ lands + 1, with **color-screw
+  awareness** — the lands must produce the spell's colored pips), stop after
+  two mulligans. Remaining: transitive fetch/dual color sources (a lone
+  fetchland still reads as colorless).
 - ⏳ **Targeting / mode / X-value choices** by evaluation, not first-legal.
 - ⏳ **Difficulty levels**; optional **search-based AI** (MCTS over the
   deterministic engine + snapshot cloning).
