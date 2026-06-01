@@ -798,6 +798,10 @@ impl GameState {
         // cast on your turn reads damage dealt since this turn began.
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
+            // Veil of Summer's "this turn" riders clear at the turn boundary
+            // for every seat (CR 514.2 cleanup-scope grants).
+            pl.spells_uncounterable_this_turn = false;
+            pl.cast_blue_or_black_this_turn = false;
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters

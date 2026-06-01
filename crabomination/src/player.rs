@@ -192,6 +192,22 @@ pub struct Player {
     /// recomputes since no permanent backs it).
     #[serde(default)]
     pub cannot_gain_life_this_turn: bool,
+    /// True while spells this player controls can't be countered for the
+    /// rest of the turn (Veil of Summer's "spells your opponents control
+    /// can't counter spells you control this turn"). Set by
+    /// `Effect::GrantSpellsUncounterableThisTurn`; reset for every player at
+    /// the active player's `do_untap`. Consulted by
+    /// `caster_grants_uncounterable_with_x`. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub spells_uncounterable_this_turn: bool,
+    /// True once this player has cast a blue or black spell this turn. Set
+    /// in `finalize_cast`; reset for every player at the active player's
+    /// `do_untap`. Powers Veil of Summer's "draw a card if an opponent has
+    /// cast a blue or black spell this turn" gate. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub cast_blue_or_black_this_turn: bool,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -240,6 +256,8 @@ impl Player {
             instants_or_sorceries_cast_this_turn: 0,
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
+            spells_uncounterable_this_turn: false,
+            cast_blue_or_black_this_turn: false,
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,

@@ -733,21 +733,52 @@ fn tarmogoyf_pt_scales_with_card_types_in_graveyards() {
 // ── Utility / lands ──────────────────────────────────────────────────────────
 
 #[test]
-fn veil_of_summer_draws_a_card() {
+fn veil_of_summer_draws_when_opponent_cast_blue_or_black() {
+    let mut g = two_player_game();
+    g.players[1].cast_blue_or_black_this_turn = true; // gate satisfied
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::veil_of_summer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Veil castable for {G}");
+    drain_stack(&mut g);
+    // Net hand: -1 cast +1 draw = 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.players[0].spells_uncounterable_this_turn, "your spells can't be countered");
+    assert!(g.players[1].cannot_gain_life_this_turn, "opponents can't gain life");
+}
+
+#[test]
+fn veil_of_summer_no_draw_without_blue_or_black() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::veil_of_summer());
     g.players[0].mana_pool.add(Color::Green, 1);
     let hand_before = g.players[0].hand.len();
-
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Veil of Summer castable for {G}");
+    }).expect("Veil castable for {G}");
     drain_stack(&mut g);
+    // No qualifying opponent spell → no draw, just the -1 for casting.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
 
-    // Net hand: -1 cast +1 draw = 0
-    assert_eq!(g.players[0].hand.len(), hand_before);
+/// The blue/black cast flag is set by finalize_cast when an opponent
+/// actually casts a black spell.
+#[test]
+fn casting_black_spell_sets_veil_gate() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::swamp());
+    let bolt = g.add_card_to_hand(1, catalog::dark_ritual());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dark Ritual castable for {B}");
+    drain_stack(&mut g);
+    assert!(g.players[1].cast_blue_or_black_this_turn, "casting a black spell flips the gate");
 }
 
 #[test]

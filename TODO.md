@@ -270,9 +270,25 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `Keyword::MustAttack` — `declare_attackers` rejects a declaration that
   omits an able must-attack creature while an opponent is in range; the bot
   force-includes them. Juggernaut. Tests: `juggernaut_must_be_declared_as_
-  attacker`, `juggernaut_tapped_is_exempt_from_must_attack`. Follow-up:
-  *granted* must-attack ("attacks next turn if able" — Goad / Big Play mode
-  0) needs a future-turn-scoped grant duration.
+  attacker`, `juggernaut_tapped_is_exempt_from_must_attack`.
+
+- ✅ **CR 701.38 — Goad** (claude/modern_decks). `CardInstance.goaded_by` +
+  `Effect::Goad`; goaded creatures are treated as must-attack in
+  `declare_attackers` (engine + bot force-include), and each goader's grant
+  clears at their own `do_untap` ("until your next turn"). Disrupt Decorum.
+  Tests: `disrupt_decorum_goads_opponents_creatures`,
+  `goaded_creature_must_attack`, `goad_expires_at_goaders_next_turn`.
+  Follow-up: the "attack a player other than the goader if able" clause is
+  vacuous in 1v1 (the goader is the only target) and not yet enforced in
+  multiplayer; Big Play mode 0's "attacks next turn if able" still wants a
+  future-turn-scoped variant.
+
+- ✅ **CR 701.40 — Explore** (claude/modern_decks). `Effect::Explore` +
+  `EventKind`/`GameEvent::Explored` (wired through the trigger dispatcher
+  and net wire). Reveal top of library: land → hand, otherwise +1/+1 counter
+  on the exploring permanent (the optional graveyard choice collapses to
+  keep-on-top). Merfolk Branchwalker, Jadelight Ranger (double explore),
+  Wildgrowth Walker (explore payoff). Tests in `tests/modern`.
 
 - ✅ **CR 603.6e — Linked "exile until ~ leaves"** (claude/modern_decks).
   `Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves` stamp

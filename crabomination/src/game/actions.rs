@@ -499,6 +499,11 @@ impl crate::game::GameState {
         if card.definition.keywords.contains(&Keyword::CantBeCountered) {
             return true;
         }
+        // Turn-scoped grant — Veil of Summer's "spells your opponents
+        // control can't counter spells you control this turn."
+        if self.players[caster].spells_uncounterable_this_turn {
+            return true;
+        }
         // Conditional "if X is N or more, this spell can't be countered"
         // rider (Banefire-style). Threshold lives on the card's printed
         // keywords as `CantBeCounteredIfXAtLeast(threshold)`; checked
@@ -1282,6 +1287,16 @@ impl GameState {
         }
         if card.definition.is_creature() {
             self.players[p].creatures_cast_this_turn += 1;
+        }
+        // Veil of Summer gate: note when a player casts a blue or black
+        // spell (color read off the printed mana cost).
+        {
+            let colors = card.definition.cost.colors();
+            if colors.contains(&crate::mana::Color::Blue)
+                || colors.contains(&crate::mana::Color::Black)
+            {
+                self.players[p].cast_blue_or_black_this_turn = true;
+            }
         }
         consume_first_spell_tax(self, p);
 

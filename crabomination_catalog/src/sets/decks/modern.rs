@@ -487,15 +487,22 @@ pub fn veil_of_summer() -> CardDefinition {
         name: "Veil of Summer",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(1),
-        },
-        triggered_abilities: vec![],
+        effect: Effect::Seq(vec![
+            // "Draw a card if an opponent has cast a blue or black spell
+            // this turn."
+            Effect::If {
+                cond: Predicate::CastBlueOrBlackThisTurn { who: PlayerRef::EachOpponent },
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+            // "Spells your opponents control can't counter spells you
+            // control this turn …"
+            Effect::GrantSpellsUncounterableThisTurn { who: Selector::You },
+            // "… and your opponents can't gain life this turn."
+            Effect::LifeGainLockThisTurn {
+                who: Selector::Player(PlayerRef::EachOpponent),
+            },
+        ]),
         ..Default::default()
     }
 }

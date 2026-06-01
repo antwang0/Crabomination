@@ -314,6 +314,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].was_dealt_damage_this_turn),
+            Predicate::CastBlueOrBlackThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].cast_blue_or_black_this_turn),
             Predicate::CardsLeftGraveyardThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

@@ -457,6 +457,9 @@ pub enum Predicate {
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
     /// dealt damage this turn."
     PlayerDamagedThisTurn { who: PlayerRef },
+    /// True if any player `who` resolves to has cast a blue or black spell
+    /// this turn (Veil of Summer's conditional cantrip).
+    CastBlueOrBlackThisTurn { who: PlayerRef },
     /// `who` has had at least `at_least` cards leave their graveyard
     /// this turn. Backed by `Player.cards_left_graveyard_this_turn`.
     /// Used by Lorehold "if a card left your graveyard this turn"
@@ -1149,6 +1152,10 @@ pub enum Effect {
     /// to (Skullcrack, Sulfurous Blast's flashback rider, future
     /// one-turn lifegain locks).
     LifeGainLockThisTurn { who: Selector },
+    /// Set `Player.spells_uncounterable_this_turn` on each resolved player —
+    /// "spells you control can't be countered for the rest of this turn"
+    /// (Veil of Summer). Cleared at the next untap.
+    GrantSpellsUncounterableThisTurn { who: Selector },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
 
@@ -2147,6 +2154,7 @@ impl Effect {
                 value_has_target(power) || value_has_target(toughness)
             }
             Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
+            Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { .. } => false,
         }
     }
