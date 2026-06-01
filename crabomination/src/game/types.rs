@@ -543,6 +543,10 @@ pub enum GameEvent {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    /// CR 701.40 — a permanent explored. `card_id` is the exploring
+    /// permanent; `controller` is its controller (whose library was
+    /// revealed).
+    Explored { card_id: CardId, controller: usize },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },

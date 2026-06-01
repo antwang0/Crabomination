@@ -19933,3 +19933,87 @@ fn krenkos_command_makes_two_goblins() {
     let gobs = g.battlefield.iter().filter(|c| c.definition.name == "Goblin" && c.controller == 0).count();
     assert_eq!(gobs, 2, "two 1/1 Goblins created");
 }
+
+// ── Explore (CR 701.40) ──────────────────────────────────────────────────────
+
+/// Merfolk Branchwalker explores; a nonland on top means a +1/+1 counter
+/// (and the card stays in the library).
+#[test]
+fn merfolk_branchwalker_explores_nonland_grows() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // nonland on top
+    let id = g.add_card_to_hand(0, catalog::merfolk_branchwalker());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Branchwalker castable for {1}{G}");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let bw = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((bw.power, bw.toughness), (3, 2), "nonland explore added a +1/+1 counter");
+    assert_eq!(g.players[0].library.len(), 1, "revealed nonland stayed on top");
+}
+
+/// Merfolk Branchwalker explores; a land on top goes to hand (no counter).
+#[test]
+fn merfolk_branchwalker_explores_land_to_hand() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::forest()); // land on top
+    let id = g.add_card_to_hand(0, catalog::merfolk_branchwalker());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Branchwalker castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let bw = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((bw.power, bw.toughness), (2, 1), "land explore grants no counter");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"),
+        "revealed land went to hand");
+    assert!(g.players[0].library.is_empty(), "land left the library");
+}
+
+/// Jadelight Ranger explores twice; two nonlands on top → two counters.
+#[test]
+fn jadelight_ranger_explores_twice() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::jadelight_ranger());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Jadelight castable for {1}{G}{G}");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let jr = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((jr.power, jr.toughness), (4, 3), "two nonland explores → +2/+2");
+}
+
+/// Wildgrowth Walker's explore payoff: a creature you control exploring puts
+/// a +1/+1 counter on it and gains you 3 life.
+#[test]
+fn wildgrowth_walker_grows_and_gains_life_on_explore() {
+    let mut g = two_player_game();
+    let ww = g.add_card_to_battlefield(0, catalog::wildgrowth_walker());
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // nonland → explore counter
+    let id = g.add_card_to_hand(0, catalog::merfolk_branchwalker());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Branchwalker castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let w = view.iter().find(|c| c.id == ww).unwrap();
+    assert_eq!((w.power, w.toughness), (1, 4), "Wildgrowth Walker grew from the explore");
+    assert_eq!(g.players[0].life, life_before + 3, "gained 3 life on explore");
+}

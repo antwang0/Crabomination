@@ -49,6 +49,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
+        (EventKind::Explored, GameEvent::Explored { .. }) => true,
         _ => false,
     };
     if !kind_ok {
@@ -120,6 +121,11 @@ pub(crate) fn event_matches_spec(
             // CR 702.108 Inspired — "Whenever this becomes untapped."
             event,
             GameEvent::PermanentUntapped { card_id } if *card_id == source.id
+        ) || matches!(
+            // CR 701.40 — "Whenever this creature explores." Source must
+            // equal the exploring permanent.
+            event,
+            GameEvent::Explored { card_id, .. } if *card_id == source.id
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A
@@ -262,6 +268,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
         // Enrage: the subject is the damaged permanent, so trigger bodies
         // referencing `Selector::TriggerSource` (and the implicit
@@ -340,6 +347,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::PermanentTapped { card_id }
         | GameEvent::PermanentUntapped { card_id }
+        | GameEvent::Explored { card_id, .. }
         | GameEvent::TokenCreated { card_id }
         | GameEvent::CounterAdded { card_id, .. }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),

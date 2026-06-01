@@ -854,6 +854,10 @@ pub enum EventKind {
     /// A permanent became tapped (Magda, Brazen Outlaw). The tapped
     /// permanent is the event subject; matched to `GameEvent::PermanentTapped`.
     Tapped,
+    /// CR 701.40 — a permanent explored (Wildgrowth Walker, Tishana's
+    /// Wayfinder payoffs). The exploring permanent is the event subject;
+    /// matched to `GameEvent::Explored`.
+    Explored,
 }
 
 /// Whose events does this trigger listen for?
@@ -1180,6 +1184,15 @@ pub enum Effect {
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },
+    /// CR 701.40 — each permanent `who` resolves to *explores*: its
+    /// controller reveals the top card of their library. If it's a land,
+    /// it goes to hand; otherwise the exploring permanent gets a +1/+1
+    /// counter and the revealed card stays on top (the optional
+    /// "put into graveyard" choice is collapsed to keep-on-top). An empty
+    /// library still counts as a (cardless) explore and grants the counter.
+    /// Each explore emits `GameEvent::Explored` so payoff triggers
+    /// ("whenever a creature you control explores") can fire.
+    Explore { who: Selector },
     /// "Look at the top `count` cards of your library, put one of them into
     /// your hand, and the rest on the bottom of your library (or into your
     /// graveyard if `rest_to_graveyard`)." Impulse / Strategic Planning /
@@ -1993,6 +2006,7 @@ impl Effect {
             Effect::LookPickToHand { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::Explore { who } => sel_has_target(who),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
             Effect::ShuffleGraveyardIntoLibrary { who } => player_has_target(who),
@@ -3936,6 +3950,20 @@ pub mod shortcut {
             who: PlayerRef::You,
             amount: Value::Const(amount),
         })
+    }
+
+    /// CR 701.40 — "this permanent explores." Reveal the top card of your
+    /// library; if it's a land, put it into your hand, otherwise put a
+    /// +1/+1 counter on the exploring permanent.
+    pub fn explore() -> Effect {
+        Effect::Explore { who: Selector::This }
+    }
+
+    /// ETB-explore: "When this creature enters, it explores." Merfolk
+    /// Branchwalker / Tishana's Wayfinder style bodies. Chain `Seq` two of
+    /// these (or wrap one in a count) for "explores twice" cards.
+    pub fn etb_explore() -> TriggeredAbility {
+        etb(explore())
     }
 
     /// ETB-Draw shortcut: "When this creature enters, draw `amount`

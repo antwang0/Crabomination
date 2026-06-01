@@ -10,8 +10,8 @@ use crate::card::{
     ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword,
     SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::card::{EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::card::{CounterType, EventKind, EventScope, EventSpec};
+use crate::effect::shortcut::{etb, etb_explore, explore, target_filtered};
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
@@ -3048,6 +3048,71 @@ pub fn lay_down_arms() -> CardDefinition {
             ),
         },
         triggered_abilities: vec![],
+        ..Default::default()
+    }
+}
+
+// ── Explore (CR 701.40) ────────────────────────────────────────────────────
+
+/// Merfolk Branchwalker — {1}{G} 2/1 Merfolk Scout. ETB: it explores.
+pub fn merfolk_branchwalker() -> CardDefinition {
+    CardDefinition {
+        name: "Merfolk Branchwalker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb_explore()],
+        ..Default::default()
+    }
+}
+
+/// Jadelight Ranger — {1}{G}{G} 2/1 Merfolk Scout. ETB: it explores, then
+/// explores again.
+pub fn jadelight_ranger() -> CardDefinition {
+    CardDefinition {
+        name: "Jadelight Ranger",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Seq(vec![explore(), explore()]))],
+        ..Default::default()
+    }
+}
+
+/// Wildgrowth Walker — {1}{G} 0/3 Elemental. Whenever a creature you control
+/// explores, put a +1/+1 counter on Wildgrowth Walker and you gain 3 life.
+pub fn wildgrowth_walker() -> CardDefinition {
+    CardDefinition {
+        name: "Wildgrowth Walker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Explored, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ]),
+        }],
         ..Default::default()
     }
 }

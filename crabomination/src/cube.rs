@@ -1321,6 +1321,10 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // the marquee value engine in green ramp shells and fires.
         // Activate.
         tireless_tracker,
+        // ── claude/modern_decks: Explore (CR 701.40) ──
+        merfolk_branchwalker,
+        jadelight_ranger,
+        wildgrowth_walker,
         // sentinel_of_the_nameless_city 🟡 — Ward 2 not enforced;
         // Plant subtype dropped (Merfolk Warrior Scout is preserved).
         // The ETB/attack-trigger Map token still works.

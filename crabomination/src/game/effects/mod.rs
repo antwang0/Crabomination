@@ -1140,6 +1140,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Explore { who } => {
+                // CR 701.40 — each resolved permanent explores: reveal the
+                // top card of its controller's library; a land goes to hand,
+                // otherwise the permanent gets a +1/+1 counter (the revealed
+                // nonland card stays on top — the optional graveyard choice
+                // is collapsed). An empty library still explores (counter,
+                // no card). Emits `Explored` so payoff triggers can fire.
+                for ent in self.resolve_selector(who, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(controller) =
+                        self.battlefield_find(cid).map(|c| c.controller)
+                    else {
+                        continue;
+                    };
+                    let top = self.players[controller].library.first();
+                    let is_land = top.map(|c| c.definition.is_land());
+                    if let Some(name) = top.map(|c| c.definition.name) {
+                        events.push(GameEvent::TopCardRevealed {
+                            player: controller,
+                            card_name: name,
+                            is_land: is_land.unwrap_or(false),
+                        });
+                    }
+                    if is_land == Some(true) {
+                        let card = self.players[controller].library.remove(0);
+                        self.players[controller].hand.push(card);
+                    } else {
+                        // Nonland revealed (or empty library): +1/+1 counter.
+                        if let Some(c) = self.battlefield_find_mut(cid) {
+                            c.add_counters(CounterType::PlusOnePlusOne, 1);
+                            events.push(GameEvent::CounterAdded {
+                                card_id: cid,
+                                counter_type: CounterType::PlusOnePlusOne,
+                                count: 1,
+                            });
+                            self.permanents_gained_counter_this_turn.insert(cid);
+                        }
+                    }
+                    events.push(GameEvent::Explored { card_id: cid, controller });
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::AddMana { who, pool } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 // Unwrap a spend-restriction wrapper. The inner payload
