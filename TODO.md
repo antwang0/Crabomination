@@ -3021,16 +3021,22 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Suggested shape: `Value::ManaSpentOnCast(Box<Selector>)` that
   reads from `StackItem::Spell.mana_paid_total`.
 - 🟡 **CR 700.2d — modal "choose two" / "choose more than one"** —
-  push XXXII landed the engine half via the new `Effect::ChooseN {
-  picks: Vec<u8>, modes: Vec<Effect> }` primitive. The auto-decider
-  runs each picked mode in `picks` order, sharing the spell's single
-  target slot. The five Strixhaven Commands (Witherbloom / Lorehold /
-  Quandrix / Silverquill / Prismari) are now ✅ via hard-coded
-  per-card default picks. Mode-pick UI plumbing — letting the
-  controller choose `picks` at cast time, rather than relying on the
-  factory's default — is still ⏳. Engine shape for the UI half:
-  bump `GameAction::CastSpell.mode: Option<u8>` → `modes: Vec<u8>`
-  and thread it into the `ChooseN`'s `picks` at resolution.
+  `Effect::ChooseN { picks: Vec<u8>, modes: Vec<Effect> }`. Each
+  target-bearing mode owns its own cast-time target slot, assigned in
+  default-`picks` order (`target_filter_for_slot_in_mode` + the
+  resolution-time `slot_of_mode` map both key off `picks`), so a
+  "choose two" spell can take e.g. a spell target for one mode and a
+  permanent target for another (Cryptic Command counter+bounce,
+  Kolaghan's Command reanimate + any-target damage, Steal the Show,
+  the five Strixhaven Commands). The auto-decider/UI run the default
+  `picks`; a `ScriptedDecider` can pick any subset, but **targets only
+  route correctly for mode-subsets of the default `picks`** (both the
+  cast-time validation and the resolution slot map are keyed off the
+  card's default `picks`, and the dense `target`+`additional_targets`
+  vec can't represent a slot-1-only pick). Closing that needs cast-time
+  mode selection: bump `GameAction::CastSpell.mode: Option<usize>` →
+  carry the chosen ChooseN picks, validate/route slots against them
+  rather than the default. Still ⏳.
 - ⏳ **`magecraft_self_untap()` / `magecraft_drain_each_opp(N)`
   shortcuts** — push XXVII added two new shortcut helpers in
   `effect::shortcut`. Future STX/SOS Magecraft creatures should

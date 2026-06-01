@@ -597,7 +597,11 @@ impl GameState {
                         Keyword::Toxic(n) => Some(*n),
                         _ => None,
                     }).sum(),
-                    should_deal: attacker_filter(kws),
+                    // CR 510.1 — a creature with "deals no combat damage this
+                    // turn" (Master of Cruelties) is skipped in both damage
+                    // steps even though it's a legal attacker/blocker.
+                    should_deal: attacker_filter(kws)
+                        && !kws.contains(&Keyword::DealsNoCombatDamage),
                 })
             })
             .collect();

@@ -688,46 +688,28 @@ pub fn deadly_dispute() -> CardDefinition {
 /// return target permanent to its owner's hand; tap all creatures your
 /// opponents control; draw a card.
 ///
-/// "Choose two" is approximated as "pick one of these four bundled
-/// modes" via `ChooseMode` (the engine has no multi-pick mode primitive
-/// yet). Mode 0 — counter + bounce. Mode 1 — counter + tap-down. Mode
-/// 2 — counter + draw. Mode 3 — bounce + draw. AutoDecider picks
-/// mode 0 (counter + bounce) which is the most reactive line.
-///
-/// The "tap all creatures your opponents control" half is wired via
-/// `ForEach(EachPermanent(Creature ∧ ControlledByOpponent))` + `Tap`.
+/// Faithful "choose two" via `Effect::ChooseN`: the four modes each own a
+/// cast-time target slot in pick order (counter → slot 0, bounce → slot 1).
+/// `picks: [0, 1]` is the AutoDecider default (counter + bounce, the most
+/// reactive line); a UI/scripted decider can pick any two of the four.
 pub fn cryptic_command() -> CardDefinition {
     CardDefinition {
         name: "Cryptic Command",
         cost: cost(&[generic(1), u(), u(), u()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: counter target spell + bounce target permanent.
-            // (Single shared target slot — both halves operate on the
-            // same target. The engine doesn't surface multi-target
-            // selection yet, so this slot resolves to the targeted
-            // stack spell, and the bounce step then bounces the
-            // permanent picked at cast time. With a single target
-            // slot, players targeting their own permanent for bounce
-            // get the counter no-op, which is acceptable.)
-            Effect::Seq(vec![
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                // Mode 0: counter target spell.
                 Effect::CounterSpell {
                     what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 },
+                // Mode 1: return target permanent to its owner's hand.
                 Effect::Move {
                     what: target_filtered(SelectionRequirement::Permanent),
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
                 },
-            ]),
-            // Mode 1: counter + tap-all-opp-creatures.
-            Effect::Seq(vec![
-                Effect::CounterSpell {
-                    what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                },
+                // Mode 2: tap all creatures your opponents control.
                 Effect::ForEach {
                     selector: Selector::EachPermanent(
                         SelectionRequirement::Creature
@@ -735,24 +717,10 @@ pub fn cryptic_command() -> CardDefinition {
                     ),
                     body: Box::new(Effect::Tap { what: Selector::TriggerSource }),
                 },
-            ]),
-            // Mode 2: counter + draw 1.
-            Effect::Seq(vec![
-                Effect::CounterSpell {
-                    what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                },
+                // Mode 3: draw a card.
                 Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            ]),
-            // Mode 3: bounce + draw 1.
-            Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(SelectionRequirement::Permanent),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-                },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            ]),
-        ]),
-        triggered_abilities: vec![],
+            ],
+        },
         ..Default::default()
     }
 }

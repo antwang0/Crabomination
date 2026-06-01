@@ -8063,48 +8063,43 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
 /// - Destroy target artifact.
 /// - Deal 2 damage to any target.
 ///
-/// Approximation: ChooseMode over the four options paired (we pick the
-/// most common pairs). Collapsed to single-mode selection.
+/// Faithful "choose two" via `Effect::ChooseN`. Each mode owns a cast-time
+/// target slot in pick order. `picks: [0, 3]` (reanimate + 2 damage) is the
+/// AutoDecider default; a UI/scripted decider can pick any two of the four.
 pub fn kolaghans_command() -> CardDefinition {
     CardDefinition {
         name: "Kolaghan's Command",
         cost: cost(&[generic(1), b(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Return creature from graveyard + opponent discards
-            Effect::Seq(vec![
+        effect: Effect::ChooseN {
+            picks: vec![0, 3],
+            modes: vec![
+                // Mode 0: return target creature card from your gy to hand.
                 Effect::Move {
                     what: target_filtered(SelectionRequirement::Creature),
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
+                // Mode 1: target player discards a card.
                 Effect::Discard {
-                    who: Selector::Player(PlayerRef::EachOpponent),
+                    who: target_filtered(SelectionRequirement::Player),
                     amount: Value::Const(1),
                     random: false,
                 },
-            ]),
-            // Mode 1: Destroy artifact + 2 damage to any target
-            Effect::Seq(vec![
+                // Mode 2: destroy target artifact.
                 Effect::Destroy {
                     what: target_filtered(SelectionRequirement::Artifact),
                 },
+                // Mode 3: deal 2 damage to any target.
                 Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
                     amount: Value::Const(2),
                 },
-            ]),
-            // Mode 2: Return creature + 2 damage to opponent
-            Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-                Effect::DealDamage {
-                    to: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(2),
-                },
-            ]),
-        ]),
+            ],
+        },
         ..Default::default()
     }
 }
@@ -8435,10 +8430,10 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
 /// turn."
 ///
 /// "Can attack only alone" is wired via `Keyword::AttacksAlone` (CR 508.0).
-/// The life-set rides the `AttacksAndIsntBlocked` event (CR 509.3g), so a
-/// blocked Master no longer sets the defender to 1. The "deals no combat
-/// damage this turn" rider is still dropped, so its first-strike deathtouch
-/// ping lands on top — net play is the printed kill condition.
+/// The `AttacksAndIsntBlocked` trigger sets the defender to 1 life and grants
+/// `Keyword::DealsNoCombatDamage` until end of turn, so its first-strike
+/// deathtouch ping no longer finishes the kill — the printed "deals no
+/// combat damage this turn" rider is now honored.
 pub fn master_of_cruelties() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -8455,10 +8450,17 @@ pub fn master_of_cruelties() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch, Keyword::AttacksAlone],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
-            effect: Effect::SetLifeTotal {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
+            effect: Effect::Seq(vec![
+                Effect::SetLifeTotal {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::DealsNoCombatDamage,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
         }],
         ..Default::default()
     }

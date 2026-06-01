@@ -376,6 +376,12 @@ pub enum Keyword {
     /// a batch that declares this creature alongside any other attacker is
     /// rejected.
     AttacksAlone,
+    /// "This creature assigns no combat damage this turn" (Master of
+    /// Cruelties' attack rider). A marker keyword — typically granted with
+    /// `Duration::EndOfTurn` by a trigger — that `combat.rs` checks off the
+    /// *computed* keyword set to zero out the bearer's combat damage in
+    /// both the first-strike and regular damage steps.
+    DealsNoCombatDamage,
     /// CR 509.1c — "This creature must be blocked if able" (Lure-style
     /// block requirement, also Academic Dispute's rider). Enforced in
     /// `declare_blockers`: if an attacker carrying this keyword is left

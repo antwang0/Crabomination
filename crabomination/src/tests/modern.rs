@@ -3902,12 +3902,11 @@ fn greater_good_sacrifices_creature_and_draws_power() {
 
 #[test]
 fn cryptic_command_counter_plus_bounce_resolves() {
-    // P1 casts Lightning Bolt at P0; P0 responds with Cryptic Command in
-    // mode 0 (counter + bounce). The counter half consumes Bolt; the
-    // bounce half tries to operate on the same target slot — but with a
-    // counter that just consumed the spell, the second `Move` no longer
-    // finds anything on the stack. We just verify the spell got countered.
+    // P1 has a creature out and casts Lightning Bolt at P0; P0 responds with
+    // Cryptic Command's default "choose two" (counter + bounce): slot 0
+    // counters the Bolt, slot 1 bounces P1's creature to its owner's hand.
     let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
     g.active_player_idx = 1;
@@ -3925,26 +3924,23 @@ fn cryptic_command_counter_plus_bounce_resolves() {
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
         card_id: cryptic,
-        target: Some(Target::Permanent(bolt)),
-        additional_targets: vec![],
-        mode: Some(0), // counter + bounce
-        x_value: None,
+        target: Some(Target::Permanent(bolt)),               // slot 0: counter
+        additional_targets: vec![Target::Permanent(creature)], // slot 1: bounce
+        mode: None, x_value: None,
     })
     .expect("Cryptic Command castable for {1}{U}{U}{U}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, 20,
-        "Bolt should have been countered by Cryptic Command's mode 0");
-    // After the counter, mode 0's bounce step then operates on the same
-    // target — by then the Bolt has hit the graveyard, so the bounce
-    // pulls it into P1's hand. Either zone is consistent with the
-    // counter having succeeded; just assert it's not still on the stack
-    // and no damage was dealt.
-    assert!(g.stack.is_empty(), "Stack should be empty after resolution");
+    assert_eq!(g.players[0].life, 20, "Bolt countered by mode 0");
+    assert!(g.players[1].hand.iter().any(|c| c.id == creature),
+        "creature bounced to its owner's hand by mode 1");
+    assert!(g.stack.is_empty(), "Stack empty after resolution");
 }
 
 #[test]
-fn cryptic_command_mode_two_counter_and_draw() {
+fn cryptic_command_counter_and_draw() {
+    // ScriptedDecider picks modes [0, 3] (counter + draw a card).
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::forest());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
@@ -3963,18 +3959,17 @@ fn cryptic_command_mode_two_counter_and_draw() {
     g.players[0].mana_pool.add(Color::Blue, 3);
     let hand_before = g.players[0].hand.len();
     g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![0, 3])]));
     g.perform_action(GameAction::CastSpell {
         card_id: cryptic,
         target: Some(Target::Permanent(bolt)),
         additional_targets: vec![],
-        mode: Some(2), // counter + draw 1
-        x_value: None,
+        mode: None, x_value: None,
     })
     .unwrap();
     drain_stack(&mut g);
 
-    // Cryptic Command itself goes to grave on resolution; net hand
-    // change = +1 (drew 1 from mode 2) - 1 (cast Cryptic) = 0.
+    // Cryptic goes to grave on resolution; net hand = +1 (draw) - 1 (cast) = 0.
     assert_eq!(g.players[0].hand.len(), hand_before, "Net hand: +1 draw - 1 cast = 0");
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
 }
@@ -11981,27 +11976,54 @@ fn territorial_kavu_grows_when_opponent_plays_a_land() {
 }
 
 #[test]
-fn kolaghans_command_mode_zero_discard_plus_reanimate() {
+fn kolaghans_command_default_reanimate_plus_two_damage() {
+    // Default picks [0, 3]: return creature from gy (slot 0) + 2 damage to
+    // any target (slot 1).
     use crate::game::types::Target;
     let mut g = two_player_game();
-    // Stage gy reanimation target + opp hand.
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.add_card_to_hand(1, catalog::island());
-    let hand_before = g.players[1].hand.len();
     let cmd = g.add_card_to_hand(0, catalog::kolaghans_command());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: cmd, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: Some(0), x_value: None,
-    }).expect("Kolaghan's Command mode 0 castable");
+        card_id: cmd,
+        target: Some(Target::Permanent(bear)),     // slot 0: reanimate
+        additional_targets: vec![Target::Player(1)], // slot 1: 2 damage
+        mode: None, x_value: None,
+    }).expect("Kolaghan's Command castable");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].hand.len(), hand_before - 1, "Opp discarded 1");
+    assert_eq!(g.players[1].life, 18, "Opp took 2 damage from mode 3");
     assert!(g.players[0].hand.iter().any(|c| c.id == bear),
-        "Bear back in hand");
+        "Bear reanimated to hand by mode 0");
+}
+
+#[test]
+fn kolaghans_command_scripted_reanimate_only() {
+    // ScriptedDecider picks just mode [0] (reanimate). Slot 0 carries the
+    // graveyard creature; the opponent takes no damage.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let cmd = g.add_card_to_hand(0, catalog::kolaghans_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![0])]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: cmd,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Kolaghan's Command castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 20, "damage mode not chosen");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "Bear reanimated by mode 0");
 }
 
 #[test]
@@ -18623,6 +18645,35 @@ fn master_of_cruelties_attacks_alone_and_sets_life_to_one() {
     g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 1, "unblocked attack sets the defender's life to 1");
+}
+
+#[test]
+fn master_of_cruelties_deals_no_combat_damage_so_player_survives_at_one() {
+    // CR 510.1 — the "deals no combat damage this turn" rider must stop
+    // Master's 1-power first-strike deathtouch ping from killing the
+    // defender after their life is set to 1.
+    let mut g = two_player_game();
+    let moc = g.add_card_to_battlefield(0, catalog::master_of_cruelties());
+    g.clear_sickness(moc);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: moc, target: AttackTarget::Player(1) },
+    ])).expect("attack alone");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+    // Push through the combat-damage step(s).
+    while g.step != TurnStep::PostCombatMain && g.players[1].life == 1 {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, 1,
+        "defender stays at 1 — Master assigns no combat damage");
+    assert!(!g.players[1].eliminated, "defender did not lose");
 }
 
 #[test]
