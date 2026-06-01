@@ -35,6 +35,14 @@ pub struct ScryReorderButton {
 #[derive(Component)]
 pub struct DecisionConfirmButton;
 
+/// ← / → reorder button for the OrderTriggers modal (CR 603.3b). Moves the
+/// trigger `delta` slots in the stack-push ordering.
+#[derive(Component)]
+pub struct TriggerReorderButton {
+    pub source: CardId,
+    pub delta: i32,
+}
+
 #[derive(Component)]
 pub struct MulliganKeepButton;
 
@@ -79,6 +87,9 @@ pub struct DecisionUiState {
     pub put_on_library: Vec<CardId>,
     /// For Discard (Inquisition / Thoughtseize picker): selected card IDs.
     pub discard_selected: Vec<CardId>,
+    /// For OrderTriggers (CR 603.3b): the working stack-push order of the
+    /// controller's simultaneous triggers (index 0 pushed first).
+    pub trigger_order: Vec<CardId>,
     /// CardId the modal was last spawned for — avoids respawning each frame.
     pub spawned_for: Option<DecisionKey>,
 }
@@ -99,6 +110,8 @@ pub enum DecisionKey {
     ChooseTarget(CardId, Vec<Target>),
     /// `Decision::Learn` — keyed by the offered Lesson ids.
     Learn(Vec<CardId>),
+    /// `Decision::OrderTriggers` — keyed by the trigger source ids.
+    OrderTriggers(Vec<CardId>),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -126,6 +139,9 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         }
         DecisionWire::ChooseTarget { source, legal, .. } => {
             Some(DecisionKey::ChooseTarget(*source, legal.clone()))
+        }
+        DecisionWire::OrderTriggers { triggers, .. } => {
+            Some(DecisionKey::OrderTriggers(triggers.iter().map(|(id, _)| *id).collect()))
         }
         _ => None,
     }
@@ -269,6 +285,20 @@ pub fn spawn_decision_ui(
             state.discard_selected.clear();
             state.spawned_for = Some(key);
             spawn_discard_modal(&mut commands, &asset_server, &ui_fonts, hand, *count);
+        }
+        DecisionWire::OrderTriggers { triggers, .. } => {
+            if state.trigger_order.is_empty() {
+                state.trigger_order = triggers.iter().map(|(id, _)| *id).collect();
+            }
+            state.spawned_for = Some(key);
+            let name_map: std::collections::HashMap<CardId, &str> =
+                triggers.iter().map(|(id, n)| (*id, n.as_str())).collect();
+            let ordered: Vec<(CardId, String)> = state
+                .trigger_order
+                .iter()
+                .map(|id| (*id, name_map.get(id).copied().unwrap_or("Triggered ability").to_string()))
+                .collect();
+            spawn_order_triggers_modal(&mut commands, &asset_server, &ui_fonts, &ordered);
         }
         DecisionWire::ChooseTarget { legal, source_name, description, .. } => {
             // No modal — reuse the existing in-scene targeting cursor.
@@ -428,6 +458,172 @@ fn spawn_scry_modal(
                                         card_id: *card_id,
                                         delta,
                                     },
+                                ))
+                                .with_children(|b| {
+                                    b.spawn((
+                                        Text::new(label),
+                                        ui_fonts.tf(16.0),
+                                        TextColor(if disabled {
+                                            theme::TEXT_MUTED
+                                        } else {
+                                            theme::TEXT_PRIMARY
+                                        }),
+                                        Pickable::IGNORE,
+                                    ));
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+        panel
+            .spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                DecisionConfirmButton,
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new("Confirm"),
+                    ui_fonts.tf(18.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                    Pickable::IGNORE,
+                ));
+            });
+    });
+}
+
+/// CR 603.3b — modal letting the viewer order their own simultaneous
+/// triggers. Renders each trigger as a card tile with ← / → reorder
+/// buttons; index 0 (leftmost) is pushed onto the stack first, so the
+/// rightmost trigger resolves first (LIFO). Confirm submits the order.
+fn spawn_order_triggers_modal(
+    commands: &mut Commands,
+    asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
+    ordered: &[(CardId, String)],
+) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG),
+            Button,
+            DecisionModal,
+        ))
+        .id();
+
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                align_items: AlignItems::Center,
+                row_gap: Val::Px(16.0),
+                padding: UiRect::all(Val::Px(20.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+
+    commands.entity(root).add_child(panel);
+
+    let n = ordered.len();
+    commands.entity(panel).with_children(|panel| {
+        panel.spawn((
+            Text::new(
+                "Order your triggers  ·  ← → to reorder  ·  rightmost resolves first",
+            ),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+
+        panel
+            .spawn(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(12.0),
+                ..default()
+            })
+            .with_children(|row| {
+                for (i, (source, name)) in ordered.iter().enumerate() {
+                    let path = scryfall::card_asset_path(name);
+                    let texture: Handle<Image> = asset_server.load(&path);
+                    let at_left = i == 0;
+                    let at_right = i == n - 1;
+
+                    row.spawn(Node {
+                        flex_direction: FlexDirection::Column,
+                        align_items: AlignItems::Center,
+                        row_gap: Val::Px(6.0),
+                        ..default()
+                    })
+                    .with_children(|col| {
+                        col.spawn((
+                            Node {
+                                flex_direction: FlexDirection::Column,
+                                width: Val::Px(CARD_W),
+                                padding: UiRect::all(Val::Px(6.0)),
+                                row_gap: Val::Px(4.0),
+                                align_items: AlignItems::Center,
+                                ..default()
+                            },
+                            BackgroundColor(MODAL_TILE_BG),
+                        ))
+                        .with_children(|cb| {
+                            cb.spawn((
+                                ImageNode { image: texture, ..default() },
+                                Node {
+                                    width: Val::Px(CARD_W - 12.0),
+                                    height: Val::Px(CARD_H - 12.0),
+                                    ..default()
+                                },
+                                Pickable::IGNORE,
+                            ));
+                            cb.spawn((
+                                Text::new(format!("{}.", i + 1)),
+                                ui_fonts.tf(14.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                Pickable::IGNORE,
+                            ));
+                        });
+
+                        col.spawn(Node {
+                            flex_direction: FlexDirection::Row,
+                            column_gap: Val::Px(8.0),
+                            ..default()
+                        })
+                        .with_children(|r| {
+                            for (label, delta, disabled) in
+                                [("←", -1i32, at_left), ("→", 1, at_right)]
+                            {
+                                r.spawn((
+                                    Button,
+                                    Node {
+                                        padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                                        ..default()
+                                    },
+                                    BackgroundColor(if disabled {
+                                        REORDER_BG_DISABLED
+                                    } else {
+                                        REORDER_BG
+                                    }),
+                                    TriggerReorderButton { source: *source, delta },
                                 ))
                                 .with_children(|b| {
                                     b.spawn((
@@ -1078,6 +1274,33 @@ pub fn handle_scry_reorder(
     }
 }
 
+/// Handle clicks on the OrderTriggers ← / → buttons: swap the trigger in
+/// the push ordering and respawn the modal to reflect the new positions.
+pub fn handle_trigger_reorder(
+    mut state: ResMut<DecisionUiState>,
+    query: Query<(&Interaction, &TriggerReorderButton), Changed<Interaction>>,
+    modal: Query<Entity, With<DecisionModal>>,
+    mut commands: Commands,
+) {
+    for (interaction, btn) in &query {
+        if *interaction != Interaction::Pressed {
+            continue;
+        }
+        let Some(pos) = state.trigger_order.iter().position(|id| *id == btn.source) else {
+            continue;
+        };
+        let new_pos =
+            (pos as i32 + btn.delta).clamp(0, state.trigger_order.len() as i32 - 1) as usize;
+        if new_pos != pos {
+            state.trigger_order.swap(pos, new_pos);
+        }
+        for e in &modal {
+            commands.entity(e).despawn();
+        }
+        state.spawned_for = None;
+    }
+}
+
 /// Handle the Confirm button: build the appropriate answer based on which
 /// decision is pending and submit it to the server via NetOutbox.
 pub fn handle_confirm(
@@ -1117,6 +1340,9 @@ pub fn handle_confirm(
                 if state.discard_selected.len() < *count as usize { continue; }
                 DecisionAnswer::Discard(state.discard_selected.clone())
             }
+            DecisionWire::OrderTriggers { .. } => {
+                DecisionAnswer::TriggerOrder(state.trigger_order.clone())
+            }
             _ => continue,
         };
 
@@ -1128,6 +1354,7 @@ pub fn handle_confirm(
         state.search_selected = None;
         state.put_on_library.clear();
         state.discard_selected.clear();
+        state.trigger_order.clear();
         state.spawned_for = None;
     }
 }

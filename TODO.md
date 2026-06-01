@@ -8,6 +8,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **OrderTriggers server suspend** — CR 603.3b same-controller trigger
+  ordering is wired engine-side (`order_same_controller_triggers` consults
+  the decider synchronously) and the client modal exists
+  (`spawn_order_triggers_modal` + `handle_trigger_reorder`). Remaining: a
+  *suspend* path (park the candidate→queue dispatch in a `ResumeContext`,
+  set `pending_decision = OrderTriggers`, resume on the client's answer) so
+  a networked `wants_ui` human is actually prompted instead of degrading to
+  the default order.
+
 - **Tracker staleness** — CUBE_FEATURES.md / DECK_FEATURES.md carry many 🟡/⏳
   rows that are already fully implemented + tested in code (verified this run:
   Opposition, Omniscience, Horizon Canopy / Sunbaked Canyon / Waterlogged
