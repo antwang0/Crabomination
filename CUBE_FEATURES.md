@@ -58,7 +58,6 @@ work is listed below.
 | Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
 | Collective Brutality | 🟡 | {1}{B} Sorcery. 3-mode ChooseMode (discard IS from opp / -2/-2 creature / drain 2). Escalate omitted. Tests: `collective_brutality_mode_two_drains`. |
 | Dread Return | 🟡 | {2}{B}{B} Sorcery. Wired as `Move(target creature card → Battlefield(You))`. The flashback "as an additional cost, sacrifice three creatures" half is omitted (no flashback-with-additional-cost primitive yet) — the regular cast is fully functional. Test: `dread_return_reanimates_target_creature_from_graveyard`. |
-| Wishclaw Talisman | 🟡 | Push (claude/modern_decks batch 102): {1}{B} Artifact. ETB with 3 charge counters. `{T}, Remove a charge counter: Search your library for a card → hand.` Tutor body + cost wired. The "opp gains control" downside is engine-wide ⏳ (no `GainControlBy { who: opp }` variant — `Effect::GainControl` always uses the activator's controller). Tests: `wishclaw_talisman_enters_with_three_charge_counters`, `wishclaw_talisman_searches_and_consumes_a_charge_counter`. |
 | Parallax Dementia | ⏳ | Fading + reanimate; needs fade counters. |
 | Parallax Nexus | 🟡 | Enters with 5 charge counters; upkeep removes one and it's sacrificed at 0 (Fading approximation). `{0}`: target opponent discards a card (proxy for "exile target card from a hand"). |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |

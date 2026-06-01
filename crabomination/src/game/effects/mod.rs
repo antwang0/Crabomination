@@ -1970,8 +1970,14 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GainControl { what, duration: _ } => {
-                let new_ctrl = ctx.controller;
+            Effect::GainControl { what, to, duration: _ } => {
+                let new_ctrl = match to {
+                    Some(pref) => match self.resolve_player(pref, ctx) {
+                        Some(p) => p,
+                        None => return Ok(()),
+                    },
+                    None => ctx.controller,
+                };
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
                         && let Some(c) = self.battlefield_find_mut(cid) {

@@ -6537,6 +6537,7 @@ pub fn archmages_charm() -> CardDefinition {
                         .and(SelectionRequirement::Nonland)
                         .and(SelectionRequirement::ManaValueAtMost(1)),
                 ),
+                to: None,
                 duration: Duration::Permanent,
             },
         ]),
@@ -8230,6 +8231,7 @@ pub fn geyadrone_dihada() -> CardDefinition {
                             SelectionRequirement::Creature
                                 .or(SelectionRequirement::Planeswalker),
                         ),
+                        to: None,
                         duration: Duration::EndOfTurn,
                     },
                     Effect::Untap {
@@ -8402,6 +8404,7 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
                 loyalty_cost: -5,
                 effect: Effect::GainControl {
                     what: target_filtered(SelectionRequirement::Permanent),
+                    to: None,
                     duration: Duration::Permanent,
                 },
             },
@@ -8707,14 +8710,10 @@ pub fn stillmoon_cavalier() -> CardDefinition {
 /// and put that card into your hand, then shuffle. An opponent gains
 /// control of Wishclaw Talisman.
 ///
-/// Cube-style approximation: the "An opponent gains control" downside
-/// is engine-wide ⏳ — `Effect::GainControl { who: ctx.controller }`
-/// can't yet route to "the opp" because no `GainControlBy { who: …
-/// EachOpponent }` variant exists. We ship the tutor body + counter
-/// removal cost; the downside is documented and dropped. The "search
-/// for any card" tutor reads `SelectionRequirement::Any`. The
-/// counter-removal cost is folded into resolution; the activation
-/// rejects when the artifact has no wish counters left.
+/// The "an opponent gains control" downside now rides
+/// `Effect::GainControl { to: Some(EachOpponent) }` (permanent control
+/// shift). The tutor reads `SelectionRequirement::Any`; the activation
+/// rejects when no wish counters remain.
 pub fn wishclaw_talisman() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
@@ -8734,6 +8733,12 @@ pub fn wishclaw_talisman() -> CardDefinition {
                     who: PlayerRef::You,
                     filter: SelectionRequirement::Any,
                     to: ZoneDest::Hand(PlayerRef::You),
+                },
+                // CR — an opponent gains control of Wishclaw afterward.
+                Effect::GainControl {
+                    what: Selector::This,
+                    to: Some(PlayerRef::EachOpponent),
+                    duration: Duration::Permanent,
                 },
             ]),
             sorcery_speed: true,

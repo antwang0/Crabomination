@@ -1331,7 +1331,17 @@ pub enum Effect {
     /// permanents, any other kind by default, and add one poison to each
     /// opponent already poisoned. (No multi-select UI yet.)
     Proliferate,
-    GainControl { what: Selector, duration: Duration },
+    /// Gain control of `what`. `to` names the new controller (`None` = the
+    /// effect's controller, the common case — Threaten, Act of Treason). A
+    /// `Some(pref)` hands control to another player — Wishclaw Talisman's
+    /// "target opponent gains control" downside. `#[serde(default)]` keeps
+    /// pre-field snapshots deserializing as `None`.
+    GainControl {
+        what: Selector,
+        #[serde(default)]
+        to: Option<PlayerRef>,
+        duration: Duration,
+    },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
     /// Create `count` token copies of the permanent resolved by `source`,

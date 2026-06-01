@@ -12124,8 +12124,9 @@ fn wishclaw_talisman_searches_and_consumes_a_charge_counter() {
     let w = g.battlefield_find(wishclaw).expect("Wishclaw alive");
     assert_eq!(w.counter_count(CounterType::Charge), 2,
         "Charge counter consumed");
-    // Wishclaw stays under your control — the printed "opp gains
-    // control" downside is documented engine-wide gap.
+    // The "an opponent gains control" downside now fires.
+    assert_eq!(w.controller, 1, "opponent gained control of Wishclaw");
+    assert_eq!(w.owner, 0, "ownership unchanged — only control shifted");
 }
 
 #[test]

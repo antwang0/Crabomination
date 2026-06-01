@@ -1168,6 +1168,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::GainControl {
                 what: target_filtered(SelectionRequirement::Creature),
+                to: None,
                 duration: Duration::EndOfTurn,
             },
             Effect::Untap {
@@ -1327,6 +1328,7 @@ pub fn mascot_interception() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::GainControl {
                 what: target_filtered(SelectionRequirement::Permanent),
+                to: None,
                 duration: Duration::EndOfTurn,
             },
             Effect::Untap {
