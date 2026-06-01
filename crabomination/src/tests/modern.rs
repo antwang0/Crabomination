@@ -9045,6 +9045,21 @@ fn tezzeret_plus_one_shrinks_target_creature() {
 }
 
 #[test]
+fn tezzeret_static_buffs_your_artifact_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
+    // Ornithopter is a 0/2 artifact creature → 1/3 under Tezzeret.
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    // A non-artifact creature is unaffected.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.compute_battlefield();
+    let t = c.iter().find(|c| c.id == thopter).unwrap();
+    assert_eq!((t.power, t.toughness), (1, 3), "0/2 Ornithopter → 1/3");
+    let b = c.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (2, 2), "non-artifact bear unbuffed");
+}
+
+#[test]
 fn balefire_dragon_combat_damage_burns_each_opp_creature() {
     let mut g = two_player_game();
     let dragon = g.add_card_to_battlefield(0, catalog::balefire_dragon());

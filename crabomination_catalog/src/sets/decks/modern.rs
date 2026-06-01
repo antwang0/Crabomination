@@ -5285,16 +5285,16 @@ pub fn karn_scion_of_urza() -> CardDefinition {
 }
 
 /// Tezzeret, Cruel Captain — {3}{B} Legendary Planeswalker — Tezzeret. 4 loyalty.
+/// Static: artifact creatures you control get +1/+1.
 /// **+1**: Up to one target creature gets -2/-2 until end of turn.
 /// **-2**: Each opponent loses 2 life and you gain 2 life.
 ///
-/// Cube-style approximation. The "ult" (typically -7) is collapsed: at this
-/// engine fidelity we cap Tezzeret at the two cube-relevant abilities (+1
-/// removal on a 3-toughness creature, -2 drain). Static "your artifact
-/// creatures get +1/+1" isn't modeled.
+/// Cube-style card. The static anthem rides `StaticEffect::PumpPT` (planes-
+/// walkers feed `static_ability_to_effects` like any permanent). The "ult"
+/// (typically -7) is collapsed to the two cube-relevant loyalty lines.
 pub fn tezzeret_cruel_captain() -> CardDefinition {
-    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
-    use crate::effect::Duration;
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, Supertype as Sup};
+    use crate::effect::{Duration, StaticEffect};
     CardDefinition {
         name: "Tezzeret, Cruel Captain",
         cost: cost(&[generic(2), b()]),
@@ -5305,6 +5305,18 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
             ..Default::default()
         },
         base_loyalty: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Artifact creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,

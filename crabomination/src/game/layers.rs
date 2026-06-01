@@ -137,6 +137,9 @@ pub enum AffectedPermanents {
     /// you control get +1/+0", various "Other X you control" anthems). Defaults
     /// to `false` (include source) via `#[serde(default)]` for snapshot back-
     /// compat with pre-push-XXXV serialized states.
+    /// `card_types` is matched as a conjunction: a permanent must carry
+    /// *every* listed type (so `[Artifact, Creature]` means "artifact
+    /// creatures", not "artifacts or creatures"). Empty = any type.
     All {
         controller: Option<usize>,
         card_types: Vec<CardType>,
@@ -406,7 +409,7 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
             }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let type_ok = card_types.is_empty()
-                || card_types.iter().any(|t| card.definition.card_types.contains(t));
+                || card_types.iter().all(|t| card.definition.card_types.contains(t));
             ctrl_ok && type_ok
         }
         AffectedPermanents::AllOpponents { source_controller, card_types, friendly_seats } => {
@@ -418,7 +421,7 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
                 !friendly_seats.contains(&card.controller)
             };
             let type_ok = card_types.is_empty()
-                || card_types.iter().any(|t| card.definition.card_types.contains(t));
+                || card_types.iter().all(|t| card.definition.card_types.contains(t));
             ctrl_ok && type_ok
         }
         AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
@@ -434,7 +437,7 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
         AffectedPermanents::AllWithCounter { controller, card_types, counter, at_least } => {
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let type_ok = card_types.is_empty()
-                || card_types.iter().any(|t| card.definition.card_types.contains(t));
+                || card_types.iter().all(|t| card.definition.card_types.contains(t));
             let counter_ok = card.counter_count(*counter) >= *at_least;
             ctrl_ok && type_ok && counter_ok
         }
