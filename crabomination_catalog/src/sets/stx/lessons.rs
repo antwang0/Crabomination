@@ -1115,44 +1115,25 @@ pub fn confront_the_doubt() -> CardDefinition {
     }
 }
 
-/// Test of Patience — {2}{U} Sorcery — Lesson.
-/// Synthesised Oracle: "Counter target activated or triggered ability. Draw
-/// a card."
-/// 🟡 Approximation: the counter-ability primitive currently targets only
-/// activated abilities on the stack (see Stifle in TODO.md). Body just
-/// draws a card at this point.
+/// Test of Patience — {2}{U} Instant — Lesson. Counter target activated
+/// or triggered ability, then draw a card. (`CounterAbility` targets the
+/// ability's source permanent, same as Stifle.)
 pub fn test_of_patience() -> CardDefinition {
     CardDefinition {
         name: "Test of Patience",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(2),
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CounterAbility {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
     }
 }
 

@@ -1029,19 +1029,31 @@ fn confront_the_doubt_discards_nonland_noncreature_and_gains_life() {
 }
 
 #[test]
-fn test_of_patience_draws_two() {
+fn test_of_patience_counters_an_ability_and_draws() {
     let mut g = two_player_game();
-    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
-    let id = g.add_card_to_hand(0, catalog::test_of_patience());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let hand_before = g.players[0].hand.len();
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    // P0 casts Devourer of Destiny; its on-cast Scry trigger goes on the stack.
+    let dev = g.add_card_to_hand(0, catalog::devourer_of_destiny());
+    g.players[0].mana_pool.add_colorless(7);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Test of Patience castable");
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    // P1 responds with Test of Patience targeting the trigger's source.
+    g.priority.player_with_priority = 1;
+    let id = g.add_card_to_hand(1, catalog::test_of_patience());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(2);
+    let hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(dev)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Test of Patience castable in response");
     drain_stack(&mut g);
-    // -1 cast + 2 draw = +1
-    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert!(!g.stack.iter().any(|si| matches!(
+        si, crate::game::StackItem::Trigger { source, .. } if *source == dev
+    )), "Scry trigger should have been countered");
+    // -1 cast + 1 draw = net 0.
+    assert_eq!(g.players[1].hand.len(), hand_before);
 }
 
 #[test]

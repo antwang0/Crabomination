@@ -1642,10 +1642,11 @@ fn pest_hivewatcher_b119_does_not_gain_life_when_only_self_dies() {
 }
 
 #[test]
-fn witherbloom_harvester_b119_sacrifices_self_to_draw() {
+fn witherbloom_harvester_b119_sacrifices_another_creature_to_draw() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let h = g.add_card_to_battlefield(0, catalog::witherbloom_harvester_b119());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(h);
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
@@ -1658,7 +1659,9 @@ fn witherbloom_harvester_b119_sacrifices_self_to_draw() {
     }).expect("activation");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
-    assert!(g.battlefield_find(h).is_none(), "Harvester sacrificed to gy");
+    // The other creature is sacrificed; Harvester itself survives.
+    assert!(g.battlefield_find(fodder).is_none(), "fodder creature sacrificed");
+    assert!(g.battlefield_find(h).is_some(), "Harvester stays in play");
 }
 
 #[test]

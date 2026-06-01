@@ -2268,27 +2268,13 @@ pub fn pest_hivewatcher_b119() -> CardDefinition {
 }
 
 /// Witherbloom Harvester (batch 119) — {2}{B}, 3/2 Plant Druid.
-///
-/// Synthesised: "{1}{B}, Sacrifice a creature: Draw a card. Activate
-/// only as a sorcery." Activated sac-outlet that turns spare bodies
-/// (Pests, Inklings) into cards. Uses `sac_cost: true` to route the
-/// printed "sacrifice a creature" cost through the engine's sacrifice
-/// path — but printed "sacrifice a creature" is broader than the
-/// engine's sac_cost (which targets the source itself); we approximate
-/// the broader version by gating the activation on having a friendly
-/// non-self creature available via the `condition` predicate.
-///
-/// 🟡 simplification: the engine's `sac_cost: true` always sacrifices
-/// the **source** permanent, so this is sticky on this card — Harvester
-/// itself goes to the graveyard. Matches the activation pattern of
-/// Letter of Acceptance / Cathar Commando. A future engine extension
-/// for "sacrifice a different creature as cost" would let the printed
-/// text resolve faithfully.
+/// `{1}{B}, Sacrifice a creature: Draw a card. Activate only as a
+/// sorcery.` Uses `sac_other_filter` to sacrifice any friendly creature
+/// (the auto-picker keeps higher-value bodies).
 pub fn witherbloom_harvester_b119() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Harvester (Batch 119)",
         cost: cost(&[generic(2), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -2296,34 +2282,17 @@ pub fn witherbloom_harvester_b119() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
-            tap_cost: false,
             mana_cost: cost(&[generic(1), b()]),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            once_per_turn: false,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             sorcery_speed: true,
-            sac_cost: true,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                1,
+            )),
             ..Default::default()
         }],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        ..Default::default()
     }
 }
 

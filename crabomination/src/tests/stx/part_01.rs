@@ -1788,7 +1788,7 @@ fn mage_hunters_mark_pumps_target_and_grants_menace() {
 #[test]
 fn mage_duel_friendly_burns_opp_creature_by_friendly_power() {
     let mut g = two_player_game();
-    let _friendly = g.add_card_to_battlefield(0, catalog::tarmogoyf());
+    let friendly = g.add_card_to_battlefield(0, catalog::tarmogoyf());
     // Tarmogoyf without any types in any graveyard is 0/1; let's seed a
     // graveyard card so its power becomes 1.
     let _ = g.add_card_to_graveyard(0, catalog::lightning_bolt());
@@ -1798,9 +1798,10 @@ fn mage_duel_friendly_burns_opp_creature_by_friendly_power() {
     let id = g.add_card_to_hand(0, catalog::mage_duel());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
+    // Slot 0 = opp victim; slot 1 = friendly dealer.
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![],
+        additional_targets: vec![Target::Permanent(friendly)],
         mode: None, x_value: None,
     }).expect("Mage Duel castable for {1}{R}");
     drain_stack(&mut g);

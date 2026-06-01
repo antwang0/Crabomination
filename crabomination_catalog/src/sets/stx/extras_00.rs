@@ -2256,18 +2256,11 @@ pub fn magma_opus() -> CardDefinition {
 // ── Reckless Amplimancer ────────────────────────────────────────────────────
 
 /// Reckless Amplimancer — {2}{G} Creature — Elf Druid, 2/2.
-/// Activated `{4}{G}{G}: +3/+3 EOT`.
-///
-/// The printed Oracle scales `+X/+X` with the mana spent on the
-/// activation, but the engine has no per-activation mana-spent
-/// tracker. We approximate via a fixed `+3/+3` for the canonical
-/// {4}{G}{G} (6 mana → +3/+3) activation cost. Body is a 2/2 elf for
-/// {2}{G}.
+/// `{X}: this creature gets +X/+X until end of turn.`
 pub fn reckless_amplimancer() -> CardDefinition {
     CardDefinition {
         name: "Reckless Amplimancer",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -2275,42 +2268,19 @@ pub fn reckless_amplimancer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
+        // {X}: +X/+X EOT, where X = the mana spent on this activation
+        // (`Value::XFromCost` reads `ActivateAbility.x_value`).
         activated_abilities: vec![ActivatedAbility {
-            tap_cost: false,
-            mana_cost: cost(&[generic(4), g(), g()]),
+            mana_cost: cost(&[crate::mana::ManaSymbol::X]),
             effect: Effect::PumpPT {
                 what: Selector::This,
-                power: Value::Const(3),
-                toughness: Value::Const(3),
+                power: Value::XFromCost,
+                toughness: Value::XFromCost,
                 duration: Duration::EndOfTurn,
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
+            ..Default::default()
         }],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        ..Default::default()
     }
 }
 
@@ -3083,52 +3053,28 @@ pub fn mage_hunters_mark() -> CardDefinition {
 /// "Target creature you control deals damage equal to its power to
 /// target creature you don't control."
 ///
-/// Asymmetric fight: only the friendly creature deals damage to the
-/// hostile creature, so the friendly survives untouched (unlike a true
-/// `Effect::Fight` which deals damage both ways). The auto-target
-/// picker picks the highest-power friendly attacker against an opp
-/// blocker by default. Wired via `Effect::DealDamage` with
-/// `Value::PowerOf(Target(0))` and a multi-target prompt approximated
-/// by picking a single opp creature as `Selector::Target(0)` while
-/// the friendly attacker is named via the auto-picker.
+/// Mage Duel — {1}{R} Sorcery. Target creature you control deals damage
+/// equal to its power to target creature you don't control.
 ///
-/// 🟡 The "target creature you control deals" rider collapses to a
-/// one-target shape — engine has no multi-target sorcery prompt yet.
-/// We resolve it by reading `Value::PowerOf` off the auto-picked
-/// friendly creature (`Selector::EachPermanent(Creature & You)`'s
-/// first match). The result is a one-shot ping equal to the friendly
-/// creature's effective power.
+/// Two-slot spell: slot 0 is the hostile victim (auto-picked hostile),
+/// slot 1 (`additional_targets[0]`) is the friendly dealer. The fight
+/// is one-sided — only the dealer's power is dealt, so it survives.
 pub fn mage_duel() -> CardDefinition {
     CardDefinition {
         name: "Mage Duel",
         cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::PowerOf(Box::new(Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ))),
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            })),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        ..Default::default()
     }
 }
 

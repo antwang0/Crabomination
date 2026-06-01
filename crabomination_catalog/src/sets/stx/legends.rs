@@ -3,10 +3,9 @@
 //!
 //! Most ship as faithfully-statted bodies: cost, P/T, supertypes, keywords,
 //! and creature types are correct so the cards play, are blockable, and
-//! feed catalog filtering. Push XXXV completes the Beledros / Tanazir /
-//! Shadrix triggers and reshapes them into ✅ — only Galazeth (artifact
-//! tap-for-any-color static) and Velomachus (reveal-and-cast-from-exile)
-//! still stay 🟡 pending those engine primitives.
+//! feed catalog filtering. Beledros / Tanazir / Shadrix / Galazeth are
+//! fully wired (✅). Velomachus stays 🟡 only because its reveal cap uses
+//! a static `ManaValueAtMost(5)` rather than its live power.
 
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, Keyword, MayPlayDuration, Selector,

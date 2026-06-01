@@ -3560,19 +3560,20 @@ fn magma_opus_etb_deals_four_taps_creates_elemental_draws_two() {
 }
 
 #[test]
-fn reckless_amplimancer_activates_for_plus_three() {
+fn reckless_amplimancer_pumps_by_x_paid() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::reckless_amplimancer());
-    g.players[0].mana_pool.add(Color::Green, 2);
+    // {X} with X=4 → +4/+4.
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Reckless Amplimancer activates");
+        card_id: id, ability_index: 0, target: None, x_value: Some(4) })
+        .expect("Reckless Amplimancer activates for {X}");
     drain_stack(&mut g);
 
     let amp = g.battlefield.iter().find(|c| c.id == id).unwrap();
-    assert_eq!(amp.power(), 5, "2 + 3 = 5");
-    assert_eq!(amp.toughness(), 5);
+    assert_eq!(amp.power(), 6, "2 + X(4) = 6");
+    assert_eq!(amp.toughness(), 6);
 }
 
 #[test]

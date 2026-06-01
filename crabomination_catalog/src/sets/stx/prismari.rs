@@ -325,43 +325,25 @@ pub fn prismari_command() -> CardDefinition {
 
 // ── Creative Outburst ──────────────────────────────────────────────────────
 
-/// Creative Outburst — {3}{U}{U}{R}{R} Instant. "Creative Outburst deals
-/// 5 damage to any target. Look at the top five cards of your library.
-/// Put one into your hand and the rest on the bottom."
-///
-/// 🟡 Look-and-choose approximated as Scry 4 + Draw 1.
+/// Creative Outburst — {3}{U}{U}{R}{R} Instant. 5 damage to any target,
+/// then look at the top five of your library, one to hand, rest on bottom.
 pub fn creative_outburst() -> CardDefinition {
     CardDefinition {
         name: "Creative Outburst",
         cost: cost(&[generic(3), u(), u(), r(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Any),
                 amount: Value::Const(5),
             },
-            Effect::Scry {
+            Effect::LookPickToHand {
                 who: PlayerRef::You,
-                amount: Value::Const(4),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+                count: Value::Const(5),
+                rest_to_graveyard: false,
+                pick_filter: None,
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }

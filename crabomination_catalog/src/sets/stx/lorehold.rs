@@ -208,45 +208,22 @@ pub fn pillardrop_rescuer() -> CardDefinition {
 
 // ── Heated Debate ───────────────────────────────────────────────────────────
 
-/// Heated Debate — {2}{R} Instant. "Heated Debate deals 4 damage to
-/// target creature. Damage can't be prevented this turn."
-///
-/// ✅ The "damage can't be prevented this turn" rider is a true no-op
-/// in this engine: there is no damage-prevention layer to gate, so
-/// every damage event already resolves at face value. Documented here
-/// rather than tracked as 🟡 — the unimplemented clause has zero
-/// gameplay impact in the engine's current scope, matching how Star
-/// Pupil's CR 122.8-related text and Skullcrack's prevention-rider
-/// are also treated as no-ops.
+/// Heated Debate — {2}{R} Instant. Damage can't be prevented this turn,
+/// then deal 4 damage to target creature. (CR 615.12 — the prevention
+/// lock is applied first so it covers this spell's own damage.)
 pub fn heated_debate() -> CardDefinition {
     CardDefinition {
         name: "Heated Debate",
         cost: cost(&[generic(2), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(4),
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DamageCantBePreventedThisTurn,
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+        ]),
+        ..Default::default()
     }
 }
 

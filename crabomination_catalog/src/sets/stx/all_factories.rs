@@ -2490,6 +2490,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::search_for_glory,
         super::fervent_strike,
         super::prismari::elemental_summoning,
+        super::prismari::creative_outburst,
         super::silverquill::humiliate,
         super::super::mod_set::elite_spellbinder,
         super::waker_of_waves,

@@ -2964,3 +2964,54 @@ fn witherbloom_rotmancer_magecraft_pings_each_opp() {
     // Bolt 3 + Rotmancer magecraft 1 = 4.
     assert_eq!(g.players[1].life, opp_before - 4);
 }
+
+#[test]
+fn creative_outburst_deals_five_and_digs_for_one() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::creative_outburst());
+    // Seed a known top card; auto-decider keeps the top of the dug pile.
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Creative Outburst castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 5, "5 damage to the opponent");
+    assert!(g.players[0].hand.iter().any(|c| c.id == top),
+        "dug-for top card landed in hand");
+}
+
+#[test]
+fn heated_debate_damage_ignores_a_prevention_shield() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Shield the bear with "prevent the next 3 damage" (Healing Salve mode 1).
+    let salve = g.add_card_to_hand(1, catalog::healing_salve());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: salve, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Healing Salve castable");
+    drain_stack(&mut g);
+    // Heated Debate: prevention is locked, so all 4 damage lands and kills it.
+    let hd = g.add_card_to_hand(0, catalog::heated_debate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hd, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Heated Debate castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(),
+        "shield is ignored — 4 damage kills the 2/2");
+}

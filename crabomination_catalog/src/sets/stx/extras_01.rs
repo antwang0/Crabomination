@@ -2710,13 +2710,6 @@ pub fn quench() -> CardDefinition {
 
 // ── Heated Debate is in lorehold; Make Your Mark is in silverquill ─────────
 
-// ── Reckless Amplimancer — promotion attempt ───────────────────────────────
-
-// (Reckless Amplimancer's `+X/+X = mana spent` rider stays 🟡 — would need
-// an x_value channel on activated abilities and a `Value::CastSpellManaSpent`
-// readable in the activation context. The {4}{G}{G}: +3/+3 EOT approximation
-// ships as the canonical activation; we leave that wire alone.)
-
 // ── New STX additions — push (modern_decks) ────────────────────────────────
 
 /// Spined Karok — {2}{G}{U} Creature — Beast, 3/3.
