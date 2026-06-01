@@ -12204,6 +12204,25 @@ fn yarok_doubles_your_own_etb_triggers() {
 }
 
 #[test]
+fn yarok_doubles_reaction_etb_triggers() {
+    // Yarok also doubles "whenever another creature enters" reaction
+    // triggers of your permanents (Soul Warden), not just self-ETBs.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::yarok_the_desecrated());
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    let life = g.players[0].life;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2,
+        "Soul Warden's reaction trigger fires twice under Yarok");
+}
+
+#[test]
 fn yarok_under_opponent_control_does_not_double_or_suppress_yours() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::yarok_the_desecrated()); // opponent's Yarok

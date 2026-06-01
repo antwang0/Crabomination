@@ -5503,12 +5503,10 @@ pub fn anguished_unmaking() -> CardDefinition {
 /// causes a triggered ability of a permanent you control to trigger,
 /// that ability triggers an additional time."
 ///
-/// Your permanents' own ETB triggers fire an additional time via
+/// Your permanents' ETB triggers fire an additional time via
 /// `StaticEffect::DoubleControllerEtbTriggers` (read by
-/// `etb_trigger_multiplier`), without suppressing opponents' triggers. (As
-/// with Elesh Norn, the multiplier currently covers each entering
-/// permanent's own `SelfSource` ETB triggers; "another permanent entered"
-/// reaction triggers aren't yet doubled.)
+/// `etb_trigger_multiplier` on both the self-ETB and reaction-ETB dispatch
+/// paths), without suppressing opponents' triggers.
 pub fn yarok_the_desecrated() -> CardDefinition {
     use crate::card::{StaticAbility, Supertype as Sup};
     use crate::effect::StaticEffect;

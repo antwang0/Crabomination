@@ -2652,25 +2652,44 @@ impl GameState {
                     continue;
                 }
             }
-            // Strict Proctor's CR 614 tax — applied only to triggers
-            // caused by an ETB event. The trigger's controller may pay
-            // {2} or sacrifice the trigger's source permanent.
-            if triggered_by_etb
-                && !crate::game::actions::apply_etb_trigger_tax(self, source, controller)
-            {
-                continue;
-            }
             // CR 700.2b — modal triggered ability mode pick at push-time.
             let mode = self.pick_trigger_mode(&effect, source);
-            queue.push(PendingTriggerPush {
-                source,
-                controller,
-                effect,
-                subject,
-                event_amount,
-                mode,
-                intervening_if: None,
-            });
+            if triggered_by_etb {
+                // Yarok / Elesh Norn replacement (CR 614). A `wants`-side
+                // ETB-trigger multiplier scales how many times this
+                // reaction trigger fires (0 = suppressed by an opponent's
+                // Spotlight, 1 normally, 2+ with a doubler). Self-source ETB
+                // triggers go through the hardcoded path in `actions.rs`
+                // (also multiplied), so they aren't double-counted here.
+                let mult = crate::game::actions::etb_trigger_multiplier(self, controller);
+                for _ in 0..mult {
+                    // Strict Proctor's CR 614 tax applies once per fire; a
+                    // declined / unpayable tax sacrifices the source and
+                    // halts the remaining fires.
+                    if !crate::game::actions::apply_etb_trigger_tax(self, source, controller) {
+                        break;
+                    }
+                    queue.push(PendingTriggerPush {
+                        source,
+                        controller,
+                        effect: effect.clone(),
+                        subject,
+                        event_amount,
+                        mode,
+                        intervening_if: None,
+                    });
+                }
+            } else {
+                queue.push(PendingTriggerPush {
+                    source,
+                    controller,
+                    effect,
+                    subject,
+                    event_amount,
+                    mode,
+                    intervening_if: None,
+                });
+            }
         }
         self.drain_trigger_queue(queue);
         // Clear the per-die-event snapshot cache
