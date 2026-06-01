@@ -13079,3 +13079,65 @@ pub fn soul_snare() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// 1/1 red Goblin token shared by the goblin-swarm sorceries below.
+fn goblin_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Dragon Fodder — {1}{R} Sorcery. "Create two 1/1 red Goblin tokens."
+pub fn dragon_fodder() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon Fodder",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: goblin_token(),
+        },
+        ..Default::default()
+    }
+}
+
+/// Krenko's Command — {1}{R} Sorcery. "Create two 1/1 red Goblin tokens."
+pub fn krenkos_command() -> CardDefinition {
+    CardDefinition {
+        name: "Krenko's Command",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: goblin_token(),
+        },
+        ..Default::default()
+    }
+}
+
+/// Hordeling Outburst — {1}{R}{R} Sorcery. "Create three 1/1 red Goblin
+/// tokens."
+pub fn hordeling_outburst() -> CardDefinition {
+    CardDefinition {
+        name: "Hordeling Outburst",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: goblin_token(),
+        },
+        ..Default::default()
+    }
+}

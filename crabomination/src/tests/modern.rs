@@ -19561,3 +19561,45 @@ fn soul_snare_exiles_an_attacker() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == attacker), "attacking creature exiled");
 }
+
+#[test]
+fn dragon_fodder_makes_two_goblins() {
+    let mut g = two_player_game();
+    let df = g.add_card_to_hand(0, catalog::dragon_fodder());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: df, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dragon Fodder castable for {1}{R}");
+    drain_stack(&mut g);
+    let gobs = g.battlefield.iter().filter(|c| c.definition.name == "Goblin" && c.controller == 0).count();
+    assert_eq!(gobs, 2, "two 1/1 Goblins created");
+}
+
+#[test]
+fn hordeling_outburst_makes_three_goblins() {
+    let mut g = two_player_game();
+    let ho = g.add_card_to_hand(0, catalog::hordeling_outburst());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ho, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hordeling Outburst castable for {1}{R}{R}");
+    drain_stack(&mut g);
+    let gobs = g.battlefield.iter().filter(|c| c.definition.name == "Goblin" && c.controller == 0).count();
+    assert_eq!(gobs, 3, "three 1/1 Goblins created");
+}
+
+#[test]
+fn krenkos_command_makes_two_goblins() {
+    let mut g = two_player_game();
+    let kc = g.add_card_to_hand(0, catalog::krenkos_command());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: kc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Krenko's Command castable for {1}{R}");
+    drain_stack(&mut g);
+    let gobs = g.battlefield.iter().filter(|c| c.definition.name == "Goblin" && c.controller == 0).count();
+    assert_eq!(gobs, 2, "two 1/1 Goblins created");
+}
