@@ -15551,6 +15551,20 @@ fn zopandrel_activation_sacs_two_creatures_and_adds_indestructible_counter() {
 }
 
 #[test]
+fn zopandrel_doubles_each_creatures_power_and_toughness_at_combat() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zopandrel_hunger_dominus()); // 4/6
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let b = view.iter().find(|c| c.id == bear).expect("bear present");
+    // True doubling: 2/2 → 4/4 (not a flat +4/+4, which would be 6/6).
+    assert_eq!((b.power, b.toughness), (4, 4), "bear's P/T doubled");
+}
+
+#[test]
 fn zopandrel_activation_rejected_without_two_other_creatures() {
     let mut g = two_player_game();
     let zop = g.add_card_to_battlefield(0, catalog::zopandrel_hunger_dominus());

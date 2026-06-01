@@ -12071,13 +12071,12 @@ pub fn scavenging_ooze() -> CardDefinition {
 /// {G/P}{G/P}, Sacrifice two other creatures: Put an indestructible
 /// counter on Zopandrel."
 ///
-/// Approximation: Reach + combat-step pump doubling is approximated
-/// as a flat +4/+4 to each creature you control (since doubling needs
-/// per-creature power introspection). The `{G/P}{G/P}, Sacrifice two
-/// other creatures: Put an indestructible counter on Zopandrel`
-/// activation is now wired — real Phyrexian pips (pay {G} or 2 life
-/// each), `sac_other_filter: (Creature, 2)` excluding the source, and an
-/// `AddCounter(Indestructible)` via the new counter type.
+/// Begin-combat doubling reads each creature's current P/T off the
+/// `ForEach` binding (`Value::PowerOf`/`ToughnessOf(TriggerSource)`) and
+/// adds it back — true doubling, not a flat bonus. The `{G/P}{G/P},
+/// Sacrifice two other creatures: Put an indestructible counter on
+/// Zopandrel` activation is wired via real Phyrexian pips,
+/// `sac_other_filter: (Creature, 2)`, and `AddCounter(Indestructible)`.
 pub fn zopandrel_hunger_dominus() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     use crate::game::types::TurnStep;
@@ -12116,8 +12115,10 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
                 ),
                 body: Box::new(Effect::PumpPT {
                     what: Selector::TriggerSource,
-                    power: Value::Const(4),
-                    toughness: Value::Const(4),
+                    // Double P/T: add each creature's current power/toughness
+                    // to itself (read per-creature off the ForEach binding).
+                    power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    toughness: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
                     duration: Duration::EndOfTurn,
                 }),
             },

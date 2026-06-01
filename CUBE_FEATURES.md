@@ -90,7 +90,6 @@ work is listed below.
 | Mightform Harmonizer | ⏳ | TBD. |
 | Ouroboroid | ⏳ | TBD. |
 | Railway Brawler | ⏳ | Train (vehicle-like). |
-| Zopandrel, Hunger Dominus | 🟡 | 4/6 Reach Legendary Phyrexian Horror. Begin-combat +4/+4 pump to each creature you control (approximation of double-power). Phyrexian-mana sac activation omitted. |
 | Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |
