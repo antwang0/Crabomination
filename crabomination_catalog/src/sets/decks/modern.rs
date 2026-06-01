@@ -12891,3 +12891,191 @@ pub fn executioners_capsule() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rapid Hybridization — {U} Instant. "Destroy target creature. It can't be
+/// regenerated. Its controller creates a 3/3 green Frog Lizard token."
+pub fn rapid_hybridization() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let frog = TokenDefinition {
+        name: "Frog Lizard".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Lizard],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Rapid Hybridization",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: frog,
+            },
+            Effect::DestroyNoRegen {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Impulse — {1}{U} Instant. "Look at the top four cards of your library. Put
+/// one of them into your hand and the rest on the bottom of your library in
+/// any order."
+pub fn impulse() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Impulse",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Serum Visions — {U} Sorcery. "Draw a card, then scry 2."
+pub fn serum_visions() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Serum Visions",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flame Rift — {1}{R} Sorcery. "Flame Rift deals 4 damage to each player."
+pub fn flame_rift() -> CardDefinition {
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        name: "Flame Rift",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ultimate Price — {1}{B} Instant. "Destroy target monocolored creature."
+pub fn ultimate_price() -> CardDefinition {
+    CardDefinition {
+        name: "Ultimate Price",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Monocolored),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Walk the Plank — {1}{B} Sorcery. "Destroy target non-Merfolk creature."
+pub fn walk_the_plank() -> CardDefinition {
+    CardDefinition {
+        name: "Walk the Plank",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(
+                    SelectionRequirement::HasCreatureType(CreatureType::Merfolk).negate(),
+                ),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Rabid Bite — {1}{G} Sorcery. "Target creature you control deals damage
+/// equal to its power to target creature you don't control."
+pub fn rabid_bite() -> CardDefinition {
+    CardDefinition {
+        name: "Rabid Bite",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            })),
+        },
+        ..Default::default()
+    }
+}
+
+/// Oust — {W} Sorcery. "Put target creature into its owner's library second
+/// from the top. Its owner gains 5 life."
+pub fn oust() -> CardDefinition {
+    use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
+    CardDefinition {
+        name: "Oust",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(5),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: LibraryPosition::FromTop(1),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Soul Snare — {1}{W} Enchantment. "{1}, Sacrifice Soul Snare: Exile target
+/// attacking or blocking creature."
+pub fn soul_snare() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Soul Snare",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::IsAttacking
+                            .or(SelectionRequirement::IsBlocking),
+                    ),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

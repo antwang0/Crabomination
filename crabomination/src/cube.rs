@@ -443,6 +443,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         white_suns_zenith,
         // ── modern_decks batch 102 (mono-white cube expansion) ──
         generous_gift,
+        oust,
+        soul_snare,
         // ── SOS (Secrets of Strixhaven) ──
         eager_glyphmage,
         erode,
@@ -639,6 +641,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 103 (mono-blue cube expansion) ──
         tempest_angler,
         seal_of_removal,
+        rapid_hybridization,
+        impulse,
+        serum_visions,
         // ── SOS (Secrets of Strixhaven) ──
         chase_inspiration,
         banishing_betrayal,
@@ -846,6 +851,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 103 (mono-black cube expansion) ──
         mai_scornful_striker,
         vendetta,
+        ultimate_price,
+        walk_the_plank,
         // ── modern_decks batch 102: cube expansion ──
         // murderous_cut — ✅ Delve (CR 702.66) wired via Keyword::Delve +
         //                  GameAction::CastSpellDelve; {4}{B} destroy.
@@ -1085,6 +1092,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         skullcrack,
         fiery_impulse,
         searing_blood,
+        flame_rift,
         grapeshot,
         ahn_crop_crasher,
         servant_of_tymaret,
@@ -1314,6 +1322,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         green_suns_zenith,
         // ── modern_decks batch 103 (mono-green cube expansion) ──
         mossborn_hydra,
+        rabid_bite,
         // ── modern_decks-14 ──
         harrow,
         // ── modern_decks-15 ──

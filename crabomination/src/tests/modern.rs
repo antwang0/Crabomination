@@ -19410,3 +19410,155 @@ fn horizon_spellbomb_draw_mode_works() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
+
+#[test]
+fn rapid_hybridization_destroys_and_makes_a_frog_lizard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rh = g.add_card_to_hand(0, catalog::rapid_hybridization());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rh, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rapid Hybridization castable for {U}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature destroyed");
+    let frog = g.battlefield.iter().find(|c| c.definition.name == "Frog Lizard");
+    assert!(frog.is_some(), "controller gets a Frog Lizard token");
+    let frog = frog.unwrap();
+    assert_eq!(frog.controller, 1);
+    assert_eq!((frog.power(), frog.toughness()), (3, 3));
+}
+
+#[test]
+fn impulse_digs_four_and_puts_one_in_hand() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let imp = g.add_card_to_hand(0, catalog::impulse());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: imp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Impulse castable for {1}{U}");
+    drain_stack(&mut g);
+    // Cast (-1) + one card to hand (+1) = net unchanged.
+    assert_eq!(g.players[0].hand.len(), hand, "one of four dug cards lands in hand");
+}
+
+#[test]
+fn serum_visions_draws_then_scries() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let sv = g.add_card_to_hand(0, catalog::serum_visions());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: sv, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Serum Visions castable for {U}");
+    drain_stack(&mut g);
+    // Cast (-1) + draw (+1) = net unchanged; scry doesn't change hand size.
+    assert_eq!(g.players[0].hand.len(), hand);
+}
+
+#[test]
+fn flame_rift_deals_four_to_each_player() {
+    let mut g = two_player_game();
+    let fr = g.add_card_to_hand(0, catalog::flame_rift());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Flame Rift castable for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 - 4, "caster takes 4");
+    assert_eq!(g.players[1].life, l1 - 4, "opponent takes 4");
+}
+
+#[test]
+fn ultimate_price_destroys_monocolored_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // mono-green
+    let up = g.add_card_to_hand(0, catalog::ultimate_price());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: up, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ultimate Price castable for {1}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "monocolored creature destroyed");
+}
+
+#[test]
+fn walk_the_plank_destroys_non_merfolk() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wtp = g.add_card_to_hand(0, catalog::walk_the_plank());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wtp, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Walk the Plank castable for {1}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "non-Merfolk creature destroyed");
+}
+
+#[test]
+fn rabid_bite_deals_your_creatures_power_to_an_enemy() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let rb = g.add_card_to_hand(0, catalog::rabid_bite());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rb, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("Rabid Bite castable for {1}{G}");
+    drain_stack(&mut g);
+    // 2 power → 2 damage → the 2/2 enemy dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "enemy took lethal (2) damage");
+    assert!(g.battlefield.iter().any(|c| c.id == mine), "your creature takes no damage back");
+}
+
+#[test]
+fn oust_tucks_creature_and_owner_gains_five() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let oust = g.add_card_to_hand(0, catalog::oust());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let owner_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: oust, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Oust castable for {W}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature left battlefield");
+    assert!(g.players[1].library.iter().any(|c| c.id == bear), "tucked into owner's library");
+    assert_eq!(g.players[1].life, owner_life + 5, "its owner gains 5 life");
+}
+
+#[test]
+fn soul_snare_exiles_an_attacker() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let snare = g.add_card_to_battlefield(0, catalog::soul_snare());
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // Player 1 attacks; then player 0 sacrifices the Snare to exile it.
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(0) }])
+        .expect("declare attacker");
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: snare, ability_index: 0, target: Some(Target::Permanent(attacker)), x_value: None })
+        .expect("{1},Sac: exile attacking creature");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == attacker), "attacking creature exiled");
+}
