@@ -918,6 +918,41 @@ pub fn arcbound_ravager() -> CardDefinition {
     }
 }
 
+/// Arcbound Hybrid — {3} Artifact Creature — Beast, 0/0, Haste, Modular 2.
+pub fn arcbound_hybrid() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType};
+    CardDefinition {
+        name: "Arcbound Hybrid",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Haste],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
+        ..Default::default()
+    }
+}
+
+/// Arcbound Bruiser — {4} Artifact Creature — Golem, 0/0, Modular 3.
+pub fn arcbound_bruiser() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType};
+    CardDefinition {
+        name: "Arcbound Bruiser",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        triggered_abilities: vec![crate::effect::shortcut::modular_dies()],
+        ..Default::default()
+    }
+}
+
 /// Hedron Archive — {4} Artifact. "{T}: Add {C}{C}." "{T}, Sacrifice this
 /// artifact: Draw two cards."
 pub fn hedron_archive() -> CardDefinition {

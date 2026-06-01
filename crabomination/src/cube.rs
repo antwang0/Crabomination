@@ -309,6 +309,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         arcbound_worker,
         arcbound_stinger,
         arcbound_ravager,
+        arcbound_hybrid,
+        arcbound_bruiser,
     ]
 }
 
@@ -502,6 +504,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         stalwart_aven,
         ainok_bond_kin,
         abzan_falconer,
+        knight_of_the_pilgrims_road,
+        consuls_lieutenant,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -1416,6 +1420,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         aquastrand_spider,
         plaxcaster_frogling,
         cytoplast_root_kin,
+        simic_initiate,
+        vigean_graftmage,
+        helium_squirter,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

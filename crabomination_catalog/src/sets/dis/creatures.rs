@@ -1,7 +1,9 @@
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, SelectionRequirement,
-    Selector, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
+    SelectionRequirement, Selector, Subtypes, Value,
 };
+use crate::effect::Duration;
+use crate::effect::shortcut::target_filtered;
 use crate::mana::{Color, cost, g, generic, hybrid, u, w};
 
 /// Azorius First-Wing — {1}{W}{U} 2/2 Bird Soldier Flying
@@ -84,6 +86,80 @@ pub fn cytoplast_root_kin() -> CardDefinition {
             }),
             crate::effect::shortcut::graft(),
         ],
+        ..Default::default()
+    }
+}
+
+/// Simic Initiate — {G/U} 0/0 Merfolk Wizard, Graft 1.
+pub fn simic_initiate() -> CardDefinition {
+    CardDefinition {
+        name: "Simic Initiate",
+        cost: cost(&[hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        triggered_abilities: vec![crate::effect::shortcut::graft()],
+        ..Default::default()
+    }
+}
+
+/// Vigean Graftmage — {1}{G/U} 0/0 Vedalken Wizard, Graft 2.
+/// "{1}{U}: Untap target creature with a +1/+1 counter on it."
+pub fn vigean_graftmage() -> CardDefinition {
+    CardDefinition {
+        name: "Vigean Graftmage",
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            effect: Effect::Untap {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::graft()],
+        ..Default::default()
+    }
+}
+
+/// Helium Squirter — {4}{G/U} 0/0 Mutant, Graft 3.
+/// "{1}: Target creature with a +1/+1 counter on it gains flying until end
+/// of turn."
+pub fn helium_squirter() -> CardDefinition {
+    CardDefinition {
+        name: "Helium Squirter",
+        cost: cost(&[generic(4), hybrid(Color::Green, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mutant],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::graft()],
         ..Default::default()
     }
 }

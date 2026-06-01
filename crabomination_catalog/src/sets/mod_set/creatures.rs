@@ -4177,3 +4177,38 @@ pub fn mer_ek_nightblade() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Knight of the Pilgrim's Road — {1}{W} 2/2 Human Knight, Renown 1.
+pub fn knight_of_the_pilgrims_road() -> CardDefinition {
+    CardDefinition {
+        name: "Knight of the Pilgrim's Road",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::renown(1)],
+        ..Default::default()
+    }
+}
+
+/// Consul's Lieutenant — {1}{W} 2/1 Human Soldier, First Strike, Renown 1.
+pub fn consuls_lieutenant() -> CardDefinition {
+    CardDefinition {
+        name: "Consul's Lieutenant",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![crate::effect::shortcut::renown(1)],
+        ..Default::default()
+    }
+}

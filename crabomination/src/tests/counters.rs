@@ -283,3 +283,94 @@ fn tuskguard_and_mer_ek_anthems_buff_countered_creatures() {
             "the lord without a counter does not");
     }
 }
+
+// ── More Modular / Graft / Renown bodies ──────────────────────────────────
+
+#[test]
+fn arcbound_hybrid_and_bruiser_enter_with_counters() {
+    for (factory, mana, pt, kw) in [
+        (catalog::arcbound_hybrid as fn() -> _, 3, (2, 2), Some(Keyword::Haste)),
+        (catalog::arcbound_bruiser as fn() -> _, 4, (3, 3), None),
+    ] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, factory());
+        g.players[0].mana_pool.add_colorless(mana);
+        cast(&mut g, id);
+        let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+        assert_eq!((view.power, view.toughness), pt, "Modular body enters with its counters");
+        if let Some(k) = kw {
+            assert!(view.keywords.contains(&k));
+        }
+    }
+}
+
+#[test]
+fn simic_initiate_enters_as_a_one_one_graft() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::simic_initiate());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, id);
+    let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+    assert_eq!((view.power, view.toughness), (1, 1), "Graft 1 → 1/1");
+}
+
+#[test]
+fn vigean_graftmage_untaps_a_countered_creature() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::vigean_graftmage());
+    g.clear_sickness(mage);
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(target).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(target).unwrap().tapped = true;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("Vigean ability activatable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(target).unwrap().tapped, "untaps the countered creature");
+}
+
+#[test]
+fn helium_squirter_grants_flying_to_a_countered_creature() {
+    let mut g = two_player_game();
+    let squirter = g.add_card_to_battlefield(0, catalog::helium_squirter());
+    g.clear_sickness(squirter);
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(target).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: squirter, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("Helium Squirter ability activatable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield().into_iter().find(|c| c.id == target).unwrap();
+    assert!(view.keywords.contains(&Keyword::Flying), "countered creature gains flying");
+}
+
+#[test]
+fn knight_and_consuls_lieutenant_are_renown_one_drops() {
+    for (factory, pt, kw) in [
+        (catalog::knight_of_the_pilgrims_road as fn() -> _, (2, 2), None),
+        (catalog::consuls_lieutenant as fn() -> _, (2, 1), Some(Keyword::FirstStrike)),
+    ] {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(id);
+        let view = g.compute_battlefield().into_iter().find(|c| c.id == id).unwrap();
+        assert_eq!((view.power, view.toughness), pt);
+        if let Some(k) = kw { assert!(view.keywords.contains(&k)); }
+        while g.step != TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: id, target: AttackTarget::Player(1),
+        }])).expect("attack");
+        for _ in 0..12 {
+            if g.battlefield_find(id).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap_or(0) > 0 { break; }
+            let _ = g.perform_action(GameAction::PassPriority);
+            drain_stack(&mut g);
+        }
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+            "Renown 1 on connect");
+    }
+}
