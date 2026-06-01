@@ -784,6 +784,12 @@ impl GameState {
                 card.summoning_sick = false;
             }
         }
+        // CR 701.38 — goad lasts "until your next turn." When the goader's
+        // (= active player p's) turn begins, drop their goad on every
+        // creature so the must-attack requirement lifts.
+        for card in &mut self.battlefield {
+            card.goaded_by.retain(|&g| g != p);
+        }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].extra_land_plays = 0;
         self.players[p].spells_cast_this_turn = 0;

@@ -167,7 +167,7 @@ impl Bot for RandomBot {
                             // CR 508.1d — must-attack creatures (Juggernaut,
                             // goaded) have no choice; always include them so
                             // the engine's requirement check accepts the batch.
-                            if c.has_keyword(&Keyword::MustAttack) {
+                            if c.has_keyword(&Keyword::MustAttack) || !c.goaded_by.is_empty() {
                                 return true;
                             }
                             // Always attack on lethal swings — the bot

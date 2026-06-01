@@ -20017,3 +20017,53 @@ fn wildgrowth_walker_grows_and_gains_life_on_explore() {
     assert_eq!((w.power, w.toughness), (1, 4), "Wildgrowth Walker grew from the explore");
     assert_eq!(g.players[0].life, life_before + 3, "gained 3 life on explore");
 }
+
+// ── Goad (CR 701.38) ─────────────────────────────────────────────────────────
+
+/// Disrupt Decorum goads every creature its caster doesn't control.
+#[test]
+fn disrupt_decorum_goads_opponents_creatures() {
+    let mut g = two_player_game();
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dd = g.add_card_to_hand(0, catalog::disrupt_decorum());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dd, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Disrupt Decorum castable for {3}{R}{R}");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(opp).unwrap();
+    assert!(c.goaded_by.contains(&0), "opponent creature is goaded by player 0");
+}
+
+/// A goaded creature must be declared as an attacker when able (CR 508.1d).
+#[test]
+fn goaded_creature_must_attack() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(c).unwrap().goaded_by = vec![0];
+    g.clear_sickness(c);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+
+    let err = g.declare_attackers(vec![]).unwrap_err();
+    assert!(matches!(err, GameError::CannotAttack(id) if id == c),
+        "goaded creature must attack, got {err:?}");
+    g.declare_attackers(vec![Attack { attacker: c, target: AttackTarget::Player(0) }])
+        .expect("declaration including the goaded creature is legal");
+}
+
+/// Goad expires when the goader's next turn begins (CR 701.38a).
+#[test]
+fn goad_expires_at_goaders_next_turn() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(c).unwrap().goaded_by = vec![0];
+    // Player 0's untap step clears their goad.
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(c).unwrap().goaded_by.is_empty(),
+        "goad lifted once the goader's turn began");
+}

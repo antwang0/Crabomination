@@ -3117,6 +3117,23 @@ pub fn wildgrowth_walker() -> CardDefinition {
     }
 }
 
+// ── Goad (CR 701.38) ────────────────────────────────────────────────────────
+
+/// Disrupt Decorum — {3}{R}{R} Sorcery. Goad all creatures you don't control.
+pub fn disrupt_decorum() -> CardDefinition {
+    CardDefinition {
+        name: "Disrupt Decorum",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Goad {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Smelt — {R} Instant. Destroy target artifact.
 ///
 /// One-mana red artifact destruction. Strictly worse than Ancient Grudge

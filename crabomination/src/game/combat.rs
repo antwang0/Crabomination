@@ -96,7 +96,12 @@ impl GameState {
             .any(|(i, pl)| !self.same_team(p, i) && pl.is_alive());
         if has_legal_target {
             for c in &self.battlefield {
-                if c.controller != p || !computed_kw(c.id).contains(&Keyword::MustAttack) {
+                // A creature must be declared if it carries MustAttack
+                // (Juggernaut) or is goaded (CR 701.38 — "attacks each
+                // combat if able").
+                let must = computed_kw(c.id).contains(&Keyword::MustAttack)
+                    || !c.goaded_by.is_empty();
+                if c.controller != p || !must {
                     continue;
                 }
                 let kws = computed_kw(c.id);

@@ -1039,6 +1039,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         arc_lightning,
         forked_lightning,
         chandras_pyrohelix,
+        // ── claude/modern_decks: Goad (CR 701.38) ──
+        disrupt_decorum,
         // ── classic core-set bodies (claude/modern_decks) ──
         gray_ogre,
         mons_goblin_raiders,

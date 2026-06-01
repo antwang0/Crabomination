@@ -1184,6 +1184,12 @@ pub enum Effect {
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },
+    /// CR 701.38 — *goad* each creature `what` resolves to: the resolving
+    /// effect's controller is added to the creature's `goaded_by` list.
+    /// Goaded creatures attack each combat if able and attack a player other
+    /// than a goader if able, until that goader's next turn. Disrupt Decorum
+    /// (mass goad), Bloodthirsty Blade.
+    Goad { what: Selector },
     /// CR 701.40 — each permanent `who` resolves to *explores*: its
     /// controller reveals the top card of their library. If it's a land,
     /// it goes to hand; otherwise the exploring permanent gets a +1/+1
@@ -2007,6 +2013,7 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::Explore { who } => sel_has_target(who),
+            Effect::Goad { what } => sel_has_target(what),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
             Effect::ShuffleGraveyardIntoLibrary { who } => player_has_target(who),

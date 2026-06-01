@@ -1220,6 +1220,13 @@ pub struct CardInstance {
     /// activated abilities of sources with the chosen name. `None` for the
     /// vast majority of permanents that never name a card.
     pub named_card: Option<String>,
+    /// CR 701.38 — players who have goaded this creature. A goaded creature
+    /// attacks each combat if able and attacks a player other than a goader
+    /// if able, until that goader's next turn. Each goader's entry is
+    /// cleared when their turn begins (`do_untap`). Empty for the vast
+    /// majority of creatures. Round-trips through `CardInstanceWire` with a
+    /// `#[serde(default)]` for snapshot back-compat.
+    pub goaded_by: Vec<usize>,
 }
 
 impl CardInstance {
@@ -1263,6 +1270,7 @@ impl CardInstance {
             granted_flashback_eot: None,
             granted_alt_cast_cost_eot: None,
             named_card: None,
+            goaded_by: Vec::new(),
         }
     }
 
@@ -1436,6 +1444,10 @@ struct CardInstanceWire {
     /// state; `#[serde(default)]` so older snapshots load as `None`.
     #[serde(default)]
     named_card: Option<String>,
+    /// CR 701.38 goad — players who have goaded this creature.
+    /// `#[serde(default)]` so older snapshots load as empty.
+    #[serde(default)]
+    goaded_by: Vec<usize>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1471,6 +1483,7 @@ impl serde::Serialize for CardInstance {
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             named_card: self.named_card.clone(),
+            goaded_by: self.goaded_by.clone(),
         };
         wire.serialize(ser)
     }
@@ -1506,6 +1519,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.named_card = wire.named_card;
+        c.goaded_by = wire.goaded_by;
         Ok(c)
     }
 }

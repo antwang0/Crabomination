@@ -1140,6 +1140,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Goad { what } => {
+                // CR 701.38 — add the resolving controller to each target
+                // creature's goaded_by list. The grant expires when the
+                // goader's next turn begins (cleared in `do_untap`).
+                let goader = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.definition.is_creature()
+                        && !c.goaded_by.contains(&goader)
+                    {
+                        c.goaded_by.push(goader);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Explore { who } => {
                 // CR 701.40 — each resolved permanent explores: reveal the
                 // top card of its controller's library; a land goes to hand,
