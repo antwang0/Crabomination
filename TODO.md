@@ -18,12 +18,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   the default order.
 
 - **Tracker staleness** — CUBE_FEATURES.md / DECK_FEATURES.md carry many 🟡/⏳
-  rows that are already fully implemented + tested in code (verified this run:
-  Opposition, Omniscience, Horizon Canopy / Sunbaked Canyon / Waterlogged
-  Grove, Dismember, Spectral Procession, the shock/fast/surveil/bridge/pathway
-  land families). A reconciliation pass (verify factory + cube registration +
-  test, then elide the row) would shrink both trackers substantially. Started
-  here; not exhaustive.
+  rows that are already fully implemented + tested in code (verified + promoted
+  this run: Conclave Sledge-Captain, Temur Ascendancy, Trinisphere — all had
+  the needed primitive wired but a stale "⏳ primitive" note). Earlier runs hit
+  Opposition, Omniscience, the shock/fast/surveil/bridge/pathway land families.
+  Many doc-comments still claim a primitive "doesn't exist yet" when it does
+  (e.g. Stadium Tidalmage's `MayDo`, the SOS placeholder-copy cards vs
+  `CreateTokenCopyOf`). A reconciliation pass would shrink both trackers.
+- **Remaining 🟡 cube/deck partials are primitive- or data-blocked.** The
+  cleanly-completable ones were finished this run. What's left needs new
+  engine primitives — split cards (Wear // Tear), name-a-card (Pithing Needle,
+  Crumble to Dust), loyalty-set (Geyadrone), `GainControlBy { who: opp }`
+  (Wishclaw), energy (Amped Raptor), divided damage / "any number of targets"
+  (Pyrokinesis, the STX Outburst/Snow Day cycle), escalate (Collective
+  Brutality) — or are synthesized bodies whose exact text can't be verified
+  while Scryfall is off-allowlist (Mossborn Hydra, Torsten, Messenger Falcons
+  cost, Kozilek's Command).
 - **Card sourcing is data-blocked** — api.scryfall.com is outside the network
   allowlist and `scripts/cards_dump.json` (319-card pool) is fully implemented,
   so brand-new cards can only be added for staples whose exact stats/text are
