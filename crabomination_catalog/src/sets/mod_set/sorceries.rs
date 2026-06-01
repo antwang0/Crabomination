@@ -568,18 +568,16 @@ pub fn wear_down() -> CardDefinition {
 /// your graveyard to the battlefield. Flashback — Sacrifice three
 /// creatures."
 ///
-/// Wired as a `Move(target → Battlefield)` against a `Creature ∧
-/// Graveyard(You)` filter, with `Keyword::Flashback({3}{B}{B}{B})`
-/// approximating "as a flashback cost, sacrifice three creatures." The
-/// real card has a free flashback cost gated on a sacrifice-three
-/// additional cost; we collapse the additional sac into the spell's
-/// resolution by adding three `Sacrifice` calls before the reanimation.
-/// AutoDecider picks the first three creatures controlled by the caster.
+/// `Move(target creature card → Battlefield)`. The free flashback cost
+/// (`Keyword::Flashback({0})`) is gated on the name-keyed flashback
+/// additional cost "sacrifice three creatures" (`cast_flashback` validates +
+/// pays it; AutoDecider sacrifices the cheapest three).
 pub fn dread_return() -> CardDefinition {
     CardDefinition {
         name: "Dread Return",
         cost: cost(&[generic(2), b(), b()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(crate::mana::ManaCost::default())],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Battlefield {

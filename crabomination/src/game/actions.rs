@@ -90,6 +90,29 @@ fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool)
 ///     pending charge taxes the caster's *next* spell {1} more. Consumed by
 ///     the caller on a successful cast (we only **read** here so callers
 ///     can see the tax before payment; the caster path decrements after).
+/// Flashback-only additional cost(s), keyed by card name (CR 702.34a). Some
+/// cards' Flashback cost is more than mana — "Flashback—Sacrifice a Mountain"
+/// (Lava Dart) or "Flashback—Sacrifice three creatures" (Dread Return). These
+/// apply *only* on the flashback cast, so they live here rather than on every
+/// CardDefinition (the `dynamic_pt_for_name` lookup-table idiom). `cast_flashback`
+/// validates + pays them on top of the flashback mana cost.
+pub(crate) fn flashback_additional_cost_for_name(
+    name: &str,
+) -> Vec<crate::card::AdditionalCastCost> {
+    use crate::card::{AdditionalCastCost as A, LandType, SelectionRequirement as S};
+    match name {
+        "Lava Dart" => vec![A::SacrificePermanent {
+            filter: S::Land.and(S::HasLandType(LandType::Mountain)),
+            count: 1,
+        }],
+        "Dread Return" => vec![A::SacrificePermanent {
+            filter: S::Creature.and(S::ControlledByYou),
+            count: 3,
+        }],
+        _ => vec![],
+    }
+}
+
 pub(crate) fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
@@ -1136,10 +1159,13 @@ impl GameState {
     ) -> bool {
         use crate::card::AdditionalCastCost as A;
         costs.iter().all(|c| match c {
-            A::SacrificePermanent { filter } => self.battlefield.iter().any(|c| {
-                c.controller == p
-                    && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
-            }),
+            A::SacrificePermanent { filter, count } => {
+                let matching = self.battlefield.iter().filter(|c| {
+                    c.controller == p
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                }).count();
+                matching >= *count as usize
+            }
             A::Discard { count } => self.players[p].hand.len() >= *count as usize,
         })
     }
@@ -1157,10 +1183,11 @@ impl GameState {
         let mut sac_power = None;
         for cost in costs {
             match cost {
-                A::SacrificePermanent { filter } => {
-                    // Auto-pick the cheapest matching permanent (tokens
-                    // first, then lowest mana value, then lowest power).
-                    let chosen = {
+                A::SacrificePermanent { filter, count } => {
+                    // Auto-pick the `count` cheapest matching permanents (tokens
+                    // first, then lowest mana value, then lowest power). The
+                    // first sacrifice's power becomes the spell's X.
+                    let chosen: Vec<(CardId, u32, bool)> = {
                         let mut cands: Vec<&crate::card::CardInstance> = self
                             .battlefield
                             .iter()
@@ -1178,11 +1205,15 @@ impl GameState {
                             (!c.is_token, c.definition.cost.cmc(), c.power())
                         });
                         cands
-                            .first()
+                            .iter()
+                            .take(*count as usize)
                             .map(|c| (c.id, c.power().max(0) as u32, c.definition.is_creature()))
+                            .collect()
                     };
-                    if let Some((id, power, is_creature)) = chosen {
-                        sac_power = Some(power);
+                    for (idx, (id, power, is_creature)) in chosen.into_iter().enumerate() {
+                        if idx == 0 {
+                            sac_power = Some(power);
+                        }
                         if is_creature {
                             if let Some(c) = self.battlefield_find(id) {
                                 self.died_card_snapshots.insert(id, c.clone());
@@ -1583,6 +1614,18 @@ impl GameState {
             return Err(GameError::SorcerySpeedOnly);
         }
 
+        // CR 702.34a — flashback-only additional costs ("Flashback—Sacrifice
+        // a Mountain"; Dread Return's "sacrifice three creatures"). Keyed by
+        // card name (the idiom for rare riders that would otherwise bloat
+        // every CardDefinition literal). Reject up front if unpayable so no
+        // mana is spent on an uncastable flashback.
+        let flashback_additional = flashback_additional_cost_for_name(card.definition.name);
+        if !flashback_additional.is_empty()
+            && !self.additional_costs_payable(p, &flashback_additional)
+        {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Validate target.
         if let Some(ref tgt) = target {
             self.check_target_legality(tgt, p)?;
@@ -1615,7 +1658,21 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
 
-        self.finalize_flashback_cast(
+        // Pay the flashback-only additional cost(s) now (CR 601.2h). A
+        // sacrifice can drop cards into this player's graveyard, shifting
+        // indices, so recompute the flashback card's position afterward.
+        let mut cost_events = Vec::new();
+        if !flashback_additional.is_empty() {
+            let (mut e, _sac_power) = self.pay_additional_costs(p, &flashback_additional);
+            cost_events.append(&mut e);
+        }
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+
+        let mut events = self.finalize_flashback_cast(
             p,
             card_id,
             graveyard_pos,
@@ -1624,7 +1681,10 @@ impl GameState {
             mode,
             x_value.unwrap_or(0),
             mana_spent,
-        )
+        )?;
+        // Sacrifice/discard events precede the cast events in the log.
+        cost_events.append(&mut events);
+        Ok(cost_events)
     }
 
     /// Shared tail for `cast_flashback` and `cast_flashback_tap`:

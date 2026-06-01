@@ -8149,6 +8149,7 @@ pub fn witherbloom_sacrosanct() -> CardDefinition {
         keywords: vec![],
         additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Creature,
+            count: 1,
         }],
         effect: Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),

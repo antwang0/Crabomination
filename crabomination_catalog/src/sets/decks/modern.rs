@@ -216,10 +216,9 @@ pub fn lava_spike() -> CardDefinition {
     }
 }
 
-/// Lava Dart — {R} Sorcery. Lava Dart deals 1 damage to any target.
-/// Flashback — sacrifice a Mountain. The flashback sacrifice cost is
-/// approximated with a regular `Flashback` mana cost of `{0}`; the engine
-/// has no "sacrifice a Mountain" alt-cost primitive yet.
+/// Lava Dart — {R} Sorcery. Deals 1 damage to any target. Flashback—Sacrifice
+/// a Mountain (the `{0}` flashback mana cost plus the name-keyed
+/// `flashback_additional_cost_for_name` sacrifice).
 pub fn lava_dart() -> CardDefinition {
     let flashback_cost = ManaCost { symbols: vec![] };
     CardDefinition {
@@ -511,6 +510,7 @@ pub fn crop_rotation() -> CardDefinition {
         card_types: vec![CardType::Instant],
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            count: 1,
         }],
         effect: Effect::Search {
             who: PlayerRef::You,
@@ -10677,6 +10677,7 @@ pub fn reckless_abandon() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            count: 1,
         }],
         effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
         ..Default::default()

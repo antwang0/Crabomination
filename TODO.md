@@ -34,14 +34,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (Pyrokinesis, the STX Outburst/Snow Day cycle), escalate (Collective
   Brutality), multi-player choice (Indulgent Tormentor) — or are synthesized
   bodies whose exact text can't be verified while Scryfall is off-allowlist.
-- **Flashback with an additional cost** — Dread Return ("sacrifice three
-  creatures") and Lava Dart ("sacrifice a Mountain") both have a *flashback*
-  cost that's more than mana. `cast_flashback` only pays the mana
-  `flashback_cost` today; it ignores `additional_cast_cost` (which is honored
-  on the hand-cast path). Wiring a `flashback_additional_cost` (validated +
-  paid in `cast_flashback`, distinct from the hand-cast additional cost)
-  would promote both cards. Currently Lava Dart's flashback is `{0}` and
-  Dread Return's flashback is dropped.
+- **Flashback with an additional cost** — ✅ done this run.
+  `flashback_additional_cost_for_name` (name-keyed, the `dynamic_pt_for_name`
+  idiom) + `cast_flashback` validation/payment; `AdditionalCastCost::
+  SacrificePermanent` gained a `count`. Lava Dart (sac a Mountain) + Dread
+  Return (sac three creatures) promoted. Next flashback rider that needs it:
+  pay-life / exile-from-gy flashback costs (none in the current pool).
 - **Card sourcing is data-blocked** — api.scryfall.com is outside the network
   allowlist and `scripts/cards_dump.json` (319-card pool) is fully implemented,
   so brand-new cards can only be added for staples whose exact stats/text are

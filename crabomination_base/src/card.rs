@@ -783,15 +783,23 @@ pub struct EntersAsCopy {
     pub extra_keywords: Vec<Keyword>,
 }
 
+fn one_u32() -> u32 { 1 }
+
 /// CR 601.2b/601.2f — an additional cost paid as the spell is cast, listed
 /// in `CardDefinition.additional_cast_cost`. Determined and paid during
 /// casting; the spell can't be cast unless every cost is payable.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+
 pub enum AdditionalCastCost {
-    /// "As an additional cost to cast this spell, sacrifice a [filter]."
-    /// The sacrificed permanent's power becomes the spell's X (read at
-    /// resolution via `Value::XFromCost`) — powers Tend the Pests.
-    SacrificePermanent { filter: SelectionRequirement },
+    /// "As an additional cost to cast this spell, sacrifice [count] [filter]."
+    /// The first sacrificed permanent's power becomes the spell's X (read at
+    /// resolution via `Value::XFromCost`) — powers Tend the Pests. `count`
+    /// defaults to 1 for snapshots/cards predating the field.
+    SacrificePermanent {
+        filter: SelectionRequirement,
+        #[serde(default = "one_u32")]
+        count: u32,
+    },
     /// "As an additional cost, discard N card(s)."
     Discard { count: u32 },
 }

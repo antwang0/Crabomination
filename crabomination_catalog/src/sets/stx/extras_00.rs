@@ -2872,6 +2872,7 @@ pub fn necrotic_fumes() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Creature,
+            count: 1,
         }],
         effect: Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),

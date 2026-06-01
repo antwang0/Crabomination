@@ -302,6 +302,36 @@ fn lava_dart_deals_one_damage() {
     assert_eq!(g.players[1].life, life_before - 1);
 }
 
+#[test]
+fn lava_dart_flashback_sacrifices_a_mountain() {
+    // Flashback—Sacrifice a Mountain (CR 702.34a, name-keyed additional cost).
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::lava_dart());
+    let mtn = g.add_card_to_battlefield(0, catalog::mountain());
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lava Dart flashback castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 1, "1 damage");
+    assert!(g.battlefield_find(mtn).is_none(), "the Mountain was sacrificed");
+}
+
+#[test]
+fn lava_dart_flashback_rejected_without_a_mountain() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::lava_dart());
+    g.add_card_to_battlefield(0, catalog::forest()); // not a Mountain
+    let result = g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(result.is_err(), "no Mountain to sacrifice → flashback rejected");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Lava Dart stays in the graveyard");
+}
+
 // ── Reanimation / graveyard ──────────────────────────────────────────────────
 
 #[test]
@@ -5533,6 +5563,41 @@ fn dread_return_reanimates_target_creature_from_graveyard() {
         "Dread Return should reanimate the target creature");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_id),
         "Bears should no longer be in graveyard");
+}
+
+#[test]
+fn dread_return_flashback_sacrifices_three_creatures() {
+    // Flashback—Sacrifice three creatures (free flashback mana; the sac is
+    // the name-keyed additional cost). Reanimates a 4th creature from gy.
+    let mut g = two_player_game();
+    let target = g.add_card_to_graveyard(0, catalog::atraxa_grand_unifier());
+    let dr = g.add_card_to_graveyard(0, catalog::dread_return());
+    let fodder: Vec<_> = (0..3)
+        .map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears()))
+        .collect();
+    g.perform_action(GameAction::CastFlashback {
+        card_id: dr, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dread Return flashback castable with 3 creatures to sac");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == target),
+        "the reanimation target is back on the battlefield");
+    for f in &fodder {
+        assert!(g.battlefield_find(*f).is_none(), "fodder creature sacrificed");
+    }
+}
+
+#[test]
+fn dread_return_flashback_rejected_without_three_creatures() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dr = g.add_card_to_graveyard(0, catalog::dread_return());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // only 1 creature
+    let result = g.perform_action(GameAction::CastFlashback {
+        card_id: dr, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(result.is_err(), "fewer than three creatures → flashback rejected");
 }
 
 #[test]
