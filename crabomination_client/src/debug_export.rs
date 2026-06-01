@@ -199,6 +199,7 @@ mod tests {
             damage_cant_be_prevented_this_turn: false,
             combat_preview: None,
             castable_hand: vec![],
+            pitchable_hand: vec![],
         }
     }
 

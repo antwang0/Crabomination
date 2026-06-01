@@ -8,6 +8,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Pitch affordance in client** — `ClientView.pitchable_hand` now lists hand
+  cards with a `from_hand` ability (Spirit Guides). The 3D client should
+  render a distinct edge/badge for these (separate from the castable-green
+  highlight) so a player sees they can exile-to-pitch for mana. Not
+  compile-verified here (client can't build in this sandbox).
+
 - **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee/
   Bloodthirst this run): **Monstrosity** ✅ (`CardInstance.monstrous` +
   `Effect::Monstrosity` + `EventKind::BecameMonstrous`; Nessian Wilds Ravager,

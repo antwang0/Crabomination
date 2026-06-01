@@ -108,6 +108,12 @@ pub struct ClientView {
     /// doesn't hold priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub castable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with an activatable "from hand" ability
+    /// right now (Spirit-Guide pitch: "Exile this from your hand: Add mana").
+    /// Lets the client show a pitch affordance separate from the castable
+    /// highlight. Empty off-priority. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub pitchable_hand: Vec<CardId>,
 }
 
 /// A projected combat-damage summary, computed from the currently

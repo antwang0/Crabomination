@@ -1754,6 +1754,27 @@ impl GameState {
         out
     }
 
+    /// Hand cards the player can activate a `from_hand` ability of right now
+    /// (Spirit-Guide-style "Exile this from your hand: Add mana"). Lets the
+    /// client surface a pitch affordance distinct from the castable-for-value
+    /// highlight. Empty when it isn't the player's priority.
+    pub fn pitchable_hand_cards(&self, player: usize) -> Vec<CardId> {
+        if self.player_with_priority() != player {
+            return Vec::new();
+        }
+        self.players[player]
+            .hand
+            .iter()
+            .filter(|c| {
+                c.definition
+                    .activated_abilities
+                    .iter()
+                    .any(|a| a.from_hand)
+            })
+            .map(|c| c.id)
+            .collect()
+    }
+
     /// Extra generic mana the caster owes on top of `card`'s printed
     /// cost — Damping Sphere's "+1 after the first spell each turn,"
     /// Chancellor of the Annex's first-spell tax, etc. Public so the

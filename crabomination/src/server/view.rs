@@ -73,6 +73,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
         combat_preview: combat_preview(state),
         castable_hand: state.castable_hand_cards(seat),
+        pitchable_hand: state.pitchable_hand_cards(seat),
     }
 }
 

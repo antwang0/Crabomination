@@ -527,6 +527,19 @@ fn castable_hand_cards_reflects_mana_timing_and_lands() {
     );
 }
 
+/// `pitchable_hand_cards` lists hand cards with a `from_hand` ability
+/// (Spirit Guides) and respects priority.
+#[test]
+fn pitchable_hand_cards_lists_spirit_guides() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    let guide = g.add_card_to_hand(0, catalog::simian_spirit_guide());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // no from-hand ability
+    assert_eq!(g.pitchable_hand_cards(0), vec![guide], "only the Spirit Guide is pitchable");
+    g.priority.player_with_priority = 1;
+    assert!(g.pitchable_hand_cards(0).is_empty(), "off-priority → empty");
+}
+
 /// Symmetric: untap step should untap creatures the active player
 /// CONTROLS, not just those they originally owned. A stolen creature
 /// untaps on the new controller's turn, never the original owner's.
