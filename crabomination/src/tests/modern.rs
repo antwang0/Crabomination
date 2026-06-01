@@ -20398,3 +20398,79 @@ fn raptor_hatchling_enrage_makes_a_token() {
         .filter(|c| c.definition.name == "Dinosaur" && c.controller == 0).count();
     assert_eq!(tokens, 1, "enrage created a 3/3 Dinosaur token");
 }
+
+#[test]
+fn pounce_makes_creatures_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::charging_monstrosaur()); // 5/5
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::pounce());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(crate::game::types::Target::Permanent(mine)),
+        additional_targets: vec![crate::game::types::Target::Permanent(theirs)],
+        mode: None, x_value: None,
+    }).expect("Pounce castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "2/2 took 5 and died");
+    assert!(g.battlefield.iter().any(|c| c.id == mine), "5/5 survived 2 damage");
+}
+
+#[test]
+fn atzocan_archer_etb_fight() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::atzocan_archer()); // 1/4
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Script the MayDo (yes) + the fight target.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(crate::game::types::Target::Permanent(theirs)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Atzocan Archer castable");
+    drain_stack(&mut g);
+    // 1/4 archer vs 2/2: the bear takes 1, the archer takes 2 — the fight
+    // resolved (no kills, but damage was exchanged).
+    assert_eq!(g.battlefield_find(id).unwrap().damage, 2, "archer took 2 from the fight");
+    assert_eq!(g.battlefield_find(theirs).unwrap().damage, 1, "bear took 1 from the fight");
+}
+
+#[test]
+fn ranging_raptors_enrage_ramps() {
+    let mut g = two_player_game();
+    let raptor = g.add_card_to_battlefield(0, catalog::ranging_raptors()); // 3/3
+    g.players[0].library.clear();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crate::game::types::Target::Permanent(raptor)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let lands = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Forest" && c.controller == 0).count();
+    assert_eq!(lands, 1, "enrage fetched a basic land");
+}
+
+#[test]
+fn otepec_huntmaster_discounts_dinosaurs() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::otepec_huntmaster());
+    // Charging Monstrosaur ({3}{R}{R}) costs {2}{R}{R} with the discount.
+    let dino = g.add_card_to_hand(0, catalog::charging_monstrosaur());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dino, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dinosaur castable at the {1}-less rate");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dino), "discounted Dinosaur resolved");
+}

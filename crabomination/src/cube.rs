@@ -1050,6 +1050,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks: enrage dinosaurs ──
         frilled_deathspitter,
         raptor_hatchling,
+        otepec_huntmaster,
         // ── classic core-set bodies (claude/modern_decks) ──
         gray_ogre,
         mons_goblin_raiders,
@@ -1348,6 +1349,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         farhaven_elf,
         regisaur_alpha,
         grazing_whiptail,
+        pounce,
+        atzocan_archer,
+        ranging_raptors,
         // sentinel_of_the_nameless_city 🟡 — Ward 2 not enforced;
         // Plant subtype dropped (Merfolk Warrior Scout is preserved).
         // The ETB/attack-trigger Map token still works.

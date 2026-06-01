@@ -3417,6 +3417,110 @@ pub fn regisaur_alpha() -> CardDefinition {
     }
 }
 
+/// Pounce — {1}{G} Sorcery. Target creature you control fights target
+/// creature you don't control.
+pub fn pounce() -> CardDefinition {
+    CardDefinition {
+        name: "Pounce",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Fight {
+            attacker: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Atzocan Archer — {1}{G} 1/4 Human Archer with reach. ETB: you may have it
+/// fight target creature you don't control.
+pub fn atzocan_archer() -> CardDefinition {
+    CardDefinition {
+        name: "Atzocan Archer",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "have it fight target creature you don't control".into(),
+            body: Box::new(Effect::Fight {
+                attacker: Selector::This,
+                defender: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ranging Raptors — {2}{G} 3/3 Dinosaur. Enrage — whenever it's dealt
+/// damage, search your library for a basic land and put it onto the
+/// battlefield tapped.
+pub fn ranging_raptors() -> CardDefinition {
+    CardDefinition {
+        name: "Ranging Raptors",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Otepec Huntmaster — {1}{R} 2/2 Human Shaman with haste. Dinosaur spells
+/// you cast cost {1} less to cast.
+pub fn otepec_huntmaster() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Otepec Huntmaster",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Dinosaur spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Grazing Whiptail — {4}{G} 3/4 Dinosaur with reach.
 pub fn grazing_whiptail() -> CardDefinition {
     CardDefinition {
