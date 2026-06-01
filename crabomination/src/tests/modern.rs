@@ -5313,6 +5313,40 @@ fn ichorid_returns_at_upkeep_then_exiles_at_end_step() {
         "Reanimation should register an end-step exile delayed trigger");
 }
 
+/// Helper: drop Arclight Phoenix into P0's graveyard, set the IS-cast
+/// counter, start on P0's pre-combat main, and walk to begin-combat.
+#[cfg(test)]
+fn arclight_setup(is_cast: u32) -> (GameState, crate::card::CardId) {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::arclight_phoenix());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].instants_or_sorceries_cast_this_turn = is_cast;
+    for _ in 0..10 {
+        if g.battlefield.iter().any(|c| c.id == id) { break; }
+        if g.step == TurnStep::PostCombatMain { break; }
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    (g, id)
+}
+
+#[test]
+fn arclight_phoenix_returns_after_three_instants_or_sorceries() {
+    let (g, id) = arclight_setup(3);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Arclight returns at begin-combat with 3+ IS spells cast");
+}
+
+#[test]
+fn arclight_phoenix_stays_in_graveyard_below_threshold() {
+    let (g, id) = arclight_setup(2);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Arclight stays in the graveyard with only 2 IS spells cast");
+    assert!(!g.battlefield.iter().any(|c| c.id == id));
+}
+
 #[test]
 fn ichorid_stays_in_graveyard_when_no_opp_black_creature_in_gy() {
     // Negative test for the batch-112 gate: with no black creature in

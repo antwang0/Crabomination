@@ -1669,11 +1669,16 @@ pub fn collector_ouphe() -> CardDefinition {
 /// Body: 3/2 Flying Haste. The graveyard-recursion trigger is omitted
 /// (needs a begin-combat trigger scoped to graveyard-resident cards +
 /// 3+ IS spell gate). The body is a strong hasty flier for red decks.
+/// Arclight Phoenix — {2}{R} Creature — Phoenix. 3/2 Flying, Haste. At the
+/// beginning of combat on your turn, if you've cast three or more instant
+/// and/or sorcery spells this turn, return this from your graveyard to the
+/// battlefield (a `FromYourGraveyard` begin-combat trigger gated on
+/// `InstantsOrSorceriesCastThisTurnAtLeast`).
 pub fn arclight_phoenix() -> CardDefinition {
+    use crate::game::types::TurnStep;
     CardDefinition {
         name: "Arclight Phoenix",
-        cost: cost(&[generic(3), r()]),
-        supertypes: vec![],
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phoenix],
@@ -1682,22 +1687,21 @@ pub fn arclight_phoenix() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::FromYourGraveyard,
+            )
+            .with_filter(Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(3),
+            }),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..Default::default()
     }
 }
 
