@@ -1399,10 +1399,8 @@ pub fn verdant_pledgemage() -> CardDefinition {
 /// opponent's hand size."
 ///
 /// Approximation: collapses to "you draw N cards where N = max(opp_hand -
-/// your_hand, 0)". The two-target prompt is engine-wide ⏳; today the
-/// caster picks one target opponent and the caster is implicitly the
-/// "chosen player". Wired via `Effect::Draw` with `Value::Diff` reading
-/// opp/you hand sizes.
+/// your_hand, 0)" — the caster is implicitly the "chosen player". Wired
+/// via `Effect::Draw` with `Value::Diff` reading opp/you hand sizes.
 pub fn channeled_force() -> CardDefinition {
     CardDefinition {
         name: "Channeled Force",

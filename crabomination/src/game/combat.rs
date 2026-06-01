@@ -670,30 +670,43 @@ impl GameState {
                         blocker_toughness
                     };
                     let assign = remaining_atk_damage.min(lethal);
+                    // Assignment is locked in regardless of prevention (CR
+                    // 510.2): trample-over reads off the assigned amount.
                     remaining_atk_damage -= assign;
-                    lifelink_dealt += assign;
+                    // CR 615 — route attacker→blocker combat damage through
+                    // the blocker's prevention shields. Lifelink and the
+                    // wither/infect -1/-1 counters scale off the actual
+                    // (post-prevention) amount dealt (CR 702.15a).
+                    let dealt = self.apply_prevention_shields(
+                        crate::game::effects::EntityRef::Permanent(blocker_id),
+                        assign.max(0) as u32,
+                        &mut events,
+                    ) as i32;
+                    lifelink_dealt += dealt;
 
                     if atk.has_infect || atk.has_wither {
-                        if assign > 0
+                        if dealt > 0
                             && let Some(blocker) = self.battlefield_find_mut(blocker_id)
                         {
                             blocker.add_counters(
                                 crate::card::CounterType::MinusOneMinusOne,
-                                assign as u32,
+                                dealt as u32,
                             );
                             events.push(GameEvent::CounterAdded {
                                 card_id: blocker_id,
                                 counter_type: crate::card::CounterType::MinusOneMinusOne,
-                                count: assign as u32,
+                                count: dealt as u32,
                             });
                         }
-                    } else if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
-                        blocker.damage += assign as u32;
-                        if atk.has_deathtouch && assign > 0 {
+                    } else if dealt > 0
+                        && let Some(blocker) = self.battlefield_find_mut(blocker_id)
+                    {
+                        blocker.damage += dealt as u32;
+                        if atk.has_deathtouch {
                             blocker.dealt_deathtouch_damage = true;
                         }
                         events.push(GameEvent::DamageDealt {
-                            amount: assign as u32,
+                            amount: dealt as u32,
                             to_player: None,
                             to_card: Some(blocker_id),
                         });
@@ -756,28 +769,28 @@ impl GameState {
                             c.keywords.contains(&Keyword::Infect)
                                 || c.keywords.contains(&Keyword::Wither)
                         });
-                    let _attacker_toughness = computed_of(atk.id).map(|c| c.toughness).unwrap_or(0);
-                    if let Some(attacker) = self.battlefield_find_mut(atk.id) {
+                    // CR 615 — route blocker→attacker combat damage through
+                    // the attacker's prevention shields before marking it.
+                    let dmg = self.apply_prevention_shields(
+                        crate::game::effects::EntityRef::Permanent(atk.id),
+                        blocker_damage_to_attacker.max(0) as u32,
+                        &mut events,
+                    );
+                    if dmg > 0 && let Some(attacker) = self.battlefield_find_mut(atk.id) {
                         if any_infect_blocker {
-                            let dmg = blocker_damage_to_attacker.max(0) as u32;
                             attacker.add_counters(crate::card::CounterType::MinusOneMinusOne, dmg);
                             events.push(GameEvent::CounterAdded {
                                 card_id: atk.id,
                                 counter_type: crate::card::CounterType::MinusOneMinusOne,
                                 count: dmg,
                             });
-                        } else if any_deathtouch_blocker {
-                            attacker.damage += blocker_damage_to_attacker.max(0) as u32;
-                            attacker.dealt_deathtouch_damage = true;
-                            events.push(GameEvent::DamageDealt {
-                                amount: blocker_damage_to_attacker.max(0) as u32,
-                                to_player: None,
-                                to_card: Some(atk.id),
-                            });
                         } else {
-                            attacker.damage += blocker_damage_to_attacker.max(0) as u32;
+                            attacker.damage += dmg;
+                            if any_deathtouch_blocker {
+                                attacker.dealt_deathtouch_damage = true;
+                            }
                             events.push(GameEvent::DamageDealt {
-                                amount: blocker_damage_to_attacker.max(0) as u32,
+                                amount: dmg,
                                 to_player: None,
                                 to_card: Some(atk.id),
                             });
@@ -787,10 +800,12 @@ impl GameState {
                     // Blocker lifelink — gained by each blocker's controller
                     // (different blockers can have different controllers in
                     // multiplayer). Only blockers actually striking back in
-                    // this step gain life from it.
+                    // this step gain life from it. CR 702.15a: lifelink
+                    // scales off damage actually dealt, so a fully-prevented
+                    // attacker (shield) yields no blocker lifelink.
                     let mut lifelink_by_controller: std::collections::HashMap<usize, i32> =
                         std::collections::HashMap::new();
-                    for &bid in &dealing_blocker_ids {
+                    for &bid in dealing_blocker_ids.iter().filter(|_| dmg > 0) {
                         let Some(bc) = computed_of(bid) else { continue };
                         if !bc.keywords.contains(&Keyword::Lifelink) {
                             continue;

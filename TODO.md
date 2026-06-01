@@ -1834,9 +1834,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   now routes attacker→player and trample→player/PW damage through the
   shields too (`combat.rs::prevent_combat_to_target`, lifelink scales off
   the post-prevention amount per CR 702.15a); test
-  `prevention_shield_stops_combat_damage_to_player`. Gaps still tracked:
-  (a) **creature-vs-creature** combat damage isn't routed through shields
-  (a creature-scoped fog won't stop block damage to/from a blocker);
+  `prevention_shield_stops_combat_damage_to_player`. **Creature-vs-creature**
+  combat damage now routes through shields too (`combat.rs` attacker→blocker
+  and blocker→attacker paths call `apply_prevention_shields`; lifelink /
+  wither -1/-1 counters scale off the post-prevention amount, CR 702.15a);
+  test `prevention_shield_stops_creature_combat_damage`. Gaps still tracked:
   (b) damage **redirection** (Maze of Ith); (c) per-source "next N from
   source X" shields.
 

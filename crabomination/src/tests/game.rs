@@ -647,6 +647,42 @@ fn blocked_combat_both_die() {
     assert_eq!(g.players[1].life, 20);
 }
 
+/// CR 615 — a prevention shield on a blocker stops the attacker's combat
+/// damage to it (creature-vs-creature path). The shielded 2/2 survives a
+/// 3/3 attacker; the attacker still takes the blocker's 2 back.
+#[test]
+fn prevention_shield_stops_creature_combat_damage() {
+    use crate::game::types::{PreventionShield, PreventionTarget};
+    let mut g = two_player_game();
+    let attacker_id = setup_attacker(&mut g, 0, catalog::hill_giant); // 3/3
+    let blocker_id = setup_attacker(&mut g, 1, catalog::grizzly_bears); // 2/2
+    g.prevention_shields.push(PreventionShield {
+        target: PreventionTarget::Permanent(blocker_id),
+        remaining: None, // prevent all damage to the blocker this turn
+    });
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: attacker_id,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker_id, attacker_id)]))
+        .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    // Blocker survived (its 3 incoming damage was prevented); attacker
+    // took the blocker's 2 back (no shield), surviving as a 3/3.
+    let blocker = g.battlefield.iter().find(|c| c.id == blocker_id)
+        .expect("shielded blocker survives");
+    assert_eq!(blocker.damage, 0, "all combat damage to the blocker prevented");
+    let attacker = g.battlefield.iter().find(|c| c.id == attacker_id)
+        .expect("attacker still alive");
+    assert_eq!(attacker.damage, 2, "attacker took the blocker's 2 (unshielded)");
+}
+
 /// Regression: a `BecomesBlocked` trigger must bind the **attacker** as
 /// `Selector::TriggerSource`, not the blocker. Both kinds (`Blocks` /
 /// `BecomesBlocked`) come off the same `BlockerDeclared` event, so
