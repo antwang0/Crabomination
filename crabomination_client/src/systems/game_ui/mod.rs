@@ -770,6 +770,29 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 StackPanel,
             ));
         });
+
+    // Bottom-right: a small, always-present affordance pointing at the
+    // keyboard-shortcut overlay (`toggle_shortcut_help`). The corner is
+    // otherwise unused — the hand and stack sit centre, the log up-right.
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                bottom: Val::Px(10.0),
+                right: Val::Px(12.0),
+                ..default()
+            },
+            Pickable::IGNORE,
+            InGameRoot,
+        ))
+        .with_children(|p| {
+            p.spawn((
+                Text::new("F1 / ?  Shortcuts"),
+                tf(12.0),
+                TextColor(theme::TEXT_MUTED),
+                Pickable::IGNORE,
+            ));
+        });
 }
 
 // ── HUD text update ───────────────────────────────────────────────────────────

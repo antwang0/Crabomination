@@ -172,6 +172,183 @@ pub fn update_castable_highlights(
     }
 }
 
+/// Root marker for the keyboard-shortcut help overlay.
+#[derive(Component)]
+pub struct ShortcutHelpPanel;
+
+/// Key → action reference, grouped into sections. Sourced from the actual
+/// input handlers (`game_ui`, `kb_cursor`, `decision_ui`, `animate`,
+/// `camera_zoom`, `debug_console`, `buttons`) — keep in sync when a
+/// binding changes.
+const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
+    (
+        "General",
+        &[
+            ("F1  ·  ?", "Toggle this help"),
+            ("Esc", "Cancel / close / back"),
+            ("Ctrl (hold)", "Zoom camera to hovered card"),
+            ("Alt (hold)", "Enlarge card · counters & P/T"),
+            ("[  ]  \\", "Animation: slower · faster · reset"),
+            ("`", "Debug console"),
+            ("X", "Export game state"),
+        ],
+    ),
+    (
+        "Your turn",
+        &[
+            ("Space", "Pass priority"),
+            ("E", "End turn"),
+            ("N", "Next turn (skip to your main)"),
+            ("A", "Attack all · confirm attackers"),
+            ("P", "Pass · skip · proceed"),
+        ],
+    ),
+    (
+        "Hand & cards",
+        &[
+            ("Click · Enter", "Play / cast / select target"),
+            ("Tab · arrows · WASD", "Move selection (Shift+Tab back)"),
+            ("F", "Flip double-faced card"),
+            ("L", "Cast for alternative cost"),
+            ("M", "Open ability menu"),
+            ("C", "Cycle the selected card"),
+            ("Right-click", "Cancel · flip card"),
+        ],
+    ),
+    (
+        "Mulligan",
+        &[
+            ("K", "Keep hand"),
+            ("M", "Mulligan"),
+            ("P", "Serum Powder"),
+        ],
+    ),
+];
+
+/// Toggle the keyboard-shortcut overlay on F1 or `?` (Shift+/); Esc (or
+/// the same keys) closes it. Stateless — the panel entity *is* the open
+/// flag, so there's nothing to fall out of sync if `OnExit(InGame)`
+/// despawns the overlay while it's up.
+pub fn toggle_shortcut_help(
+    mut commands: Commands,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    ui_fonts: Res<UiFonts>,
+    existing: Query<Entity, With<ShortcutHelpPanel>>,
+) {
+    let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
+    let open_key =
+        keyboard.just_pressed(KeyCode::F1) || (shift && keyboard.just_pressed(KeyCode::Slash));
+
+    if let Ok(panel) = existing.single() {
+        if open_key || keyboard.just_pressed(KeyCode::Escape) {
+            commands.entity(panel).despawn();
+        }
+    } else if open_key {
+        spawn_shortcut_help(&mut commands, &ui_fonts);
+    }
+}
+
+/// Build the centered shortcut panel: a dimmed scrim over a two-column
+/// reference grid. Tagged `InGameRoot` so it's cleaned up on exit even if
+/// left open.
+fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts) {
+    let tf = |s: f32| ui_fonts.tf(s);
+    let mid = HELP_SECTIONS.len().div_ceil(2);
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG),
+            ShortcutHelpPanel,
+            crate::systems::game_ui::InGameRoot,
+        ))
+        .with_children(|root| {
+            root.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(22.0)),
+                    row_gap: Val::Px(14.0),
+                    border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                    ..default()
+                },
+                BackgroundColor(theme::PANEL_BG),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Text::new("Keyboard Shortcuts"),
+                    tf(22.0),
+                    TextColor(theme::ACCENT_GOLD),
+                ));
+                panel
+                    .spawn(Node {
+                        flex_direction: FlexDirection::Row,
+                        column_gap: Val::Px(32.0),
+                        align_items: AlignItems::FlexStart,
+                        ..default()
+                    })
+                    .with_children(|cols| {
+                        for chunk in [&HELP_SECTIONS[..mid], &HELP_SECTIONS[mid..]] {
+                            cols.spawn(Node {
+                                flex_direction: FlexDirection::Column,
+                                row_gap: Val::Px(12.0),
+                                min_width: Val::Px(330.0),
+                                ..default()
+                            })
+                            .with_children(|col| {
+                                for (header, rows) in chunk {
+                                    col.spawn((
+                                        Text::new(*header),
+                                        tf(14.0),
+                                        TextColor(theme::ACCENT_BLUE),
+                                    ));
+                                    for (key, desc) in *rows {
+                                        col.spawn(Node {
+                                            flex_direction: FlexDirection::Row,
+                                            column_gap: Val::Px(10.0),
+                                            align_items: AlignItems::Center,
+                                            ..default()
+                                        })
+                                        .with_children(|row| {
+                                            row.spawn(Node {
+                                                min_width: Val::Px(126.0),
+                                                ..default()
+                                            })
+                                            .with_children(|kc| {
+                                                kc.spawn((
+                                                    Text::new(*key),
+                                                    tf(13.0),
+                                                    TextColor(theme::ACCENT_YELLOW),
+                                                ));
+                                            });
+                                            row.spawn((
+                                                Text::new(*desc),
+                                                tf(13.0),
+                                                TextColor(theme::TEXT_BODY),
+                                            ));
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+                panel.spawn((
+                    Text::new("Press F1, ?, or Esc to close"),
+                    tf(12.0),
+                    TextColor(theme::TEXT_MUTED),
+                ));
+            });
+        });
+}
+
 /// Standard Magic card aspect ratio (height / width).
 const CARD_ASPECT_RATIO: f32 = 88.0 / 63.0;
 const POPUP_WIDTH: f32 = 340.0;
