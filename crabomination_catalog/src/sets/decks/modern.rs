@@ -12657,3 +12657,23 @@ pub fn inquisitive_puppet() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Juggernaut — {4} Artifact Creature — Juggernaut 5/3. "Juggernaut attacks
+/// each combat if able." (CR 508.1d via `Keyword::MustAttack`, enforced in
+/// `declare_attackers`. The "can't be blocked by Walls" rider is dropped —
+/// no Wall-typed blockers are modelled.)
+pub fn juggernaut() -> CardDefinition {
+    CardDefinition {
+        name: "Juggernaut",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Juggernaut],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![crate::card::Keyword::MustAttack],
+        ..Default::default()
+    }
+}

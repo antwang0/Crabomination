@@ -175,6 +175,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   batch containing it. Master of Cruelties. Test:
   `master_of_cruelties_cannot_attack_alongside_another_creature`.
 
+- ✅ **CR 508.1d — "Attacks each combat if able"** (claude/modern_decks).
+  `Keyword::MustAttack` — `declare_attackers` rejects a declaration that
+  omits an able must-attack creature while an opponent is in range; the bot
+  force-includes them. Juggernaut. Tests: `juggernaut_must_be_declared_as_
+  attacker`, `juggernaut_tapped_is_exempt_from_must_attack`. Follow-up:
+  *granted* must-attack ("attacks next turn if able" — Goad / Big Play mode
+  0) needs a future-turn-scoped grant duration.
+
 - ✅ **CR 603.6e — Linked "exile until ~ leaves"** (claude/modern_decks).
   `Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves` stamp
   `CardInstance.exiled_by`; `return_linked_exiles` (called from every

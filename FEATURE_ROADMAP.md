@@ -216,10 +216,13 @@ feature; sweep card-batch by card-batch.
 - ⏳ **Multiple combat phases / extra attack steps** (Aggravated Assault).
 - 🟡 **"Must attack/block", "can't attack alone", "attacks each combat"**
   restrictions and requirements. `Keyword::CantAttack` / `CantBlock`
-  (Pacifism) and `Keyword::AttacksAlone` (CR 508.0 — Master of Cruelties,
-  rejects a multi-attacker batch) are wired from computed keywords in
-  `declare_attackers`/`declare_blockers`. Still open: must-attack/must-block
-  requirements, "attacks each combat".
+  (Pacifism), `Keyword::AttacksAlone` (CR 508.0 — Master of Cruelties),
+  `Keyword::MustBeBlocked` (CR 509.1c — Lure), and `Keyword::MustAttack`
+  (CR 508.1d — "attacks each combat if able", Juggernaut) are wired from
+  computed keywords in `declare_attackers`/`declare_blockers`. Still open:
+  *granted/temporary* must-attack ("attacks next turn if able" — Goad, Big
+  Play mode 0) needs a future-turn-scoped duration; must-block requirements
+  on the blocker side; cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ⏳ **Ninjutsu attacking-creature swap**, **Goad**, **Lure**, **provoke**.
 

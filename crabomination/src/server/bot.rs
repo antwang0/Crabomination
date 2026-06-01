@@ -157,6 +157,12 @@ impl Bot for RandomBot {
                     let mut attackers: Vec<crate::card::CardId> = raw_attackers
                         .into_iter()
                         .filter(|c| {
+                            // CR 508.1d — must-attack creatures (Juggernaut,
+                            // goaded) have no choice; always include them so
+                            // the engine's requirement check accepts the batch.
+                            if c.has_keyword(&Keyword::MustAttack) {
+                                return true;
+                            }
                             // Always attack on lethal swings — the bot
                             // would rather suicide than miss a kill.
                             if lethal_swing {

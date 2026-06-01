@@ -265,6 +265,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         trinisphere,
         ravens_crime,
         pithing_needle,
+        juggernaut,
         trenchpost,
         three_tree_city,
         // ── modern_decks batch 103: colorless cube expansion ──

@@ -83,6 +83,34 @@ impl GameState {
                 .unwrap_or(&[])
         };
 
+        // CR 508.1d — "attacks each combat if able" (Juggernaut, goaded
+        // creatures). Any creature the active player controls that carries
+        // MustAttack and *can* legally attack (untapped, not sick / has
+        // Haste, not Defender / CantAttack) must be in the declared batch
+        // while at least one opponent is in range. Reject an incomplete
+        // declaration so the requirement is honored.
+        let has_legal_target = self
+            .players
+            .iter()
+            .enumerate()
+            .any(|(i, pl)| !self.same_team(p, i) && pl.is_alive());
+        if has_legal_target {
+            for c in &self.battlefield {
+                if c.controller != p || !computed_kw(c.id).contains(&Keyword::MustAttack) {
+                    continue;
+                }
+                let kws = computed_kw(c.id);
+                let able = c.definition.is_creature()
+                    && !c.tapped
+                    && !kws.contains(&Keyword::Defender)
+                    && !kws.contains(&Keyword::CantAttack)
+                    && (!c.summoning_sick || kws.contains(&Keyword::Haste));
+                if able && !attacks.iter().any(|atk| atk.attacker == c.id) {
+                    return Err(GameError::CannotAttack(c.id));
+                }
+            }
+        }
+
         for atk in attacks {
             let id = atk.attacker;
             // Filter by *controller*, not *owner* — a creature you've

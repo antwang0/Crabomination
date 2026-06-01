@@ -88,6 +88,8 @@ pub enum CreatureType {
     Thopter,
     // Theros devotion gods (Nylea, Thassa, Erebos, ...).
     God,
+    // Artifact creature subtype (Juggernaut).
+    Juggernaut,
 }
 
 /// Land subtypes (basic land types + others).
@@ -390,6 +392,14 @@ pub enum Keyword {
     /// engine models the single-requirement case; multi-Lure
     /// maximization (CR 509.1c's "as many as possible") is approximated.
     MustBeBlocked,
+    /// CR 508.1d — "This creature attacks each combat if able." Enforced in
+    /// `declare_attackers`: an untapped, non-sick creature carrying this
+    /// keyword whose controller declares attackers must be among them when
+    /// it has a legal attack (any opponent in range). Models the
+    /// single-creature case; the "if able" maximization across multiple
+    /// requirements (Goad targeting rules, can't-attack overrides) is
+    /// approximated by the per-creature gate. Juggernaut, goaded creatures.
+    MustAttack,
     /// "When you cast this spell from your hand, exile it as it resolves.
     /// At the beginning of your next upkeep, you may cast this card from
     /// exile without paying its mana cost." Wired in

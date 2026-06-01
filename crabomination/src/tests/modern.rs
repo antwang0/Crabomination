@@ -6,6 +6,7 @@ use crate::card::{CardType, CounterType};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::*;
+use crate::TurnStep;
 use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
 
@@ -19222,4 +19223,43 @@ fn phyrexian_revoker_is_a_two_one_construct_that_names_and_suppresses() {
     let err = g.perform_action(GameAction::ActivateAbility {
         card_id: crypt, ability_index: 0, target: None, x_value: None }).unwrap_err();
     assert!(matches!(err, GameError::AbilitySuppressedByNamedCard));
+}
+
+// ── Juggernaut / "attacks each combat if able" (CR 508.1d) ───────────────────
+
+#[test]
+fn juggernaut_must_be_declared_as_attacker() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let jug = g.add_card_to_battlefield(0, catalog::juggernaut());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(jug);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+
+    // Declaring only the Bear while Juggernaut can attack is illegal.
+    let err = g.declare_attackers(vec![
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]).unwrap_err();
+    assert!(matches!(err, GameError::CannotAttack(id) if id == jug),
+        "Juggernaut must attack if able, got {err:?}");
+
+    // Including the Juggernaut is accepted.
+    g.declare_attackers(vec![
+        Attack { attacker: jug, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]).expect("declaration including Juggernaut is legal");
+}
+
+#[test]
+fn juggernaut_tapped_is_exempt_from_must_attack() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let jug = g.add_card_to_battlefield(0, catalog::juggernaut());
+    g.battlefield_find_mut(jug).unwrap().tapped = true; // can't attack → exempt
+    g.clear_sickness(jug);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![]).expect("a tapped Juggernaut isn't forced to attack");
 }
