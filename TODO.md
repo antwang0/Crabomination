@@ -8,6 +8,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Kicker is unwired (CR 702.32)** — `Keyword::Kicker(cost)` and the
+  `kicked` flag exist on the card/stack item, but no cast path pays the
+  optional kicker cost and no `Predicate`/`Effect` reads `kicked`, so it's
+  inert. Wiring shape: a cast-time opt-in to pay the kicker cost (set
+  `kicked` on the resolving stack item), a `Predicate::SpellWasKicked`
+  read off the resolution context, and `Effect::If` branching on it.
+  Unblocks Tear Asunder ("if kicked, destroy any nonland permanent
+  instead") and the FEATURE_ROADMAP "Kicker shipped" claim (currently
+  aspirational). FEATURE_ROADMAP lists Kicker under shipped keywords —
+  that's stale; fix when the mechanic actually lands.
 - **Pitch affordance in client** — `ClientView.pitchable_hand` now lists hand
   cards with a `from_hand` ability (Spirit Guides). The 3D client should
   render a distinct edge/badge for these (separate from the castable-green
@@ -2672,7 +2682,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (a) **602.1a** — ✅ (`ActivatedAbility::mana_cost`, `tap_cost`, `sac_cost`,
   `life_cost`, `exile_self_cost`, `exile_other_filter` between them
   cover the full cost vocabulary; tap/mana/life/sac are all paid in
-  `activate_ability` before the effect goes on stack).
+  `activate_ability` before the effect goes on stack. Push
+  claude/modern_decks: `from_hand` lets an ability be activated from the
+  controller's hand — paired with `exile_self_cost` it models the Spirit
+  Guides' "Exile this from your hand: Add {C}." pitch mana ability;
+  tap costs are rejected from a hand source).
   (b) **602.1b** — 🟡 (`ActivatedAbility.condition` covers per-ability
   predicate gates ("Activate only if …"); `once_per_turn` /
   `sorcery_speed` / `from_graveyard` cover the canonical instructions.
