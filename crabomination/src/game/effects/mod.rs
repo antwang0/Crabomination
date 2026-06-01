@@ -1466,6 +1466,46 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileSameNameAsTarget { what } => {
+                // Crumble to Dust: exile the anchor permanent, then exile every
+                // same-named card from its owner's graveyard, hand, and library,
+                // and shuffle that library. Read the anchor's name + owner first.
+                let anchor = self.resolve_selector(what, ctx).into_iter().find_map(|e| match e {
+                    EntityRef::Permanent(c) => Some(c),
+                    _ => None,
+                });
+                let Some(anchor_id) = anchor else { return Ok(()); };
+                let Some((name, owner)) = self
+                    .battlefield_find(anchor_id)
+                    .map(|c| (c.definition.name.to_string(), c.owner))
+                else { return Ok(()); };
+
+                self.remove_from_battlefield_to_exile(anchor_id);
+                events.push(GameEvent::PermanentExiled { card_id: anchor_id });
+
+                // Sweep the owner's hidden/graveyard zones for same-named cards.
+                let pl = &mut self.players[owner];
+                let mut swept: Vec<CardInstance> = Vec::new();
+                for zone in [&mut pl.graveyard, &mut pl.hand, &mut pl.library] {
+                    let mut i = 0;
+                    while i < zone.len() {
+                        if zone[i].definition.name == name.as_str() {
+                            swept.push(zone.remove(i));
+                        } else {
+                            i += 1;
+                        }
+                    }
+                }
+                for c in swept {
+                    let cid = c.id;
+                    self.exile.push(c);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                }
+                use rand::seq::SliceRandom;
+                self.players[owner].library.shuffle(&mut rand::rng());
+                Ok(())
+            }
+
             Effect::ExileUntilSourceLeaves { what, return_to } => {
                 // CR 603.6e — exile the resolved card(s) and link each to
                 // the ability's source. When that source leaves the

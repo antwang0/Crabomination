@@ -1222,6 +1222,12 @@ pub enum Effect {
     /// cards in your hand have miracle {2}" grant.
     GrantMiracle { what: Selector, cost: crate::mana::ManaCost },
     Exile   { what: Selector },
+    /// "Exile target [permanent], then search its owner's graveyard, hand,
+    /// and library for any number of cards with the same name as that
+    /// [permanent] and exile them. Then that player shuffles." Crumble to
+    /// Dust, Spreading Plague-style name sweeps. `what` resolves the
+    /// anchor permanent (slot 0); its printed name keys the sweep.
+    ExileSameNameAsTarget { what: Selector },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the
@@ -1992,6 +1998,7 @@ impl Effect {
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
+            | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
@@ -2128,6 +2135,7 @@ impl Effect {
             | Effect::GrantFlashbackThisTurn { what }
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
+            | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }

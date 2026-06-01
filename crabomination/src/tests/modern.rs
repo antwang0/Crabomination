@@ -9481,6 +9481,33 @@ fn crumble_to_dust_exiles_nonbasic_but_rejects_basic() {
 }
 
 #[test]
+fn crumble_to_dust_sweeps_same_named_cards_from_all_zones() {
+    // Exiles the targeted nonbasic land AND every same-named copy in the
+    // owner's graveyard, hand, and library; the rest is shuffled, not lost.
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::watery_grave());
+    let in_hand = g.add_card_to_hand(1, catalog::watery_grave());
+    let in_gy = g.add_card_to_graveyard(1, catalog::watery_grave());
+    let in_lib = g.add_card_to_library(1, catalog::watery_grave());
+    let bystander = g.add_card_to_library(1, catalog::island()); // different name, survives
+
+    let crumble = g.add_card_to_hand(0, catalog::crumble_to_dust());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: crumble, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Crumble castable");
+    drain_stack(&mut g);
+
+    for id in [target, in_hand, in_gy, in_lib] {
+        assert!(g.exile.iter().any(|c| c.id == id), "same-named card {id:?} exiled");
+    }
+    assert!(g.players[1].library.iter().any(|c| c.id == bystander),
+        "a differently-named card stays in the library");
+}
+
+#[test]
 fn skullcrack_deals_three_damage_to_player() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::skullcrack());

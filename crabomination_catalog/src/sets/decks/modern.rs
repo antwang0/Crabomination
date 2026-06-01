@@ -5780,20 +5780,16 @@ pub fn despark() -> CardDefinition {
     }
 }
 
-/// Crumble to Dust — {2}{R}{R} Sorcery. Exile target nonbasic land,
-/// then search its controller's library, graveyard, and hand for any
-/// number of cards with the same name and exile them.
-///
-/// The "all cards with the same name" rider is collapsed (no name-match
-/// selector at cast time). The single-target nonbasic exile is the
-/// gameplay-relevant payoff: kills a Tron land, a manland, or a
-/// Cabal Coffers without needing the chain-effect.
+/// Crumble to Dust — {2}{R}{R} Sorcery. Exile target nonbasic land, then
+/// search its owner's library, graveyard, and hand for any number of cards
+/// with the same name and exile them; that player shuffles. Wired via
+/// `Effect::ExileSameNameAsTarget` — the full same-name sweep.
 pub fn crumble_to_dust() -> CardDefinition {
     CardDefinition {
         name: "Crumble to Dust",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Exile {
+        effect: Effect::ExileSameNameAsTarget {
             what: target_filtered(
                 SelectionRequirement::Land
                     .and(SelectionRequirement::IsBasicLand.negate()),
