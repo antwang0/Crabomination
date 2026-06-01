@@ -415,6 +415,7 @@ fn project_permanent(
                 && tough > 0
                 && card.damage as i32 >= tough
         },
+        named_card: card.named_card.clone(),
     }
 }
 
@@ -1079,6 +1080,19 @@ mod tests {
         state.battlefield.iter_mut().find(|c| c.id == bear).unwrap().damage = 2;
         assert!(project(&state, 0).battlefield.iter()
             .find(|p| p.id == bear).unwrap().marked_lethal);
+    }
+
+    #[test]
+    fn named_card_is_surfaced_in_permanent_view() {
+        let mut state = two_player_game();
+        let needle = state.add_card_to_battlefield(0, catalog::pithing_needle());
+        assert_eq!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == needle).unwrap().named_card, None);
+        state.battlefield.iter_mut().find(|c| c.id == needle).unwrap()
+            .named_card = Some("Tormod's Crypt".into());
+        assert_eq!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == needle).unwrap().named_card.as_deref(),
+            Some("Tormod's Crypt"));
     }
 
     #[test]

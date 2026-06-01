@@ -591,6 +591,12 @@ pub struct PermanentView {
     /// recomputing toughness. Populated by `project_permanent`.
     #[serde(default)]
     pub marked_lethal: bool,
+    /// The card name this permanent has chosen (CR 201.3 — Pithing Needle,
+    /// Phyrexian Revoker). Lets the client badge "naming: <X>" and grey out
+    /// the suppressed source's activated abilities. `None` for the common
+    /// case. Populated by `project_permanent`.
+    #[serde(default)]
+    pub named_card: Option<String>,
 }
 
 impl PermanentView {
