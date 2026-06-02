@@ -45,7 +45,13 @@ read of the code and should be re-verified before picking up an item.
   (`Effect::CantCastNoncreatureThisTurn` — Ranger-Captain of Eos);
   "becomes the target" triggers now fire for SelfSource and the new
   `EventScope::YourPermanentTargetedByOpponent` (Goldspan Dragon, Phantasmal
-  Image, Battle Mammoth, Tenured Concocter).
+  Image, Battle Mammoth, Tenured Concocter); CR 704.5j legend-rule controller
+  choice (`Decision::ChooseLegendToKeep`); CR 800.4a player-leaving cleanup
+  (`objects_leave_with_player`); CR 121.2b per-turn draw cap
+  (`StaticEffect::CapDrawsPerTurn`, surfaced in `PlayerView.draw_cap` + HUD);
+  dynamic MV-vs-graveyard target gate
+  (`SelectionRequirement::ManaValueAtMostControllerGraveyard` — Drown in the
+  Loch).
 
 ---
 

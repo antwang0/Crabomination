@@ -178,6 +178,7 @@ mod tests {
                 first_spell_tax_charges: 0,
                 life_gained_this_turn: 0,
                 cards_drawn_this_turn: 0,
+                draw_cap: None,
                 cards_left_graveyard_this_turn: 0,
                 creatures_died_this_turn: 0,
                 cards_exiled_this_turn: 0,

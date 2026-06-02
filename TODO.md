@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Entwine (CR 702.41)** — Plunge into Darkness (cached) is the only entwine
+  card; needs an `entwine_cost` cast-mode that flips a `ChooseMode` to "run
+  all modes" when paid (kicker-style additional cost + `kicked`-style flag).
+  Plunge's two modes are also approximations (variable-count sacrifice;
+  pay-X-life-look-at-X), so a full promotion needs those too.
+- **Variable-count sacrifice / "sacrifice any number"** — Plunge into Darkness
+  mode 0, Devour, Fling-with-count. No primitive that sacrifices a
+  player-chosen count and feeds the count to a payoff Value.
+- **Opponent-controlled pay-to-copy** — Chain Lightning's "the damaged player
+  may pay {R}{R} to copy this spell." `Effect::CopySpell*` exist but are all
+  controller-side; needs a copy offered to a different player.
+- **Card floor blocked by Scryfall egress.** All 332 cards in
+  `scripts/.scryfall_cache.json` are implemented; new cube/STX TBDs (Baloth
+  Prime, Icetill Explorer, Ouroboroid, …) still need a session with Scryfall
+  access. Prefer promoting documented 🟡 partials + engine primitives until
+  then (this run promoted Callous Sell-Sword and Drown in the Loch).
 - **Card-data audit vs Scryfall cache** (`cargo run --bin dump_cards` diffed
   against `scripts/.scryfall_cache.json`). The claude/modern_decks run fixed
   18 mana-cost bugs and 4 keyword bugs this way. **Remaining diffs are all
