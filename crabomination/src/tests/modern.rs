@@ -10201,7 +10201,7 @@ fn lumra_returns_all_lands_from_your_graveyard() {
     let lumra = g.battlefield_find(id).unwrap();
     assert_eq!(lumra.definition.power, 6);
     assert_eq!(lumra.definition.toughness, 6);
-    assert!(lumra.definition.keywords.contains(&crate::card::Keyword::Trample));
+    assert!(lumra.definition.keywords.contains(&crate::card::Keyword::Reach));
 }
 
 #[test]
@@ -13478,6 +13478,26 @@ fn stillmoon_cavalier_grants_protection_from_black_eot() {
     let c = g.battlefield_find(cav).expect("Stillmoon alive");
     assert!(c.has_keyword(&crate::card::Keyword::Protection(Color::Black)),
         "Gained protection from black EOT");
+}
+
+/// Black Knight has protection from white: a white removal spell (Swords
+/// to Plowshares) can't legally target it.
+#[test]
+fn black_knight_protection_from_white_blocks_targeting() {
+    let mut g = two_player_game();
+    let bk = g.add_card_to_battlefield(1, catalog::black_knight());
+    assert!(g.battlefield_find(bk).unwrap()
+        .has_keyword(&crate::card::Keyword::Protection(Color::White)));
+    let stp = g.add_card_to_hand(0, catalog::swords_to_plowshares());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: stp,
+        target: Some(Target::Permanent(bk)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(res.is_err(), "white Swords can't target a pro-white creature: {res:?}");
 }
 
 #[test]

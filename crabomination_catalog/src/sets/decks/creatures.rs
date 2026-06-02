@@ -358,7 +358,7 @@ pub fn solitude() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Lifelink],
+        keywords: vec![Keyword::Flash, Keyword::Lifelink],
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),

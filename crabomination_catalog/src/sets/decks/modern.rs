@@ -5898,7 +5898,7 @@ pub fn lumra_bellow_of_the_woods() -> CardDefinition {
         toughness: 6,
         // Real Oracle: Vigilance, Trample. (Reach was a stale leftover —
         // Lumra is not the Reach printing.)
-        keywords: vec![Keyword::Vigilance, Keyword::Trample],
+        keywords: vec![Keyword::Vigilance, Keyword::Reach],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {

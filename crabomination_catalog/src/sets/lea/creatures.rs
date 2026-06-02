@@ -39,7 +39,7 @@ pub fn white_knight() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::FirstStrike],
+        keywords: vec![Keyword::FirstStrike, Keyword::Protection(Color::Black)],
         effect: Effect::Noop,
         triggered_abilities: vec![],
         ..Default::default()
@@ -129,7 +129,7 @@ pub fn black_knight() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::FirstStrike],
+        keywords: vec![Keyword::FirstStrike, Keyword::Protection(Color::White)],
         effect: Effect::Noop,
         triggered_abilities: vec![],
         ..Default::default()
