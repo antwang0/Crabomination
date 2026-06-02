@@ -2352,6 +2352,183 @@ pub fn centaur_courser() -> CardDefinition {
     }
 }
 
+/// Thieving Magpie — {2}{U} 1/3 Bird, Flying. Whenever it deals combat
+/// damage to a player, draw a card.
+pub fn thieving_magpie() -> CardDefinition {
+    CardDefinition {
+        name: "Thieving Magpie",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abyssal Specter — {2}{B}{B} 2/3 Specter, Flying. Whenever it deals
+/// combat damage to a player, that player discards a card. (Modeled as the
+/// defending opponent discarding — single-defender faithful.)
+pub fn abyssal_specter() -> CardDefinition {
+    CardDefinition {
+        name: "Abyssal Specter",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Specter],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloodgift Demon — {3}{B}{B} 5/4 Demon, Flying. At the beginning of your
+/// upkeep, draw a card and lose 1 life. (Printed "target player" collapses
+/// to the controller — the usual line.)
+pub fn bloodgift_demon() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodgift Demon",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Whitemane Lion — {1}{W} 2/2 Cat, Flash. ETB: return a creature you
+/// control to its owner's hand.
+pub fn whitemane_lion() -> CardDefinition {
+    CardDefinition {
+        name: "Whitemane Lion",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Penumbra Spider — {3}{G} 2/4 Spider, Reach. When it dies, create a
+/// 2/4 black Spider creature token with Reach.
+pub fn penumbra_spider() -> CardDefinition {
+    CardDefinition {
+        name: "Penumbra Spider",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::card::TokenDefinition {
+                name: "Spider".to_string(),
+                power: 2,
+                toughness: 4,
+                keywords: vec![Keyword::Reach],
+                card_types: vec![CardType::Creature],
+                colors: vec![crate::mana::Color::Black],
+                supertypes: vec![],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ember Hauler — {1}{R} 2/2 Goblin. {2}, Sacrifice this: deal 2 damage to
+/// any target.
+pub fn ember_hauler() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Ember Hauler",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_cost: true,
+            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fire Imp — {2}{R} 2/1 Imp. ETB: deal 2 damage to target creature.
+pub fn fire_imp() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Imp",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Borderland Ranger — {2}{G} 2/2 Human Scout. ETB: search your library
 /// for a basic land card, reveal it, put it into your hand, then shuffle.
 pub fn borderland_ranger() -> CardDefinition {

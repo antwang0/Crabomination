@@ -21364,3 +21364,101 @@ fn viashino_pyromancer_burns_a_player_on_etb() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp - 2, "Viashino Pyromancer dealt 2 to the opponent");
 }
+
+// ── Combat-trigger / dies-token / sac-ping batch (claude/modern_decks) ───────
+
+#[test]
+fn thieving_magpie_draws_on_combat_damage() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let magpie = g.add_card_to_battlefield(0, catalog::thieving_magpie());
+    g.clear_sickness(magpie);
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: magpie, target: AttackTarget::Player(1),
+    }])).expect("magpie attacks");
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Magpie drew on combat damage");
+}
+
+#[test]
+fn abyssal_specter_forces_discard_on_combat_damage() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let spec = g.add_card_to_battlefield(0, catalog::abyssal_specter());
+    g.clear_sickness(spec);
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a card to discard
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: spec, target: AttackTarget::Player(1),
+    }])).expect("specter attacks");
+    let opp_hand = g.players[1].hand.len();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand - 1, "defender discarded a card");
+}
+
+#[test]
+fn penumbra_spider_leaves_a_token_on_death() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let spider = g.add_card_to_battlefield(0, catalog::penumbra_spider());
+    g.battlefield_find_mut(spider).unwrap().toughness_bonus -= 4;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Spider)).count();
+    assert_eq!(tokens, 1, "Penumbra Spider leaves a 2/4 Spider token");
+}
+
+#[test]
+fn ember_hauler_sacrifices_to_deal_two() {
+    let mut g = two_player_game();
+    let hauler = g.add_card_to_battlefield(0, catalog::ember_hauler());
+    g.players[0].mana_pool.add_colorless(2);
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hauler, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac-ping activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "Ember Hauler dealt 2");
+    assert!(g.battlefield_find(hauler).is_none(), "Ember Hauler sacrificed itself");
+}
+
+#[test]
+fn fire_imp_burns_a_creature_on_etb() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fire_imp());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {2}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "Fire Imp's 2 damage killed the 2/2");
+}
+
+#[test]
+fn bloodgift_demon_draws_and_loses_one_at_upkeep() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bloodgift_demon());
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+}
