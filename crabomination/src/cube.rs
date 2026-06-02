@@ -1092,6 +1092,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mogg_fanatic,
         lightning_elemental,
         skyknight_legionnaire,
+        viashino_pyromancer,
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
         goblin_chainwhirler,
@@ -1365,6 +1366,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         deadly_recluse,
         sporemound,
         centaur_courser,
+        borderland_ranger,
         // ── Lure (CR 509.1c all-must-block) ──
         lure,
         // ── Undying aggro ──

@@ -21330,3 +21330,37 @@ fn green_keyword_bodies_have_correct_stats() {
     let courser = catalog::centaur_courser();
     assert_eq!((courser.power, courser.toughness), (3, 3));
 }
+
+// ── Borderland Ranger / Viashino Pyromancer ──────────────────────────────────
+
+#[test]
+fn borderland_ranger_fetches_a_basic_land_to_hand() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    // Script the ETB search to grab the Forest (AutoDecider would decline).
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::borderland_ranger());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {2}{G}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest),
+        "Borderland Ranger fetched the Forest to hand");
+}
+
+#[test]
+fn viashino_pyromancer_burns_a_player_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::viashino_pyromancer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "Viashino Pyromancer dealt 2 to the opponent");
+}

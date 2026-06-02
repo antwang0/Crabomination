@@ -2352,6 +2352,49 @@ pub fn centaur_courser() -> CardDefinition {
     }
 }
 
+/// Borderland Ranger — {2}{G} 2/2 Human Scout. ETB: search your library
+/// for a basic land card, reveal it, put it into your hand, then shuffle.
+pub fn borderland_ranger() -> CardDefinition {
+    CardDefinition {
+        name: "Borderland Ranger",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Viashino Pyromancer — {1}{R} 2/1 Lizard. ETB: deal 2 damage to target
+/// player.
+pub fn viashino_pyromancer() -> CardDefinition {
+    CardDefinition {
+        name: "Viashino Pyromancer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Marauding Mako — {U} 1/1 Shark. Whenever you discard a card, put
 /// a +1/+1 counter on Marauding Mako. (The full Oracle pumps on every
 /// discard; we use a `CardDiscarded`+`YourControl` listener.)
