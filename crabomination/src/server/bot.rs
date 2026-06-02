@@ -23,9 +23,13 @@ pub trait Bot: Send {
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction>;
 }
 
-/// Random-play reference bot. Taps lands, plays a random affordable card from
-/// hand, attacks with everything that can, assigns blockers at random, and
-/// auto-answers any decisions with [`AutoDecider`].
+/// Reference bot. Taps lands and plays a (roughly random) affordable card
+/// from hand, but combat is heuristic: it attacks with creatures that swing
+/// safely or profitably (evasion / first-strike / deathtouch / menace /
+/// lifelink / trample / indestructible awareness, plus a suicide filter and
+/// planeswalker redirection) and assigns blockers to maximize value trades
+/// and survive lethal (see `pick_attack`/`pick_blocks`). Decisions are
+/// auto-answered with [`AutoDecider`].
 ///
 /// The bot keeps a little internal flag state so it only submits
 /// `DeclareAttackers`/`DeclareBlockers` once per combat phase — the match
@@ -226,6 +230,30 @@ impl Bot for RandomBot {
                             // worth swinging when we can race.
                             if c.has_keyword(&Keyword::Lifelink) {
                                 return true;
+                            }
+                            // Deathtouch attacker: any blocker that deals
+                            // with it dies (CR 702.2), so blocking is at
+                            // best an even trade for the opponent — swinging
+                            // is always at least fine.
+                            if c.has_keyword(&Keyword::Deathtouch) && c.power() >= 1 {
+                                return true;
+                            }
+                            // Menace (CR 702.111): needs two+ blockers. If
+                            // the opponent has fewer than two creatures that
+                            // can legally block this attacker, it gets
+                            // through unblocked — safe to swing.
+                            if c.has_keyword(&Keyword::Menace) {
+                                let able = opp_blockers
+                                    .iter()
+                                    .filter(|b| {
+                                        !flying
+                                            || b.has_keyword(&Keyword::Flying)
+                                            || b.has_keyword(&Keyword::Reach)
+                                    })
+                                    .count();
+                                if able < 2 {
+                                    return true;
+                                }
                             }
                             // First strike + bigger power than blockers'
                             // toughness — we kill the blocker before it
@@ -1638,6 +1666,62 @@ mod tests {
                     "+1 loyalty preferred over -1 / -2 (don't suicide-ult)");
             }
             other => panic!("expected ActivateLoyaltyAbility, got {:?}", other),
+        }
+    }
+
+    /// Helper: a 1/1 creature with one extra keyword for attack-filter tests.
+    fn one_one_with(name: &'static str, kw: crate::card::Keyword) -> CardDefinition {
+        let mut d = catalog::grizzly_bears();
+        d.name = name;
+        d.power = 1;
+        d.toughness = 1;
+        d.keywords.push(kw);
+        d
+    }
+
+    /// A menace attacker swings even into a single bigger blocker — menace
+    /// needs two blockers, so it gets through (the suicide filter must not
+    /// hold it back when the opponent has fewer than two blockers).
+    #[test]
+    fn bot_attacks_with_menace_into_lone_blocker() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let atk = g.add_card_to_battlefield(0, one_one_with("Sneak", crate::card::Keyword::Menace));
+        g.clear_sickness(atk);
+        g.add_card_to_battlefield(1, catalog::grizzly_bears()); // lone 2/2 blocker
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
+                    "menace attacker should swing past a lone blocker");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// A deathtouch attacker swings even when smaller than every blocker —
+    /// any block trades the opponent's creature for ours.
+    #[test]
+    fn bot_attacks_with_deathtouch_into_bigger_blocker() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let atk = g.add_card_to_battlefield(0, one_one_with("Stinger", crate::card::Keyword::Deathtouch));
+        g.clear_sickness(atk);
+        // Two 3/3s — without deathtouch awareness the suicide filter would
+        // hold the 1/1 back.
+        g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.add_card_to_battlefield(1, catalog::hill_giant());
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
+                    "deathtouch attacker should swing into bigger blockers");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
         }
     }
 

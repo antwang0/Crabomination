@@ -388,9 +388,12 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 
 ## Tier 13 — AI
 
-- 🟡 **Smarter blocking** — the bot blocks "at random" (`server/bot.rs`);
-  add survive-don't-chump, gang-block lethal, deathtouch/trample awareness.
-  Highest-value single-player improvement.
+- 🟡 **Smarter combat** — `server/bot.rs` blocking is heuristic (value
+  trades, first-strike/deathtouch/trample awareness, gang-block-to-survive
+  lethal) and attacking has a suicide filter plus evasion awareness
+  (first-strike, deathtouch, menace, lifelink, trample, indestructible) and
+  planeswalker redirection. Remaining: race math / when-to-hold-back across
+  turns, multi-blocker attacker math, and attacking-into-open-mana respect.
 - ⏳ **Better sequencing** (land drops, hold-up interaction, when to cast).
 - 🟡 **Mulligan decisions** — `RandomBot` ships flooded/screwed opening
   hands via `decide_mulligan`: keep 2–5 lands **and** at least one nonland
