@@ -1370,6 +1370,7 @@ pub fn snuff_out() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            flash: false,
         }),
         ..Default::default()
     }
@@ -2873,6 +2874,7 @@ pub fn cyclonic_rift() -> CardDefinition {
                 }),
             }),
             dash: false,
+            flash: false,
         }),
         ..Default::default()
     }
@@ -5325,12 +5327,11 @@ pub fn volcanic_fallout() -> CardDefinition {
     }
 }
 
-/// Rout — {3}{W}{W} Sorcery. Destroy all creatures.
-///
-/// Day of Judgment at +1 mana. The flash mode ({2}{W}{W}{W}, instant) is
-/// collapsed since `AlternativeCost` doesn't expose sorcery-vs-instant
-/// timing toggles. Sorcery body is fully wired.
+/// Rout — {3}{W}{W} Sorcery. Destroy all creatures. You may cast Rout as
+/// though it had flash if you pay {2} more ({5}{W}{W}, instant speed) — wired
+/// via an `AlternativeCost { flash: true }` at the higher cost.
 pub fn rout() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Rout",
         cost: cost(&[generic(3), w(), w()]),
@@ -5339,6 +5340,11 @@ pub fn rout() -> CardDefinition {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
             body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
         },
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(5), w(), w()]),
+            flash: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

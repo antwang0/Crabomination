@@ -29,6 +29,7 @@ pub fn force_of_will() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            flash: false,
         }),
         ..Default::default()
     }

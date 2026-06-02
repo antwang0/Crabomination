@@ -2499,9 +2499,9 @@ impl GameState {
             card.dashed = true;
         }
 
-        // Timing: sorcery-speed unless instant-speed, plus Teferi-style
-        // opponent restriction.
-        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+        // Timing: sorcery-speed unless instant-speed (or the alt cost grants
+        // flash — Rout), plus Teferi-style opponent restriction.
+        let must_be_sorcery_speed = (!card.definition.is_instant_speed() && !alt.flash)
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             self.players[p].hand.push(card);

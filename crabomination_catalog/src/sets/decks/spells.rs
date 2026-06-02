@@ -427,6 +427,7 @@ pub fn force_of_negation() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            flash: false,
         }),
         ..Default::default()
     }
@@ -659,6 +660,7 @@ pub fn mystical_dispute() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            flash: false,
         }),
         ..Default::default()
     }

@@ -8794,6 +8794,30 @@ fn bloodlust_inciter_grants_haste() {
 }
 
 #[test]
+fn rout_flash_mode_casts_at_instant_speed_and_sweeps() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rout = g.add_card_to_hand(0, catalog::rout());
+    // Move to a non-main step where sorcery-speed casting is illegal.
+    g.step = TurnStep::DeclareAttackers;
+    // The plain (sorcery) cast is rejected here…
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: rout, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Rout can't be hard-cast at instant speed");
+    // …but the flash alt cost ({5}{W}{W}) can.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: rout, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rout's flash mode is castable at instant speed");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "Rout swept the board");
+}
+
+#[test]
 fn phantom_monster_is_a_three_three_flyer() {
     use crate::card::Keyword;
     let def = catalog::phantom_monster();

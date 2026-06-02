@@ -171,6 +171,7 @@ pub fn vandalblast() -> CardDefinition {
                 }),
             }),
             dash: false,
+            flash: false,
         }),
         ..Default::default()
     }

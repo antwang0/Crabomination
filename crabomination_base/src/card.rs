@@ -978,6 +978,12 @@ pub struct AlternativeCost {
     /// beginning of the next end step.
     #[serde(default)]
     pub dash: bool,
+    /// True when casting via this alternative cost grants the spell flash
+    /// timing (e.g. Rout's "cast as though it had flash if you pay {2}
+    /// more"). Bypasses the sorcery-speed gate the alt-cast path otherwise
+    /// enforces on noninstant spells.
+    #[serde(default)]
+    pub flash: bool,
 }
 
 impl CardDefinition {
