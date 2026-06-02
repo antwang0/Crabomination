@@ -8,6 +8,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **`PlayerRef::DefendingPlayer` doesn't resolve in post-combat-damage
+  triggers** (discovered claude/modern_decks). A `DealsCombatDamageToPlayer`
+  trigger body using `PlayerRef::DefendingPlayer` (e.g. the Ninja-style Mill
+  rider, and an early Abyssal Specter draft) resolves to no player because
+  by dispatch time `resolve_combat` no longer reports the source as
+  attacking. Workaround used: model "that player" as `EachOpponent`
+  (single-defender faithful). Fix: stamp the damaged player into the
+  trigger's `EffectContext` (event payload) so `DefendingPlayer` /
+  a new `PlayerRef::DamagedPlayer` resolves at resolution time.
+
 - **AutoDecider declines all library searches** (`Decision::SearchLibrary
   → Search(None)` in `decision.rs`) — kept as-is so tests stay
   deterministic. The **bot** now overrides this: `RandomBot` handles
