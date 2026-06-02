@@ -5070,6 +5070,124 @@ pub fn carrion_feeder() -> CardDefinition {
     }
 }
 
+/// Zulaport Cutthroat — {2}{B} 1/1 Human Rogue. Whenever another creature
+/// you control dies, each opponent loses 1 life and you gain 1. (Its own
+/// death isn't caught — no "this-or-another-you-control" death scope yet.)
+pub fn zulaport_cutthroat() -> CardDefinition {
+    CardDefinition {
+        name: "Zulaport Cutthroat",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Doomed Dissenter — {1}{B} 1/1 Human. When it dies, create a 2/2 black
+/// Zombie creature token.
+pub fn doomed_dissenter() -> CardDefinition {
+    CardDefinition {
+        name: "Doomed Dissenter",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::card::TokenDefinition {
+                name: "Zombie".to_string(),
+                power: 2,
+                toughness: 2,
+                keywords: vec![],
+                card_types: vec![CardType::Creature],
+                colors: vec![crate::mana::Color::Black],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Zombie],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nantuko Husk — {2}{B} 2/2 Zombie Insect. Sacrifice a creature: it gets
+/// +1/+1 until end of turn.
+pub fn nantuko_husk() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Nantuko Husk",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloodthrone Vampire — {1}{B} 1/1 Vampire. Sacrifice a creature: it gets
+/// +2/+2 until end of turn.
+pub fn bloodthrone_vampire() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Bloodthrone Vampire",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Unearth — {B} Sorcery. Return target creature card with mana value 1 or
 /// less from your graveyard to the battlefield.
 pub fn unearth() -> CardDefinition {

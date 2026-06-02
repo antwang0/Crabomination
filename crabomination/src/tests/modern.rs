@@ -21147,3 +21147,52 @@ fn territorial_hammerskull_taps_on_attack() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(blocker).unwrap().tapped, "attack trigger tapped the blocker");
 }
+
+// ── Aristocrats / sac-fodder batch (claude/modern_decks) ─────────────────────
+
+#[test]
+fn zulaport_cutthroat_drains_when_your_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zulaport_cutthroat());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Bolt my own fodder so the full SBA+dispatch path fires Zulaport.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp = g.players[1].life;
+    let me = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(fodder)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the fodder");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "opponent lost 1 to Zulaport");
+    assert_eq!(g.players[0].life, me + 1, "controller gained 1");
+}
+
+#[test]
+fn doomed_dissenter_leaves_a_zombie_when_it_dies() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let dd = g.add_card_to_battlefield(0, catalog::doomed_dissenter());
+    g.battlefield_find_mut(dd).unwrap().toughness_bonus -= 1;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    let zombies = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Zombie)).count();
+    assert_eq!(zombies, 1, "Doomed Dissenter dies → one 2/2 Zombie");
+}
+
+#[test]
+fn nantuko_husk_sacrifices_for_a_pump() {
+    let mut g = two_player_game();
+    let husk = g.add_card_to_battlefield(0, catalog::nantuko_husk());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: husk, ability_index: 0, target: None, x_value: None,
+    }).expect("sac ability activatable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(husk).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "Nantuko Husk pumps to 3/3");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 1,
+        "the fodder creature was sacrificed");
+}

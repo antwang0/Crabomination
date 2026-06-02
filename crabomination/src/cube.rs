@@ -807,6 +807,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         basilica_screecher,
         tithe_drinker,
         kingpins_pet,
+        // ── claude/modern_decks: aristocrats / sac-fodder ──
+        zulaport_cutthroat,
+        doomed_dissenter,
+        nantuko_husk,
+        bloodthrone_vampire,
         // ── claude/modern_decks: Explore (CR 701.40) ──
         seekers_squire,
         // ── classic core-set bodies (claude/modern_decks) ──
