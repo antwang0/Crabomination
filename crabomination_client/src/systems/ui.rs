@@ -129,13 +129,17 @@ pub fn update_castable_highlights(
     } else {
         view.0
             .as_ref()
-            // Union the normal castable set with cards playable via their
-            // Dash alternative cost (CR 702.110) so dash creatures also light
-            // up as "playable now."
+            // Union the normal castable set with cards playable via an
+            // alternative path so they all light up as "playable now":
+            // Dash (CR 702.110), an exile-to-pitch ability (Force of Will /
+            // Spirit Guides — these may be uncastable for mana yet still
+            // pitchable), and a kicker-paid cast (CR 702.32).
             .map(|cv| {
                 cv.castable_hand
                     .iter()
                     .chain(cv.dashable_hand.iter())
+                    .chain(cv.pitchable_hand.iter())
+                    .chain(cv.kickable_hand.iter())
                     .copied()
                     .collect()
             })

@@ -40,11 +40,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `auto_targets_for_effect_all_slots` isn't reached from the trigger
   dispatch path (same root as the Saheeli emblem note below). Thread the
   multi-slot picker through `fire_step_triggers` / trigger auto-target.
-- **Client kicker affordance.** `ClientView.kickable_hand` now lists hand
-  cards castable with their kicker paid; the 3D client should render a
-  distinct "pay kicker?" badge/toggle (separate from castable-green and
-  the pitch affordance) and submit `GameAction::CastSpellKicked`. Not
-  compile-verified here (client can't build in this sandbox).
+- **Client kicker affordance.** `kickable_hand` (and `pitchable_hand`) now
+  light up green as "playable now" via `update_castable_highlights` (unioned
+  into the castable set alongside `dashable_hand`). Still wanted: a *distinct*
+  "pay kicker?" badge/toggle that submits `GameAction::CastSpellKicked`
+  (vs. the plain castable-green). Not compile-verified here (client can't
+  build in this sandbox).
 - **Provoke (targeted must-block).** `Keyword::AllMustBlock` (Lure) +
   `MustBeBlocked` (Academic Dispute) cover the untargeted 509.1c cases;
   Provoke's "that creature must block this + untap it" needs a per-blocker
@@ -61,11 +62,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   into the kick (a "pay kicker?" toggle on cast) and a bot heuristic to
   kick when profitable (today the bot only casts unkicked); more kicker
   cards (multikicker, kicker-with-different-effect riders).
-- **Pitch affordance in client** — `ClientView.pitchable_hand` now lists hand
-  cards with a `from_hand` ability (Spirit Guides). The 3D client should
-  render a distinct edge/badge for these (separate from the castable-green
-  highlight) so a player sees they can exile-to-pitch for mana. Not
-  compile-verified here (client can't build in this sandbox).
+- **Pitch affordance in client** — `pitchable_hand` cards (Force of Will /
+  Spirit Guides) now light up green as "playable now" (unioned into
+  `update_castable_highlights`), so a card uncastable for mana but pitchable
+  still shows as playable. Still wanted: a *distinct* edge/badge separating
+  pitch-castable from hard-castable. Not compile-verified here (client can't
+  build in this sandbox).
 
 - **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee/
   Bloodthirst this run): **Monstrosity** ✅ (`CardInstance.monstrous` +
