@@ -2599,7 +2599,33 @@ fn goldspan_dragon_attack_creates_a_treasure() {
     }]))
     .expect("Goldspan Dragon attacks");
     drain_stack(&mut g);
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"));
+    let treasure = g.battlefield.iter().find(|c| c.definition.name == "Treasure")
+        .expect("attack mints a Treasure");
+    // Goldspan's Treasure taps+sacs for *two* mana of one color.
+    let tid = treasure.id;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tid, ability_index: 0, target: None, x_value: None,
+    }).expect("Treasure mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "Goldspan Treasure yields two mana");
+}
+
+#[test]
+fn goldspan_dragon_treasure_on_becoming_targeted() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::goldspan_dragon());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.cast_spell(bolt, Some(Target::Permanent(dragon)), vec![], None, None)
+        .expect("Bolt targets Goldspan");
+    drain_stack(&mut g);
+    // Becoming targeted minted a Treasure for Goldspan's controller; the 4/4
+    // survives the 3 damage.
+    assert!(g.battlefield.iter().any(|c| c.id == dragon), "4/4 survives Bolt");
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
+        "becoming the target of a spell mints a Treasure");
 }
 
 #[test]
@@ -19641,6 +19667,29 @@ fn phantasmal_image_copies_and_keeps_illusion_plus_sacrifice_rider() {
     assert!(img.definition.triggered_abilities.iter()
         .any(|t| t.event.kind == EventKind::BecameTarget),
         "gained 'when targeted, sacrifice it' rider");
+}
+
+#[test]
+fn phantasmal_image_sacrifices_itself_when_targeted() {
+    // The copy's "when this becomes the target of a spell or ability,
+    // sacrifice it" rider now actually fires (BecameTarget SelfSource).
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::phantasmal_image());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Opponent bolts the Image — targeting it sacrifices it.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.cast_spell(bolt, Some(Target::Permanent(id)), vec![], None, None)
+        .expect("Bolt targets the Image");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == id),
+        "Phantasmal Image sacrificed on becoming a target");
 }
 
 #[test]

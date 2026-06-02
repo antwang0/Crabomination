@@ -689,17 +689,18 @@ pub fn voldaren_epicure() -> CardDefinition {
 }
 
 /// Goldspan Dragon — {3}{R}{R}, 4/4 Dragon with Flying and Haste. Whenever
-/// this attacks, create a Treasure token.
-///
-/// Approximation: the real card's "becomes the target of a spell" trigger
-/// is omitted (no targeting event exists in the engine yet), and the
-/// static "Treasures you control have `{T}, Sac: Add 2 mana of any one
-/// color`" rider is dropped — Goldspan's Treasures are vanilla
-/// 1-mana-of-any-color tokens. Document the Treasure-2 upgrade as a
-/// follow-up if we add per-controller token-ability modification.
+/// this attacks or becomes the target of a spell, create a Treasure token.
+/// Goldspan's Treasures tap+sac for two mana of one color
+/// (`goldspan_treasure_token`). The static is modeled on the Treasures it
+/// mints (the common case) rather than retagging every Treasure you control.
 pub fn goldspan_dragon() -> CardDefinition {
-    use crate::game::effects::treasure_token;
+    use crate::game::effects::goldspan_treasure_token;
     use crate::mana::r;
+    let make_treasure = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: goldspan_treasure_token(),
+    };
     CardDefinition {
         name: "Goldspan Dragon",
         cost: cost(&[generic(3), r(), r()]),
@@ -712,14 +713,16 @@ pub fn goldspan_dragon() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: treasure_token(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: make_treasure(),
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                effect: make_treasure(),
+            },
+        ],
         ..Default::default()
     }
 }

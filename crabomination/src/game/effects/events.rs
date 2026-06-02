@@ -132,6 +132,13 @@ pub(crate) fn event_matches_spec(
             // the permanent that became monstrous.
             event,
             GameEvent::BecameMonstrous { card_id } if *card_id == source.id
+        ) || matches!(
+            // "When this becomes the target of a spell or ability." The
+            // implicit target==source.id check above already constrained it;
+            // accept the event here so the SelfSource trigger fires (Goldspan
+            // Dragon's Treasure, Phantasmal Image's sacrifice rider).
+            event,
+            GameEvent::BecameTarget { target, .. } if *target == source.id
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A

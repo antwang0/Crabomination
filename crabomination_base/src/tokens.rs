@@ -130,6 +130,32 @@ pub fn treasure_token() -> TokenDefinition {
     }
 }
 
+/// Treasure as enhanced by Goldspan Dragon — "{T}, Sacrifice this artifact:
+/// Add two mana of any one color." (Goldspan grants this to Treasures you
+/// control; modeled on the Treasures it mints, the common play pattern.)
+pub fn goldspan_treasure_token() -> TokenDefinition {
+    TokenDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(2)),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None, from_hand: false,
+        }],
+        ..treasure_token()
+    }
+}
+
 pub fn blood_token() -> TokenDefinition {
     TokenDefinition {
         name: "Blood".into(),

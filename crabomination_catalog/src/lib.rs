@@ -32,7 +32,9 @@ mod game {
         pub use crabomination_base::TurnStep;
     }
     pub mod effects {
-        pub use crabomination_base::tokens::{blood_token, clue_token, treasure_token};
+        pub use crabomination_base::tokens::{
+            blood_token, clue_token, goldspan_treasure_token, treasure_token,
+        };
     }
 }
 
