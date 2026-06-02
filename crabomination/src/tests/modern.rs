@@ -8438,6 +8438,44 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
 #[test]
+fn grief_etb_discards_a_nonland_card() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::grief());
+    let victim = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].hand.retain(|c| c.id == victim); // exactly one nonland card
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Grief castable for {1}{B}{B}");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == victim),
+        "Grief's ETB discards the opponent's nonland card");
+}
+
+#[test]
+fn fury_evoke_etb_deals_four_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fury());
+    let pitch = g.add_card_to_hand(0, catalog::lightning_bolt()); // red card to evoke
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: Some(pitch),
+        target: None,
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Fury evoke should succeed");
+    drain_stack(&mut g);
+    // The ETB auto-targets the lone creature and dumps all 4 damage into it.
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "Fury's evoke ETB deals a lethal 4 to the 4/4");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Fury sacrificed via evoke");
+}
+
+#[test]
 fn bot_kicks_tear_asunder_to_hit_a_creature() {
     use crate::server::bot::{Bot, RandomBot};
     let mut g = two_player_game();

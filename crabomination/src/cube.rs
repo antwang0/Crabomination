@@ -803,6 +803,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         nekrataal,
         skinrender,
         fatal_push,
+        // ── Evoke Incarnation (MH2) ──
+        grief,
         // ── modern_decks (dredge): Stinkweed Imp ──
         stinkweed_imp,
         // ── modern_decks (dredge/aura) ──
@@ -1047,6 +1049,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
+        // ── Evoke Incarnation (MH2) ──
+        fury,
         // ── divided-damage burn (claude/modern_decks) ──
         arc_lightning,
         forked_lightning,

@@ -397,6 +397,74 @@ pub fn solitude() -> CardDefinition {
     }
 }
 
+/// Grief — {1}{B}{B} Creature — Elemental Incarnation, 3/2, Menace.
+/// Evoke—exile a black card from hand. ETB: target opponent discards a
+/// nonland card you choose (Thoughtseize-on-ETB). (Reveal-hand step
+/// collapses to the engine's `DiscardChosen`.)
+pub fn grief() -> CardDefinition {
+    CardDefinition {
+        name: "Grief",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+        }],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: ManaCost::default(),
+            exile_filter: Some(SelectionRequirement::HasColor(Color::Black)),
+            evoke_sacrifice: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Fury — {3}{R}{R} Creature — Elemental Incarnation, 3/3, Double strike.
+/// Evoke—exile a red card from hand. ETB: deal 4 damage divided as you
+/// choose among up to two target creatures and/or planeswalkers.
+pub fn fury() -> CardDefinition {
+    CardDefinition {
+        name: "Fury",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamageDivided {
+                total: Value::Const(4),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker),
+                max_targets: 2,
+            },
+        }],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: ManaCost::default(),
+            exile_filter: Some(SelectionRequirement::HasColor(Color::Red)),
+            evoke_sacrifice: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 // ── Sideboard creatures ──────────────────────────────────────────────────────
 
 /// Chancellor of the Annex — {4}{W}{W}, 5/6 Avatar. Flying. "You may reveal
