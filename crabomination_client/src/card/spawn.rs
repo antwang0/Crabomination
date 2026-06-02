@@ -59,6 +59,13 @@ pub fn init_shared_assets(
         cull_mode: None,
         ..default()
     });
+    // Cyan "playable only via an alternative cost" border (Dash / pitch).
+    let alt_castable_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.15, 0.80, 0.95),
+        unlit: true,
+        cull_mode: None,
+        ..default()
+    });
     // Red "will die in combat" border.
     let dying_material = materials.add(StandardMaterial {
         base_color: Color::srgb(0.95, 0.12, 0.12),
@@ -70,6 +77,7 @@ pub fn init_shared_assets(
         border_mesh: border_mesh_handle,
         border_material,
         castable_material,
+        alt_castable_material,
         dying_material,
     });
     commands.insert_resource(CardMeshAssets {

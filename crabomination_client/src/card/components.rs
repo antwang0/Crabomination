@@ -373,24 +373,33 @@ pub struct RevealPeekAnimation {
 pub struct CardHighlightAssets {
     pub border_mesh: Handle<Mesh>,
     pub border_material: Handle<StandardMaterial>,
-    /// Green border for the "castable now" hand highlight. Distinct from
-    /// the gold `border_material` (hover / valid-target / put-on-library)
-    /// so a castable card reads differently from a targeting candidate.
+    /// Green border for a hand card castable *for its normal cost* now.
+    /// Distinct from the gold `border_material` (hover / valid-target /
+    /// put-on-library) so a castable card reads differently from a
+    /// targeting candidate.
     pub castable_material: Handle<StandardMaterial>,
+    /// Cyan border for a hand card playable only via an *alternative*
+    /// path (Dash, pitch/exile, etc.) — not affordable for its normal
+    /// cost. Signals "you can play this, but it costs something other
+    /// than just mana" vs. the plain-green hard-castable.
+    pub alt_castable_material: Handle<StandardMaterial>,
     /// Red border for battlefield creatures the current combat preview
     /// projects to die. Distinct from gold/green so a doomed creature
     /// reads as a warning, not a candidate.
     pub dying_material: Handle<StandardMaterial>,
 }
 
-/// Links a viewer hand card to its spawned "castable now" green border
-/// meshes (back, front). Mirrors [`CardBorderHighlight`] but driven by
-/// `update_castable_highlights` off the view's `castable_hand` set rather
-/// than by pointer hover.
+/// Links a viewer hand card to its spawned "playable now" border meshes
+/// (back, front). Mirrors [`CardBorderHighlight`] but driven by
+/// `update_castable_highlights` off the view's castable/alt-cost sets
+/// rather than by pointer hover. `alt` records which colour is currently
+/// applied (green hard-castable vs. cyan alt-cost) so the system can
+/// re-tint a card whose category changes without leaking borders.
 #[derive(Component)]
 pub struct CastableHighlight {
     pub back: Entity,
     pub front: Entity,
+    pub alt: bool,
 }
 
 /// Links a battlefield card to its spawned red "will die in combat" border

@@ -93,16 +93,20 @@ pub fn highlight_hovered_cards(
     }
 }
 
-/// Spawn / despawn a green "castable now" border around each viewer hand
-/// card listed in the view's `castable_hand` set (computed server-side via
-/// the engine's `would_accept` dry-run, so it already reflects timing,
-/// mana, taxes, and target availability). Mirrors the hover-border /
-/// put-on-library highlight pattern.
+/// Spawn / despawn a "playable now" border around each viewer hand card,
+/// in one of two colours: **green** for cards castable for their normal
+/// cost (`castable_hand`), **cyan** for cards playable only via an
+/// alternative path — Dash, pitch/exile, kicker (`dashable_hand` /
+/// `pitchable_hand` / `kickable_hand`, minus anything already
+/// hard-castable). All are computed server-side via the engine's
+/// `would_accept` dry-run, so they already reflect timing, mana, taxes,
+/// and target availability. Mirrors the hover-border / put-on-library
+/// highlight pattern.
 ///
 /// Suppressed while the targeting cursor is active — there the gold
 /// valid-target borders own the hand visuals and a second border set would
-/// only stack and z-fight. The set is also naturally empty when the viewer
-/// lacks priority (you can't cast then anyway).
+/// only stack and z-fight. The sets are also naturally empty when the
+/// viewer lacks priority (you can't cast then anyway).
 #[allow(clippy::type_complexity)]
 pub fn update_castable_highlights(
     mut commands: Commands,
@@ -124,40 +128,71 @@ pub fn update_castable_highlights(
         commands.entity(entity).remove::<CastableHighlight>();
     }
 
-    let castable: std::collections::HashSet<crabomination::card::CardId> = if targeting.active {
-        std::collections::HashSet::new()
+    // `hard` = castable for the normal cost (green). `alt` = playable only
+    // via an alternative path — Dash (CR 702.110), an exile-to-pitch
+    // ability (Force of Will / Spirit Guides), or kicker (CR 702.32) — that
+    // ISN'T already hard-castable (cyan). A card hard-castable *and*
+    // kickable stays green: you can just cast it, and kicker is an opt-in
+    // rather than an alternative path.
+    let (hard, alt): (
+        std::collections::HashSet<crabomination::card::CardId>,
+        std::collections::HashSet<crabomination::card::CardId>,
+    ) = if targeting.active {
+        (Default::default(), Default::default())
+    } else if let Some(cv) = view.0.as_ref() {
+        let hard: std::collections::HashSet<crabomination::card::CardId> =
+            cv.castable_hand.iter().copied().collect();
+        let alt = cv
+            .dashable_hand
+            .iter()
+            .chain(cv.pitchable_hand.iter())
+            .chain(cv.kickable_hand.iter())
+            .copied()
+            .filter(|id| !hard.contains(id))
+            .collect();
+        (hard, alt)
     } else {
-        view.0
-            .as_ref()
-            // Union the normal castable set with cards playable via an
-            // alternative path so they all light up as "playable now":
-            // Dash (CR 702.110), an exile-to-pitch ability (Force of Will /
-            // Spirit Guides — these may be uncastable for mana yet still
-            // pitchable), and a kicker-paid cast (CR 702.32).
-            .map(|cv| {
-                cv.castable_hand
-                    .iter()
-                    .chain(cv.dashable_hand.iter())
-                    .chain(cv.pitchable_hand.iter())
-                    .chain(cv.kickable_hand.iter())
-                    .copied()
-                    .collect()
-            })
-            .unwrap_or_default()
+        (Default::default(), Default::default())
     };
 
     for (entity, gid, marker) in &hand_cards {
-        let should = castable.contains(&gid.0);
-        match (should, marker) {
-            (true, None) => {
+        // Desired colour: Some(false) = green hard-castable,
+        // Some(true) = cyan alt-cost, None = no border.
+        let desired = if hard.contains(&gid.0) {
+            Some(false)
+        } else if alt.contains(&gid.0) {
+            Some(true)
+        } else {
+            None
+        };
+        match (desired, marker) {
+            // Already showing the right colour — nothing to do.
+            (Some(is_alt), Some(h)) if h.alt == is_alt => {}
+            // No longer playable (or targeting took over) — tear down.
+            (None, Some(h)) => {
+                commands.entity(h.back).despawn();
+                commands.entity(h.front).despawn();
+                commands.entity(entity).remove::<CastableHighlight>();
+            }
+            // New highlight, or the category flipped (re-tint) — (re)spawn.
+            (Some(is_alt), prev) => {
+                if let Some(h) = prev {
+                    commands.entity(h.back).despawn();
+                    commands.entity(h.front).despawn();
+                }
+                let mat = if is_alt {
+                    assets.alt_castable_material.clone()
+                } else {
+                    assets.castable_material.clone()
+                };
                 // Sits slightly proud of the hover border (0.001) so a card
-                // that is both castable and hovered shows both rings without
+                // that is both playable and hovered shows both rings without
                 // z-fighting.
                 let offset = CARD_THICKNESS / 2.0 + 0.0018;
                 let back = commands
                     .spawn((
                         Mesh3d(assets.border_mesh.clone()),
-                        MeshMaterial3d(assets.castable_material.clone()),
+                        MeshMaterial3d(mat.clone()),
                         Transform::from_xyz(0.0, 0.0, -offset),
                         Pickable::IGNORE,
                     ))
@@ -165,22 +200,17 @@ pub fn update_castable_highlights(
                 let front = commands
                     .spawn((
                         Mesh3d(assets.border_mesh.clone()),
-                        MeshMaterial3d(assets.castable_material.clone()),
+                        MeshMaterial3d(mat),
                         Transform::from_xyz(0.0, 0.0, offset),
                         Pickable::IGNORE,
                     ))
                     .id();
                 commands
                     .entity(entity)
-                    .insert(CastableHighlight { back, front })
+                    .insert(CastableHighlight { back, front, alt: is_alt })
                     .add_children(&[back, front]);
             }
-            (false, Some(h)) => {
-                commands.entity(h.back).despawn();
-                commands.entity(h.front).despawn();
-                commands.entity(entity).remove::<CastableHighlight>();
-            }
-            _ => {}
+            (None, None) => {}
         }
     }
 }
