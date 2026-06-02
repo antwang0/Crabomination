@@ -8569,6 +8569,74 @@ fn bot_kicks_tear_asunder_to_hit_a_creature() {
 }
 
 #[test]
+fn think_twice_draws_and_has_flashback() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::think_twice());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Think Twice castable for {1}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "cast -1 + draw +1 = net 0");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Think Twice"),
+        "Think Twice is in the graveyard (flashback available)");
+}
+
+#[test]
+fn forbidden_alchemy_digs_four_and_buries_the_rest() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::forbidden_alchemy());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Forbidden Alchemy castable for {2}{U}");
+    drain_stack(&mut g);
+    // One of the top four goes to hand; the other three are milled.
+    assert_eq!(g.players[0].hand.len(), hand_before, "cast -1 + pick +1 = net 0 hand");
+    assert!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count() >= 3,
+        "the other three dug cards are milled");
+}
+
+#[test]
+fn pilgrims_eye_fetches_a_basic_to_hand() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::pilgrims_eye());
+    g.players[0].mana_pool.add_colorless(2);
+    // AutoDecider declines searches; script the basic-land pick.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pilgrim's Eye castable for {2}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"),
+        "ETB tutors a basic land into hand");
+}
+
+#[test]
+fn goblin_king_anthems_goblins() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_king());
+    let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // 1/1 Goblin
+    let cp = g.computed_permanent(raider).expect("raider alive");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "Goblin King anthems other Goblins +1/+1");
+}
+
+#[test]
+fn phantom_monster_is_a_three_three_flyer() {
+    use crate::card::Keyword;
+    let def = catalog::phantom_monster();
+    assert_eq!((def.power, def.toughness), (3, 3));
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
 fn champion_of_the_parish_grows_when_a_human_enters() {
     let mut g = two_player_game();
     let champ = g.add_card_to_battlefield(0, catalog::champion_of_the_parish());

@@ -217,6 +217,8 @@ fn colorless_pool() -> Vec<CardFactory> {
     vec![
         // ── Eldrazi (colorless {C} cost) ──
         reality_smasher,
+        // ── colorless utility ──
+        pilgrims_eye,
         // ── classic colorless core-set bodies (claude/modern_decks) ──
         obsianus_golem,
         yotian_soldier,
@@ -601,6 +603,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         aether_figment,
         glint_nest_crane,
         merfolk_looter,
+        think_twice,
+        forbidden_alchemy,
+        phantom_monster,
         // ── Delve dragon (MH2) ──
         murktide_regent,
         // ── classic core-set bodies (claude/modern_decks) ──
@@ -1064,6 +1069,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_bushwhacker,
         goblin_chainwhirler,
         seasoned_pyromancer,
+        goblin_king,
         // ── UR spellslinger ──
         goblin_electromancer,
         wee_dragonauts,

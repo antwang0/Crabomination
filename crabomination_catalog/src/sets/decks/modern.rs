@@ -6550,6 +6550,111 @@ pub fn aether_figment() -> CardDefinition {
     }
 }
 
+/// Think Twice — {1}{U} Instant. Draw a card. Flashback {2}{U}.
+pub fn think_twice() -> CardDefinition {
+    CardDefinition {
+        name: "Think Twice",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(ManaCost {
+            symbols: vec![ManaSymbol::Generic(2), ManaSymbol::Colored(Color::Blue)],
+        })],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Forbidden Alchemy — {2}{U} Instant. Look at the top four cards of your
+/// library; put one into your hand and the rest into your graveyard.
+/// Flashback {6}{B}.
+pub fn forbidden_alchemy() -> CardDefinition {
+    CardDefinition {
+        name: "Forbidden Alchemy",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(ManaCost {
+            symbols: vec![ManaSymbol::Generic(6), ManaSymbol::Colored(Color::Black)],
+        })],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: true,
+            pick_filter: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Pilgrim's Eye — {2} Artifact Creature — Thopter, 1/1, Flying. ETB:
+/// search your library for a basic land, reveal it, put it into your hand,
+/// then shuffle.
+pub fn pilgrims_eye() -> CardDefinition {
+    CardDefinition {
+        name: "Pilgrim's Eye",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Goblin King — {1}{R}{R} Creature — Goblin, 2/2. Other Goblins you
+/// control get +1/+1. (Mountainwalk granted clause omitted.)
+pub fn goblin_king() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Goblin King",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Goblins you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phantom Monster — {3}{U} Creature — Phantom Monster, 3/3, Flying.
+pub fn phantom_monster() -> CardDefinition {
+    CardDefinition {
+        name: "Phantom Monster",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
 /// Champion of the Parish — {W} Creature — Human Soldier, 1/1. "Whenever
 /// another Human enters under your control, put a +1/+1 counter on this."
 pub fn champion_of_the_parish() -> CardDefinition {
