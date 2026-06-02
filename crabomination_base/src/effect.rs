@@ -1275,6 +1275,14 @@ pub enum Effect {
         #[serde(default)]
         pick_filter: Option<SelectionRequirement>,
     },
+    /// "Reveal the top `count` cards of your library. For each card type, you
+    /// may put a card of that type from among them into your hand. Put the
+    /// rest on the bottom of your library in a random order." Atraxa, Grand
+    /// Unifier. Resolution takes one revealed card per card type present
+    /// (a card satisfying multiple types is taken once); the leftovers are
+    /// bottomed. Card types considered: artifact, battle, creature,
+    /// enchantment, instant, land, planeswalker, sorcery.
+    RevealTopTakeOnePerType { who: PlayerRef, count: Value },
 
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.
@@ -1705,6 +1713,11 @@ pub enum Effect {
     /// step where the put-onto-battlefield clause is handled separately.
     RevealTopCard { who: PlayerRef },
 
+    /// Reveal the top card of `who`'s library; if it's a permanent card, put it
+    /// onto the battlefield under its owner's control (firing ETB). Otherwise
+    /// it stays on top. Chaos Warp.
+    RevealTopPutPermanentOntoBattlefield { who: PlayerRef },
+
     /// Controller chooses `count` cards from their hand and puts them on top of
     /// their library in a chosen order (first chosen = topmost).
     PutOnLibraryFromHand { who: PlayerRef, count: Value },
@@ -2088,6 +2101,9 @@ impl Effect {
             Effect::LookPickToHand { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::RevealTopTakeOnePerType { who, count } => {
+                player_has_target(who) || value_has_target(count)
+            }
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),
             Effect::Monstrosity { n } => value_has_target(n),
@@ -2182,7 +2198,9 @@ impl Effect {
             Effect::AddRadCounters { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
-            Effect::RevealTopAndDrawIf { who, .. } | Effect::RevealTopCard { who } => {
+            Effect::RevealTopAndDrawIf { who, .. }
+            | Effect::RevealTopCard { who }
+            | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }
             Effect::PutOnLibraryFromHand { who, count } => {

@@ -2920,6 +2920,52 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopTakeOnePerType { who, count } => {
+                use crate::card::CardType;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                // For each card type, take the first revealed (not-yet-taken)
+                // card bearing that type.
+                const TYPES: [CardType; 8] = [
+                    CardType::Artifact, CardType::Battle, CardType::Creature,
+                    CardType::Enchantment, CardType::Instant, CardType::Land,
+                    CardType::Planeswalker, CardType::Sorcery,
+                ];
+                let mut taken: Vec<crate::card::CardId> = Vec::new();
+                for ty in TYPES {
+                    if let Some(id) = revealed.iter().copied().find(|id| {
+                        !taken.contains(id)
+                            && self.players[p].library.iter()
+                                .find(|c| c.id == *id)
+                                .is_some_and(|c| c.definition.card_types.contains(&ty))
+                    }) {
+                        taken.push(id);
+                    }
+                }
+                // Pull taken cards into hand (preserve library order otherwise).
+                for id in &taken {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *id) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].hand.push(card);
+                    }
+                }
+                // Bottom the remaining revealed cards (random order).
+                let rest: Vec<crate::card::CardId> =
+                    revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
+                for id in rest {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ShuffleGraveyardIntoLibrary { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let cards = std::mem::take(&mut self.players[p].graveyard);
@@ -3015,6 +3061,26 @@ impl GameState {
                         card_name: top.definition.name,
                         is_land: top.definition.is_land(),
                     });
+                }
+                Ok(())
+            }
+
+            Effect::RevealTopPutPermanentOntoBattlefield { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    let (cid, name, is_land, is_perm) = (
+                        top.id, top.definition.name, top.definition.is_land(),
+                        top.definition.is_permanent(),
+                    );
+                    events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+                    if is_perm {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                            ctx,
+                            events,
+                        );
+                    }
                 }
                 Ok(())
             }

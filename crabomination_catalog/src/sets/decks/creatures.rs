@@ -154,11 +154,8 @@ pub fn devourer_of_destiny() -> CardDefinition {
 /// ten cards of your library, you may put up to one of each card type
 /// into your hand, the rest on the bottom.
 ///
-/// Wired ETB: `Effect::AtraxaRevealTopTen` — counts distinct card types in
-/// the top 10 of the controller's library and draws that many cards. The
-/// ordering of "draw from the top after reordering" is collapsed to plain
-/// Draw N for simplicity — gameplay-equivalent in expected card economy
-/// for a typical reanimator pile (no library manipulation reordering).
+/// ETB reveals the top ten and takes one card of each card type into hand
+/// (`Effect::RevealTopTakeOnePerType`), bottoming the rest.
 pub fn atraxa_grand_unifier() -> CardDefinition {
     CardDefinition {
         name: "Atraxa, Grand Unifier",
@@ -180,17 +177,9 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            // Draw `DistinctCardTypesInTopN(You, 10)` cards. With the new
-            // `Value::DistinctTypesInTopOfLibrary`, we count actual card
-            // types in the top 10 of the controller's library rather than
-            // assuming a flat 4 — so a graveyard-heavy library reveals
-            // fewer types and a balanced library reveals more.
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::DistinctTypesInTopOfLibrary {
-                    who: PlayerRef::You,
-                    count: Box::new(Value::Const(10)),
-                },
+            effect: Effect::RevealTopTakeOnePerType {
+                who: PlayerRef::You,
+                count: Value::Const(10),
             },
         }],
         ..Default::default()

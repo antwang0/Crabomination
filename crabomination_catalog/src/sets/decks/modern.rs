@@ -5939,11 +5939,6 @@ pub fn crabomination() -> CardDefinition {
 /// Chaos Warp — {2}{R} Instant. The owner of target permanent shuffles it
 /// into their library, then reveals the top card. If it's a permanent card,
 /// they put it onto the battlefield; otherwise it stays on top.
-///
-/// Approximation: shuffles the target in, then fires `RevealTopCard` so the
-/// client shows the flip animation.  The "put onto the battlefield if it's a
-/// permanent" clause is still collapsed — implementing arbitrary-card ETB from
-/// the library top requires a pipeline we don't have yet.
 pub fn chaos_warp() -> CardDefinition {
     use crate::effect::LibraryPosition;
     CardDefinition {
@@ -5958,7 +5953,7 @@ pub fn chaos_warp() -> CardDefinition {
                     pos: LibraryPosition::Shuffled,
                 },
             },
-            Effect::RevealTopCard {
+            Effect::RevealTopPutPermanentOntoBattlefield {
                 who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
             },
         ]),

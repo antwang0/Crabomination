@@ -2516,8 +2516,8 @@ fn spoils_of_the_vault_tutors_and_loses_three_life() {
 
 #[test]
 fn atraxa_grand_unifier_etb_draws_per_distinct_type() {
-    // ETB now draws `DistinctTypesInTopOfLibrary(top 10)` cards. Library
-    // here is 6 forests (Land), so distinct = 1 → draw 1.
+    // ETB reveals top 10 and takes one card of each type. Library here is
+    // 6 forests (Land), so only one Land is taken → hand +1.
     let mut g = two_player_game();
     for _ in 0..6 {
         g.add_card_to_library(0, catalog::forest());
@@ -2567,7 +2567,38 @@ fn atraxa_grand_unifier_draws_per_card_type_diverse_library() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before_cast + 3,
-        "3 distinct card types in library → draw 3");
+        "3 distinct card types in library → take 3");
+}
+
+#[test]
+fn atraxa_takes_one_per_type_and_bottoms_the_rest() {
+    // Top of library: two Forests (Land) + one Grizzly Bears (Creature).
+    // Atraxa takes one Land + the Creature into hand; the extra Forest is
+    // bottomed (not taken, not lost).
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    let atraxa = g.add_card_to_hand(0, catalog::atraxa_grand_unifier());
+    g.players[0].mana_pool.add_colorless(3);
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        g.players[0].mana_pool.add(c, 1);
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: atraxa, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    // One Land + one Creature taken → hand +2.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears), "Creature taken");
+    // Exactly one Forest remains, on the bottom of the library.
+    let forests: Vec<_> = g.players[0].library.iter()
+        .filter(|c| c.definition.name == "Forest").collect();
+    assert_eq!(forests.len(), 1, "the extra Forest is bottomed, not lost");
+    assert_eq!(g.players[0].library.last().map(|c| c.definition.name), Some("Forest"));
 }
 
 #[test]

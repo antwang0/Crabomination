@@ -10125,14 +10125,16 @@ fn crabomination_etb_mills_each_opponent_three_cards() {
 }
 
 #[test]
-fn chaos_warp_sends_target_permanent_to_owners_library() {
+fn chaos_warp_reshuffles_target_and_replays_revealed_permanent() {
+    // With the owner's library otherwise empty, the shuffled-in bear is the
+    // sole card → revealed top → put back onto the battlefield (CR-faithful).
     let mut g = two_player_game();
+    g.players[1].library.clear();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::chaos_warp());
     g.players[0].mana_pool.add_colorless(2);
     g.players[0].mana_pool.add(Color::Red, 1);
 
-    let lib_before = g.players[1].library.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
@@ -10141,11 +10143,29 @@ fn chaos_warp_sends_target_permanent_to_owners_library() {
     }).expect("Chaos Warp castable for {2}{R}");
     drain_stack(&mut g);
 
-    assert!(g.battlefield_find(bear).is_none(),
-        "Bear left the battlefield");
-    assert_eq!(g.players[1].library.len(), lib_before + 1,
-        "Bear returns to its owner's library");
-    assert!(g.players[1].library.iter().any(|c| c.id == bear));
+    // The revealed card was a permanent → it's on the battlefield (a fresh
+    // object under its owner's control); the library is empty again.
+    assert!(g.players[1].library.is_empty());
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.definition.name == "Grizzly Bears"),
+        "revealed permanent is put onto the battlefield");
+}
+
+#[test]
+fn chaos_warp_reveals_nonpermanent_and_leaves_it_on_top() {
+    // Direct test of the reveal-and-replay effect: a Lightning Bolt on top
+    // is not a permanent, so it stays put and nothing enters.
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bf_before = g.battlefield.len();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(
+        &Effect::RevealTopPutPermanentOntoBattlefield { who: crate::effect::PlayerRef::You },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].library.first().map(|c| c.id), Some(bolt),
+        "non-permanent stays on top");
+    assert_eq!(g.battlefield.len(), bf_before, "nothing entered the battlefield");
 }
 
 #[test]

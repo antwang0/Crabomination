@@ -245,25 +245,20 @@ pub fn thud() -> CardDefinition {
 
 /// Inquisition of Kozilek — {B} Sorcery. Target opponent reveals their hand;
 /// you choose a nonland card with mana value 3 or less; they discard it.
-///
-/// Targeting is approximated as `EachOpponent` (correct in 2-player). The
-/// caster auto-picks the first nonland card with mana value ≤ 3.
+/// `DiscardChosen` lets the caster pick (suspends to a UI modal for a human
+/// picker; AutoDecider takes the first match). `EachOpponent` is correct in
+/// 2-player.
 pub fn inquisition_of_kozilek() -> CardDefinition {
     CardDefinition {
         name: "Inquisition of Kozilek",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::DiscardChosen {
             from: Selector::Player(PlayerRef::EachOpponent),
             count: Value::Const(1),
             filter: SelectionRequirement::Nonland
                 .and(SelectionRequirement::ManaValueAtMost(3)),
         },
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
