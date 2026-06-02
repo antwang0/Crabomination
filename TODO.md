@@ -8,6 +8,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Scryfall is blocked by the web-session network policy** (HTTP 403 for
+  `api.scryfall.com`, both `scripts/fetch_cards.py` and the `WebFetch`
+  tool). Only the 332 cards already in `scripts/.scryfall_cache.json` are
+  available — all of which are implemented. New-card work that needs
+  Scryfall verification (the ⏳ cube TBDs: Baloth Prime, Icetill Explorer,
+  Mightform Harmonizer, Ouroboroid, Springleaf Parade, Metamorphosis
+  Fanatic, The Endstone, the *verge* / tri-landscape lands, etc.) is
+  blocked until a session with Scryfall egress runs. Prefer promoting the
+  documented 🟡 partials and engine primitives meanwhile.
+
 - **"May" triggers: bot now value-aware; human suspend still ⏳.**
   `AutoDecider` still declines every `Decision::OptionalTrigger`
   (`Bool(false)`), but **`RandomBot` now takes beneficial ones**
