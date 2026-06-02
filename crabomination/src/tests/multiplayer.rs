@@ -817,6 +817,31 @@ fn three_player_ffa_ends_with_last_player_standing() {
     assert!(events.iter().any(|e| matches!(e, GameEvent::GameOver { winner: Some(1) })));
 }
 
+/// CR 800.4a — when a player leaves the game, the cards/tokens they own
+/// leave with them, and permanents they controlled but didn't own revert to
+/// their owners' control.
+#[test]
+fn cr_800_4a_departed_players_objects_leave_and_control_reverts() {
+    let mut g = multi_player_game(3);
+    // Seat 0 owns a creature; seat 2 owns one but seat 0 has stolen it.
+    let owned = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stolen = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == stolen) {
+        c.controller = 0; // seat 0 controls seat 2's creature
+    }
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+
+    g.players[0].life = 0; // seat 0 leaves the game
+    g.check_state_based_actions();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == owned),
+        "seat 0's owned creature leaves the game with them");
+    let reverted = g.battlefield.iter().find(|c| c.id == stolen)
+        .expect("seat 2's creature stays in play");
+    assert_eq!(reverted.controller, 2, "control reverts to its owner (seat 2)");
+    assert!(g.players[0].hand.is_empty(), "the departed player's hand leaves");
+}
+
 /// All seats eliminated simultaneously → draw (winner=None). Pre-existing
 /// behavior preserved through the team-aware refactor.
 #[test]

@@ -3022,6 +3022,13 @@ pub enum StaticEffect {
     /// ("your life total can't change") and by future "your opponent
     /// can't lose life" payoffs.
     PlayerCannotLoseLife { target: PlayerStaticTarget },
+    /// CR 121.2b — Targeted players can't draw more than `max` cards each
+    /// turn. While active, an `Effect::Draw` that would push a player past
+    /// `max` (counting `Player.cards_drawn_this_turn`) is truncated. Models
+    /// "Each player can't draw more than one card each turn" effects (Aven
+    /// Mindcensor-style draw locks, Spirit of the Labyrinth's `max: 1`
+    /// applied to each opponent).
+    CapDrawsPerTurn { target: PlayerStaticTarget, max: u32 },
     /// Damping-Sphere-style "lands that tap for more than one mana enter
     /// producing only {C}". Detected at `play_land` time: if any active
     /// `LandsTapColorlessOnly` static is in play, the entering land's

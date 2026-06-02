@@ -5495,6 +5495,54 @@ fn cr_704_5j_legend_rule_different_controllers_coexist() {
     );
 }
 
+// ── CR 121.2b — per-turn draw cap ────────────────────────────────────────
+
+#[test]
+fn cr_121_2b_draw_cap_truncates_draws() {
+    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::effect::PlayerStaticTarget;
+    let mut g = two_player_game();
+    // Synthetic enchantment: each player can't draw more than one card/turn.
+    let lock = CardDefinition {
+        name: "Labyrinth Lock",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        static_abilities: vec![StaticAbility {
+            description: "Each player can't draw more than one card each turn.",
+            effect: StaticEffect::CapDrawsPerTurn {
+                target: PlayerStaticTarget::EachPlayer,
+                max: 1,
+            },
+        }],
+        ..Default::default()
+    };
+    g.add_card_to_battlefield(1, lock);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let hand_before = g.players[0].hand.len();
+    let ctx = EffectContext {
+        controller: 0,
+        source: None,
+        targets: vec![],
+        trigger_source: None,
+        mode: 0,
+        x_value: 0,
+        converged_value: 0,
+        mana_spent: 0,
+        source_name: None,
+        cast_from_hand: false,
+        event_amount: 0,
+        kicked: false,
+    };
+    g.resolve_effect(
+        &Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "draw cap truncates a draw-3 to a single card");
+}
+
 // ── CR 704.5c — empty library + draw attempt ─────────────────────────────
 
 /// CR 704.5c is already tested at cr_121_4 / empty_library; adding a

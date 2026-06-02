@@ -1090,6 +1090,25 @@ impl GameState {
         self.block_map.retain(|_, atk| *atk != id);
     }
 
+    /// CR 800.4a — handle a player leaving the game: all cards/tokens they
+    /// own leave with them (every zone), and permanents they controlled but
+    /// don't own revert to their owners' control. Objects leaving this way
+    /// are removed directly (not via the death/exile pipelines) since a
+    /// departing player's objects "cease to exist" rather than being
+    /// destroyed or sacrificed.
+    fn objects_leave_with_player(&mut self, p: usize) {
+        self.battlefield.retain(|c| c.owner != p);
+        for c in &mut self.battlefield {
+            if c.controller == p {
+                c.controller = c.owner; // control-changing effects end
+            }
+        }
+        self.exile.retain(|c| c.owner != p);
+        self.players[p].hand.clear();
+        self.players[p].library.clear();
+        self.players[p].graveyard.clear();
+    }
+
     pub(crate) fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
@@ -1137,7 +1156,7 @@ impl GameState {
         // share a controller, that player chooses one to keep; the rest go to
         // their owners' graveyards. We group tied permanents, then consult the
         // controller's decider per group (AutoDecider keeps the newest).
-        let legend_groups: Vec<(usize, String, Vec<(CardId, String)>)> = {
+        let legend_groups = {
             let mut order: Vec<(usize, &str)> = Vec::new();
             let mut groups: std::collections::HashMap<(usize, &str), Vec<(CardId, String)>> =
                 std::collections::HashMap::new();
@@ -1490,6 +1509,7 @@ impl GameState {
         // 704.5a). Poison stays per-player (CR 810.7b — 2HG shares
         // life but not poison; an individual teammate hitting 10
         // poison still loses).
+        let mut newly_eliminated: Vec<usize> = Vec::new();
         for i in 0..self.players.len() {
             if self.players[i].eliminated {
                 continue;
@@ -1508,7 +1528,16 @@ impl GameState {
                 || lost_to_commander;
             if lost {
                 self.players[i].eliminated = true;
+                newly_eliminated.push(i);
             }
+        }
+        // CR 800.4a — when a player leaves the game, every card and token
+        // they own leaves with them, and permanents they controlled but
+        // didn't own revert to their owners' control. (Stack items the
+        // departed player controlled ceasing to exist is a remaining gap;
+        // tracked in TODO.md.)
+        for &p in &newly_eliminated {
+            self.objects_leave_with_player(p);
         }
 
         // CR 104.2 / 810.7: the game ends when only one *team* has

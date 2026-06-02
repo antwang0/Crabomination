@@ -1122,6 +1122,30 @@ impl GameState {
         })
     }
 
+    /// CR 121.2b — the smallest per-turn draw cap currently imposed on
+    /// `seat` by any active `StaticEffect::CapDrawsPerTurn`, or `None` if
+    /// the seat may draw freely. Multiple caps take the strictest (min).
+    pub fn draw_cap_for(&self, seat: usize) -> Option<u32> {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        self.battlefield
+            .iter()
+            .flat_map(|src| {
+                src.definition.static_abilities.iter().filter_map(move |sa| {
+                    if let StaticEffect::CapDrawsPerTurn { target, max } = &sa.effect {
+                        let hits = match target {
+                            PlayerStaticTarget::Controller => src.controller == seat,
+                            PlayerStaticTarget::EachOpponent => src.controller != seat,
+                            PlayerStaticTarget::EachPlayer => true,
+                        };
+                        hits.then_some(*max)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .min()
+    }
+
     /// Replace the current team partition. Every seat must appear in
     /// exactly one entry; partitions must be non-empty. Used by team
     /// formats (2HG) after `new()` to group seats.
@@ -4495,6 +4519,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PlayerCannotLoseLife — consulted dynamically by adjust_life /
             // damage paths via player_cannot_lose_life_now; no layer effect.
             | StaticEffect::PlayerCannotLoseLife { .. }
+            // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
+            // layer effect.
+            | StaticEffect::CapDrawsPerTurn { .. }
             // PreventUntap — consulted by `do_untap` (CR 502.3); no layer
             // effect since it gates a turn-based action rather than a
             // characteristic.

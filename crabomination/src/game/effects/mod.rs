@@ -1100,6 +1100,15 @@ impl GameState {
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
+                        // CR 121.2b — a per-turn draw cap truncates the draw.
+                        let n = match self.draw_cap_for(p) {
+                            Some(cap) => {
+                                let remaining = (cap as usize)
+                                    .saturating_sub(self.players[p].cards_drawn_this_turn as usize);
+                                n.min(remaining)
+                            }
+                            None => n,
+                        };
                         for _ in 0..n {
                             // `draw_one` applies the Dredge replacement
                             // (CR 702.52) before falling back to a normal

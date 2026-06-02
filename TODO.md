@@ -815,9 +815,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   SOS card prints a "draw N additional cards as part of each draw"
   rider, so the gap is doc-tracked).
   (d) **121.2b** "Can't draw more than one card each turn" rider —
-  ⏳ (no `StaticEffect::CapDrawsPerTurn(N)` primitive; Maralen of the
-  Mornsong / Future Sight-class no-draw effects aren't in the
-  catalog).
+  ✅ (`StaticEffect::CapDrawsPerTurn { target, max }`; `Effect::Draw`
+  consults `GameState::draw_cap_for(seat)` and truncates the draw to
+  `max - cards_drawn_this_turn`. Spirit of the Labyrinth / Notion Thief-
+  class locks express via `PlayerStaticTarget`. Test:
+  `cr_121_2b_draw_cap_truncates_draws`).
   (e) **121.2c** — 🟡
   (multi-player draws fan out via `Selector::Player(EachPlayer)`'s
   iteration order which is seat-index; the active player is seat 0
@@ -2713,6 +2715,22 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
      winner from a `GameState.last_coin_flip_winner: Option<usize>`
      field for in-resolution mode dispatch.
   No catalog card needs this today; the gap is doc-tracked.
+
+- 🟡 **CR 800 — General (multiplayer leaving the game)**
+  (claude/modern_decks). How a player leaving mid-game disposes of their
+  objects.
+  (a) **800.4a** — ✅ (when a player is eliminated,
+  `check_state_based_actions` calls `objects_leave_with_player`: every card
+  and token they own leaves the game from all zones, and permanents they
+  controlled but didn't own revert to their owners' control. Test:
+  `cr_800_4a_departed_players_objects_leave_and_control_reverts`).
+  (b) **800.4a (stack)** — ⏳ (spells / abilities the departed player
+  controlled should also cease to exist; stack-item cleanup on departure is
+  not yet wired).
+  (c) **800.4e — control-changing one-shots end** — 🟡 (control reverts to
+  owner on departure, but mid-game continuous control effects from *other*
+  sources aren't re-evaluated here; the SBA recompute handles the common
+  case).
 
 - 🟡 **CR 903 — Commander Variant** (push modern_decks batch 64,
   claude/modern_decks branch — audit against
