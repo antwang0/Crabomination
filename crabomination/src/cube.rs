@@ -339,6 +339,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: Extort (CR 702.99) ──
         syndic_of_tithes,
+        // ── claude/modern_decks: white value/keyword bodies ──
+        kor_skyfisher,
+        skyknight_legionnaire,
+        healers_hawk,
         // ── Investigate (CR 701.13) ──
         thraben_inspector,
         selfless_spirit,
@@ -592,6 +596,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: flash flyer ──
+        spectral_sailor,
         // ── ETB-value + adapt/connive creatures (claude/modern_decks) ──
         aether_adept,
         augury_owl,
@@ -812,6 +818,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         doomed_dissenter,
         nantuko_husk,
         bloodthrone_vampire,
+        fleshbag_marauder,
+        typhoid_rats,
         // ── claude/modern_decks: Explore (CR 701.40) ──
         seekers_squire,
         // ── classic core-set bodies (claude/modern_decks) ──
@@ -1079,6 +1087,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks: Riot (CR 702.137) ──
         zhur_taa_goblin,
         frenzied_arynx,
+        // ── claude/modern_decks: red value/keyword bodies ──
+        mogg_fanatic,
+        lightning_elemental,
+        skyknight_legionnaire,
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
         goblin_chainwhirler,
@@ -1346,6 +1358,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: deathtouch body ──
+        gnarlwood_dryad,
         // ── Lure (CR 509.1c all-must-block) ──
         lure,
         // ── Undying aggro ──

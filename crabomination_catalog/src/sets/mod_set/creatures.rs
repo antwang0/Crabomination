@@ -2067,6 +2067,183 @@ pub fn frenzied_arynx() -> CardDefinition {
     }
 }
 
+/// Fleshbag Marauder — {2}{B} 2/2 Zombie. ETB: each player sacrifices a
+/// creature.
+pub fn fleshbag_marauder() -> CardDefinition {
+    CardDefinition {
+        name: "Fleshbag Marauder",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kor Skyfisher — {1}{W} 2/3 Kor Soldier, Flying. ETB: return a permanent
+/// you control to its owner's hand.
+pub fn kor_skyfisher() -> CardDefinition {
+    CardDefinition {
+        name: "Kor Skyfisher",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Skyknight Legionnaire — {1}{R}{W} 2/2 Human Knight with Flying and Haste.
+pub fn skyknight_legionnaire() -> CardDefinition {
+    CardDefinition {
+        name: "Skyknight Legionnaire",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Mogg Fanatic — {R} 1/1 Goblin. Sacrifice this: deal 1 damage to any target.
+pub fn mogg_fanatic() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Mogg Fanatic",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spectral Sailor — {U} 1/1 Spirit with Flash and Flying. {3}{U}, {T}:
+/// draw a card.
+pub fn spectral_sailor() -> CardDefinition {
+    CardDefinition {
+        name: "Spectral Sailor",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), u()]),
+            tap_cost: true,
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Healer's Hawk — {W} 1/1 Bird with Flying and Lifelink.
+pub fn healers_hawk() -> CardDefinition {
+    CardDefinition {
+        name: "Healer's Hawk",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Gnarlwood Dryad — {G} 1/1 Dryad with Deathtouch.
+pub fn gnarlwood_dryad() -> CardDefinition {
+    CardDefinition {
+        name: "Gnarlwood Dryad",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Typhoid Rats — {B} 1/1 Rat with Deathtouch.
+pub fn typhoid_rats() -> CardDefinition {
+    CardDefinition {
+        name: "Typhoid Rats",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Lightning Elemental — {3}{R} 4/1 Elemental with Haste.
+pub fn lightning_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning Elemental",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    }
+}
+
 /// Marauding Mako — {U} 1/1 Shark. Whenever you discard a card, put
 /// a +1/+1 counter on Marauding Mako. (The full Oracle pumps on every
 /// discard; we use a `CardDiscarded`+`YourControl` listener.)

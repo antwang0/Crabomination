@@ -21196,3 +21196,85 @@ fn nantuko_husk_sacrifices_for_a_pump() {
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 1,
         "the fodder creature was sacrificed");
 }
+
+// ── ETB-value + keyword bodies batch (claude/modern_decks) ───────────────────
+
+#[test]
+fn fleshbag_marauder_edicts_each_player() {
+    let mut g = two_player_game();
+    // Each player has one creature to lose.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fleshbag_marauder());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {2}{B}");
+    drain_stack(&mut g);
+    // P0 keeps the Marauder (sacs the bear); P1 sacs its bear.
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 1,
+        "P0 sacrificed the bear, kept the Marauder");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 0,
+        "P1 sacrificed its only creature");
+}
+
+#[test]
+fn kor_skyfisher_returns_a_permanent_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::kor_skyfisher());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {1}{W}");
+    drain_stack(&mut g);
+    // ETB bounced one of the controller's permanents back to hand.
+    assert_eq!(g.players[0].hand.len(), 1, "exactly one permanent returned to hand");
+}
+
+#[test]
+fn mogg_fanatic_sacrifices_to_ping() {
+    let mut g = two_player_game();
+    let fanatic = g.add_card_to_battlefield(0, catalog::mogg_fanatic());
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fanatic, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac ability activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "Mogg Fanatic pinged for 1");
+    assert!(g.battlefield_find(fanatic).is_none(), "Mogg Fanatic sacrificed itself");
+}
+
+#[test]
+fn spectral_sailor_draws_with_its_ability() {
+    let mut g = two_player_game();
+    let sailor = g.add_card_to_battlefield(0, catalog::spectral_sailor());
+    g.clear_sickness(sailor);
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sailor, ability_index: 0, target: None, x_value: None,
+    }).expect("draw ability activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Spectral Sailor drew a card");
+}
+
+#[test]
+fn keyword_bodies_have_correct_stats() {
+    use crate::card::Keyword;
+    let sky = catalog::skyknight_legionnaire();
+    assert!(sky.keywords.contains(&Keyword::Flying) && sky.keywords.contains(&Keyword::Haste));
+    let hawk = catalog::healers_hawk();
+    assert!(hawk.keywords.contains(&Keyword::Flying) && hawk.keywords.contains(&Keyword::Lifelink));
+    let dryad = catalog::gnarlwood_dryad();
+    assert!(dryad.keywords.contains(&Keyword::Deathtouch));
+    let rats = catalog::typhoid_rats();
+    assert!(rats.keywords.contains(&Keyword::Deathtouch));
+    let elem = catalog::lightning_elemental();
+    assert_eq!((elem.power, elem.toughness), (4, 1));
+    assert!(elem.keywords.contains(&Keyword::Haste));
+}
