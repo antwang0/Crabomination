@@ -455,6 +455,51 @@ fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts) {
                             });
                         }
                     });
+
+                // Card-border colour legend — documents the 3-D highlight
+                // vocabulary, and pairs every colour with a label so it
+                // reads without relying on hue alone. Swatches are hollow
+                // (a coloured border) to mirror the on-card highlight.
+                // Colours match the materials in `card::spawn`.
+                panel.spawn((Text::new("Card borders"), tf(14.0), TextColor(theme::ACCENT_BLUE)));
+                panel
+                    .spawn(Node {
+                        flex_direction: FlexDirection::Row,
+                        flex_wrap: FlexWrap::Wrap,
+                        column_gap: Val::Px(20.0),
+                        row_gap: Val::Px(6.0),
+                        ..default()
+                    })
+                    .with_children(|legend| {
+                        for (color, label) in [
+                            (Color::srgb(0.20, 0.90, 0.35), "Castable now"),
+                            (Color::srgb(0.15, 0.80, 0.95), "Dash / pitch / kicker"),
+                            (Color::srgb(0.95, 0.12, 0.12), "Will die in combat"),
+                            (Color::srgb(1.0, 0.85, 0.0), "Hover / target"),
+                        ] {
+                            legend
+                                .spawn(Node {
+                                    flex_direction: FlexDirection::Row,
+                                    align_items: AlignItems::Center,
+                                    column_gap: Val::Px(7.0),
+                                    ..default()
+                                })
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Node {
+                                            width: Val::Px(16.0),
+                                            height: Val::Px(16.0),
+                                            border: UiRect::all(Val::Px(2.5)),
+                                            ..default()
+                                        },
+                                        BorderColor::all(color),
+                                        BackgroundColor(Color::NONE),
+                                    ));
+                                    row.spawn((Text::new(label), tf(13.0), TextColor(theme::TEXT_BODY)));
+                                });
+                        }
+                    });
+
                 panel.spawn((
                     Text::new("Press F1, ?, or Esc to close"),
                     tf(12.0),
