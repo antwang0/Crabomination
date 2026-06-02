@@ -2244,6 +2244,114 @@ pub fn lightning_elemental() -> CardDefinition {
     }
 }
 
+/// Filigree Familiar — {2} 1/1 artifact Fox. ETB gain 2 life; when it
+/// dies, draw a card.
+pub fn filigree_familiar() -> CardDefinition {
+    use crate::effect::shortcut::{etb, on_dies};
+    CardDefinition {
+        name: "Filigree Familiar",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fox],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+            on_dies(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gladecover Scout — {G} 1/1 Elf Scout with Hexproof.
+pub fn gladecover_scout() -> CardDefinition {
+    CardDefinition {
+        name: "Gladecover Scout",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Hexproof],
+        ..Default::default()
+    }
+}
+
+/// Deadly Recluse — {1}{G} 1/2 Spider with Reach and Deathtouch.
+pub fn deadly_recluse() -> CardDefinition {
+    CardDefinition {
+        name: "Deadly Recluse",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Reach, Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Sporemound — {4}{G} 3/3 Elemental. Landfall — whenever a land enters
+/// under your control, create a 1/1 green Saproling creature token.
+pub fn sporemound() -> CardDefinition {
+    CardDefinition {
+        name: "Sporemound",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::card::TokenDefinition {
+                    name: "Saproling".to_string(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::Green],
+                    supertypes: vec![],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Centaur Courser — {2}{G} 3/3 Centaur Warrior (vanilla).
+pub fn centaur_courser() -> CardDefinition {
+    CardDefinition {
+        name: "Centaur Courser",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
 /// Marauding Mako — {U} 1/1 Shark. Whenever you discard a card, put
 /// a +1/+1 counter on Marauding Mako. (The full Oracle pumps on every
 /// discard; we use a `CardDiscarded`+`YourControl` listener.)

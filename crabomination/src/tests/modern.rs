@@ -21278,3 +21278,55 @@ fn keyword_bodies_have_correct_stats() {
     assert_eq!((elem.power, elem.toughness), (4, 1));
     assert!(elem.keywords.contains(&Keyword::Haste));
 }
+
+// ── Filigree Familiar / Sporemound / vanilla bodies ──────────────────────────
+
+#[test]
+fn filigree_familiar_gains_life_on_etb_and_draws_on_death() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::filigree_familiar());
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {2}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "ETB gained 2 life");
+    let hand = g.players[0].hand.len();
+    // Bolt it to trigger the dies-draw.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the familiar");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "spent Bolt, drew 1 on death → net same");
+    assert!(g.battlefield_find(id).is_none(), "Filigree Familiar died");
+}
+
+#[test]
+fn sporemound_makes_a_saproling_on_landfall() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::sporemound());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+    drain_stack(&mut g);
+    let saps = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Saproling").count();
+    assert_eq!(saps, 1, "landfall minted one Saproling");
+}
+
+#[test]
+fn green_keyword_bodies_have_correct_stats() {
+    use crate::card::Keyword;
+    let scout = catalog::gladecover_scout();
+    assert!(scout.keywords.contains(&Keyword::Hexproof));
+    let recluse = catalog::deadly_recluse();
+    assert!(recluse.keywords.contains(&Keyword::Reach)
+        && recluse.keywords.contains(&Keyword::Deathtouch));
+    let courser = catalog::centaur_courser();
+    assert_eq!((courser.power, courser.toughness), (3, 3));
+}

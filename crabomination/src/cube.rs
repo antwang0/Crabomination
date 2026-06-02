@@ -219,6 +219,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         reality_smasher,
         // ── colorless utility ──
         pilgrims_eye,
+        filigree_familiar,
         // ── classic colorless core-set bodies (claude/modern_decks) ──
         obsianus_golem,
         yotian_soldier,
@@ -1360,6 +1361,10 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: deathtouch body ──
         gnarlwood_dryad,
+        gladecover_scout,
+        deadly_recluse,
+        sporemound,
+        centaur_courser,
         // ── Lure (CR 509.1c all-must-block) ──
         lure,
         // ── Undying aggro ──
