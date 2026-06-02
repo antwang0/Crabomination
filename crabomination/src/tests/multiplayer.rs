@@ -1597,3 +1597,30 @@ fn two_headed_giant_mulligan_chain_is_per_seat() {
     }
     assert!(g.pending_decision.is_none(), "all four mulligans resolved");
 }
+
+// ── DefendingPlayer in combat-damage triggers (CR 509.2) ────────────────────
+
+#[test]
+fn abyssal_specter_only_defending_player_discards_in_ffa() {
+    use crate::game::types::TurnStep;
+    let mut g = multi_player_game(3);
+    let spec = g.add_card_to_battlefield(0, catalog::abyssal_specter());
+    g.clear_sickness(spec);
+    // Give every opponent a card to lose so we can see who's hit.
+    for seat in [1usize, 2] {
+        g.add_card_to_hand(seat, catalog::grizzly_bears());
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: spec,
+        target: AttackTarget::Player(2),
+    }]))
+    .expect("specter attacks seat 2");
+    let (h1, h2) = (g.players[1].hand.len(), g.players[2].hand.len());
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), h1, "non-defending opponent keeps cards");
+    assert_eq!(g.players[2].hand.len(), h2 - 1, "only the defending player discards");
+}

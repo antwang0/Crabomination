@@ -17,15 +17,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   trigger when the body is clearly beneficial), and a `wants_ui` suspend so
   a human is actually prompted.
 
-- **`PlayerRef::DefendingPlayer` doesn't resolve in post-combat-damage
-  triggers** (discovered claude/modern_decks). A `DealsCombatDamageToPlayer`
-  trigger body using `PlayerRef::DefendingPlayer` (e.g. the Ninja-style Mill
-  rider, and an early Abyssal Specter draft) resolves to no player because
-  by dispatch time `resolve_combat` no longer reports the source as
-  attacking. Workaround used: model "that player" as `EachOpponent`
-  (single-defender faithful). Fix: stamp the damaged player into the
-  trigger's `EffectContext` (event payload) so `DefendingPlayer` /
-  a new `PlayerRef::DamagedPlayer` resolves at resolution time.
+- **`PlayerRef::DefendingPlayer` in post-combat-damage triggers** — ✅ fixed
+  (claude/modern_decks). The dispatcher already stamps the damaged player as
+  the trigger's `Target::Player`, so `resolve_player(DefendingPlayer)` now
+  falls back to that target when the live attack record is gone. Abyssal
+  Specter / Moonshadow ("that player discards") use `DefendingPlayer`
+  faithfully again — multiplayer-correct: only the player actually hit
+  discards (`abyssal_specter_only_defending_player_discards_in_ffa`).
 
 - **AutoDecider declines all library searches** (`Decision::SearchLibrary
   → Search(None)` in `decision.rs`) — kept as-is so tests stay

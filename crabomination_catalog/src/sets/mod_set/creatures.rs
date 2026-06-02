@@ -2467,8 +2467,7 @@ pub fn thieving_magpie() -> CardDefinition {
 }
 
 /// Abyssal Specter — {2}{B}{B} 2/3 Specter, Flying. Whenever it deals
-/// combat damage to a player, that player discards a card. (Modeled as the
-/// defending opponent discarding — single-defender faithful.)
+/// combat damage to a player, that player discards a card.
 pub fn abyssal_specter() -> CardDefinition {
     CardDefinition {
         name: "Abyssal Specter",
@@ -2484,7 +2483,7 @@ pub fn abyssal_specter() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::Player(PlayerRef::DefendingPlayer),
                 amount: Value::Const(1),
                 random: false,
             },
@@ -4200,7 +4199,7 @@ pub fn moonshadow() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+                who: Selector::Player(PlayerRef::DefendingPlayer),
                 amount: Value::Const(1),
                 random: false,
             },

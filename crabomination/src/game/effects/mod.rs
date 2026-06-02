@@ -4507,7 +4507,18 @@ impl GameState {
             PlayerRef::DefendingPlayer => ctx
                 .source
                 .and_then(|src| self.attack_for(src).map(|a| a.target))
-                .and_then(|target| self.defender_for(target)),
+                .and_then(|target| self.defender_for(target))
+                // Fallback for post-combat-damage triggers: by the time a
+                // `DealsCombatDamageToPlayer` body resolves, the attack
+                // record is gone, so `attack_for` returns nothing. The
+                // dispatcher stamps the damaged player as the trigger's
+                // `Target::Player`, so read it back here.
+                .or_else(|| {
+                    ctx.targets.iter().find_map(|t| match t {
+                        Target::Player(p) => Some(*p),
+                        _ => None,
+                    })
+                }),
             PlayerRef::OwnerOf(sel) => self
                 .resolve_selector(sel, ctx)
                 .into_iter()
