@@ -11,7 +11,7 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{etb, etb_explore, explore, target_filtered};
+use crate::effect::shortcut::{each_your_creature, etb, etb_explore, explore, target_filtered};
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
@@ -6358,6 +6358,42 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
             sac_cost: true,
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Bushwhacker — {R} Creature — Goblin, 1/1, Haste. Kicker {R}.
+/// When it enters, if it was kicked, creatures you control get +1/+0 and
+/// gain haste until end of turn (CR 702.32 + ETB-kicked context).
+pub fn goblin_bushwhacker() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Bushwhacker",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste, Keyword::Kicker(cost(&[r()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: each_your_creature(),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: each_your_creature(),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ])),
+            else_: Box::new(Effect::Noop),
+        })],
         ..Default::default()
     }
 }

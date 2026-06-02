@@ -1042,6 +1042,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Kicker (CR 702.32) ──
+        goblin_bushwhacker,
         // ── divided-damage burn (claude/modern_decks) ──
         arc_lightning,
         forked_lightning,

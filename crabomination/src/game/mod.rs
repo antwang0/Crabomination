@@ -3799,6 +3799,12 @@ impl GameState {
             EffectContext::for_trigger(source, controller, resolved_target.clone(), mode);
         ctx.x_value = x_value;
         ctx.converged_value = converged_value;
+        // CR 702.32 — an ETB/other trigger on a permanent reads the
+        // source's `kicked` flag so "when ~ enters, if it was kicked, …"
+        // riders (Goblin Bushwhacker) can branch on `SpellWasKicked`.
+        if let Some(src) = self.battlefield.iter().find(|c| c.id == source) {
+            ctx.kicked = src.kicked;
+        }
         if let Some(ts) = trigger_source_ent {
             ctx.trigger_source = Some(ts);
         }

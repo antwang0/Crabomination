@@ -8389,6 +8389,44 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
 #[test]
+fn goblin_bushwhacker_kicked_pumps_the_team() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::goblin_bushwhacker());
+    // {R} + Kicker {R} = {R}{R}.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("kicked Goblin Bushwhacker castable for {R}{R}");
+    drain_stack(&mut g);
+    // The pre-existing ally got +1/+0 from the kicked ETB.
+    let cp = g.computed_permanent(ally).expect("ally still in play");
+    assert_eq!(cp.power, 3, "kicked Bushwhacker pumps allies +1/+0");
+}
+
+#[test]
+fn goblin_bushwhacker_unkicked_has_no_etb_pump() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::goblin_bushwhacker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Goblin Bushwhacker castable for {R}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(ally).expect("ally still in play");
+    assert_eq!(cp.power, 2, "unkicked Bushwhacker leaves the team unpumped");
+}
+
+#[test]
 fn into_the_roil_unkicked_bounces_without_drawing() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
