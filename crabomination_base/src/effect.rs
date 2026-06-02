@@ -4770,6 +4770,63 @@ pub mod shortcut {
         })
     }
 
+    /// Extort (CR 702.99): "Whenever you cast a spell, you may pay
+    /// {W/B}. If you do, each opponent loses 1 life and you gain that
+    /// much life." A `SpellCast / YourControl` trigger whose body is a
+    /// `MayPay` over the canonical [`drain`] shape. Basilica Screecher,
+    /// Crypt Ghast, Pontiff of Blight.
+    pub fn extort() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Extort — pay {W/B}: drain 1".into(),
+                mana_cost: crate::mana::cost(&[crate::mana::hybrid(Color::White, Color::Black)]),
+                body: Box::new(drain(1)),
+            },
+        }
+    }
+
+    /// Riot (CR 702.137): "This creature enters the battlefield with
+    /// your choice of a +1/+1 counter or haste." Modeled as an ETB
+    /// `ChooseMode([grant Haste permanently, add a +1/+1 counter])`.
+    /// AutoDecider takes mode 0 (haste); scripted deciders can pick the
+    /// counter. Zhur-Taa Goblin, Gruul Spellbreaker.
+    pub fn riot() -> TriggeredAbility {
+        use crate::card::CounterType;
+        etb(Effect::ChooseMode(vec![
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Haste,
+                duration: Duration::Permanent,
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))
+    }
+
+    /// Soulshift N (CR 702.46): "When this creature dies, you may return
+    /// target Spirit card with mana value N or less from your graveyard
+    /// to your hand." A `CreatureDied / SelfSource` trigger wrapping a
+    /// `MayDo(Move target → hand)` over a graveyard Spirit filter.
+    pub fn soulshift(n: u32) -> TriggeredAbility {
+        on_dies(Effect::MayDo {
+            description: format!("Soulshift {n} — return a Spirit from your graveyard"),
+            body: Box::new(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InGraveyard
+                        .and(SelectionRequirement::HasCreatureType(
+                            crate::card::CreatureType::Spirit,
+                        ))
+                        .and(SelectionRequirement::ManaValueAtMost(n)),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            }),
+        })
+    }
+
     /// Adapt N (CR 702.108) — the *effect* of an Adapt activated ability:
     /// "If this creature has no +1/+1 counters on it, put N +1/+1 counters
     /// on it." Built from existing primitives (`If` + `EntityMatches` +

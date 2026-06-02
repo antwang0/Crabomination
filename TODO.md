@@ -300,6 +300,22 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   — `CreatureDied / SelfSource` trigger minting n 1/1 white-and-black Spirit
   tokens with flying.
 
+- ✅ **CR 702.99 — Extort** (claude/modern_decks). `shortcut::extort()` —
+  `SpellCast / YourControl` trigger over `MayPay({W/B}, drain 1)`. Basilica
+  Screecher. Tests: `cr_702_99_extort_*`.
+
+- ✅ **CR 702.137 — Riot** (claude/modern_decks). `shortcut::riot()` — ETB
+  `ChooseMode([GrantKeyword(Haste, Permanent), AddCounter(+1/+1)])`; AutoDecider
+  takes haste, scripted picks the counter. Zhur-Taa Goblin. Tests:
+  `cr_702_137_riot_*`.
+
+- ✅ **CR 702.46 — Soulshift** (claude/modern_decks). `shortcut::soulshift(n)`
+  — `CreatureDied / SelfSource` `MayDo(Move target → hand)` over an
+  `InGraveyard ∧ HasCreatureType(Spirit) ∧ ManaValueAtMost(n)` filter. Test:
+  `cr_702_46_soulshift_returns_a_spirit_from_graveyard`. (No real Soulshift
+  card wired yet — Scryfall was unreachable this run; add Kamigawa Spirits
+  when network is available.)
+
   (Bushido CR 702.45, Flanking CR 702.25, Rampage CR 702.23 already ship as
   `Keyword::*` combat-step rules wired in `combat.rs::declare_blockers`.)
 

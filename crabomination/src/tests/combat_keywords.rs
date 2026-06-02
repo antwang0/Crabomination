@@ -236,3 +236,115 @@ fn cr_702_19_deathtouch_trample_assigns_one_then_tramples_rest() {
         "1 lethal to the 2/2 (deathtouch), 4 trample to the player");
     assert!(g.battlefield_find(blk).is_none(), "the blocker died to deathtouch");
 }
+
+// ── CR 702.137 Riot ──────────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_137_riot_default_grants_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::zhur_taa_goblin());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {R}{G}");
+    drain_stack(&mut g);
+    // AutoDecider picks mode 0 → permanent haste.
+    let cp = g.computed_permanent(id).expect("Goblin in play");
+    assert!(cp.keywords.contains(&Keyword::Haste), "Riot default mode grants haste");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "no counter in haste mode");
+}
+
+#[test]
+fn cr_702_137_riot_counter_mode_grows_the_body() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(1)]));
+    let id = g.add_card_to_hand(0, catalog::zhur_taa_goblin());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "Riot counter mode → 3/3");
+}
+
+// ── CR 702.99 Extort ─────────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_99_extort_drains_when_the_optional_cost_is_paid() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Yes to the extort "may pay {W/B}" prompt.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::basilica_screecher());
+    // Cast Bolt ({R}, no generic so the floated W survives for extort).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    let opp_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 4, "Bolt 3 + extort drain 1");
+    assert_eq!(g.players[0].life, my_life + 1, "extort gained the controller 1");
+}
+
+#[test]
+fn cr_702_99_extort_does_nothing_when_declined() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::basilica_screecher());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bears castable");
+    drain_stack(&mut g);
+    // AutoDecider declines the optional cost → no drain.
+    assert_eq!(g.players[1].life, opp_life, "extort declined → opponent untouched");
+}
+
+// ── CR 702.46 Soulshift ──────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_46_soulshift_returns_a_spirit_from_graveyard() {
+    use crate::card::{CardType, CreatureType, Subtypes};
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::mana::{b, cost, generic};
+    let mut g = two_player_game();
+    // Yes to the soulshift "may return" prompt.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    // A 2/2 Spirit with Soulshift 5.
+    let warden = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Test Spirit Warden",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2, toughness: 2,
+        triggered_abilities: vec![shortcut::soulshift(5)],
+        ..Default::default()
+    });
+    // A cheap Spirit waiting in the graveyard (MV 2 ≤ 5).
+    let ghost = g.add_card_to_graveyard(0, CardDefinition {
+        name: "Test Lost Ghost",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1, toughness: 1,
+        ..Default::default()
+    });
+    // Kill the warden via SBA.
+    g.battlefield_find_mut(warden).unwrap().toughness_bonus -= 2;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == ghost),
+        "Soulshift returned the graveyard Spirit to hand");
+}

@@ -801,6 +801,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: Extort (CR 702.99) ──
+        basilica_screecher,
         // ── claude/modern_decks: Explore (CR 701.40) ──
         seekers_squire,
         // ── classic core-set bodies (claude/modern_decks) ──
@@ -1065,6 +1067,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: Riot (CR 702.137) ──
+        zhur_taa_goblin,
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
         goblin_chainwhirler,

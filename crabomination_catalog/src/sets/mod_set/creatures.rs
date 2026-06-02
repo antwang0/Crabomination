@@ -1950,6 +1950,42 @@ pub fn indulgent_tormentor() -> CardDefinition {
     }
 }
 
+/// Basilica Screecher — {2}{B} 1/2 Bat. Flying, Extort (CR 702.99).
+pub fn basilica_screecher() -> CardDefinition {
+    CardDefinition {
+        name: "Basilica Screecher",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::extort()],
+        ..Default::default()
+    }
+}
+
+/// Zhur-Taa Goblin — {R}{G} 2/2 Goblin Berserker with Riot (CR 702.137):
+/// enters with a +1/+1 counter or haste (your choice).
+pub fn zhur_taa_goblin() -> CardDefinition {
+    CardDefinition {
+        name: "Zhur-Taa Goblin",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::riot()],
+        ..Default::default()
+    }
+}
+
 /// Marauding Mako — {U} 1/1 Shark. Whenever you discard a card, put
 /// a +1/+1 counter on Marauding Mako. (The full Oracle pumps on every
 /// discard; we use a `CardDiscarded`+`YourControl` listener.)
