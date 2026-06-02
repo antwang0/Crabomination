@@ -804,6 +804,17 @@ impl GameState {
         // "deals combat damage to a player" never see a damage event.
         let prevent_combat_damage = self.prevent_combat_damage_this_turn;
 
+        // CR 614.2 — global combat-damage doubling (Furnace of Rath /
+        // Gratuitous Violence). Each `DoubleDamageDealt` permanent doubles
+        // every damage *event*; the doubling applies to the amount dealt
+        // (after assignment, before prevention), so a creature is still
+        // assigned base lethal but takes double, and trample-over / player
+        // damage double too. `1` (no doublers) leaves combat untouched.
+        let dmg_mult = {
+            let d = self.damage_doublers();
+            if d > 0 { 1u32 << d.min(16) } else { 1 }
+        };
+
         for atk in &attacker_infos {
             if !atk.should_deal {
                 continue;
@@ -834,7 +845,8 @@ impl GameState {
                 // CR 615 — per-target prevention shields on the defending
                 // player/planeswalker also reduce unblocked combat damage.
                 // Lifelink scales off the post-prevention amount (702.15a).
-                let amount = self.prevent_combat_to_target(atk.target, raw, &mut events);
+                let amount =
+                    self.prevent_combat_to_target(atk.target, raw.saturating_mul(dmg_mult), &mut events);
                 if amount > 0 {
                     self.deal_combat_damage_to_target(atk, amount, &mut events);
                     if atk.has_lifelink {
@@ -878,7 +890,7 @@ impl GameState {
                     // (post-prevention) amount dealt (CR 702.15a).
                     let dealt = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
-                        assign,
+                        assign.saturating_mul(dmg_mult),
                         &mut events,
                     ) as i32;
                     lifelink_dealt += dealt;
@@ -919,7 +931,7 @@ impl GameState {
                     // post-prevention amount.
                     let amount = self.prevent_combat_to_target(
                         atk.target,
-                        trample_leftover,
+                        trample_leftover.saturating_mul(dmg_mult),
                         &mut events,
                     );
                     lifelink_dealt += amount as i32;
@@ -971,9 +983,10 @@ impl GameState {
                         });
                     // CR 615 — route blocker→attacker combat damage through
                     // the attacker's prevention shields before marking it.
+                    // CR 614.2 doubling also applies to the blocker's strike.
                     let dmg = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(atk.id),
-                        blocker_damage_to_attacker.max(0) as u32,
+                        (blocker_damage_to_attacker.max(0) as u32).saturating_mul(dmg_mult),
                         &mut events,
                     );
                     if dmg > 0 && let Some(attacker) = self.battlefield_find_mut(atk.id) {
@@ -1016,7 +1029,8 @@ impl GameState {
                             .find(|c| c.id == bid)
                             .map(|c| c.controller)
                             .unwrap_or(atk.defender_player);
-                        *lifelink_by_controller.entry(controller).or_insert(0) += bc.power;
+                        *lifelink_by_controller.entry(controller).or_insert(0) +=
+                            bc.power.saturating_mul(dmg_mult as i32);
                     }
                     // Sort by seat for deterministic event ordering;
                     // life-gain math is commutative but the event log

@@ -1811,6 +1811,56 @@ fn cr_614_2_double_damage_dealt_doubles_noncombat_damage() {
 }
 
 #[test]
+fn cr_614_2_double_damage_dealt_doubles_combat_damage_to_player() {
+    // A 2/2 attacker hits an open player; a Furnace-of-Rath doubler turns
+    // the 2 combat damage into 4.
+    let mut g = two_player_game();
+    let mut furnace = catalog::grizzly_bears();
+    furnace.static_abilities = vec![StaticAbility {
+        description: "double damage",
+        effect: StaticEffect::DoubleDamageDealt,
+    }];
+    g.add_card_to_battlefield(0, furnace);
+    let attacker = setup_attacker(&mut g, 0, || vanilla_body("Beater 2/2", 2, 2, vec![]));
+    let before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(g.players[1].life, before - 4, "2 combat damage doubled to 4");
+}
+
+#[test]
+fn cr_614_2_doubled_trample_over_lethal() {
+    // A 3/3 trampler vs a single 2/2: base lethal 2 is assigned (doubled to
+    // 4 dealt → kills), and the 1 leftover doubles to 2 trampling through.
+    let mut g = two_player_game();
+    let mut furnace = catalog::grizzly_bears();
+    furnace.static_abilities = vec![StaticAbility {
+        description: "double damage",
+        effect: StaticEffect::DoubleDamageDealt,
+    }];
+    g.add_card_to_battlefield(0, furnace);
+    let attacker = setup_attacker(&mut g, 0, || {
+        vanilla_body("Trampler 3/3", 3, 3, vec![crate::card::Keyword::Trample])
+    });
+    let blocker = setup_attacker(&mut g, 1, || vanilla_body("Wall 2/2", 2, 2, vec![]));
+    let before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert!(!g.battlefield.iter().any(|c| c.id == blocker), "blocker took doubled lethal");
+    assert_eq!(g.players[1].life, before - 2, "1 trample leftover doubled to 2");
+}
+
+#[test]
 fn cr_614_2_two_doublers_compound_multiplicatively() {
     let mut g = two_player_game();
     for _ in 0..2 {

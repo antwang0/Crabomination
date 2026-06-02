@@ -2019,14 +2019,19 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   layer-injection pass at `stack.rs` and `place_card_in_dest`). Used
   by Quandrix Calligrapher, Symmathematics, Fractal Augmenter (batch
   56), and ~10 other Fractal cards.
-  (d) **614.2** damage-replacement effects — 🟡 (damage *doubling* now
-  wired for non-combat damage: `StaticEffect::DoubleDamageDealt` +
-  `GameState::damage_doublers` scale `deal_damage_to_from` by `2^n`
-  — Furnace of Rath / Gratuitous Violence / Fiery Emancipation-as-×2.
-  Tests: `cr_614_2_double_damage_dealt_doubles_noncombat_damage`,
-  `cr_614_2_two_doublers_compound_multiplicatively`. Remaining: doubling
-  *combat* damage (touch the combat assignment + lifelink/trample math),
-  arbitrary "deal X instead" redirection, and Gisela-style halving.)
+  (d) **614.2** damage-replacement effects — 🟡 (damage *doubling* now wired
+  for **both** non-combat and combat damage: `StaticEffect::DoubleDamageDealt`
+  + `GameState::damage_doublers` scale `deal_damage_to_from` and every combat
+  dealing point (`resolve_combat_damage_with_filter` — blocker assignment,
+  trample-over, unblocked player/PW, blocker-strikes-back, and the lifelink
+  that scales off them) by `2^n` — a faithful Furnace of Rath / Gratuitous
+  Violence / Fiery-Emancipation-as-×2. Tests:
+  `cr_614_2_double_damage_dealt_doubles_noncombat_damage`,
+  `cr_614_2_double_damage_dealt_doubles_combat_damage_to_player`,
+  `cr_614_2_doubled_trample_over_lethal`,
+  `cr_614_2_two_doublers_compound_multiplicatively`. Remaining for the
+  umbrella row: arbitrary "deal X instead" redirection (614.9) and
+  Gisela/Furnace-style *halving*.)
   (e) **614.3** no special casting restrictions — ✅ (replacement
   effects come from on-resolve effects like any other; no engine
   gates the casting of a spell with a replacement clause).
