@@ -7701,13 +7701,12 @@ pub fn harrow() -> CardDefinition {
 }
 
 /// Drown in the Loch — {U}{B} Instant. Choose one — counter target spell;
-/// or destroy target creature or planeswalker. Spend only mana from
-/// snow sources to cast this spell.
+/// or destroy target creature. Both halves are gated by "mana value ≤ cards
+/// in its controller's graveyard."
 ///
-/// Modal: mode 0 counters a spell on the stack, mode 1 destroys a
-/// creature/planeswalker. The "snow mana only" rider is collapsed (no
-/// snow-mana primitive). The "X = cards in opp's graveyard" gate is
-/// also collapsed — both halves of the modal are always available.
+/// Modal: mode 0 counters a spell, mode 1 destroys a creature. The "X = cards
+/// in the target's controller's graveyard" mana-value gate is collapsed (no
+/// per-target dynamic-MV target restriction yet) — tracked in TODO.md.
 /// AutoDecider picks mode 0 (the counter line is usually the higher
 /// gameplay-impact pick when both are legal).
 pub fn drown_in_the_loch() -> CardDefinition {
@@ -7720,10 +7719,7 @@ pub fn drown_in_the_loch() -> CardDefinition {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
             },
             Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
-                ),
+                what: target_filtered(SelectionRequirement::Creature),
             },
         ]),
         ..Default::default()
@@ -13562,8 +13558,10 @@ pub fn aluren() -> CardDefinition {
 
 /// Chain Lightning — {R} Sorcery. Deal 3 damage to any target.
 ///
-/// The printed "then that player may pay {R}{R} to copy this spell" rider
-/// is omitted — no spell-copy primitive exists yet.
+/// The printed "then the damaged player may pay {R}{R} to copy this spell"
+/// rider is omitted: spell-copy primitives exist (`Effect::CopySpell` etc.)
+/// but this copy is offered to a *different* player (the one dealt damage),
+/// which has no opponent-controlled pay-to-copy hook yet.
 pub fn chain_lightning() -> CardDefinition {
     CardDefinition {
         name: "Chain Lightning",

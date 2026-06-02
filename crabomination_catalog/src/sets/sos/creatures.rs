@@ -1746,11 +1746,8 @@ pub fn fractal_mascot() -> CardDefinition {
 
 /// Stadium Tidalmage — {2}{U}{R}, 4/4 Djinn Sorcerer.
 /// "Whenever this creature enters or attacks, you may draw a card. If you
-/// do, discard a card."
-///
-/// Approximation: the "you may" is collapsed to "always loot" — the
-/// engine has no may-do primitive yet, so we always perform the
-/// draw+discard pair. Both ETB and Attacks triggers fire the loot.
+/// do, discard a card." Wired via `Effect::MayDo` on both the ETB and
+/// Attacks triggers (loot only on a yes).
 pub fn stadium_tidalmage() -> CardDefinition {
     use crate::mana::{r, u};
     let loot_body = Effect::Seq(vec![
