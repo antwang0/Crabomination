@@ -809,6 +809,10 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         nekrataal,
         skinrender,
         fatal_push,
+        // ── Aristocrats / recursion ──
+        blood_artist,
+        carrion_feeder,
+        unearth,
         // ── Evoke Incarnation (MH2) ──
         grief,
         // ── modern_decks (dredge): Stinkweed Imp ──
@@ -1318,6 +1322,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Lure (CR 509.1c all-must-block) ──
         lure,
+        // ── Undying aggro ──
+        strangleroot_geist,
         // ── classic core-set bodies (claude/modern_decks) ──
         spined_wurm,
         panther_warriors,

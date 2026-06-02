@@ -8455,6 +8455,62 @@ fn goblin_chainwhirler_etb_pings_opponents_board() {
 }
 
 #[test]
+fn strangleroot_geist_has_haste_and_undying() {
+    use crate::card::Keyword;
+    let def = catalog::strangleroot_geist();
+    assert_eq!((def.power, def.toughness), (2, 1));
+    assert!(def.keywords.contains(&Keyword::Haste) && def.keywords.contains(&Keyword::Undying));
+}
+
+#[test]
+fn blood_artist_drains_when_a_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_artist());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    // Bolt the opponent's creature so SBA dispatches CreatureDied to Blood Artist.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 + 1, "you gain 1");
+    assert_eq!(g.players[1].life, l1 - 1, "opponent loses 1");
+}
+
+#[test]
+fn carrion_feeder_sacs_a_creature_to_grow() {
+    let mut g = two_player_game();
+    let feeder = g.add_card_to_battlefield(0, catalog::carrion_feeder());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(feeder);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: feeder, ability_index: 0,
+        target: Some(Target::Permanent(fodder)), x_value: None,
+    }).expect("sac-a-creature ability activates");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(feeder).expect("feeder alive");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "Carrion Feeder grows to 2/2");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "fodder sacrificed");
+}
+
+#[test]
+fn unearth_returns_a_one_drop_from_graveyard() {
+    let mut g = two_player_game();
+    let mystic = g.add_card_to_graveyard(0, catalog::elvish_mystic()); // MV 1 creature
+    let id = g.add_card_to_hand(0, catalog::unearth());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mystic)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Unearth castable for {B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == mystic), "the 1-drop returns to the battlefield");
+}
+
+#[test]
 fn grief_etb_discards_a_nonland_card() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::grief());

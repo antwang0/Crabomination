@@ -5000,6 +5000,93 @@ pub fn coalition_relic() -> CardDefinition {
 
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
+/// Strangleroot Geist — {G}{G} Creature — Spirit, 2/1, Haste, Undying.
+pub fn strangleroot_geist() -> CardDefinition {
+    CardDefinition {
+        name: "Strangleroot Geist",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste, Keyword::Undying],
+        ..Default::default()
+    }
+}
+
+/// Blood Artist — {1}{B} Creature — Vampire, 0/1. Whenever this or another
+/// creature dies, an opponent loses 1 life and you gain 1 life.
+pub fn blood_artist() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Artist",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Carrion Feeder — {1}{B} Creature — Zombie, 1/1, can't block.
+/// "Sacrifice a creature: Put a +1/+1 counter on this."
+pub fn carrion_feeder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Carrion Feeder",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unearth — {B} Sorcery. Return target creature card with mana value 1 or
+/// less from your graveyard to the battlefield.
+pub fn unearth() -> CardDefinition {
+    CardDefinition {
+        name: "Unearth",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(1)),
+            ),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
 /// Tear Asunder — {1}{G} Instant, Kicker {1}{B}. Exile target artifact or
 /// enchantment; if kicked, exile target nonland permanent instead. The
 /// kicked branch's broader target filter is enforced at cast time via the
