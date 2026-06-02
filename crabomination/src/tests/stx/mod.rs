@@ -35,6 +35,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most: 0,
+            on_doubles: None,
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
                 (3, 6, Effect::LoseLife {
@@ -81,6 +82,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most: 0,
+            on_doubles: None,
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
                 (3, 6, Effect::LoseLife {
@@ -127,6 +129,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most: 0,
+            on_doubles: None,
             results: vec![
                 (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
                 // 4-6 intentionally unmapped.
@@ -171,6 +174,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
             count: Value::Const(1),
             modifier: Value::Const(modifier),
             reroll_at_most: 0,
+            on_doubles: None,
             results: vec![
                 (1, 6, Effect::LoseLife { who: Selector::You, amount: Value::Const(1) }),
                 (7, 255, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
@@ -209,10 +213,36 @@ fn test_card_die_roll_d6_reroll(reroll_at_most: u8) -> crate::card::CardDefiniti
             count: Value::Const(1),
             modifier: Value::Const(0),
             reroll_at_most,
+            on_doubles: None,
             results: vec![
                 (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
                 (4, 6, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
             ],
+        },
+        ..Default::default()
+    }
+}
+
+/// Test-only fixture for CR 706.5: "roll two d6. 4-6: gain 1 life each.
+/// If the dice show doubles, draw a card."
+fn test_card_die_roll_doubles() -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::{Effect, Selector, Value};
+    use crate::mana::{cost, generic};
+    CardDefinition {
+        name: "Test Die Roll Doubles",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RollDie {
+            sides: 6,
+            count: Value::Const(2),
+            modifier: Value::Const(0),
+            reroll_at_most: 0,
+            on_doubles: Some(Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            })),
+            results: vec![(4, 6, Effect::GainLife { who: Selector::You, amount: Value::Const(1) })],
         },
         ..Default::default()
     }

@@ -525,7 +525,7 @@ impl GameState {
             // range covers `rolled`. AutoDecider returns the midpoint;
             // ScriptedDecider can script any face. Mirrors FlipCoin's
             // resolver shape.
-            Effect::RollDie { sides, count, modifier, reroll_at_most, results } => {
+            Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 let sides = (*sides).max(2);
                 // CR 706.2 — the flat result modifier applied to every die
@@ -543,12 +543,15 @@ impl GameState {
                         _ => (sides as u32).div_ceil(2) as u8,
                     }
                 };
+                // CR 706.5 — track natural faces to detect "doubles".
+                let mut naturals: Vec<u8> = Vec::with_capacity(n as usize);
                 for _ in 0..n {
                     let mut natural = roll_one(self);
                     // CR 706.2b — reroll a low natural result exactly once.
                     if *reroll_at_most > 0 && natural <= *reroll_at_most {
                         natural = roll_one(self);
                     }
+                    naturals.push(natural);
                     // CR 706.2 — add the modifier, flooring the modified
                     // result at 1 (a die result is never reduced below 1).
                     // The result may exceed `sides`, letting a top "N+"
@@ -562,6 +565,16 @@ impl GameState {
                         results.iter().find(|(lo, hi, _)| rolled >= *lo && rolled <= *hi)
                     {
                         self.run_effect(effect, ctx, events)?;
+                    }
+                }
+                // CR 706.5 — "if any of the dice show the same number"
+                // (doubles): fires once after the per-die dispatch when two
+                // or more natural faces match.
+                if let Some(doubles_effect) = on_doubles {
+                    let mut sorted = naturals.clone();
+                    sorted.sort_unstable();
+                    if sorted.windows(2).any(|w| w[0] == w[1]) {
+                        self.run_effect(doubles_effect, ctx, events)?;
                     }
                 }
                 Ok(())

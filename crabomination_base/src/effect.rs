@@ -1011,6 +1011,12 @@ pub enum Effect {
         /// for that die. Use `(low, sides, effect)` for an "N+" arm,
         /// or `(n, n, effect)` for a single-number arm.
         results: Vec<(u8, u8, Effect)>,
+        /// CR 706.5 — "if any of the dice rolled the same number, [effect]".
+        /// When `count >= 2` and two or more dice share a *natural* face
+        /// (doubles), this fires once after the per-die results dispatch.
+        /// Defaults to `None` (no doubles check) for snapshot back-compat.
+        #[serde(default)]
+        on_doubles: Option<Box<Effect>>,
     },
     /// Modal — controller picks one of `modes` at cast time; the chosen index
     /// is stored in the stack item's `mode` field.

@@ -1282,6 +1282,10 @@ fn roll_die_serde_round_trip() {
         count: Value::Const(2),
         modifier: Value::Const(0),
         reroll_at_most: 0,
+        on_doubles: Some(Box::new(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })),
         results: vec![
             (1, 1, Effect::Discard {
                 who: Selector::You, amount: Value::Const(1), random: false,
@@ -1293,7 +1297,7 @@ fn roll_die_serde_round_trip() {
     let json = serde_json::to_string(&original).expect("serialize");
     let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
     match parsed {
-        Effect::RollDie { sides, count, modifier, reroll_at_most, results } => {
+        Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles } => {
             assert!(matches!(modifier, Value::Const(0)));
             assert_eq!(reroll_at_most, 0);
             assert_eq!(sides, 20);
@@ -1303,6 +1307,7 @@ fn roll_die_serde_round_trip() {
             assert_eq!(results[1].0, 2);
             assert_eq!(results[1].1, 19);
             assert_eq!(results[2].1, 20);
+            assert!(on_doubles.is_some(), "CR 706.5 on_doubles round-trips");
         }
         other => panic!("expected RollDie, got {:?}", other),
     }
@@ -1398,6 +1403,49 @@ fn cr_706_2b_high_natural_roll_is_not_rerolled() {
     }).expect("die roll sorcery castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, you_before + 5, "natural 5 is kept (no reroll)");
+}
+
+#[test]
+fn cr_706_5_matching_faces_fire_the_doubles_effect() {
+    // Two d6 both rolling 4 → doubles: the per-die 4-6 arm gains 1 each
+    // (+2 life) AND the on_doubles clause draws a card.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(4),
+        DecisionAnswer::DieRoll(4),
+    ]));
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    let id = g.add_card_to_hand(0, test_card_die_roll_doubles());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "both dice in the 4-6 arm gain 1 each");
+    assert_eq!(g.players[0].hand.len(), hand, "doubles drew a card (net 0: cast 1, drew 1)");
+}
+
+#[test]
+fn cr_706_5_distinct_faces_skip_the_doubles_effect() {
+    // Faces 4 and 5 → no doubles: +2 life from the arms, no extra draw.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(4),
+        DecisionAnswer::DieRoll(5),
+    ]));
+    let life = g.players[0].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_doubles());
+    let hand_after_add = g.players[0].hand.len();
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "both dice in the 4-6 arm gain 1 each");
+    assert_eq!(g.players[0].hand.len(), hand_after_add - 1,
+        "no doubles → no draw (hand only lost the cast sorcery)");
 }
 
 // ── Batch 126 — 26 new STX cards across all 5 schools + new shortcut helpers

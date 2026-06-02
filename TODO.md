@@ -1545,9 +1545,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   matching `[low, high]` band. Out-of-range rolls run no effect for
   that die per CR 706.3a literal "If the result was in this range"
   semantics).
-  (d) **706.5** — ⏳ (no two-roll-
-  with-doubles-check predicate; the current primitive rolls each die
-  independently and dispatches per-die without observing pairs).
+  (d) **706.5** — ✅ (push claude/modern_decks): `Effect::RollDie` carries
+  `on_doubles: Option<Box<Effect>>` (serde-defaulted None). After the
+  per-die results dispatch, if two or more dice share a natural face the
+  doubles effect fires once. Tests:
+  `cr_706_5_matching_faces_fire_the_doubles_effect`,
+  `cr_706_5_distinct_faces_skip_the_doubles_effect`, plus serde round-trip
+  in `roll_die_serde_round_trip`.
   (e) **706.6** — ⏳ (no ignore-roll primitive; the resolver doesn't emit roll
   events that triggers could observe yet).
   (f) **706.8** — ⏳ (no `CounterType` representation of stored rolls;
