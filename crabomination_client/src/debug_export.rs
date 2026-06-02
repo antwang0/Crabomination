@@ -200,6 +200,7 @@ mod tests {
             combat_preview: None,
             castable_hand: vec![],
             pitchable_hand: vec![],
+            kickable_hand: vec![],
         }
     }
 

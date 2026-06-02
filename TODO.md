@@ -8,6 +8,28 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **AutoDecider declines all library searches** (`Decision::SearchLibrary
+  → Search(None)` in `decision.rs`), so tutor ETBs (Pilgrim's Eye,
+  Burnished Hart, Ranger-Captain) fetch nothing under the bot/AutoDecider
+  — tests must script the pick. Give AutoDecider a "pick the first
+  candidate (prefer a basic land matching an unmet color)" heuristic so
+  the singleplayer bot actually tutors.
+- **Divided damage through a trigger fills only one slot.** Fury's evoke
+  ETB (`DealDamageDivided { max_targets: 2 }`) auto-targets a single
+  creature and dumps the whole total there; the multi-slot fill in
+  `auto_targets_for_effect_all_slots` isn't reached from the trigger
+  dispatch path (same root as the Saheeli emblem note below). Thread the
+  multi-slot picker through `fire_step_triggers` / trigger auto-target.
+- **Client kicker affordance.** `ClientView.kickable_hand` now lists hand
+  cards castable with their kicker paid; the 3D client should render a
+  distinct "pay kicker?" badge/toggle (separate from castable-green and
+  the pitch affordance) and submit `GameAction::CastSpellKicked`. Not
+  compile-verified here (client can't build in this sandbox).
+- **Provoke (targeted must-block).** `Keyword::AllMustBlock` (Lure) +
+  `MustBeBlocked` (Academic Dispute) cover the untargeted 509.1c cases;
+  Provoke's "that creature must block this + untap it" needs a per-blocker
+  `CardInstance.must_block_attacker` link set by an attack trigger and
+  cleared at end of combat.
 - **Kicker — ✅ wired (CR 702.32, claude/modern_decks).**
   `GameAction::CastSpellKicked` folds the optional kicker cost into the
   spell's mana cost and stamps `CardInstance.kicked`;
