@@ -8707,6 +8707,51 @@ fn goblin_trashmaster_sacrifices_a_goblin_to_destroy_an_artifact() {
 }
 
 #[test]
+fn beetleback_chief_makes_two_goblins() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::beetleback_chief());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Beetleback Chief");
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token).count();
+    assert_eq!(tokens, 2, "two 1/1 Goblin tokens");
+}
+
+#[test]
+fn goblin_warchief_reduces_goblin_costs_and_grants_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_warchief());
+    let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders());
+    // Haste anthem reaches other Goblins.
+    assert!(g.computed_permanent(raider).unwrap().keywords.contains(&Keyword::Haste),
+        "Goblins gain haste");
+    // {2}{R} Krenko (a Goblin spell) is discounted by {1} → costs {1}{R}{R}.
+    let krenko = g.add_card_to_hand(0, catalog::krenko_mob_boss());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1); // only {1} generic, relying on the discount
+    g.perform_action(GameAction::CastSpell {
+        card_id: krenko, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Goblin spell costs one less");
+}
+
+#[test]
+fn skirk_prospector_sacrifices_a_goblin_for_red() {
+    use crate::mana::Color;
+    let mut g = two_player_game();
+    let prospector = g.add_card_to_battlefield(0, catalog::skirk_prospector());
+    g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // sac fodder
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prospector, ability_index: 0, target: None, x_value: None,
+    }).expect("sac a Goblin for one red");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red");
+}
+
+#[test]
 fn phantom_monster_is_a_three_three_flyer() {
     use crate::card::Keyword;
     let def = catalog::phantom_monster();

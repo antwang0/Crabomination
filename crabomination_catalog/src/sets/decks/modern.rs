@@ -6888,6 +6888,95 @@ pub fn goblin_trashmaster() -> CardDefinition {
     }
 }
 
+/// Beetleback Chief — {3}{R} 2/2 Goblin Warrior. When this enters, create
+/// two 1/1 red Goblin creature tokens.
+pub fn beetleback_chief() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Beetleback Chief",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: goblin_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Goblin Warchief — {1}{R}{R} 2/2 Goblin Warrior with Haste. Goblin spells
+/// you cast cost {1} less to cast. Goblins you control have haste.
+pub fn goblin_warchief() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Goblin Warchief",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Goblin spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Goblins you control have haste.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Haste,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Skirk Prospector — {R} 1/1 Goblin. Sacrifice a Goblin: Add {R}.
+pub fn skirk_prospector() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Skirk Prospector",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Red]),
+            },
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                1,
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Phantom Monster — {3}{U} Creature — Phantom Monster, 3/3, Flying.
 pub fn phantom_monster() -> CardDefinition {
     CardDefinition {
