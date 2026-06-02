@@ -207,6 +207,12 @@ pub struct PlayerView {
     /// previews on Quandrix scaling cards (Fractal Anomaly, etc.).
     #[serde(default)]
     pub cards_drawn_this_turn: u32,
+    /// CR 121.2b — the per-turn draw cap currently imposed on this player by
+    /// any `StaticEffect::CapDrawsPerTurn` (Spirit of the Labyrinth / Notion
+    /// Thief-class locks), or `None` if they may draw freely. UIs show
+    /// "draws: X / cap" and grey out draw payoffs once the cap is reached.
+    #[serde(default)]
+    pub draw_cap: Option<u32>,
     /// Number of times a card has left this player's graveyard on the
     /// current turn. Reset on the controller's untap. Surfaced so UIs
     /// can show "Lorehold ready" hints on cards whose riders fire when

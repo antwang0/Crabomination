@@ -34,7 +34,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(p, i, seat, &state.prevention_shields, devotion)
+                project_player(p, i, seat, &state.prevention_shields, devotion, state.draw_cap_for(i))
             })
             .collect(),
         battlefield: {
@@ -200,6 +200,7 @@ fn project_player(
     viewer_seat: usize,
     prevention_shields: &[crate::game::types::PreventionShield],
     devotion: [u32; 5],
+    draw_cap: Option<u32>,
 ) -> PlayerView {
     use crate::game::types::PreventionTarget;
     let has_prevention_shield = prevention_shields
@@ -226,6 +227,7 @@ fn project_player(
         first_spell_tax_charges: player.first_spell_tax_charges,
         life_gained_this_turn: player.life_gained_this_turn,
         cards_drawn_this_turn: player.cards_drawn_this_turn,
+        draw_cap,
         cards_left_graveyard_this_turn: player.cards_left_graveyard_this_turn,
         creatures_died_this_turn: player.creatures_died_this_turn,
         cards_exiled_this_turn: player.cards_exiled_this_turn,

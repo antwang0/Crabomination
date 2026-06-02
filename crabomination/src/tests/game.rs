@@ -5541,6 +5541,11 @@ fn cr_121_2b_draw_cap_truncates_draws() {
     ).unwrap();
     assert_eq!(g.players[0].hand.len(), hand_before + 1,
         "draw cap truncates a draw-3 to a single card");
+
+    // The cap is surfaced to clients via PlayerView.draw_cap.
+    let view = crate::server::view::project(&g, 0);
+    let me = view.players.iter().find(|p| p.seat == 0).unwrap();
+    assert_eq!(me.draw_cap, Some(1), "draw cap surfaced in the player view");
 }
 
 // ── CR 704.5c — empty library + draw attempt ─────────────────────────────

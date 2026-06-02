@@ -43,6 +43,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Devotion => (Color::srgba(0.22, 0.16, 0.34, 1.0), theme::TEXT_PRIMARY),
         // Energy (CR 122) — a Kaladesh aether teal.
         StatChipKind::Energy => (Color::srgba(0.10, 0.30, 0.32, 1.0), theme::TEXT_PRIMARY),
+        // Draw cap (CR 121.2b) — a muted warning amber: drawing is locked.
+        StatChipKind::DrawCap => (Color::srgba(0.36, 0.24, 0.10, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -57,6 +59,7 @@ pub(super) enum StatChipKind {
     Emblem,
     Devotion,
     Energy,
+    DrawCap,
 }
 
 /// Library size at or below which the Deck chip switches to its amber
@@ -374,6 +377,15 @@ pub fn update_player_stats_chips(
         if p.energy > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
         }
+        // CR 121.2b draw cap — only surface when a draw lock is active.
+        if let Some(cap) = p.draw_cap {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::DrawCap,
+                format!("✎ {}/{}", p.cards_drawn_this_turn, cap),
+            );
+        }
         // CR 114 emblems — only surface when the player actually owns one.
         if !p.emblems.is_empty() {
             spawn_stat_chip(
@@ -611,6 +623,14 @@ pub fn update_opponent_stats_rows(
                 }
                 if p.energy > 0 {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
+                }
+                if let Some(cap) = p.draw_cap {
+                    spawn_stat_chip(
+                        row,
+                        &ui_fonts,
+                        StatChipKind::DrawCap,
+                        format!("✎ {}/{}", p.cards_drawn_this_turn, cap),
+                    );
                 }
                 if !p.emblems.is_empty() {
                     spawn_stat_chip(
