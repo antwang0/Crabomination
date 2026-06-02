@@ -234,6 +234,37 @@ pub fn jeskai_elder() -> CardDefinition {
     }
 }
 
+/// Bloodsoaked Champion — {R} 1/1 Human Warrior. This can't block. Raid —
+/// {1}{B}: Return Bloodsoaked Champion from your graveyard to the battlefield.
+/// Activate only if you attacked this turn.
+pub fn bloodsoaked_champion() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Predicate, ZoneDest};
+    CardDefinition {
+        name: "Bloodsoaked Champion",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            from_graveyard: true,
+            condition: Some(Predicate::PlayerAttackedThisTurn { who: PlayerRef::You }),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Mardu Heart-Piercer — {3}{R} 3/2 Human Warrior. Raid — When this enters,
 /// if you attacked this turn, it deals 2 damage to any target.
 pub fn mardu_heart_piercer() -> CardDefinition {
@@ -268,5 +299,6 @@ pub fn all_ktk_card_factories() -> &'static [crate::CardFactory] {
         seeker_of_the_way,
         jeskai_elder,
         mardu_heart_piercer,
+        bloodsoaked_champion,
     ]
 }

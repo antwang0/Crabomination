@@ -161,6 +161,39 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
 }
 
 #[test]
+fn bloodsoaked_champion_returns_from_graveyard_after_an_attack() {
+    let mut g = two_player_game();
+    // Champion starts in the graveyard.
+    let champ_def = catalog::bloodsoaked_champion();
+    let champ = g.next_id();
+    let mut inst = crate::card::CardInstance::new(champ, champ_def, 0);
+    inst.controller = 0;
+    g.players[0].graveyard.push(inst);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // No attack yet → activation rejected.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: champ, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "raid not satisfied → can't return");
+    // Attack with another creature to satisfy raid.
+    let atk = g.add_card_to_battlefield(0, catalog::screamreach_brawler());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // Mana cleared on the step change — re-add for the activation.
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: champ, ability_index: 0, target: None, x_value: None,
+    }).expect("raid satisfied → return from graveyard");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == champ), "Champion is back on the battlefield");
+}
+
+#[test]
 fn raid_etb_does_nothing_without_an_attack() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mardu_heart_piercer());
