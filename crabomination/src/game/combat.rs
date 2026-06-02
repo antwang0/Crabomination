@@ -665,6 +665,93 @@ impl GameState {
         ordered
     }
 
+    /// CR 510.1c-d — divide an attacker's `total_power` combat damage among
+    /// its blockers (given in assignment order with their `lethal` amounts).
+    /// Returns `(blocker_id, amount)` pairs in the same order; any power not
+    /// assigned to a blocker is the trample-over leftover.
+    ///
+    /// The default (and `AutoDecider`) split assigns lethal to each blocker
+    /// in order until the power runs out. A `wants_ui` / scripted decider may
+    /// answer `CombatDamageAssignment` to over-assign (e.g. deny trample),
+    /// subject to CR 510.1c: a blocker may receive damage only after every
+    /// earlier blocker has been assigned at least its lethal, and the total
+    /// can't exceed `total_power`. A malformed answer falls back to default.
+    fn assign_combat_damage(
+        &mut self,
+        attacker: CardId,
+        total_power: u32,
+        lethals: &[(CardId, u32)],
+    ) -> Vec<(CardId, u32)> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let default_split = || {
+            let mut remaining = total_power;
+            lethals
+                .iter()
+                .map(|&(id, lethal)| {
+                    let a = lethal.min(remaining);
+                    remaining -= a;
+                    (id, a)
+                })
+                .collect::<Vec<_>>()
+        };
+        // No meaningful choice for a single blocker or zero power.
+        if lethals.len() <= 1 || total_power == 0 {
+            return default_split();
+        }
+        let blockers: Vec<(CardId, String, u32)> = lethals
+            .iter()
+            .map(|&(id, lethal)| {
+                let name = self
+                    .battlefield_find(id)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                (id, name, lethal)
+            })
+            .collect();
+        let answer = self.decider.decide(&Decision::AssignCombatDamage {
+            attacker,
+            attacker_power: total_power,
+            blockers,
+        });
+        let DecisionAnswer::CombatDamageAssignment(pairs) = answer else {
+            return default_split();
+        };
+        if pairs.is_empty() {
+            return default_split();
+        }
+        // Re-key the answer into blocker order (missing entries = 0).
+        let amounts: Vec<u32> = lethals
+            .iter()
+            .map(|&(id, _)| {
+                pairs
+                    .iter()
+                    .find(|(pid, _)| *pid == id)
+                    .map(|(_, a)| *a)
+                    .unwrap_or(0)
+            })
+            .collect();
+        let assigned: u32 = amounts.iter().sum();
+        if assigned > total_power {
+            return default_split();
+        }
+        // Ordering rule: once a blocker is under-assigned, no later blocker
+        // (nor trample-over) may receive damage.
+        let mut earlier_all_lethal = true;
+        for (i, &(_, lethal)) in lethals.iter().enumerate() {
+            if !earlier_all_lethal && amounts[i] > 0 {
+                return default_split();
+            }
+            if amounts[i] < lethal {
+                earlier_all_lethal = false;
+            }
+        }
+        if total_power > assigned && !earlier_all_lethal {
+            // A trample-over leftover requires every blocker to be at lethal.
+            return default_split();
+        }
+        lethals.iter().map(|&(id, _)| id).zip(amounts).collect()
+    }
+
     /// Core combat damage resolver. Each attacker has its own defending
     /// player or planeswalker (`Attack::target`); damage routing is
     /// per-attacker.
@@ -757,32 +844,41 @@ impl GameState {
                     }
                 }
             } else {
-                let mut remaining_atk_damage =
-                    if prevent_combat_damage { 0 } else { atk.power };
+                let total_power = if prevent_combat_damage {
+                    0
+                } else {
+                    atk.power.max(0) as u32
+                };
+                // CR 510.1c-d — the attacking player divides combat damage
+                // among the blockers in the chosen order. Build the default
+                // lethal-to-each split, then let the controller override it
+                // (e.g. over-assign to a blocker to deny trample). The lethal
+                // for each is 1 under deathtouch (CR 702.2e).
+                let lethals: Vec<(CardId, u32)> = blocker_ids
+                    .iter()
+                    .map(|&bid| {
+                        let tough = computed_of(bid)
+                            .map(|c| c.toughness.max(0) as u32)
+                            .unwrap_or(0);
+                        (bid, if atk.has_deathtouch { 1 } else { tough })
+                    })
+                    .collect();
+                let assignment = self.assign_combat_damage(atk.id, total_power, &lethals);
                 let mut lifelink_dealt = 0i32;
+                let mut assigned_to_blockers = 0u32;
 
-                for &blocker_id in &blocker_ids {
-                    if remaining_atk_damage <= 0 {
-                        break;
+                for &(blocker_id, assign) in &assignment {
+                    assigned_to_blockers += assign;
+                    if assign == 0 {
+                        continue;
                     }
-                    let blocker_toughness =
-                        computed_of(blocker_id).map(|c| c.toughness).unwrap_or(0);
-                    let lethal = if atk.has_deathtouch {
-                        1
-                    } else {
-                        blocker_toughness
-                    };
-                    let assign = remaining_atk_damage.min(lethal);
-                    // Assignment is locked in regardless of prevention (CR
-                    // 510.2): trample-over reads off the assigned amount.
-                    remaining_atk_damage -= assign;
                     // CR 615 — route attacker→blocker combat damage through
                     // the blocker's prevention shields. Lifelink and the
                     // wither/infect -1/-1 counters scale off the actual
                     // (post-prevention) amount dealt (CR 702.15a).
                     let dealt = self.apply_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
-                        assign.max(0) as u32,
+                        assign,
                         &mut events,
                     ) as i32;
                     lifelink_dealt += dealt;
@@ -816,13 +912,14 @@ impl GameState {
                     }
                 }
 
-                if atk.has_trample && remaining_atk_damage > 0 {
+                let trample_leftover = total_power.saturating_sub(assigned_to_blockers);
+                if atk.has_trample && trample_leftover > 0 {
                     // Trample-over damage to the defending player/PW is also
                     // subject to prevention shields; lifelink follows the
                     // post-prevention amount.
                     let amount = self.prevent_combat_to_target(
                         atk.target,
-                        remaining_atk_damage as u32,
+                        trample_leftover,
                         &mut events,
                     );
                     lifelink_dealt += amount as i32;

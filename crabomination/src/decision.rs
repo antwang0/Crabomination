@@ -205,6 +205,20 @@ pub enum Decision {
         total: u32,
         targets: Vec<Target>,
     },
+
+    /// CR 510.1c-d — divide an attacker's combat damage among its multiple
+    /// blockers. `blockers` lists `(id, name, lethal)` in the assignment
+    /// order chosen earlier (see `CombatDamageOrder`); the attacker may
+    /// assign more than `lethal` to any blocker (e.g. to deny trample) but
+    /// must assign at least `lethal` to a blocker before any later blocker
+    /// (or trample-over) receives damage. The decider answers
+    /// `CombatDamageAssignment(amounts)`; `AutoDecider` returns an empty
+    /// answer = the engine's default lethal-to-each-then-trample split.
+    AssignCombatDamage {
+        attacker: CardId,
+        attacker_power: u32,
+        blockers: Vec<(CardId, String, u32)>,
+    },
 }
 
 /// The decider's answer to a `Decision::Learn`.
@@ -268,6 +282,12 @@ pub enum DecisionAnswer {
     /// `Decision::DivideDamage { targets }`. A malformed answer (wrong
     /// length / wrong sum) is renormalized to an even split by the engine.
     DamageDivision(Vec<u32>),
+    /// CR 510.1c-d — `(blocker_id, amount)` pairs answering
+    /// `Decision::AssignCombatDamage`. An empty or invalid answer (one that
+    /// violates the assign-lethal-before-next-blocker ordering rule, or
+    /// over-assigns past the attacker's power) falls back to the engine's
+    /// default lethal-to-each split.
+    CombatDamageAssignment(Vec<(CardId, u32)>),
 }
 
 /// Spread `total` damage across `n` targets as evenly as possible, with the
@@ -400,6 +420,10 @@ impl Decider for AutoDecider {
             // CR 601.2d — spread the damage as evenly as possible.
             Decision::DivideDamage { total, targets, .. } => {
                 DecisionAnswer::DamageDivision(even_damage_split(*total, targets.len()))
+            }
+            // CR 510.1c-d — keep the engine's default lethal-to-each split.
+            Decision::AssignCombatDamage { .. } => {
+                DecisionAnswer::CombatDamageAssignment(vec![])
             }
         }
     }

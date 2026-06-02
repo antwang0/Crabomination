@@ -830,6 +830,13 @@ pub enum DecisionWire {
         total: u32,
         targets: Vec<Target>,
     },
+    /// CR 510.1c-d — divide an attacker's combat damage among its blockers.
+    /// Decider answers `CombatDamageAssignment((id, amount) pairs)`.
+    AssignCombatDamage {
+        attacker: CardId,
+        attacker_power: u32,
+        blockers: Vec<(CardId, String, u32)>,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -930,6 +937,13 @@ impl From<&Decision> for DecisionWire {
                 total: *total,
                 targets: targets.clone(),
             },
+            Decision::AssignCombatDamage { attacker, attacker_power, blockers } => {
+                DecisionWire::AssignCombatDamage {
+                    attacker: *attacker,
+                    attacker_power: *attacker_power,
+                    blockers: blockers.clone(),
+                }
+            }
         }
     }
 }

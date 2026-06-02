@@ -5736,6 +5736,72 @@ fn cr_510_1c_attacker_chooses_damage_assignment_order() {
 }
 
 #[test]
+fn cr_510_1c_attacker_over_assigns_to_deny_trample() {
+    // A 5/5 trampler blocked by two 2/2s would, by default, assign lethal
+    // (2) to each and trample 1 through. The attacking player may instead
+    // pour all 5 into the first blocker — denying any trample and sparing
+    // the second 2/2. Scripted: empty order (keep default), then assign 5/0.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || {
+        vanilla_body("Trampler 5/5", 5, 5, vec![crate::card::Keyword::Trample])
+    });
+    let b1 = setup_attacker(&mut g, 1, || vanilla_body("Wall A", 2, 2, vec![]));
+    let b2 = setup_attacker(&mut g, 1, || vanilla_body("Wall B", 2, 2, vec![]));
+
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DamageOrder(vec![]),
+        DecisionAnswer::CombatDamageAssignment(vec![(b1, 5), (b2, 0)]),
+    ]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)]))
+        .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == b1), "blocker A took all 5 → dies");
+    assert!(g.battlefield.iter().any(|c| c.id == b2), "blocker B got 0 → survives");
+    assert_eq!(g.players[1].life, 20, "no trample-over: defender takes no damage");
+}
+
+#[test]
+fn cr_510_1c_invalid_over_assignment_falls_back_to_default() {
+    // An illegal answer (assign damage to the second blocker while the first
+    // is under-assigned) is rejected and the engine uses the lethal-to-each
+    // default: a 4/4 trampler vs two 2/2s kills both and tramples 0.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || {
+        vanilla_body("Trampler 4/4", 4, 4, vec![crate::card::Keyword::Trample])
+    });
+    let b1 = setup_attacker(&mut g, 1, || vanilla_body("Wall A", 2, 2, vec![]));
+    let b2 = setup_attacker(&mut g, 1, || vanilla_body("Wall B", 2, 2, vec![]));
+
+    // Skip the first blocker (0) but feed the second (2) — illegal ordering.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::DamageOrder(vec![]),
+        DecisionAnswer::CombatDamageAssignment(vec![(b1, 0), (b2, 2)]),
+    ]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)]))
+        .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == b1), "default split: blocker A dies");
+    assert!(!g.battlefield.iter().any(|c| c.id == b2), "default split: blocker B dies");
+    assert_eq!(g.players[1].life, 20, "4 - 2 - 2 = 0 tramples through");
+}
+
+#[test]
 fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
     use crate::effect::Predicate;
     use crate::game::effects::EffectContext;

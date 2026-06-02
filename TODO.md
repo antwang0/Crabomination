@@ -1688,8 +1688,9 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 - ✅ **CR 111 — Tokens**
 
-- 🟡 **CR 510 — Combat Damage Step** (push modern_decks batch 38,
-  claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
+- ✅ **CR 510 — Combat Damage Step** (push modern_decks batch 38; multi-
+  blocker damage-split player prompt landed claude/modern_decks — audit
+  against `MagicCompRules_20260417.txt`):
   Combat damage assignment and dealing. Audit:
   (a) **510.1** — ✅
   (`resolve_combat_damage_with_filter` in `game/combat.rs` walks
@@ -1703,17 +1704,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ✅ (`deal_combat_damage_to_target` matches on `AttackTarget::Player`
   vs `Planeswalker` and routes to `deal_damage_to_player` or
   `deal_damage_to_planeswalker`).
-  (d) **510.1c** blocked attacker assigns to creatures blocking it (split
-  by controller if multiple blockers) — ✅ for the single-blocker case;
-  🟡 for the multi-blocker split (engine assigns all damage to the first
-  blocker in declaration order — the player-chooses-split rider isn't
-  surfaced through a Decision prompt; AutoDecider fans out the "deal all
-  to first blocker" path which is CR-legal but not optimal).
-  (e) **510.1d** blocking creature assigns to creatures it's blocking —
-  ✅ for the single-attacker case; same multi-attacker split 🟡 gap.
-  (f) **510.1e** total damage assignment validity check — n/a (the
-  assignment is computed by the engine, not by an external player, so it
-  can't be illegal by construction).
+  (d) **510.1c** blocked attacker assigns to creatures blocking it — ✅.
+  The attacker orders its blockers (`order_combat_blockers`) and then
+  divides its damage among them (`assign_combat_damage` +
+  `Decision::AssignCombatDamage`): the default/`AutoDecider` split assigns
+  lethal to each in order then tramples over, while a `wants_ui`/scripted
+  controller may over-assign (e.g. pour all damage into one blocker to deny
+  trample). Tests: `cr_510_1c_attacker_over_assigns_to_deny_trample`,
+  `cr_510_1c_attacker_chooses_damage_assignment_order`.
+  (e) **510.1d** blocking creature assigns to creatures it's blocking — ✅.
+  (f) **510.1e** total damage assignment validity check — ✅:
+  `assign_combat_damage` validates the answer (sum ≤ power; a blocker may be
+  assigned damage only after every earlier blocker reached lethal; a
+  trample-over leftover requires all blockers at lethal) and falls back to
+  the default lethal-to-each split on any malformed answer. Test:
+  `cr_510_1c_invalid_over_assignment_falls_back_to_default`.
   (g) **510.2** — ✅ (`resolve_combat_damage_with_
   filter` computes attacker damage then resolves it in one pass — no
   priority interlude, no `give_priority` calls between the assignment
@@ -1736,9 +1741,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   during cleanup).
   Tests: extensive combat-coverage in `crabomination/src/tests/game.rs`
   (single-blocker damage, lifelink swing, first-strike clears blocker
-  before regular damage, prevent_combat_damage zeros damage and
-  lifelink). Promote to ✅ when the multi-blocker damage-split player
-  prompt lands (CR 510.1c-d).
+  before regular damage, prevent_combat_damage zeros damage and lifelink,
+  multi-blocker order + over-assign + invalid-fallback). Remaining client
+  work: a `DecisionWire::AssignCombatDamage` modal so a networked human
+  picks the split (server consults the decider synchronously today, same
+  caveat as `CombatDamageOrder`).
 
 - ✅ **CR 511 — End of Combat Step**
 
