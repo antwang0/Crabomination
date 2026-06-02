@@ -2352,6 +2352,98 @@ pub fn centaur_courser() -> CardDefinition {
     }
 }
 
+/// Rootwater Hunter — {2}{U} 1/1 Merfolk. {T}: deal 1 damage to target
+/// creature.
+pub fn rootwater_hunter() -> CardDefinition {
+    CardDefinition {
+        name: "Rootwater Hunter",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stormfront Pegasus — {1}{W} 2/1 Pegasus with Flying.
+pub fn stormfront_pegasus() -> CardDefinition {
+    CardDefinition {
+        name: "Stormfront Pegasus",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pegasus],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Suntail Hawk — {W} 1/1 Bird with Flying.
+pub fn suntail_hawk() -> CardDefinition {
+    CardDefinition {
+        name: "Suntail Hawk",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Thundering Giant — {3}{R} 4/3 Giant with Haste.
+pub fn thundering_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Thundering Giant",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Pillarfield Ox — {3}{W} 2/4 Ox (vanilla).
+pub fn pillarfield_ox() -> CardDefinition {
+    CardDefinition {
+        name: "Pillarfield Ox",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ox],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
 /// Thieving Magpie — {2}{U} 1/3 Bird, Flying. Whenever it deals combat
 /// damage to a player, draw a card.
 pub fn thieving_magpie() -> CardDefinition {

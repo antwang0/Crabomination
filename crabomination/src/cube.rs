@@ -343,6 +343,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks: white value/keyword bodies ──
         kor_skyfisher,
         whitemane_lion,
+        stormfront_pegasus,
+        suntail_hawk,
+        pillarfield_ox,
         skyknight_legionnaire,
         healers_hawk,
         // ── Investigate (CR 701.13) ──
@@ -601,6 +604,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks: flash flyer ──
         spectral_sailor,
         thieving_magpie,
+        rootwater_hunter,
         // ── ETB-value + adapt/connive creatures (claude/modern_decks) ──
         aether_adept,
         augury_owl,
@@ -1099,6 +1103,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         viashino_pyromancer,
         ember_hauler,
         fire_imp,
+        goblin_balloon_brigade,
+        thundering_giant,
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
         goblin_chainwhirler,

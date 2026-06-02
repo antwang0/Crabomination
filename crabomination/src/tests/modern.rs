@@ -21462,3 +21462,47 @@ fn bloodgift_demon_draws_and_loses_one_at_upkeep() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
     assert_eq!(g.players[0].life, life - 1, "lost 1 life");
 }
+
+// ── Tap-to-ping / pump-grant / vanilla bodies (claude/modern_decks) ──────────
+
+#[test]
+fn rootwater_hunter_pings_a_creature() {
+    let mut g = two_player_game();
+    let hunter = g.add_card_to_battlefield(0, catalog::rootwater_hunter());
+    g.clear_sickness(hunter);
+    // Target a 1-toughness creature so the single point is lethal.
+    let target = g.add_card_to_battlefield(1, catalog::mogg_fanatic()); // 1/1
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hunter, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("tap-ping activatable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "1 damage killed the 1/1");
+    assert!(g.battlefield_find(hunter).unwrap().tapped, "Rootwater Hunter tapped for its ability");
+}
+
+#[test]
+fn goblin_balloon_brigade_grants_itself_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let gob = g.add_card_to_battlefield(0, catalog::goblin_balloon_brigade());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gob, ability_index: 0, target: None, x_value: None,
+    }).expect("flying-grant activatable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(gob).expect("Goblin in play");
+    assert!(cp.keywords.contains(&Keyword::Flying), "gained flying until end of turn");
+}
+
+#[test]
+fn vanilla_keyword_bodies_round_two() {
+    use crate::card::Keyword;
+    let peg = catalog::stormfront_pegasus();
+    assert!(peg.keywords.contains(&Keyword::Flying) && (peg.power, peg.toughness) == (2, 1));
+    let hawk = catalog::suntail_hawk();
+    assert!(hawk.keywords.contains(&Keyword::Flying));
+    let giant = catalog::thundering_giant();
+    assert!(giant.keywords.contains(&Keyword::Haste) && (giant.power, giant.toughness) == (4, 3));
+    let ox = catalog::pillarfield_ox();
+    assert_eq!((ox.power, ox.toughness), (2, 4));
+}
