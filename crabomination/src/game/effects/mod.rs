@@ -4594,15 +4594,25 @@ impl GameState {
                     // (push XVI fix — was breaking Embrace the Paradox's
                     // MayDo land sub).
                     let on_bf = matches!(zone, Zone::Battlefield);
+                    // CR — honor `OtherThanSource` in hidden-zone searches too
+                    // (the on-card evaluator has no source context, so it
+                    // can't drop the source itself — e.g. Ichorid exiling a
+                    // black creature *other than itself* from its own gy).
+                    let exclude_source = requirement_mentions_other_than_source(filter);
                     out.extend(
                         cards
                             .into_iter()
-                            .filter(|c| if on_bf {
-                                self.evaluate_requirement_static(
-                                    filter, &Target::Permanent(c.id), ctx.controller, ctx.source,
-                                )
-                            } else {
-                                self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                            .filter(|c| {
+                                if !on_bf && exclude_source && ctx.source == Some(c.id) {
+                                    return false;
+                                }
+                                if on_bf {
+                                    self.evaluate_requirement_static(
+                                        filter, &Target::Permanent(c.id), ctx.controller, ctx.source,
+                                    )
+                                } else {
+                                    self.evaluate_requirement_on_card(filter, c, ctx.controller)
+                                }
                             })
                             .map(|c| if on_bf {
                                 EntityRef::Permanent(c.id)
@@ -4857,6 +4867,22 @@ fn target_to_entity(t: &Target) -> EntityRef {
     match t {
         Target::Player(p) => EntityRef::Player(*p),
         Target::Permanent(c) => EntityRef::Permanent(*c),
+    }
+}
+
+/// True if a requirement tree contains `OtherThanSource` anywhere. Used to
+/// apply source-exclusion in hidden-zone searches where the on-card
+/// evaluator can't see the source.
+fn requirement_mentions_other_than_source(req: &crate::card::SelectionRequirement) -> bool {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::OtherThanSource => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_other_than_source(a)
+                || requirement_mentions_other_than_source(b)
+        }
+        R::Not(inner) => requirement_mentions_other_than_source(inner),
+        _ => false,
     }
 }
 

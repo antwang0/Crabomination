@@ -2744,22 +2744,27 @@ pub fn bloodghast() -> CardDefinition {
     }
 }
 
-/// Ichorid — {B}, 3/1 Horror with Haste. "At the beginning of your
-/// upkeep, if Ichorid is in your graveyard and at least one of your
-/// opponents' graveyards contains a black creature card, you may
-/// return Ichorid to the battlefield. If you do, exile Ichorid at the
-/// beginning of the next end step."
+/// Ichorid — {3}{B}, 3/1 Horror with Haste. "At the beginning of the
+/// end step, sacrifice this creature. At the beginning of your upkeep,
+/// if this card is in your graveyard, you may exile a black creature
+/// card other than this card from your graveyard. If you do, return
+/// this card to the battlefield."
 ///
-/// Push (modern_decks batch 112): the "opponent has a black creature
-/// card in their graveyard" gate is now wired via
-/// `EventSpec::with_filter(SelectorExists(opp's GY ∩ Creature ∩ Black))`.
-/// The trigger only fires when at least one of your opponents' graveyards
-/// contains a black creature card — so Ichorid stays in your graveyard
-/// (rather than free-recurring every turn) until an opponent loses a
-/// black creature.
+/// The exile-a-black-creature cost rides `SelectorExists(your GY ∩
+/// Creature ∩ Black ∩ OtherThanSource)` as the trigger gate plus an
+/// `Effect::Move(… → Exile)` cost before the return. The end-step body
+/// **sacrifices** Ichorid (to the graveyard, scheduled on return) so it
+/// recurs each upkeep while you still have black fodder.
 pub fn ichorid() -> CardDefinition {
     use crate::card::{Predicate, Zone};
     use crate::mana::Color;
+    let black_fodder = || Selector::CardsInZone {
+        who: PlayerRef::You,
+        zone: Zone::Graveyard,
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::HasColor(Color::Black))
+            .and(SelectionRequirement::OtherThanSource),
+    };
     CardDefinition {
         name: "Ichorid",
         cost: cost(&[generic(3), b()]),
@@ -2776,25 +2781,33 @@ pub fn ichorid() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::FromYourGraveyard,
             )
-            .with_filter(Predicate::SelectorExists(Selector::CardsInZone {
-                who: PlayerRef::EachOpponent,
-                zone: Zone::Graveyard,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::HasColor(Color::Black)),
-            })),
-            effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
+            .with_filter(Predicate::SelectorExists(black_fodder())),
+            effect: Effect::MayDo {
+                description: "Exile a black creature card from your graveyard to return Ichorid?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    // Cost: exile a black creature card other than Ichorid.
+                    Effect::Move {
+                        what: Selector::take(black_fodder(), Value::Const(1)),
+                        to: ZoneDest::Exile,
                     },
-                },
-                Effect::DelayUntil {
-                    kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Exile { what: Selector::This }),
-                },
-            ]),
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    },
+                    // "At the beginning of the end step, sacrifice this
+                    // creature" — to the graveyard, so it recurs next upkeep.
+                    Effect::DelayUntil {
+                        kind: DelayedTriggerKind::NextEndStep,
+                        body: Box::new(Effect::Move {
+                            what: Selector::This,
+                            to: ZoneDest::Graveyard,
+                        }),
+                    },
+                ])),
+            },
         }],
         ..Default::default()
     }

@@ -47,7 +47,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Mutated Cultist | ⏳ | Mutate primitive needed. |
-| Ichorid | 🟡 | {B} 3/1 Horror with Haste. `StepBegins(Upkeep)` + `FromYourGraveyard` trigger returns Selector::This to the battlefield, then schedules a `NextEndStep` delayed exile (reuses Goryo's reanimate-then-exile pattern). The "opponent's graveyard contains a black creature" gate is omitted (no graveyard-color trigger filter yet). Test: `ichorid_returns_at_upkeep_then_exiles_at_end_step`. |
 | Necrotic Ooze | ⏳ | Gains all activated abilities of creatures in graveyards. Big ability-borrow primitive. |
 | Doomsday Excruciator | 🟡 | 6/6 Flying Demon; ETB each player mills 20. The Doomsday deck-stacking text is approximated by the symmetric mill. |
 | Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
