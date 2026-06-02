@@ -6977,6 +6977,94 @@ pub fn skirk_prospector() -> CardDefinition {
     }
 }
 
+/// Goblin Sledder — {R} 1/1 Goblin. Sacrifice a Goblin: Target creature gets
+/// +1/+1 until end of turn.
+pub fn goblin_sledder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Goblin Sledder",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                1,
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mogg Raider — {1}{R} 1/1 Goblin. Sacrifice a creature: Mogg Raider gets
+/// +1/+1 until end of turn.
+pub fn mogg_raider() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Mogg Raider",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloodlust Inciter — {R} 1/1 Goblin. {T}: Target creature gains haste until
+/// end of turn.
+pub fn bloodlust_inciter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Bloodlust Inciter",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Phantom Monster — {3}{U} Creature — Phantom Monster, 3/3, Flying.
 pub fn phantom_monster() -> CardDefinition {
     CardDefinition {

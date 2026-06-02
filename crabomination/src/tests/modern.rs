@@ -8752,6 +8752,48 @@ fn skirk_prospector_sacrifices_a_goblin_for_red() {
 }
 
 #[test]
+fn goblin_sledder_sacs_a_goblin_to_pump() {
+    let mut g = two_player_game();
+    let sledder = g.add_card_to_battlefield(0, catalog::goblin_sledder());
+    g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // sac fodder
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sledder, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("sac a Goblin to pump");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(target).unwrap();
+    assert_eq!((s.power(), s.toughness()), (3, 3), "target got +1/+1");
+}
+
+#[test]
+fn mogg_raider_sacs_a_creature_to_grow() {
+    let mut g = two_player_game();
+    let raider = g.add_card_to_battlefield(0, catalog::mogg_raider());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // sac fodder
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: raider, ability_index: 0, target: None, x_value: None,
+    }).expect("sac a creature");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(raider).unwrap();
+    assert_eq!((s.power(), s.toughness()), (2, 2), "Mogg Raider grew +1/+1");
+}
+
+#[test]
+fn bloodlust_inciter_grants_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let inciter = g.add_card_to_battlefield(0, catalog::bloodlust_inciter());
+    g.clear_sickness(inciter);
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // summoning sick
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: inciter, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("grant haste");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(target).unwrap().keywords.contains(&Keyword::Haste),
+        "target gained haste");
+}
+
+#[test]
 fn phantom_monster_is_a_three_three_flyer() {
     use crate::card::Keyword;
     let def = catalog::phantom_monster();
