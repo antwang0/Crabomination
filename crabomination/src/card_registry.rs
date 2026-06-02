@@ -50,6 +50,9 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     // Khans of Tarkir Dash creatures (sets::ktk) — registered so mid-game
     // snapshots involving them round-trip through the name→factory lookup.
     all.extend_from_slice(sets::ktk::all_ktk_card_factories());
+    // Kaldheim Boast creatures (sets::khm) — registered for snapshot
+    // name→factory round-trip.
+    all.extend_from_slice(sets::khm::all_khm_card_factories());
     // Theros devotion payoffs / gods (sets::ths) — registered so mid-game
     // snapshots involving them round-trip through the name→factory lookup.
     let ths: [CardFactory; 36] = [

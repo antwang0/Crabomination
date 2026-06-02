@@ -200,7 +200,10 @@ feature; sweep card-batch by card-batch.
   Duelmaster), ✅ Frenzy (`shortcut::frenzy` — CR 702.68),
   ✅ Melee (`shortcut::melee` — CR 702.121, +1/+1 on attack; per-opponent
   tally collapses to one in the common single-defender case),
-  ⏳ Dash, ⏳ Boast,
+  ✅ Dash (`shortcut::dash` — CR 702.110, alt-cost haste + return-to-hand
+  at next end step; Khans `sets::ktk`),
+  ✅ Boast (`shortcut::boast` — CR 702.142, once-per-turn activated ability
+  gated on `Predicate::SourceAttackedThisTurn`; Kaldheim `sets::khm`),
   ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
   ⏳ Enlist, ⏳ Mobilize, ⏳ Myriad.
 - **Value/ETB:** ✅ Investigate (`shortcut::investigate(n)` — CR 701.13,

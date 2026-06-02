@@ -11,6 +11,7 @@ use crate::effect::shortcut;
 use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
 use crate::game::types::TurnStep;
+use crate::mana::Color;
 
 /// A bare N/M creature carrying the given triggered abilities.
 fn body(name: &'static str, p: i32, t: i32, trig: Vec<TriggeredAbility>) -> CardDefinition {
@@ -70,6 +71,59 @@ fn cr_702_68_frenzy_silent_when_blocked() {
 }
 
 // ── CR 702.158 Connive ─────────────────────────────────────────────────────
+
+// ── CR 702.142 Boast ─────────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_142_boast_rejected_before_attacking() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::dragonkin_berserker());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(res.is_err(), "Boast can't be activated by a creature that hasn't attacked");
+}
+
+#[test]
+fn cr_702_142_boast_succeeds_after_attacking() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::dragonkin_berserker());
+    g.clear_sickness(id);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // Now boast: {3}{R} put a +1/+1 counter on it.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Boast activatable after attacking");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(id).unwrap();
+    assert_eq!((s.power(), s.toughness()), (3, 3), "Boast adds a +1/+1 counter");
+}
+
+#[test]
+fn cr_702_142_boast_only_once_per_turn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::dragonkin_berserker());
+    g.battlefield_find_mut(id).unwrap().attacked_this_turn = true;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("first boast");
+    drain_stack(&mut g);
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(res.is_err(), "Boast is once per turn");
+}
 
 #[test]
 fn cr_702_158_connive_draws_discards_and_counters_per_nonland() {

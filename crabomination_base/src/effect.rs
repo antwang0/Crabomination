@@ -457,6 +457,9 @@ pub enum Predicate {
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
     /// dealt damage this turn."
     PlayerDamagedThisTurn { who: PlayerRef },
+    /// True if the effect's source creature attacked this turn (CR 702.142
+    /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
+    SourceAttackedThisTurn,
     /// True if any player `who` resolves to has cast a blue or black spell
     /// this turn (Veil of Summer's conditional cantrip).
     CastBlueOrBlackThisTurn { who: PlayerRef },
@@ -4110,6 +4113,18 @@ pub mod shortcut {
             who: PlayerRef::You,
             count: Value::Const(n as i32),
             definition: crate::tokens::clue_token(),
+        }
+    }
+
+    /// CR 702.142 — "Boast — `cost`: `effect`." Activate only if this
+    /// creature attacked this turn, and only once each turn.
+    pub fn boast(cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
+        ActivatedAbility {
+            mana_cost: cost,
+            effect,
+            once_per_turn: true,
+            condition: Some(Predicate::SourceAttackedThisTurn),
+            ..Default::default()
         }
     }
 

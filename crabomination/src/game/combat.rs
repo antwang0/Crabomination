@@ -171,6 +171,8 @@ impl GameState {
             if computed_kw(id).contains(&Keyword::Exert) {
                 card.skip_next_untap = true;
             }
+            // CR 702.142 — record that this creature attacked (gates Boast).
+            card.attacked_this_turn = true;
             self.attacking.push(atk);
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted

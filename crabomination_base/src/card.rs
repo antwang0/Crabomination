@@ -1215,6 +1215,11 @@ pub struct CardInstance {
     /// time; consumed (and the untap skipped) by `do_untap`. Transient —
     /// not serialized (defaults to false on snapshot reload).
     pub skip_next_untap: bool,
+    /// CR 702.142 — set when this creature is declared as an attacker;
+    /// gates Boast activated abilities ("activate only if this attacked
+    /// this turn"). Cleared in per-turn cleanup. Transient — not
+    /// serialized (defaults to false on snapshot reload).
+    pub attacked_this_turn: bool,
     /// CR 603.6e — set on a card in exile that a permanent's "exile until
     /// ~ leaves" ability put there. When that source leaves the
     /// battlefield the engine returns this card to `ExileLink::return_to`.
@@ -1293,6 +1298,7 @@ impl CardInstance {
             dealt_deathtouch_damage: false,
             regeneration_shields: 0,
             skip_next_untap: false,
+            attacked_this_turn: false,
             exiled_by: None,
             granted_flashback_eot: None,
             granted_alt_cast_cost_eot: None,

@@ -854,6 +854,8 @@ impl GameState {
         // creature so the must-attack requirement lifts.
         for card in &mut self.battlefield {
             card.goaded_by.retain(|&g| g != p);
+            // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.
+            card.attacked_this_turn = false;
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].extra_land_plays = 0;

@@ -150,6 +150,7 @@ pub mod fem;
 pub mod gpt;
 pub mod ice;
 pub mod inv;
+pub mod khm;
 pub mod kld;
 pub mod ktk;
 pub mod lea;
