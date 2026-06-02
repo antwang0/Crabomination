@@ -400,6 +400,7 @@ impl GameState {
                         .map(|t| t.effect.clone())
                         .collect();
                     let evoked = card.evoked;
+                    let dashed = card.dashed;
                     // CR 614.12 — capture the "enters with N counters"
                     // replacement before the card moves to the battlefield;
                     // we apply the counters immediately after pushing,
@@ -547,6 +548,33 @@ impl GameState {
                             mana_spent: 0,
                             event_amount: 0,
                             intervening_if: None,
+                        });
+                    }
+
+                    // Dash (CR 702.110): the dashed creature gains haste and
+                    // returns to its owner's hand at the beginning of the next
+                    // end step. Grant haste on the entering instance and arm
+                    // the delayed bounce.
+                    if dashed
+                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                    {
+                        if !c.granted_keywords_eot.contains(&Keyword::Haste) {
+                            c.granted_keywords_eot.push(Keyword::Haste);
+                        }
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: caster,
+                            source: card_id,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::Move {
+                                what: crate::effect::Selector::This,
+                                to: crate::effect::ZoneDest::Hand(
+                                    crate::effect::PlayerRef::OwnerOf(Box::new(
+                                        crate::effect::Selector::This,
+                                    )),
+                                ),
+                            },
+                            target: None,
+                            fires_once: true,
                         });
                     }
 

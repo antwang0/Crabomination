@@ -973,6 +973,11 @@ pub struct AlternativeCost {
     /// change the spell's resolution behavior.
     #[serde(default)]
     pub effect_override: Option<crate::effect::Effect>,
+    /// True for Dash (CR 702.110) alternative costs — the resulting
+    /// creature gains haste and is returned to its owner's hand at the
+    /// beginning of the next end step.
+    #[serde(default)]
+    pub dash: bool,
 }
 
 impl CardDefinition {
@@ -1144,6 +1149,10 @@ pub struct CardInstance {
     /// True if this card was cast via an evoke alternative cost — it will
     /// be sacrificed on ETB after its ETB triggers fire.
     pub evoked: bool,
+    /// True if this card was cast via a Dash alternative cost (CR 702.110)
+    /// — on ETB it gains haste and is scheduled to return to its owner's
+    /// hand at the beginning of the next end step.
+    pub dashed: bool,
     /// True if this card was cast from its owner's hand on its current
     /// trip through the stack. Used by the rebound resolution path to
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
@@ -1273,6 +1282,7 @@ impl CardInstance {
             is_token: false,
             used_loyalty_ability_this_turn: false,
             evoked: false,
+            dashed: false,
             cast_from_hand: false,
             cast_via_flashback: false,
             chosen_creature_type: None,
@@ -1425,6 +1435,8 @@ struct CardInstanceWire {
     is_token: bool,
     used_loyalty_ability_this_turn: bool,
     evoked: bool,
+    #[serde(default)]
+    dashed: bool,
     cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field deserialize
     /// as `false` (matching the old "not cast via flashback" path).
@@ -1491,6 +1503,7 @@ impl serde::Serialize for CardInstance {
             is_token: self.is_token,
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
             evoked: self.evoked,
+            dashed: self.dashed,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
             chosen_creature_type: self.chosen_creature_type,
@@ -1532,6 +1545,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.is_token = wire.is_token;
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;
         c.evoked = wire.evoked;
+        c.dashed = wire.dashed;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
         c.chosen_creature_type = wire.chosen_creature_type;

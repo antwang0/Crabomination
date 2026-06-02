@@ -426,6 +426,7 @@ pub fn force_of_negation() -> CardDefinition {
                     return_to_hand: None,
                     sacrifice_permanents: None,
             effect_override: None,
+            dash: false,
         }),
         ..Default::default()
     }
@@ -657,6 +658,7 @@ pub fn mystical_dispute() -> CardDefinition {
                     return_to_hand: None,
                     sacrifice_permanents: None,
             effect_override: None,
+            dash: false,
         }),
         ..Default::default()
     }

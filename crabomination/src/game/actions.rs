@@ -2495,6 +2495,9 @@ impl GameState {
         if alt.evoke_sacrifice {
             card.evoked = true;
         }
+        if alt.dash {
+            card.dashed = true;
+        }
 
         // Timing: sorcery-speed unless instant-speed, plus Teferi-style
         // opponent restriction.

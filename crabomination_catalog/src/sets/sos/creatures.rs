@@ -3299,6 +3299,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
                     return_to_hand: None,
                     sacrifice_permanents: None,
             effect_override: None,
+            dash: false,
         }),
         ..Default::default()
     }
@@ -3510,6 +3511,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
             return_to_hand: None,
             sacrifice_permanents: None,
             effect_override: None,
+            dash: false,
         }),
         ..Default::default()
     }

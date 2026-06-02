@@ -3393,6 +3393,12 @@ pub mod shortcut {
         Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(n)) }
     }
 
+    /// Dash (CR 702.110) alternative cost: cast for `mana_cost`; the creature
+    /// gains haste and returns to its owner's hand at the next end step.
+    pub fn dash(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+        crate::card::AlternativeCost { mana_cost, dash: true, ..Default::default() }
+    }
+
     /// "[Permanents matching `filter`] have '{T}: Add one mana of any
     /// color.'" — the mana-dork-anthem static shared by Galazeth Prismari
     /// (artifacts), Cryptolith Rite (creatures), Resonating Lute (lands).

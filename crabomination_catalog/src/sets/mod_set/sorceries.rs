@@ -170,6 +170,7 @@ pub fn vandalblast() -> CardDefinition {
                     what: Selector::TriggerSource,
                 }),
             }),
+            dash: false,
         }),
         ..Default::default()
     }

@@ -1369,6 +1369,7 @@ pub fn snuff_out() -> CardDefinition {
                     return_to_hand: None,
                     sacrifice_permanents: None,
             effect_override: None,
+            dash: false,
         }),
         ..Default::default()
     }
@@ -2871,6 +2872,7 @@ pub fn cyclonic_rift() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
                 }),
             }),
+            dash: false,
         }),
         ..Default::default()
     }

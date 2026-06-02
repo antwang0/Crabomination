@@ -392,6 +392,7 @@ pub fn solitude() -> CardDefinition {
                     return_to_hand: None,
                     sacrifice_permanents: None,
             effect_override: None,
+            dash: false,
         }),
         ..Default::default()
     }
