@@ -8752,6 +8752,57 @@ fn skirk_prospector_sacrifices_a_goblin_for_red() {
 }
 
 #[test]
+fn midnight_haunting_makes_two_flying_spirits() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::midnight_haunting());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Midnight Haunting");
+    drain_stack(&mut g);
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Spirit").collect();
+    assert_eq!(spirits.len(), 2, "two Spirit tokens");
+    assert!(spirits.iter().all(|c| c.definition.keywords.contains(&Keyword::Flying)), "with flying");
+}
+
+#[test]
+fn gather_the_townsfolk_makes_two_humans() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gather_the_townsfolk());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Gather the Townsfolk");
+    drain_stack(&mut g);
+    let humans = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Human").count();
+    assert_eq!(humans, 2, "two Human tokens");
+}
+
+#[test]
+fn captain_of_the_watch_anthems_soldiers_and_makes_three() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::captain_of_the_watch());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Captain of the Watch");
+    drain_stack(&mut g);
+    let soldiers: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Soldier").collect();
+    assert_eq!(soldiers.len(), 3, "three Soldier tokens");
+    // Anthem + vigilance reach the tokens.
+    let cp = g.computed_permanent(soldiers[0].id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "+1/+1 to other Soldiers");
+    assert!(cp.keywords.contains(&Keyword::Vigilance), "Soldiers gain vigilance");
+}
+
+#[test]
 fn foundry_street_denizen_grows_when_a_red_creature_enters() {
     let mut g = two_player_game();
     let denizen = g.add_card_to_battlefield(0, catalog::foundry_street_denizen());

@@ -6983,6 +6983,114 @@ pub fn skirk_prospector() -> CardDefinition {
     }
 }
 
+/// Midnight Haunting — {1}{W} Instant. Create two 1/1 white Spirit creature
+/// tokens with flying.
+pub fn midnight_haunting() -> CardDefinition {
+    CardDefinition {
+        name: "Midnight Haunting",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Spirit],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Gather the Townsfolk — {2}{W} Sorcery. Create two 1/1 white Human creature
+/// tokens. (Fateful hour — "five instead if you have ≤5 life" — collapses to
+/// the base two.)
+pub fn gather_the_townsfolk() -> CardDefinition {
+    CardDefinition {
+        name: "Gather the Townsfolk",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Human".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Human],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Captain of the Watch — {4}{W}{W} 3/3 Human Soldier with Vigilance. Other
+/// Soldiers you control get +1/+1 and have vigilance. When this enters,
+/// create three 1/1 white Soldier creature tokens.
+pub fn captain_of_the_watch() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::shortcut::etb;
+    let soldiers = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Soldier)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Captain of the Watch",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Soldiers you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: soldiers(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Soldiers you control have vigilance.",
+                effect: StaticEffect::GrantKeyword { applies_to: soldiers(), keyword: Keyword::Vigilance },
+            },
+        ],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: TokenDefinition {
+                name: "Soldier".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Soldier],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
 /// Foundry Street Denizen — {R} 1/1 Goblin. Whenever another red creature
 /// enters under your control, this gets +1/+1 until end of turn.
 pub fn foundry_street_denizen() -> CardDefinition {
