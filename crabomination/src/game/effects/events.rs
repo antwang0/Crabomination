@@ -65,6 +65,9 @@ pub(crate) fn event_matches_spec(
     if let (EventKind::BecameTarget, GameEvent::BecameTarget { target, .. }) =
         (&spec.kind, event)
         && *target != source.id
+        // The "any permanent you control" scope intentionally fires for
+        // subjects other than the source, so skip the implicit check there.
+        && spec.scope != EventScope::YourPermanentTargetedByOpponent
     {
         return false;
     }
@@ -185,6 +188,17 @@ pub(crate) fn event_matches_spec(
         }
         EventScope::FromYourGraveyard => event_actor(state, event)
             .is_some_and(|p| p == source.owner),
+        EventScope::YourPermanentTargetedByOpponent => {
+            // The targeted permanent must be controlled by the trigger's
+            // controller, and the caster must be an opponent. Battle Mammoth.
+            if let GameEvent::BecameTarget { target, caster } = event {
+                let target_ctrl = state.battlefield_find(*target).map(|c| c.controller);
+                target_ctrl == Some(source.controller)
+                    && !state.same_team(*caster, source.controller)
+            } else {
+                false
+            }
+        }
     };
 
     if !scope_ok {
@@ -347,7 +361,7 @@ pub(crate) fn emblem_event_matches(
             event_actor(state, event).is_some_and(|p| !state.same_team(p, controller))
         }
         EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
-        EventScope::FromYourGraveyard => false,
+        EventScope::FromYourGraveyard | EventScope::YourPermanentTargetedByOpponent => false,
     }
 }
 

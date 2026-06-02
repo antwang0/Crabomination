@@ -906,6 +906,13 @@ pub enum EventScope {
     /// for triggers with this scope; the trigger's effective controller
     /// is the graveyard owner.
     FromYourGraveyard,
+    /// A permanent **you control** (any, including the source) becomes the
+    /// target of a spell or ability an **opponent** controls. Used with
+    /// `EventKind::BecameTarget` — Battle Mammoth. Unlike SelfSource, the
+    /// targeted permanent need not be the trigger source; the dispatcher
+    /// checks the targeted permanent's controller == trigger controller and
+    /// the caster is an opponent.
+    YourPermanentTargetedByOpponent,
 }
 
 /// A structural filter over the unified `GameEvent` stream. The trigger fires

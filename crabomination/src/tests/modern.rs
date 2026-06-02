@@ -2629,6 +2629,42 @@ fn goldspan_dragon_treasure_on_becoming_targeted() {
 }
 
 #[test]
+fn battle_mammoth_draws_when_your_permanent_is_targeted_by_opponent() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::battle_mammoth());
+    // A *different* permanent you control is the one targeted.
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.cast_spell(bolt, Some(Target::Permanent(bears)), vec![], None, None)
+        .expect("opponent's Bolt targets your creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Battle Mammoth draws when your permanent is targeted by an opponent");
+}
+
+#[test]
+fn battle_mammoth_does_not_draw_on_your_own_targeting() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::battle_mammoth());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    // You target your own creature — no draw (opponent-only clause).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.cast_spell(bolt, Some(Target::Permanent(bears)), vec![], None, None)
+        .expect("your own Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "no draw when you target your own permanent");
+}
+
+#[test]
 fn tireless_tracker_investigates_when_a_land_enters() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::tireless_tracker());

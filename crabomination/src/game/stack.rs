@@ -223,6 +223,7 @@ impl GameState {
                         EventScope::OpponentControl => c.controller != active,
                         EventScope::AnotherOfYours => false,
                         EventScope::FromYourGraveyard => false, // walked separately below
+                        EventScope::YourPermanentTargetedByOpponent => false, // event-based
                     })
                     .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
             })

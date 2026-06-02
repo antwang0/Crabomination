@@ -8,15 +8,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **BecameTarget "a permanent you control" scope.** `EventKind::BecameTarget`
-  now fires for SelfSource (targeted permanent IS the source — Goldspan,
-  Phantasmal) and OpponentControl-of-self (Tenured Concocter). Triggers whose
-  subject is *any permanent you control* (Battle Mammoth — "whenever a
-  permanent you control becomes the target of an opponent's spell/ability,
-  draw") need a new scope that drops the implicit `target == source.id`
-  constraint and instead checks the targeted permanent's controller == trigger
-  controller while the caster is an opponent. One card today (Battle Mammoth).
-
 - **Scryfall is blocked by the web-session network policy** (HTTP 403 for
   `api.scryfall.com`, both `scripts/fetch_cards.py` and the `WebFetch`
   tool). Only the 332 cards already in `scripts/.scryfall_cache.json` are

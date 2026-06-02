@@ -2467,17 +2467,13 @@ pub fn doomskar() -> CardDefinition {
 /// becomes the target of a spell or ability an opponent controls, draw
 /// a card."
 ///
-/// Body 6/5 Trample ships faithfully. The "whenever a permanent you control
-/// becomes the target of an opponent's spell/ability, draw" rider is omitted:
-/// `EventKind::BecameTarget` now fires, but only for SelfSource/OpponentControl
-/// scopes where the targeted permanent IS the trigger source. Battle Mammoth's
-/// "any permanent you control" subject (≠ source) needs a new scope (tracked
-/// in TODO.md). Tests: `battle_mammoth_is_a_five_mana_six_five_trampler`.
+/// 6/5 Trample. "Whenever a permanent you control becomes the target of a
+/// spell or ability an opponent controls, draw a card"
+/// (`EventScope::YourPermanentTargetedByOpponent` + `EventKind::BecameTarget`).
 pub fn battle_mammoth() -> CardDefinition {
     CardDefinition {
         name: "Battle Mammoth",
         cost: cost(&[generic(3), g(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elephant],
@@ -2486,22 +2482,14 @@ pub fn battle_mammoth() -> CardDefinition {
         power: 6,
         toughness: 5,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::BecameTarget,
+                EventScope::YourPermanentTargetedByOpponent,
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
     }
 }
 
