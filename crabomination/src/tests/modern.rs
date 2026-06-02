@@ -16803,18 +16803,17 @@ fn darkbore_pathway_plays_either_face() {
 }
 
 #[test]
-fn amped_raptor_etb_gains_two_life() {
+fn amped_raptor_etb_gets_two_energy() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::amped_raptor());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
-    let life_before = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Amped Raptor castable for {1}{R}");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before + 2);
+    assert_eq!(g.players[0].energy, 2, "ETB grants {{E}}{{E}}");
     let c = g.battlefield_find(id).unwrap();
     assert_eq!((c.definition.power, c.definition.toughness), (2, 1));
 }

@@ -141,6 +141,17 @@ pub struct Player {
     pub sorceries_as_flash: bool,
     /// Poison counters (player loses at 10).
     pub poison_counters: u32,
+    /// CR 122 / 107.16 — energy counters ({E}) this player has. A
+    /// generic resource pool added by `Effect::AddEnergy` and spent by
+    /// `Effect::PayEnergy`. Defaults to 0 for snapshot back-compat.
+    #[serde(default)]
+    pub energy: u32,
+    /// CR 122.1i / 728 — rad counters on this player. At the start of
+    /// their precombat main phase they mill that many cards; for each
+    /// nonland milled, they lose 1 life and shed a rad counter (handled
+    /// as a turn-based action in `do_rad_counters`). Default 0.
+    #[serde(default)]
+    pub rad_counters: u32,
     /// True if this player has no maximum hand size for the rest of the
     /// game. Set by `Effect::SetNoMaxHandSize` (Wisdom of Ages, Reliquary
     /// Tower-style effects). When true, the cleanup-step CR 514.1 enforcement
@@ -261,6 +272,8 @@ impl Player {
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,
+            energy: 0,
+            rad_counters: 0,
             no_maximum_hand_size: false,
             eliminated: false,
             skip_turns: 0,

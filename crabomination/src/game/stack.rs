@@ -153,6 +153,11 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::PreCombatMain => {
+                // CR 728.2 — rad-counter mill is a turn-based action that
+                // happens as the precombat main phase begins, before
+                // players receive priority (and thus before step triggers).
+                let mut rad = self.do_rad_counters();
+                events.append(&mut rad);
                 self.fire_step_triggers(TurnStep::PreCombatMain);
                 self.give_priority_to_active();
             }
@@ -691,6 +696,38 @@ impl GameState {
     }
 
     // ── Automatic step effects ────────────────────────────────────────────────
+
+    /// CR 728.2 / 122.1i — rad-counter turn-based action. As the active
+    /// player begins their precombat main phase, if they have any rad
+    /// counters they mill that many cards; for each *nonland* card milled
+    /// this way they lose 1 life and remove one rad counter.
+    pub(crate) fn do_rad_counters(&mut self) -> Vec<GameEvent> {
+        use crate::card::CardType;
+        let p = self.active_player_idx;
+        let mut events = Vec::new();
+        let n = self.players[p].rad_counters;
+        if n == 0 {
+            return events;
+        }
+        for _ in 0..n {
+            if self.players[p].library.is_empty() {
+                break;
+            }
+            let card = self.players[p].library.remove(0);
+            let cid = card.id;
+            let is_land = card.definition.card_types.contains(&CardType::Land);
+            self.players[p].graveyard.push(card);
+            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+            if !is_land {
+                self.players[p].rad_counters = self.players[p].rad_counters.saturating_sub(1);
+                self.adjust_life(p, -1);
+                events.push(GameEvent::LifeLost { player: p, amount: 1 });
+            }
+        }
+        let mut sba = self.check_state_based_actions();
+        events.append(&mut sba);
+        events
+    }
 
     pub(crate) fn do_untap(&mut self) {
         let p = self.active_player_idx;

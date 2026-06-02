@@ -50,6 +50,9 @@ mod tests_classic;
 #[cfg(test)]
 #[path = "../tests/counters.rs"]
 mod tests_counters;
+#[cfg(test)]
+#[path = "../tests/energy.rs"]
+mod tests_energy;
 pub mod types;
 
 #[cfg(test)]

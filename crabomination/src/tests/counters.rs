@@ -465,3 +465,73 @@ fn disowned_ancestor_and_citadel_castellan_renown_bodies() {
     assert_eq!((av.power, av.toughness), (1, 4));
     assert_eq!((cv.power, cv.toughness), (2, 4));
 }
+
+// ── CR 728.2 / 122.1i — Rad counters ───────────────────────────────────────
+
+/// CR 728.2 — at the start of a player's precombat main phase, if they have
+/// rad counters they mill that many cards; for each *nonland* milled they
+/// lose 1 life and shed a rad counter.
+#[test]
+fn cr_728_2_rad_counters_mill_and_drain_on_nonland() {
+    let mut g = two_player_game();
+    // Seat the rad counters on P1 and stock their library with nonland cards
+    // so every mill is a "hit": -1 life and -1 rad counter per card.
+    g.players[1].rad_counters = 2;
+    for _ in 0..6 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let life_before = g.players[1].life;
+    let mut iters = 0;
+    while !(g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain) && iters < 200 {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() { break; }
+    }
+    assert_eq!(g.players[1].rad_counters, 0, "both rad counters shed by nonland mills");
+    // P1 drew for turn (1 card) and milled 2 nonland → lost 2 life.
+    assert_eq!(g.players[1].life, life_before - 2, "1 life lost per nonland milled");
+}
+
+/// CR 728.2 — a land milled by the rad action does NOT cost life or remove a
+/// rad counter, so the rad pool persists turn over turn until a nonland is hit.
+#[test]
+fn cr_728_2_rad_milling_a_land_keeps_the_counter() {
+    let mut g = two_player_game();
+    g.players[1].rad_counters = 1;
+    // Top of P1's library after their draw step is a Forest (a land).
+    g.add_card_to_library(1, catalog::forest()); // deeper
+    g.add_card_to_library(1, catalog::forest()); // drawn for turn
+    g.add_card_to_library(1, catalog::forest()); // milled by the rad action
+    let life_before = g.players[1].life;
+    let mut iters = 0;
+    while !(g.active_player_idx == 1 && g.step == TurnStep::PreCombatMain) && iters < 200 {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() { break; }
+    }
+    assert_eq!(g.players[1].life, life_before, "milling a land costs no life");
+    assert_eq!(g.players[1].rad_counters, 1, "land mill keeps the rad counter");
+}
+
+/// CR 122.1d / 502 — a tapped permanent with a stun counter does not untap on
+/// its controller's untap step; instead one stun counter is removed.
+#[test]
+fn cr_122_1d_stun_counter_replaces_untap() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).unwrap();
+        c.tapped = true;
+        c.add_counters(CounterType::Stun, 1);
+    }
+    let mut iters = 0;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 3) && iters < 300 {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() { break; }
+    }
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.tapped, "CR 122.1d: stun counter replaced the untap — still tapped");
+    assert_eq!(c.counter_count(CounterType::Stun), 0, "one stun counter removed instead");
+}

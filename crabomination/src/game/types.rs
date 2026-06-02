@@ -533,6 +533,8 @@ pub enum GameEvent {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// CR 122 — a player got `amount` energy counters ({E}).
+    EnergyGained { player: usize, amount: u32 },
     CreatureDied { card_id: CardId },
     /// A creature was sacrificed by `who` (CR 701.16). Fires before the
     /// corresponding `CreatureDied` event so order-sensitive sacrifice

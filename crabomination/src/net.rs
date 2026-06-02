@@ -157,6 +157,10 @@ pub struct PlayerView {
     pub name: String,
     pub life: i32,
     pub poison_counters: u32,
+    /// CR 122 energy counters ({E}) this player has. Surfaced so the
+    /// client HUD can show an energy chip alongside life/poison.
+    #[serde(default)]
+    pub energy: u32,
     pub mana_pool: ManaPool,
     pub library: LibraryView,
     pub graveyard: Vec<GraveyardCardView>,
@@ -953,6 +957,8 @@ pub enum GameEventWire {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::EnergyGained`.
+    EnergyGained { player: usize, amount: u32 },
     CreatureDied { card_id: CardId },
     /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
@@ -1063,6 +1069,10 @@ impl From<&GameEvent> for GameEventWire {
                 amount: *amount,
             },
             GameEvent::LifeGained { player, amount } => GameEventWire::LifeGained {
+                player: *player,
+                amount: *amount,
+            },
+            GameEvent::EnergyGained { player, amount } => GameEventWire::EnergyGained {
                 player: *player,
                 amount: *amount,
             },
@@ -1238,6 +1248,7 @@ impl GameEventWire {
             },
             E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
             E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
+            E::EnergyGained { player, amount } => format!("P{player} gets {amount} energy"),
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
             E::CreatureSacrificed { card_id, who } => {
                 format!("P{who} sacrificed creature {}", name(*card_id))

@@ -1178,6 +1178,18 @@ pub enum Effect {
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
 
+    /// CR 122 / 107.16 — the controller gets `amount` energy counters
+    /// ({E}). Energy is a per-player resource pool (`Player.energy`), not
+    /// tied to any object. "You get {E}{E}" → `AddEnergy(Const(2))`.
+    AddEnergy(Value),
+    /// Pay `amount` energy counters as a cost at resolution; if the
+    /// controller has at least that much, deduct it and resolve `then`,
+    /// otherwise do nothing. Models energy-only activated/triggered
+    /// payoffs ("Pay {E}{E}{E}: …") without a dedicated cost field on
+    /// `ActivatedAbility` — the player commits by activating, and the
+    /// energy is consumed when the ability resolves.
+    PayEnergy { amount: u32, then: Box<Effect> },
+
     // ── Cards / draw / discard / mill ────────────────────────────────────────
     Draw    { who: Selector, amount: Value },
     /// CR 701.45 — Learn. `who` may reveal a Lesson card they own from their
@@ -1664,6 +1676,8 @@ pub enum Effect {
 
     // ── Counters on players ──────────────────────────────────────────────────
     AddPoison { who: Selector, amount: Value },
+    /// CR 122.1i / 728 — give each resolved player `amount` rad counters.
+    AddRadCounters { who: Selector, amount: Value },
 
     // ── Misc atomic operations needed by existing cards ──────────────────────
     /// Reveal the top card of `who`'s library; if `reveal_filter` matches, draw it.
@@ -2147,6 +2161,9 @@ impl Effect {
                     || otherwise.requires_target()
             }
             Effect::AddPoison { who, amount } => sel_has_target(who) || value_has_target(amount),
+            Effect::AddRadCounters { who, amount } => {
+                sel_has_target(who) || value_has_target(amount)
+            }
             Effect::RevealTopAndDrawIf { who, .. } | Effect::RevealTopCard { who } => {
                 player_has_target(who)
             }
@@ -2200,6 +2217,8 @@ impl Effect {
             Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
             Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { .. } => false,
+            Effect::AddEnergy(amount) => value_has_target(amount),
+            Effect::PayEnergy { then, .. } => then.requires_target(),
         }
     }
 

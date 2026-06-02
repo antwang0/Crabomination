@@ -947,6 +947,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AddEnergy(amount) => {
+                let amt = self.evaluate_value(amount, ctx).max(0) as u32;
+                if amt == 0 { return Ok(()); }
+                let p = ctx.controller;
+                self.players[p].energy = self.players[p].energy.saturating_add(amt);
+                events.push(GameEvent::EnergyGained { player: p, amount: amt });
+                Ok(())
+            }
+
+            Effect::PayEnergy { amount, then } => {
+                let p = ctx.controller;
+                if self.players[p].energy >= *amount {
+                    self.players[p].energy -= *amount;
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::Draw { who, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
@@ -2765,6 +2783,18 @@ impl GameState {
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::AddRadCounters { who, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].rad_counters =
+                            self.players[p].rad_counters.saturating_add(n);
+                    }
+                }
                 Ok(())
             }
 

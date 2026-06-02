@@ -44,6 +44,9 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         sets::xtra::nexus_of_fate,
     ];
     all.extend_from_slice(&xtra);
+    // Kaladesh energy cards (sets::kld) — registered so mid-game snapshots
+    // involving them round-trip through the name→factory lookup.
+    all.extend_from_slice(sets::kld::all_kld_card_factories());
     // Theros devotion payoffs / gods (sets::ths) — registered so mid-game
     // snapshots involving them round-trip through the name→factory lookup.
     let ths: [CardFactory; 36] = [

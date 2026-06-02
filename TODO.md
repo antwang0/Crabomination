@@ -1347,8 +1347,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (i) **122.1h** finality counters — ✅ (`CounterType::Finality`; the
   Battlefield→Graveyard move at `stack.rs:1438` redirects to exile when
   the permanent has a finality counter. Tested in `tests/stx/part_21`,
-  `part_22`). (j) **122.1i** rad counters — ⏳ (no
-  `CounterType::Rad` + per-upkeep mill).
+  `part_22`). (j) **122.1i** rad counters — ✅ (push claude/modern_decks:
+  `Player.rad_counters` + `Effect::AddRadCounters`; the CR 728.2 turn-based
+  action `GameState::do_rad_counters` mills N at precombat main, losing 1
+  life and shedding a rad counter per *nonland* milled. Tests
+  `cr_728_2_rad_counters_mill_and_drain_on_nonland`,
+  `cr_728_2_rad_milling_a_land_keeps_the_counter` in `tests::counters`).
   (k) **122.2** counters cease to exist on zone change — 🟡 (the engine
   preserves counters across moves for the Felisa "creature with +1/+1
   counter dies → token" pattern; printed CR says "cease to exist", so
@@ -2681,6 +2685,24 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ⏳ **Energy ({E}) follow-ups** (push claude/modern_decks — energy system
+  shipped this run as `Player.energy` + `Effect::AddEnergy`/`PayEnergy`,
+  `sets::kld`). Remaining: (a) **energy-gated mana abilities** — Aether Hub
+  and Servant of the Conduit collapse the "{T}, Pay {E}: Add any color"
+  split because a mana ability's cost has no energy slot; needs an
+  `ActivatedAbility.energy_cost` field (blocked on the 365-literal struct,
+  so it wants a `..Default::default()` migration first). (b) **"pay {E}{E}
+  or sacrifice/bounce" rider** (Lathnu Hellion, Greenbelt Rampager) — a
+  `PayEnergyOrElse { amount, otherwise }` primitive. (c) **EnergyGained
+  trigger event** (Aetherborn Marauder's "whenever you get one or more
+  {E}") — add an `EventKind::EnergyGained`. (d) **damage→energy feedback**
+  (Harnessed Lightning's "you get {E} for each excess damage").
+
+- ⏳ **`ActivatedAbility` builder / `Default`** — the 365 struct literals
+  spell out every field, so adding an ability cost field (energy, etc.)
+  touches all of them. A `Default` impl + `..Default::default()` sweep
+  would unblock cheap cost-field additions.
+
 - ⏳ **Future batch — focus on engine-feature-unlocking cards**: priority
   candidates are Helix Pinnacle (keyword counter), Walking Ballista
   (Nth-counter trigger), and cards that exercise CR 122.4 (counter cap)
@@ -2729,12 +2751,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Engine-wide ⏳; low priority since no current STX/SOS/cube card
   needs it.
 
-- ⏳ **Vehicle / Crew primitive**. Strixhaven has Strixhaven Skycoach (currently
-  approximated as a free-attacking Construct), and the cube has
-  Smuggler's Copter / Esika's Chariot. A general
-  `Effect::Crew { tap_count_at_least: Value }` primitive that turns a
-  noncreature Vehicle into a creature EOT once enough power has tapped
-  would unblock all three plus future vehicles. Engine-wide ⏳.
+- ✅ **Vehicle / Crew primitive**. `Keyword::Crew(N)` + `GameAction::Crew`
+  tap untapped creatures totalling power ≥ N to animate a Vehicle into an
+  artifact creature EOT (layer-4 `AddCardType(Creature)`); combat reads the
+  computed view so a crewed Vehicle can attack. (This TODO row was stale.)
 
 - ⏳ **`Effect::CreateCopyToken { source, who, count, modifiers }`
   primitive**.

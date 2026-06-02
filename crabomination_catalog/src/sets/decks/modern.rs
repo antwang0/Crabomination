@@ -11638,12 +11638,12 @@ pub fn enduring_innocence() -> CardDefinition {
 }
 
 /// Amped Raptor — {1}{R} Creature — Dinosaur. 2/1.
-/// "When Amped Raptor enters, you get {E}{E}, then you may cast a spell
-/// from exile with mana value ≤ energy spent."
+/// "When Amped Raptor enters, you get {E}{E}, then exile the top card; you
+/// may pay {E}{E} to cast it for free."
 ///
-/// 🟡 Body-only: energy system is not wired. ETB gains 2 life as a
-/// placeholder effect to exercise the trigger path. The exile-cast
-/// clause is omitted.
+/// 🟡 ETB now grants real energy ({E}{E}) via `Effect::AddEnergy`. The
+/// exile-then-pay-energy-to-cast-free clause is still omitted (no
+/// energy-gated free-cast-from-exile path).
 pub fn amped_raptor() -> CardDefinition {
     CardDefinition {
         name: "Amped Raptor",
@@ -11655,10 +11655,7 @@ pub fn amped_raptor() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(2),
-        })],
+        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
         ..Default::default()
     }
 }

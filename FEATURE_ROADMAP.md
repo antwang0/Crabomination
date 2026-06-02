@@ -218,7 +218,13 @@ feature; sweep card-batch by card-batch.
   Drinker, Kingpin's Pet), ⏳ Cohort, ⏳ Support.
 - **Spell-matters:** ⏳ Splice, ⏳ Replicate, ⏳ Overload, ⏳ Cipher,
   ⏳ Surge, ⏳ Spectacle, ⏳ Addendum, ⏳ Conspire, ⏳ Demonstrate.
-- **Resource systems:** ⏳ Energy ({E}), ⏳ Experience counters,
+- **Resource systems:** ✅ Energy ({E}) — `Player.energy` pool +
+  `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`
+  + HUD chip; bot spends surplus via `pick_energy_payoff`. Wired the
+  Kaladesh set (`sets::kld`: Longtusk Cub, Bristling Hydra, Dynavolt Tower,
+  Aether Swooper, Glimmer of Genius, …). ⏳ remaining: energy-gated *mana*
+  abilities (Aether Hub / Servant collapse the {E}-mana split). ⏳ Experience
+  counters,
   ✅ Poison/Toxic (`Keyword::Toxic(N)` adds N poison on combat damage,
   CR 702.180c; 10-poison loss SBA wired),
   ✅ Devotion (CR 700.5 — `Value::DevotionTo`,

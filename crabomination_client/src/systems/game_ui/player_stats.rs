@@ -41,6 +41,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Emblem => (Color::srgba(0.34, 0.28, 0.10, 1.0), theme::TEXT_PRIMARY),
         // Devotion (CR 700.5) — a Theros-nyx indigo to set it apart.
         StatChipKind::Devotion => (Color::srgba(0.22, 0.16, 0.34, 1.0), theme::TEXT_PRIMARY),
+        // Energy (CR 122) — a Kaladesh aether teal.
+        StatChipKind::Energy => (Color::srgba(0.10, 0.30, 0.32, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -54,6 +56,7 @@ pub(super) enum StatChipKind {
     Poison,
     Emblem,
     Devotion,
+    Energy,
 }
 
 /// Library size at or below which the Deck chip switches to its amber
@@ -367,6 +370,10 @@ pub fn update_player_stats_chips(
                 format!("☠ {}/10", p.poison_counters),
             );
         }
+        // CR 122 energy — only surface once the player has banked any {E}.
+        if p.energy > 0 {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
+        }
         // CR 114 emblems — only surface when the player actually owns one.
         if !p.emblems.is_empty() {
             spawn_stat_chip(
@@ -601,6 +608,9 @@ pub fn update_opponent_stats_rows(
                         StatChipKind::Poison,
                         format!("☠ {}/10", p.poison_counters),
                     );
+                }
+                if p.energy > 0 {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
                 }
                 if !p.emblems.is_empty() {
                     spawn_stat_chip(
