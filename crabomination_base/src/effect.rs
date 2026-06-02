@@ -1386,6 +1386,10 @@ pub enum Effect {
         duration: Duration,
     },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// Each permanent picked by `what` becomes a single color of the
+    /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
+    /// Wild Mongrel ("becomes the color of your choice until end of turn").
+    BecomeChosenColor { what: Selector, duration: Duration },
     /// Grant a transient triggered ability to each permanent picked by
     /// `what`, for `duration`. Stashed in `GameState.
     /// granted_triggers_eot` (only EOT duration is wired today;
@@ -2156,6 +2160,7 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
+            Effect::BecomeChosenColor { what, .. } => sel_has_target(what),
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
             | Effect::RemoveCounter { what, amount, .. }

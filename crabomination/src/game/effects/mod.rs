@@ -2026,6 +2026,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeChosenColor { what, duration } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let legal = vec![
+                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                    ];
+                    let answer = self.decider.decide(&Decision::ChooseColor { source: cid, legal });
+                    let color = match answer {
+                        DecisionAnswer::Color(c) => c,
+                        _ => Color::Green,
+                    };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetColors(vec![color]),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }

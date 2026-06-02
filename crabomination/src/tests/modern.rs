@@ -8150,9 +8150,10 @@ fn last_gasp_kills_a_three_toughness() {
         "Bear (2/2) dies to -3/-3");
 }
 
-/// Wild Mongrel: discard ability gives +1/+1 EOT.
+/// Wild Mongrel: discard ability gives +1/+1 EOT and sets a chosen color.
 #[test]
 fn wild_mongrel_pumps_via_discard() {
+    use crate::mana::Color;
     let mut g = two_player_game();
     let mongrel = g.add_card_to_battlefield(0, catalog::wild_mongrel());
     g.clear_sickness(mongrel);
@@ -8160,6 +8161,7 @@ fn wild_mongrel_pumps_via_discard() {
 
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Discard(vec![fodder]),
+        DecisionAnswer::Color(Color::Blue),
     ]));
 
     g.perform_action(GameAction::ActivateAbility {
@@ -8171,6 +8173,9 @@ fn wild_mongrel_pumps_via_discard() {
     // Wild Mongrel is 2/2 + 1/1 EOT = 3/3.
     assert_eq!(view.power(), 3, "power should be base 2 + bonus 1 = 3");
     assert_eq!(view.toughness(), 3, "toughness should be base 2 + bonus 1 = 3");
+    // Color of choice (Blue) replaces its printed green via layer 5.
+    let computed = g.computed_permanent(mongrel).unwrap();
+    assert_eq!(computed.colors, vec![Color::Blue], "becomes the chosen color");
     // Fodder discarded.
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
         "Discarded card lands in graveyard");

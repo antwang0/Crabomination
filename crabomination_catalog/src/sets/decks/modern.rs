@@ -4572,9 +4572,9 @@ pub fn telling_time() -> CardDefinition {
 /// creature gets +1/+1 until end of turn and becomes the color of your
 /// choice until end of turn.
 ///
-/// Same shape as Psychic Frog's discard pump ability. The
-/// "becomes the color of your choice" half collapses (no
-/// color-flag primitive) — the +1/+1 EOT swing is the gameplay axis.
+/// Same shape as Psychic Frog's discard pump ability, plus the
+/// `Effect::BecomeChosenColor` layer-5 color change (matters for
+/// protection / color-hate interactions).
 pub fn wild_mongrel() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -4603,6 +4603,10 @@ pub fn wild_mongrel() -> CardDefinition {
                     what: Selector::This,
                     power: Value::Const(1),
                     toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::BecomeChosenColor {
+                    what: Selector::This,
                     duration: Duration::EndOfTurn,
                 },
             ]),
