@@ -583,6 +583,12 @@ pub enum Predicate {
     /// to `true`, so this predicate evaluates as `True` outside of
     /// spell-resolution context too.
     CastFromHand,
+    /// True when the resolving spell was kicked (CR 702.32) — its optional
+    /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
+    /// stamped from the resolving `CardInstance.kicked` flag. Used by
+    /// "if this spell was kicked, …" riders (Tear Asunder). Non-spell
+    /// contexts default `kicked` to `false`.
+    SpellWasKicked,
     /// True if any opponent of `ctx.controller` controls more lands
     /// than `ctx.controller` does. Backed by walking the battlefield
     /// and counting `Land` permanents per seat. Used by catch-up ramp
@@ -2641,6 +2647,20 @@ impl Effect {
         slot: u8,
         mode: Option<usize>,
     ) -> Option<&SelectionRequirement> {
+        self.target_filter_for_slot_in_mode_kicked(slot, mode, false)
+    }
+
+    /// Kicker-aware variant: when `kicked`, an `If(SpellWasKicked, …)`
+    /// resolves to its `then` branch's filter (and `else_`'s otherwise) so
+    /// the cast-time target legality matches the branch that will resolve
+    /// (Tear Asunder's kicked "nonland permanent" vs base "artifact or
+    /// enchantment"). The non-kicked callers use the default-`false` wrapper.
+    pub fn target_filter_for_slot_in_mode_kicked(
+        &self,
+        slot: u8,
+        mode: Option<usize>,
+        kicked: bool,
+    ) -> Option<&SelectionRequirement> {
         fn sel_find(s: &Selector, slot: u8) -> Option<&SelectionRequirement> {
             match s {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
@@ -2670,20 +2690,30 @@ impl Effect {
             e: &Effect,
             slot: u8,
             mode: Option<usize>,
+            kicked: bool,
         ) -> Option<&SelectionRequirement> {
             match e {
-                Effect::Seq(v) => v.iter().find_map(|x| eff_find(x, slot, mode)),
-                Effect::If { then, else_, .. } => eff_find(then, slot, mode)
-                    .or_else(|| eff_find(else_, slot, mode)),
-                Effect::ForEach { selector, body } => {
-                    sel_find(selector, slot).or_else(|| eff_find(body, slot, mode))
+                Effect::Seq(v) => v.iter().find_map(|x| eff_find(x, slot, mode, kicked)),
+                // `If(SpellWasKicked, …)` chooses the branch that will
+                // actually resolve so cast-time target legality matches it.
+                Effect::If { cond: Predicate::SpellWasKicked, then, else_ } => {
+                    if kicked {
+                        eff_find(then, slot, mode, kicked)
+                    } else {
+                        eff_find(else_, slot, mode, kicked)
+                    }
                 }
-                Effect::Repeat { body, .. } => eff_find(body, slot, mode),
+                Effect::If { then, else_, .. } => eff_find(then, slot, mode, kicked)
+                    .or_else(|| eff_find(else_, slot, mode, kicked)),
+                Effect::ForEach { selector, body } => {
+                    sel_find(selector, slot).or_else(|| eff_find(body, slot, mode, kicked))
+                }
+                Effect::Repeat { body, .. } => eff_find(body, slot, mode, kicked),
                 Effect::ChooseMode(modes) => match mode {
                     // Mode-aware path: only look in the chosen branch.
-                    Some(m) if m < modes.len() => eff_find(&modes[m], slot, None),
+                    Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
                     // Legacy path: first hit across all modes.
-                    _ => modes.iter().find_map(|m| eff_find(m, slot, None)),
+                    _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
                 },
                 // ChooseN: each target-bearing picked mode occupies one
                 // cast-time slot in pick order — slot 0 = the first picked
@@ -2698,7 +2728,7 @@ impl Effect {
                             && m.requires_target()
                         {
                             if s == slot {
-                                return eff_find(m, 0, None);
+                                return eff_find(m, 0, None, kicked);
                             }
                             s += 1;
                         }
@@ -2706,17 +2736,17 @@ impl Effect {
                     None
                 }
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
-                    eff_find(body, slot, mode)
+                    eff_find(body, slot, mode, kicked)
                 }
                 Effect::IfRevealFromHand { then, else_, .. } => {
-                    eff_find(then, slot, mode).or_else(|| eff_find(else_, slot, mode))
+                    eff_find(then, slot, mode, kicked).or_else(|| eff_find(else_, slot, mode, kicked))
                 }
                 Effect::FlipCoin { on_heads, on_tails, .. } => {
-                    eff_find(on_heads, slot, mode).or_else(|| eff_find(on_tails, slot, mode))
+                    eff_find(on_heads, slot, mode, kicked).or_else(|| eff_find(on_tails, slot, mode, kicked))
                 }
                 Effect::RollDie { results, .. } => results
                     .iter()
-                    .find_map(|(_, _, e)| eff_find(e, slot, mode)),
+                    .find_map(|(_, _, e)| eff_find(e, slot, mode, kicked)),
                 Effect::DealDamage { to, amount } => {
                     sel_find(to, slot).or_else(|| val_find(amount, slot))
                 }
@@ -2773,7 +2803,7 @@ impl Effect {
                 _ => None,
             }
         }
-        eff_find(self, slot, mode)
+        eff_find(self, slot, mode, kicked)
     }
 
     /// Mode-agnostic shorthand for `target_filter_for_slot_in_mode(slot, None)`.

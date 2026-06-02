@@ -4998,21 +4998,28 @@ pub fn coalition_relic() -> CardDefinition {
 
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
-/// Tear Asunder — {1}{B}{G} Instant. Destroy target artifact or enchantment.
-///
-/// Cube models the base cast (destroy artifact/enchantment); the kicker
-/// {2} mode ("destroy any nonland permanent") is omitted since
-/// `AlternativeCost` doesn't currently swap target filters at cast time.
-/// Functions as a flexible BG answer.
+/// Tear Asunder — {1}{G} Instant, Kicker {1}{B}. Exile target artifact or
+/// enchantment; if kicked, exile target nonland permanent instead. The
+/// kicked branch's broader target filter is enforced at cast time via the
+/// kick-aware target validation (CR 702.32).
 pub fn tear_asunder() -> CardDefinition {
     CardDefinition {
         name: "Tear Asunder",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
-            ),
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), b()]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+            }),
+            else_: Box::new(Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            }),
         },
         ..Default::default()
     }

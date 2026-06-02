@@ -520,6 +520,12 @@ impl GameState {
                 // matches their non-spell-resolution context.
                 ctx.cast_from_hand
             }
+            Predicate::SpellWasKicked => {
+                // CR 702.32 — true iff the kicker cost was paid at cast
+                // time. Stamped onto `ctx.kicked` from the resolving
+                // `CardInstance.kicked` flag.
+                ctx.kicked
+            }
             Predicate::OpponentControlsMoreLandsThanYou => {
                 // Walk the battlefield, count lands per seat. True iff
                 // any opponent of `ctx.controller` has strictly more

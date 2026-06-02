@@ -8376,12 +8376,11 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
 #[test]
-fn tear_asunder_destroys_target_artifact() {
+fn tear_asunder_exiles_target_artifact() {
     let mut g = two_player_game();
     let relic = g.add_card_to_battlefield(1, catalog::sol_ring());
     let id = g.add_card_to_hand(0, catalog::tear_asunder());
     g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
@@ -8390,20 +8389,19 @@ fn tear_asunder_destroys_target_artifact() {
         additional_targets: vec![],
         mode: None, x_value: None,
     })
-    .expect("Tear Asunder castable for {1}{B}{G}");
+    .expect("Tear Asunder castable for {1}{G}");
     drain_stack(&mut g);
 
-    assert!(!g.battlefield.iter().any(|c| c.id == relic),
-        "Tear Asunder destroys the artifact");
+    assert!(g.exile.iter().any(|c| c.id == relic),
+        "unkicked Tear Asunder exiles the artifact");
 }
 
 #[test]
-fn tear_asunder_rejects_creature_target() {
+fn tear_asunder_unkicked_rejects_creature_target() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::tear_asunder());
     g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
 
     let r = g.perform_action(GameAction::CastSpell {
@@ -8412,7 +8410,30 @@ fn tear_asunder_rejects_creature_target() {
         additional_targets: vec![],
         mode: None, x_value: None,
     });
-    assert!(r.is_err(), "Tear Asunder should reject creature targets at cast time");
+    assert!(r.is_err(), "unkicked Tear Asunder rejects creature (nonland-permanent) targets");
+}
+
+#[test]
+fn tear_asunder_kicked_exiles_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tear_asunder());
+    // {1}{G} base + {1}{B} kicker.
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("kicked Tear Asunder castable for {1}{G}+{1}{B}, targets a nonland permanent");
+    drain_stack(&mut g);
+
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "kicked Tear Asunder exiles the creature");
 }
 
 #[test]

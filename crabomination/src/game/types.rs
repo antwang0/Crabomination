@@ -44,6 +44,17 @@ pub enum GameAction {
     /// (mana abilities, ETB triggers, land types) come from the back face.
     PlayLandBack(CardId),
     CastSpell { card_id: CardId, target: Option<Target>, additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// CR 702.32 — cast a spell paying its optional Kicker cost in addition
+    /// to the mana cost. The resolving spell is stamped `kicked` so
+    /// `Predicate::SpellWasKicked` riders fire (Tear Asunder).
+    CastSpellKicked {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a modal-double-faced card via its **back face**. Mirrors
     /// `PlayLandBack` but for non-land back faces (creature/instant/
     /// sorcery). The card's `definition` is swapped to the back face's

@@ -8,16 +8,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Kicker is unwired (CR 702.32)** — `Keyword::Kicker(cost)` and the
-  `kicked` flag exist on the card/stack item, but no cast path pays the
-  optional kicker cost and no `Predicate`/`Effect` reads `kicked`, so it's
-  inert. Wiring shape: a cast-time opt-in to pay the kicker cost (set
-  `kicked` on the resolving stack item), a `Predicate::SpellWasKicked`
-  read off the resolution context, and `Effect::If` branching on it.
-  Unblocks Tear Asunder ("if kicked, destroy any nonland permanent
-  instead") and the FEATURE_ROADMAP "Kicker shipped" claim (currently
-  aspirational). FEATURE_ROADMAP lists Kicker under shipped keywords —
-  that's stale; fix when the mechanic actually lands.
+- **Kicker — ✅ wired (CR 702.32, claude/modern_decks).**
+  `GameAction::CastSpellKicked` folds the optional kicker cost into the
+  spell's mana cost and stamps `CardInstance.kicked`;
+  `Predicate::SpellWasKicked` reads it at resolution (via
+  `EffectContext.kicked`) and `target_filter_for_slot_in_mode_kicked` makes
+  cast-time target legality follow the `If(SpellWasKicked, …)` branch that
+  will resolve. Tear Asunder promoted (exile artifact/enchantment, or any
+  nonland permanent when kicked). Remaining: a client affordance to opt
+  into the kick (a "pay kicker?" toggle on cast) and a bot heuristic to
+  kick when profitable (today the bot only casts unkicked); more kicker
+  cards (multikicker, kicker-with-different-effect riders).
 - **Pitch affordance in client** — `ClientView.pitchable_hand` now lists hand
   cards with a `from_hand` ability (Spirit Guides). The 3D client should
   render a distinct edge/badge for these (separate from the castable-green

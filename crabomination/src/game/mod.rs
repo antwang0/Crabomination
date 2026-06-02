@@ -1920,6 +1920,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSpellKicked {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_kicked(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
@@ -1927,7 +1934,7 @@ impl GameState {
                 mode,
                 x_value,
                 convoke_creatures,
-            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[]),
+            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], false),
             GameAction::CastSpellDelve {
                 card_id,
                 target,
@@ -2765,6 +2772,7 @@ impl GameState {
                     source_name: None,
                     cast_from_hand: true,
                     event_amount,
+                    kicked: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -3652,7 +3660,7 @@ impl GameState {
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
-        let ctx = EffectContext::for_spell_with_source_and_origin(
+        let mut ctx = EffectContext::for_spell_with_source_and_origin(
             card.id,
             card.definition.name,
             caster,
@@ -3664,6 +3672,7 @@ impl GameState {
             mana_spent,
             card.cast_from_hand,
         );
+        ctx.kicked = card.kicked;
         let events = self.resolve_effect(&effect, &ctx)?;
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {

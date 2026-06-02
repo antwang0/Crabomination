@@ -5163,6 +5163,7 @@ fn effect_untap_removes_stun_counter_instead_of_untapping() {
         source_name: None,
         cast_from_hand: false,
         event_amount: 0,
+        kicked: false,
     };
     g.resolve_effect(
         &Effect::Untap {
@@ -5723,6 +5724,7 @@ fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
         source_name: None,
         cast_from_hand: false,
         event_amount: 0,
+        kicked: false,
     };
     assert!(!g.evaluate_predicate(&morbid, &ctx), "no deaths yet → morbid off");
     // A creature died under the opponent's control (seat 1).

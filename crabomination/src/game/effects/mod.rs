@@ -98,6 +98,11 @@ pub struct EffectContext {
     /// +1/+1 counters on target creature you control." Defaults to 0
     /// for non-trigger contexts (spells, activated abilities).
     pub event_amount: u32,
+    /// True if the resolving spell was kicked (CR 702.32). Stamped from
+    /// the resolving `CardInstance.kicked` flag; read by
+    /// `Predicate::SpellWasKicked`. Defaults to `false` for non-spell
+    /// contexts.
+    pub kicked: bool,
 }
 
 impl EffectContext {
@@ -114,6 +119,7 @@ impl EffectContext {
             source_name: None,
             cast_from_hand: true,
             event_amount: 0,
+            kicked: false,
         }
     }
     /// Spell-resolution context with the resolving spell's
@@ -189,6 +195,7 @@ impl EffectContext {
             source_name: Some(spell_name),
             cast_from_hand,
             event_amount: 0,
+            kicked: false,
         }
     }
     pub fn for_trigger(
@@ -209,6 +216,7 @@ impl EffectContext {
             source_name: None,
             cast_from_hand: true,
             event_amount: 0,
+            kicked: false,
         }
     }
     pub fn for_ability(
@@ -228,6 +236,7 @@ impl EffectContext {
             source_name: None,
             cast_from_hand: true,
             event_amount: 0,
+            kicked: false,
         }
     }
 }

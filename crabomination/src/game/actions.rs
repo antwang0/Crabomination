@@ -847,7 +847,21 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[])
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false)
+    }
+
+    /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
+    /// mana is added to the spell's cost and the resolving spell is stamped
+    /// `kicked`, which `Predicate::SpellWasKicked` reads.
+    pub(crate) fn cast_spell_kicked(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], true)
     }
 
     /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
@@ -865,7 +879,7 @@ impl GameState {
         x_value: Option<u32>,
         delve_cards: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, false)
     }
 
     /// Internal cast-spell helper with optional convoke creatures and delve
@@ -884,6 +898,7 @@ impl GameState {
         x_value: Option<u32>,
         convoke_creatures: &[CardId],
         delve_cards: &[CardId],
+        kicked: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
@@ -892,6 +907,11 @@ impl GameState {
         }
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
+        // CR 702.32 — opt-in Kicker. Only stamp `kicked` if the card
+        // actually has a kicker cost; the cost itself is folded into the
+        // spell's mana cost below.
+        let kicked = kicked && card.definition.has_kicker().is_some();
+        card.kicked = kicked;
 
         // Validate convoke creatures up-front (before any state mutation).
         if !convoke_creatures.is_empty()
@@ -997,7 +1017,7 @@ impl GameState {
             && let Some(filter) = card
                 .definition
                 .effect
-                .target_filter_for_slot_in_mode(0, mode)
+                .target_filter_for_slot_in_mode_kicked(0, mode, kicked)
             && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
         {
             self.players[p].hand.push(card);
@@ -1008,7 +1028,7 @@ impl GameState {
             if let Some(filter) = card
                 .definition
                 .effect
-                .target_filter_for_slot_in_mode(slot, mode)
+                .target_filter_for_slot_in_mode_kicked(slot, mode, kicked)
                 && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
             {
                 self.players[p].hand.push(card);
@@ -1035,6 +1055,10 @@ impl GameState {
         } else {
             base_cost
         };
+        // CR 702.32b — fold the optional kicker cost into the total cost.
+        if kicked && let Some(kick) = card.definition.has_kicker() {
+            cost.symbols.extend(kick.symbols.iter().cloned());
+        }
         let tax = extra_cost_for_spell(self, p, &card);
         if tax > 0 {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
@@ -1568,6 +1592,7 @@ impl GameState {
                     source_name: None,
                     cast_from_hand: true,
                     event_amount: 0,
+                    kicked: false,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
@@ -2349,6 +2374,7 @@ impl GameState {
                 source_name: None,
                 cast_from_hand: true,
                 event_amount: 0,
+                kicked: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::NoAlternativeCost);
@@ -2829,6 +2855,7 @@ impl GameState {
                     source_name: None,
                     cast_from_hand,
                     event_amount: 0,
+                    kicked: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -3692,6 +3719,7 @@ impl GameState {
                 source_name: None,
                 cast_from_hand: true,
                 event_amount: 0,
+                kicked: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);
