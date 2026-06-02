@@ -219,6 +219,18 @@ pub enum Decision {
         attacker_power: u32,
         blockers: Vec<(CardId, String, u32)>,
     },
+
+    /// CR 704.5j — when a player controls two or more legendary permanents
+    /// with the same name, that player chooses one to keep; the rest are put
+    /// into their owners' graveyards. `duplicates` lists the tied permanents
+    /// (id + name) sharing `name`. The decider answers `KeptLegend(id)` with
+    /// the permanent to keep; an id not in `duplicates` (or `AutoDecider`'s
+    /// default) keeps the newest (highest id).
+    ChooseLegendToKeep {
+        player: usize,
+        name: String,
+        duplicates: Vec<(CardId, String)>,
+    },
 }
 
 /// The decider's answer to a `Decision::Learn`.
@@ -288,6 +300,9 @@ pub enum DecisionAnswer {
     /// over-assigns past the attacker's power) falls back to the engine's
     /// default lethal-to-each split.
     CombatDamageAssignment(Vec<(CardId, u32)>),
+    /// CR 704.5j — the legendary permanent the controller keeps. An id not
+    /// among the tied duplicates falls back to keeping the newest.
+    KeptLegend(CardId),
 }
 
 /// Spread `total` damage across `n` targets as evenly as possible, with the
@@ -425,6 +440,11 @@ impl Decider for AutoDecider {
             Decision::AssignCombatDamage { .. } => {
                 DecisionAnswer::CombatDamageAssignment(vec![])
             }
+            // CR 704.5j — keep the newest (highest id); the engine treats an
+            // out-of-set id this way, so any sentinel works.
+            Decision::ChooseLegendToKeep { duplicates, .. } => DecisionAnswer::KeptLegend(
+                duplicates.iter().map(|(id, _)| *id).max().unwrap_or(CardId(0)),
+            ),
         }
     }
 }

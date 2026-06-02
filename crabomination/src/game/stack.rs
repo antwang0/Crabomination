@@ -1133,25 +1133,61 @@ impl GameState {
             }
         }
 
-        // Legend rule: if two+ legendaries with the same name share a controller,
-        // keep the newest (highest CardId) and sacrifice the rest.
-        let legend_victims: Vec<CardId> = {
-            let mut seen: std::collections::HashMap<(usize, &str), CardId> =
+        // Legend rule (CR 704.5j): if two+ legendaries with the same name
+        // share a controller, that player chooses one to keep; the rest go to
+        // their owners' graveyards. We group tied permanents, then consult the
+        // controller's decider per group (AutoDecider keeps the newest).
+        let legend_groups: Vec<(usize, String, Vec<(CardId, String)>)> = {
+            let mut order: Vec<(usize, &str)> = Vec::new();
+            let mut groups: std::collections::HashMap<(usize, &str), Vec<(CardId, String)>> =
                 std::collections::HashMap::new();
-            let mut victims = Vec::new();
-            // Sort by id descending so we keep the newest.
-            let mut legendaries: Vec<_> = self
+            // Walk descending by id so each group's vec is newest-first.
+            let mut by_id: Vec<_> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.definition.supertypes.contains(&Supertype::Legendary))
                 .collect();
-            legendaries.sort_by_key(|b| std::cmp::Reverse(b.id));
-            for c in legendaries {
+            by_id.sort_by_key(|b| std::cmp::Reverse(b.id));
+            for c in by_id {
                 let key = (c.controller, c.definition.name);
-                if let std::collections::hash_map::Entry::Vacant(e) = seen.entry(key) {
-                    e.insert(c.id);
-                } else {
-                    victims.push(c.id);
+                groups
+                    .entry(key)
+                    .or_insert_with(|| {
+                        order.push(key);
+                        Vec::new()
+                    })
+                    .push((c.id, c.definition.name.to_string()));
+            }
+            let mut out = Vec::new();
+            for k in order {
+                let dups = groups.remove(&k).unwrap_or_default();
+                if dups.len() > 1 {
+                    out.push((k.0, k.1.to_string(), dups));
+                }
+            }
+            out
+        };
+        let legend_victims: Vec<CardId> = {
+            let mut victims = Vec::new();
+            for (player, name, duplicates) in legend_groups {
+                // Ask the controller which to keep; default keeps newest.
+                let kept = match self.decider.decide(&crate::decision::Decision::ChooseLegendToKeep {
+                    player,
+                    name,
+                    duplicates: duplicates.clone(),
+                }) {
+                    crate::decision::DecisionAnswer::KeptLegend(id)
+                        if duplicates.iter().any(|(d, _)| *d == id) =>
+                    {
+                        id
+                    }
+                    // Out-of-set / wrong answer → keep newest (highest id).
+                    _ => duplicates.iter().map(|(id, _)| *id).max().unwrap_or(CardId(0)),
+                };
+                for (id, _) in &duplicates {
+                    if *id != kept {
+                        victims.push(*id);
+                    }
                 }
             }
             victims

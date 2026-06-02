@@ -574,10 +574,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (m) **704.5i — Loyalty 0** —
   ✅ (`pw_dead` walk at `stack.rs:1002` filters
   `is_planeswalker() && counter_count(Loyalty) == 0`).
-  (n) **704.5j — Legend rule** — ✅ (the `legend_victims` HashMap walk at
-  `stack.rs:803`; defaults to "keep newest" via descending CardId
-  sort, controller-choice prompt engine-wide ⏳ since auto-picker is
-  deterministic).
+  (n) **704.5j — Legend rule** — ✅ (the `legend_groups`/`legend_victims`
+  walk in `check_state_based_actions` groups same-name legends per
+  controller and consults `Decision::ChooseLegendToKeep` so the controller
+  picks which to keep; `AutoDecider` keeps the newest (highest id) and an
+  out-of-set/invalid answer falls back to the same. Tests:
+  `cr_704_5j_legend_rule_keeps_newest`,
+  `cr_704_5j_legend_rule_controller_chooses_which_to_keep`. Server-side
+  *suspend* for a networked human mid-SBA is still ⏳ — same limitation as
+  the OrderTriggers prompt; the decider is consulted inline.).
   (o) **704.5k — World rule** — ⏳ (no World supertype
   in the catalog; no engine path; Ice Age / Mirage era only).
   (p) **704.5m — Aura attachment** — ✅ (the `orphaned_auras` walk at

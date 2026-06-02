@@ -16,45 +16,26 @@ use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 // ── BRG creatures ────────────────────────────────────────────────────────────
 
-/// Callous Sell-Sword — {3}{R}, 4/4 Human Mercenary. The full Oracle is a
-/// 1/1 with a "this gets +X/+0 where X is the sacrificed power" Casualty
-/// mechanic. We approximate with an ETB sacrifice-and-pump:
-///
-/// **ETB**: Sacrifice a creature you control. Callous Sell-Sword gets
-/// +(sacrificed creature's power)/+0 until end of turn. Modeled via
-/// `Effect::Seq([SacrificeAndRemember, PumpPT { power: SacrificedPower }])`,
-/// reusing the same primitives Thud already exercises. The Casualty 2
-/// "copy this spell" half is omitted (no copy primitive yet).
+/// Callous Sell-Sword — {1}{B} 2/2 Human Soldier. Enters with a +1/+1
+/// counter for each creature that died under your control this turn
+/// (`Value::CreaturesDiedThisTurn`). The Adventure half (Burn Together)
+/// is omitted — no Adventure cost-mode primitive yet.
 pub fn callous_sell_sword() -> CardDefinition {
-    use crate::effect::{Duration, PlayerRef};
+    use crate::card::CounterType;
     CardDefinition {
         name: "Callous Sell-Sword",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::PumpPT {
-                    what: Selector::This,
-                    power: Value::SacrificedPower,
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
-        }],
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CreaturesDiedThisTurn(PlayerRef::You),
+        )),
         ..Default::default()
     }
 }

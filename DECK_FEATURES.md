@@ -18,7 +18,6 @@ remaining 🟡/⏳ work is listed below. Full per-card history is in git.
 
 | Count | Card | Status | Notes |
 |---|---|---|---|
-| 1 | Callous Sell-Sword | 🟡 | 4/4 with ETB "sacrifice a creature; +(sacrificed power)/+0 EOT". Casualty 2 "copy this spell" half omitted (no copy primitive yet). |
 | 4 | Plunge into Darkness | 🟡 | `ChooseMode([SacrificeAndRemember + GainLife 3, LoseLife 4 + Search → Hand])`. Mode 0 sacrifices one creature for 3 life. Mode 1 pays 4 life and tutors any card (approximation of "pay X life, look at top X, take one"). Tests: `plunge_into_darkness_mode_one_pays_four_life_and_tutors`. |
 | 4 | Spoils of the Vault | 🟡 | Wired to `Effect::RevealUntilFind { find: Any, cap: 10, life_per_revealed: 1 }`: walks the top of the library until a match (or cap), mills the misses, deducts 1 life per revealed card. With `find: Any` the very first card is taken (1 life). The "name a card" half is still pending a naming primitive. |
 
@@ -44,7 +43,7 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Feature | Status | Cards depending on it |
 |---|---|---|
 | Uncounterable spell flag | 🟡 | `StackItem::Spell.uncounterable: bool` + `CounterSpell` respects it. Cavern of Souls flags any creature spell its controller casts as uncounterable. Turn-scoped grants ride `Player.spells_uncounterable_this_turn` (`Effect::GrantSpellsUncounterableThisTurn`) — Veil of Summer ✅. (Mana-provenance / name-a-type gates still collapse.) |
-| X-cost creature side-effects | 🟡 | Callous Sell-Sword now ETBs via `Seq([SacrificeAndRemember, PumpPT { power: SacrificedPower, EOT }])`. Casualty's "copy this spell" branch still ⏳ (no spell-copy-modal primitive). |
+| X-cost creature side-effects | 🟡 | Thud / Burn at the Stake ride `SacrificeAndRemember` + `Value::SacrificedPower`. Casualty's "copy this spell" branch still ⏳ (no Casualty cost-mode primitive); Adventure cost-modes (Burn Together) ⏳. |
 | Sacrifice-as-cost effects | 🟡 | Thud ✅ via `SacrificeAndRemember` + `Value::SacrificedPower`; Plunge into Darkness still ⏳. Flashback-with-additional-cost (Lava Dart sac-a-Mountain, Dread Return sac-three) ✅ via `flashback_additional_cost_for_name` + `cast_flashback`. |
 
 ## Plan

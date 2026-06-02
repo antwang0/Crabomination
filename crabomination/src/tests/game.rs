@@ -3779,31 +3779,24 @@ fn serum_powder_exiles_hand_and_redraws() {
 // ── Card behavior tests ──────────────────────────────────────────────────────
 
 #[test]
-fn callous_sell_sword_etb_sacrifices_and_pumps() {
-    // ETB Callous Sell-Sword (2/1, cost {1}{R}). The ETB sacrifices the
-    // first controller-controlled creature (the bear), and the sell-sword
-    // gains +(bear's power)/+0 until end of turn.
+fn callous_sell_sword_enters_with_counter_per_creature_died() {
+    // {1}{B} 2/2 enters with a +1/+1 counter for each creature that died
+    // under your control this turn.
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
-    g.clear_sickness(bear);
+    g.players[0].creatures_died_this_turn = 2;
     let css = g.add_card_to_hand(0, catalog::callous_sell_sword());
     g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: css, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Callous Sell-Sword castable for {1}{R}");
+    }).expect("Callous Sell-Sword castable for {1}{B}");
     drain_stack(&mut g);
 
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == bear),
-        "Sell-Sword's ETB should have sacrificed the bear"
-    );
-    let sell = g.battlefield.iter()
-        .find(|c| c.id == css)
+    let sell = g.battlefield.iter().find(|c| c.id == css)
         .expect("Sell-Sword should be on the battlefield");
-    // Base 2 (Sell-Sword) + sacrificed bear's power 2 = 4.
-    assert_eq!(sell.power(), 4,
-        "Base 2 + sacrificed bear's power 2 = 4");
+    // Base 2/2 + two +1/+1 counters = 4/4.
+    assert_eq!(sell.power(), 4, "2 base + 2 counters");
+    assert_eq!(sell.toughness(), 4, "2 base + 2 counters");
 }
 
 #[test]
@@ -5473,6 +5466,21 @@ fn cr_704_5j_legend_rule_keeps_newest() {
         "Legend rule should keep the newest (highest id)");
     assert!(!g.battlefield.iter().any(|c| c.id == first),
         "Legend rule should sacrifice the oldest");
+}
+
+#[test]
+fn cr_704_5j_legend_rule_controller_chooses_which_to_keep() {
+    // CR 704.5j: the controller chooses which legend to keep. Script a
+    // KeptLegend answer that keeps the *older* one (not the engine default).
+    let mut g = two_player_game();
+    let first = g.add_card_to_battlefield(0, catalog::griselbrand());
+    let second = g.add_card_to_battlefield(0, catalog::griselbrand());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::KeptLegend(first)]));
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield.iter().any(|c| c.id == first),
+        "Controller chose to keep the older Griselbrand");
+    assert!(!g.battlefield.iter().any(|c| c.id == second),
+        "The unchosen duplicate is put into the graveyard");
 }
 
 #[test]

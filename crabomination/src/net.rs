@@ -849,6 +849,13 @@ pub enum DecisionWire {
         attacker_power: u32,
         blockers: Vec<(CardId, String, u32)>,
     },
+    /// CR 704.5j — choose which of several same-named legends to keep.
+    /// Decider answers `KeptLegend(id)`.
+    ChooseLegendToKeep {
+        player: usize,
+        name: String,
+        duplicates: Vec<(CardId, String)>,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -954,6 +961,13 @@ impl From<&Decision> for DecisionWire {
                     attacker: *attacker,
                     attacker_power: *attacker_power,
                     blockers: blockers.clone(),
+                }
+            }
+            Decision::ChooseLegendToKeep { player, name, duplicates } => {
+                DecisionWire::ChooseLegendToKeep {
+                    player: *player,
+                    name: name.clone(),
+                    duplicates: duplicates.clone(),
                 }
             }
         }
