@@ -1,17 +1,17 @@
-//! Khans of Tarkir block — Dash (CR 702.110) creatures.
+//! Khans of Tarkir block cards.
 //!
-//! Dash rides the `AlternativeCost { dash: true }` path (`shortcut::dash`):
-//! cast for the dash cost, the creature enters with haste and returns to its
-//! owner's hand at the next end step. Each card here is built on that plus
-//! existing primitives — no per-card dash plumbing.
+//! Showcases Dash (CR 702.110, `shortcut::dash`): cast for the dash cost, the
+//! creature enters with haste and returns to its owner's hand at the next end
+//! step. Plus a few Jeskai prowess/tempo bodies built on existing primitives.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement,
-    Subtypes, Supertype, TokenDefinition,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility,
 };
 use crate::effect::shortcut::{dash, etb, on_attack, target_filtered};
 use crate::effect::{Duration, PlayerRef, Value};
-use crate::mana::{b, cost, generic, r};
+use crate::mana::{b, cost, generic, r, u, w};
 
 /// Screamreach Brawler — {2}{R} 3/3 Orc Berserker. Dash {1}{R}.
 pub fn screamreach_brawler() -> CardDefinition {
@@ -125,6 +125,115 @@ pub fn ponyback_brigade() -> CardDefinition {
     }
 }
 
+/// Lightning Berserker — {R} 1/1 Human Berserker. {R}: +1/+0 until end of
+/// turn. Dash {R}.
+pub fn lightning_berserker() -> CardDefinition {
+    CardDefinition {
+        name: "Lightning Berserker",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        alternative_cost: Some(dash(cost(&[r()]))),
+        ..Default::default()
+    }
+}
+
+/// Alesha, Who Smiles at Death — {2}{R} 3/2 Legendary Human Warrior with
+/// First strike. Dash {1}{R}. (The attack-trigger reanimation of a power-≤2
+/// creature is omitted — no targeted graveyard-to-attacking-battlefield
+/// reanimate primitive yet.)
+pub fn alesha_who_smiles_at_death() -> CardDefinition {
+    CardDefinition {
+        name: "Alesha, Who Smiles at Death",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        alternative_cost: Some(dash(cost(&[generic(1), r()]))),
+        ..Default::default()
+    }
+}
+
+/// Seeker of the Way — {1}{W} 2/2 Human Monk with Prowess. Whenever you cast
+/// a noncreature spell, this gains lifelink until end of turn.
+pub fn seeker_of_the_way() -> CardDefinition {
+    use crate::effect::shortcut::{cast_is_noncreature, prowess};
+    CardDefinition {
+        name: "Seeker of the Way",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![
+            prowess(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(cast_is_noncreature()),
+                effect: Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Jeskai Elder — {1}{U} 2/1 Human Monk with Prowess. Whenever this deals
+/// combat damage to a player, you may loot (draw a card, then discard one).
+pub fn jeskai_elder() -> CardDefinition {
+    CardDefinition {
+        name: "Jeskai Elder",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Prowess],
+        triggered_abilities: vec![
+            crate::effect::shortcut::prowess(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Every KTK factory, for snapshot name→factory registration.
 pub fn all_ktk_card_factories() -> &'static [crate::CardFactory] {
     &[
@@ -133,5 +242,9 @@ pub fn all_ktk_card_factories() -> &'static [crate::CardFactory] {
         zurgo_bellstriker,
         goblin_heelcutter,
         ponyback_brigade,
+        lightning_berserker,
+        alesha_who_smiles_at_death,
+        seeker_of_the_way,
+        jeskai_elder,
     ]
 }
