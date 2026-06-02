@@ -344,15 +344,8 @@ pub fn ephemerate() -> CardDefinition {
     }
 }
 
-/// Faithful Mending — {1}{W} Sorcery. Discard up to two cards. Draw two
-/// cards. Gain 2 life. Flashback {1}{B}.
-///
-/// "Up to two" is exposed as a `ChooseMode` with three options (discard 2,
-/// discard 1, discard 0). Mode 0 is the full discard so `AutoDecider` (and
-/// the bot) keep the gameplay-optimal choice for this deck — Faithful
-/// Mending is most often cast to dump a fatty for reanimation. Flashback
-/// {1}{B} is wired via `Keyword::Flashback` + the existing flashback cast
-/// path.
+/// Faithful Mending — {W}{U} Instant. "You gain 2 life, draw two cards,
+/// then discard two cards." Flashback {1}{W}{U} (`Keyword::Flashback`).
 pub fn faithful_mending() -> CardDefinition {
     use crate::card::Keyword;
     use crate::mana::ManaCost as Mc;
