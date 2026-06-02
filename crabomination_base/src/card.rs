@@ -595,6 +595,12 @@ pub enum SelectionRequirement {
     /// Battlefield/zone candidate; the count walks the battlefield for
     /// permanents matching `inner` under the evaluating controller.
     ManaValueAtMostControlledCount(Box<SelectionRequirement>),
+    /// True when the candidate's mana value is ≤ the number of cards in its
+    /// own controller's graveyard. Powers Drown in the Loch's "counter/
+    /// destroy target with mana value ≤ cards in its controller's graveyard"
+    /// gate. Works on stack spells and battlefield permanents alike (both
+    /// carry a `controller`).
+    ManaValueAtMostControllerGraveyard,
     /// True when the candidate has a back-face `CardDefinition` —
     /// i.e. it's a double-faced card (MDFC). Used by the SOS Prepare
     /// mechanic, whose printed reminder text reads "(Only creatures

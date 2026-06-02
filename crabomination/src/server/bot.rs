@@ -2192,7 +2192,10 @@ mod tests {
     #[test]
     fn bot_picks_alternate_mode_for_modal_spell() {
         let mut g = two_player_game();
-        // Opp creature for mode-1 (destroy creature) to target.
+        // Opp creature for mode-1 (destroy creature) to target. Drown's
+        // MV gate needs MV(bear=2) ≤ cards in its controller's graveyard.
+        g.add_card_to_graveyard(1, catalog::forest());
+        g.add_card_to_graveyard(1, catalog::forest());
         let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
         g.clear_sickness(bear);
         // Tap an Island/Swamp so {U}{B} is in the pool — bot's land-tap

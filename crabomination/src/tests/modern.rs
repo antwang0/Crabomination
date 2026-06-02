@@ -11557,6 +11557,9 @@ fn harrow_sacrifices_land_and_searches_two_basics() {
 #[test]
 fn drown_in_the_loch_mode_zero_counters_a_spell() {
     let mut g = two_player_game();
+    // The gate needs MV ≤ cards in the spell's controller's graveyard.
+    // Bolt is MV 1, so seat 1 needs at least one graveyard card.
+    g.add_card_to_graveyard(1, catalog::forest());
     // Opponent casts a spell on their own turn.
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
@@ -11595,6 +11598,9 @@ fn drown_in_the_loch_mode_zero_counters_a_spell() {
 #[test]
 fn drown_in_the_loch_mode_one_destroys_creature() {
     let mut g = two_player_game();
+    // Gate: MV (bear = 2) ≤ cards in the creature's controller's graveyard.
+    g.add_card_to_graveyard(1, catalog::forest());
+    g.add_card_to_graveyard(1, catalog::forest());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::drown_in_the_loch());
     g.players[0].mana_pool.add(Color::Blue, 1);
@@ -11611,6 +11617,26 @@ fn drown_in_the_loch_mode_one_destroys_creature() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Mode 1 destroys target creature");
+}
+
+#[test]
+fn drown_in_the_loch_gate_blocks_high_mv_target() {
+    // The MV gate makes a creature illegal when its controller's graveyard
+    // is too small (bear MV 2, empty graveyard → not a legal target).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::drown_in_the_loch());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    });
+    assert!(res.is_err(), "MV-2 creature with an empty-graveyard controller is illegal");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear survives");
 }
 
 #[test]

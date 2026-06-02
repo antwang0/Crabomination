@@ -830,6 +830,10 @@ impl GameState {
                             .count() as u32;
                         card.definition.cost.cmc() <= count
                     }
+                    R::ManaValueAtMostControllerGraveyard => {
+                        let count = self.players[card.controller].graveyard.len() as u32;
+                        card.definition.cost.cmc() <= count
+                    }
                     R::HasBackFace => card.definition.back_face.is_some(),
                     _ => unreachable!("handled above"),
                 }
@@ -935,6 +939,10 @@ impl GameState {
                         )
                     })
                     .count() as u32;
+                card.definition.cost.cmc() <= count
+            }
+            R::ManaValueAtMostControllerGraveyard => {
+                let count = self.players[card.controller].graveyard.len() as u32;
                 card.definition.cost.cmc() <= count
             }
             // Back-face check is a static property of the card

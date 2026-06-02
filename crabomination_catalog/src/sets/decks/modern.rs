@@ -7701,25 +7701,27 @@ pub fn harrow() -> CardDefinition {
 }
 
 /// Drown in the Loch — {U}{B} Instant. Choose one — counter target spell;
-/// or destroy target creature. Both halves are gated by "mana value ≤ cards
-/// in its controller's graveyard."
-///
-/// Modal: mode 0 counters a spell, mode 1 destroys a creature. The "X = cards
-/// in the target's controller's graveyard" mana-value gate is collapsed (no
-/// per-target dynamic-MV target restriction yet) — tracked in TODO.md.
+/// or destroy target creature. Both halves are gated by "mana value ≤ the
+/// number of cards in its controller's graveyard"
+/// (`SelectionRequirement::ManaValueAtMostControllerGraveyard`).
 /// AutoDecider picks mode 0 (the counter line is usually the higher
 /// gameplay-impact pick when both are legal).
 pub fn drown_in_the_loch() -> CardDefinition {
+    use crate::card::SelectionRequirement as R;
     CardDefinition {
         name: "Drown in the Loch",
         cost: cost(&[u(), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::CounterSpell {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                what: target_filtered(
+                    R::IsSpellOnStack.and(R::ManaValueAtMostControllerGraveyard),
+                ),
             },
             Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
+                what: target_filtered(
+                    R::Creature.and(R::ManaValueAtMostControllerGraveyard),
+                ),
             },
         ]),
         ..Default::default()
