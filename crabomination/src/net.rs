@@ -120,6 +120,12 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub kickable_hand: Vec<CardId>,
+    /// CardIds of permanents the viewer controls with an activated ability
+    /// they could use right now (timing/mana/tap/target all checked). Lets
+    /// the client highlight "this permanent can do something." Empty
+    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub activatable_permanents: Vec<CardId>,
 }
 
 /// A projected combat-damage summary, computed from the currently

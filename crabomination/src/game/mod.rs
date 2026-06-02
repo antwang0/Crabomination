@@ -1754,6 +1754,55 @@ impl GameState {
         out
     }
 
+    /// CardIds of permanents `seat` controls with at least one activated
+    /// ability they could activate **right now** — dry-run through
+    /// [`would_accept`] so timing, mana, tap state, and target availability
+    /// are all honored. Drives a client "this permanent can do something"
+    /// highlight (legal-plays hint, roadmap Tier 7/8). Empty off-priority.
+    ///
+    /// [`would_accept`]: Self::would_accept
+    pub fn activatable_permanents(&self, seat: usize) -> Vec<CardId> {
+        if self.player_with_priority() != seat {
+            return Vec::new();
+        }
+        // Snapshot (id, [ability effects]) so the borrow of `self.battlefield`
+        // is released before the cloning probes run.
+        let perms: Vec<(CardId, Vec<Option<Effect>>)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && !c.definition.activated_abilities.is_empty())
+            .map(|c| {
+                let effs = c
+                    .definition
+                    .activated_abilities
+                    .iter()
+                    .map(|a| a.effect.requires_target().then(|| a.effect.clone()))
+                    .collect();
+                (c.id, effs)
+            })
+            .collect();
+
+        let mut out = Vec::new();
+        for (id, ability_effects) in &perms {
+            let any = ability_effects.iter().enumerate().any(|(idx, targeted)| {
+                let target = match targeted {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, seat, None).0,
+                    None => None,
+                };
+                self.would_accept(GameAction::ActivateAbility {
+                    card_id: *id,
+                    ability_index: idx,
+                    target,
+                    x_value: None,
+                })
+            });
+            if any {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// Hand cards the viewer could cast *with their Kicker paid* right now
     /// (CR 702.32) — computed via a `CastSpellKicked` dry-run so it accounts
     /// for the full base+kicker cost, timing, and the kicked target set.

@@ -379,3 +379,29 @@ fn frenzied_arynx_pump_ability_grows_it() {
     let c = g.battlefield_find(id).unwrap();
     assert_eq!((c.power(), c.toughness()), (6, 5), "Frenzied Arynx pumps to 6/5");
 }
+
+// ── ClientView.activatable_permanents (legal-plays hint) ─────────────────────
+
+#[test]
+fn activatable_permanents_lists_a_usable_ability() {
+    let mut g = two_player_game();
+    // Nantuko Husk: "Sacrifice a creature: +1/+1". With fodder available
+    // and priority held, it should report as activatable.
+    let husk = g.add_card_to_battlefield(0, catalog::nantuko_husk());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let view = crate::server::view::project(&g, 0);
+    assert!(view.activatable_permanents.contains(&husk),
+        "Nantuko Husk with sac fodder is activatable");
+}
+
+#[test]
+fn activatable_permanents_empty_off_priority() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::nantuko_husk());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.priority.player_with_priority = 1; // not our priority
+    let view = crate::server::view::project(&g, 0);
+    assert!(view.activatable_permanents.is_empty(), "no affordance off-priority");
+}
