@@ -788,7 +788,16 @@ fn main() {
         usize_from_env("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP),
     );
 
-    let listener = TcpListener::bind(&bind).expect("failed to bind");
+    let listener = match TcpListener::bind(&bind) {
+        Ok(l) => l,
+        Err(e) => {
+            eprintln!(
+                "crabomination_server: failed to bind {bind}: {e}\n\
+                 (set CRAB_BIND to choose a different address/port)"
+            );
+            std::process::exit(1);
+        }
+    };
     eprintln!(
         "crabomination_server listening on {bind} (bot_mode={bot_mode}, format={}, \
          pairing_timeout={}s, max_conns={}, max_conns_per_ip={})",

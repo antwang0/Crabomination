@@ -1576,11 +1576,11 @@ fn spawn_choose_color_modal(
         .with_children(|row| {
             for c in legal {
                 let (bg, label) = match c {
-                    ManaColor::White => (Color::srgb(0.92, 0.92, 0.78), "White"),
-                    ManaColor::Blue  => (Color::srgb(0.30, 0.55, 0.90), "Blue"),
-                    ManaColor::Black => (Color::srgb(0.20, 0.20, 0.24), "Black"),
-                    ManaColor::Red   => (Color::srgb(0.85, 0.28, 0.20), "Red"),
-                    ManaColor::Green => (Color::srgb(0.25, 0.60, 0.30), "Green"),
+                    ManaColor::White => (Color::srgb(0.92, 0.92, 0.78), "White (W)"),
+                    ManaColor::Blue  => (Color::srgb(0.30, 0.55, 0.90), "Blue (U)"),
+                    ManaColor::Black => (Color::srgb(0.20, 0.20, 0.24), "Black (B)"),
+                    ManaColor::Red   => (Color::srgb(0.85, 0.28, 0.20), "Red (R)"),
+                    ManaColor::Green => (Color::srgb(0.25, 0.60, 0.30), "Green (G)"),
                 };
                 let text_color = if matches!(c, ManaColor::White) {
                     Color::BLACK
@@ -1981,22 +1981,36 @@ pub fn handle_mode_pick_buttons(
 }
 
 /// Click handler for color buttons in the `ChooseColor` modal. Submits the
-/// chosen color as the pending decision's answer.
+/// chosen color as the pending decision's answer. Also accepts the W/U/B/R/G
+/// keyboard shortcuts (only for colors actually offered).
 pub fn handle_choose_color_buttons(
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
     mut state: ResMut<DecisionUiState>,
+    keyboard: Res<ButtonInput<KeyCode>>,
     buttons: Query<(&Interaction, &ChooseColorButton), Changed<Interaction>>,
 ) {
+    use crabomination::mana::Color as ManaColor;
     let Some(cv) = &view.0 else { return };
-    let is_color = matches!(
-        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
-        Some(DecisionWire::ChooseColor { .. })
-    );
-    if !is_color {
+    let legal = match cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()) {
+        Some(DecisionWire::ChooseColor { legal, .. }) => legal.clone(),
+        _ => return,
+    };
+    let Some(outbox) = outbox else { return };
+    // Keyboard shortcut — submit the matching color if it's on offer.
+    let key_color = if keyboard.just_pressed(KeyCode::KeyW) { Some(ManaColor::White) }
+        else if keyboard.just_pressed(KeyCode::KeyU) { Some(ManaColor::Blue) }
+        else if keyboard.just_pressed(KeyCode::KeyB) { Some(ManaColor::Black) }
+        else if keyboard.just_pressed(KeyCode::KeyR) { Some(ManaColor::Red) }
+        else if keyboard.just_pressed(KeyCode::KeyG) { Some(ManaColor::Green) }
+        else { None };
+    if let Some(c) = key_color
+        && legal.contains(&c)
+    {
+        outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Color(c)));
+        state.spawned_for = None;
         return;
     }
-    let Some(outbox) = outbox else { return };
     for (interaction, btn) in &buttons {
         if *interaction == Interaction::Pressed {
             outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Color(btn.0)));
