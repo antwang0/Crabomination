@@ -1875,6 +1875,32 @@ impl GameState {
             .collect()
     }
 
+    /// Hand cards the player could cast right now via their **Dash**
+    /// alternative cost (CR 702.110). Lets the client surface a dash
+    /// affordance distinct from the normal castable highlight. Empty when
+    /// it isn't the player's priority.
+    pub fn dashable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.alternative_cost.as_ref().is_some_and(|a| a.dash))
+            .map(|c| c.id)
+            .filter(|&id| {
+                self.would_accept(GameAction::CastSpellAlternative {
+                    card_id: id,
+                    pitch_card: None,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .collect()
+    }
+
     /// Extra generic mana the caster owes on top of `card`'s printed
     /// cost — Damping Sphere's "+1 after the first spell each turn,"
     /// Chancellor of the Annex's first-spell tax, etc. Public so the

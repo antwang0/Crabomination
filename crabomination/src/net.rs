@@ -120,6 +120,12 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub kickable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand they could cast via their Dash
+    /// alternative cost right now (CR 702.110). Lets the client offer a
+    /// "dash?" affordance distinct from the plain castable highlight.
+    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub dashable_hand: Vec<CardId>,
     /// CardIds of permanents the viewer controls with an activated ability
     /// they could use right now (timing/mana/tap/target all checked). Lets
     /// the client highlight "this permanent can do something." Empty

@@ -129,7 +129,16 @@ pub fn update_castable_highlights(
     } else {
         view.0
             .as_ref()
-            .map(|cv| cv.castable_hand.iter().copied().collect())
+            // Union the normal castable set with cards playable via their
+            // Dash alternative cost (CR 702.110) so dash creatures also light
+            // up as "playable now."
+            .map(|cv| {
+                cv.castable_hand
+                    .iter()
+                    .chain(cv.dashable_hand.iter())
+                    .copied()
+                    .collect()
+            })
             .unwrap_or_default()
     };
 
