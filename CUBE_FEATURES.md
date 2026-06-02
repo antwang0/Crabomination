@@ -22,7 +22,6 @@ work is listed below.
 | Containment Priest | 🟡 | Body wired: 2/2 W flash. The replacement effect ("nontoken creatures entering not from a spell get exiled instead") needs an ETB-replacement primitive the engine doesn't have yet — the body is in the cube as a flash flier replacement until the primitive lands. Test: `containment_priest_is_a_flash_two_two`. |
 | Lion Sash | ⏳ | Equipment + grow via exile-from-graveyard. Needs equipment + counters wiring. |
 | Enduring Innocence | 🟡 | 2/1 Lifelink Glimmer; ETB-of-another-nontoken-creature → Draw 1. The "return from exile after death" self-revive clause is omitted. |
-| Ranger-Captain of Eos | 🟡 | ETB tutor for ≤1-CMC creature. The sac-for-no-noncreature-spells static is omitted (no sac-as-cost activation primitive). |
 | Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 | Virtue of Loyalty | ⏳ | Adventure + enchantment side. Needs Adventure cost-mode primitive. |
 

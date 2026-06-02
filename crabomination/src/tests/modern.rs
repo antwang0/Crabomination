@@ -3014,6 +3014,36 @@ fn ranger_captain_etb_searches_for_a_one_drop() {
 }
 
 #[test]
+fn ranger_captain_sac_locks_opponents_out_of_noncreature_spells() {
+    let mut g = two_player_game();
+    let ranger = g.add_card_to_battlefield(0, catalog::ranger_captain_of_eos());
+    g.clear_sickness(ranger);
+    // Sacrifice Ranger-Captain to fire its lock.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ranger, ability_index: 0, target: None, x_value: None,
+    }).expect("sac ability activates");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == ranger), "Ranger sacrificed");
+    assert!(g.players[1].cant_cast_noncreature_this_turn, "opponents locked out");
+
+    // The gate rejects a noncreature spell but allows a creature spell.
+    g.players[1].cant_cast_noncreature_this_turn = true;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.cast_spell(bolt, Some(Target::Player(0)), vec![], None, None);
+    assert!(matches!(err, Err(GameError::CantCastNoncreature)),
+        "noncreature spell blocked");
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add_colorless(1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    assert!(!matches!(
+        g.cast_spell(bears, None, vec![], None, None),
+        Err(GameError::CantCastNoncreature)),
+        "creature spell not blocked by the lock");
+}
+
+#[test]
 fn upheaval_returns_all_permanents_to_hands() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());

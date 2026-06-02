@@ -1188,6 +1188,10 @@ pub enum Effect {
     /// "spells you control can't be countered for the rest of this turn"
     /// (Veil of Summer). Cleared at the next untap.
     GrantSpellsUncounterableThisTurn { who: Selector },
+    /// Set `Player.cant_cast_noncreature_this_turn` on each resolved player —
+    /// "those players can't cast noncreature spells this turn"
+    /// (Ranger-Captain of Eos). Cleared at the next untap.
+    CantCastNoncreatureThisTurn { who: Selector },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
 
@@ -2257,6 +2261,7 @@ impl Effect {
             }
             Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
             Effect::GrantSpellsUncounterableThisTurn { who } => sel_has_target(who),
+            Effect::CantCastNoncreatureThisTurn { who } => sel_has_target(who),
             Effect::ExileTopAndGrantMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } => then.requires_target(),

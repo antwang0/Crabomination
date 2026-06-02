@@ -737,6 +737,8 @@ pub enum GameError {
     NotYourPriority,
     #[error("Sorcery-speed only: stack must be empty and it must be your main phase")]
     SorcerySpeedOnly,
+    #[error("You can't cast noncreature spells this turn")]
+    CantCastNoncreature,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),
     #[error("Card {0:?} not found in graveyard")]

@@ -224,6 +224,12 @@ pub struct Player {
     /// snapshot back-compat.
     #[serde(default)]
     pub cast_blue_or_black_this_turn: bool,
+    /// True while this player can't cast noncreature spells for the rest of
+    /// the turn (Ranger-Captain of Eos's sacrifice ability). Set by
+    /// `Effect::CantCastNoncreatureThisTurn`; reset for every player at the
+    /// active player's `do_untap`. Consulted by the cast-legality gate.
+    #[serde(default)]
+    pub cant_cast_noncreature_this_turn: bool,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -275,6 +281,7 @@ impl Player {
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,
             cast_blue_or_black_this_turn: false,
+            cant_cast_noncreature_this_turn: false,
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,

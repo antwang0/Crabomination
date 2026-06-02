@@ -913,6 +913,15 @@ impl GameState {
         let kicked = kicked && card.definition.has_kicker().is_some();
         card.kicked = kicked;
 
+        // Ranger-Captain of Eos lock — this player can't cast noncreature
+        // spells for the rest of the turn.
+        if self.players[p].cant_cast_noncreature_this_turn
+            && !card.definition.is_creature()
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastNoncreature);
+        }
+
         // Validate convoke creatures up-front (before any state mutation).
         if !convoke_creatures.is_empty()
             && !card.definition.keywords.contains(&crate::card::Keyword::Convoke)

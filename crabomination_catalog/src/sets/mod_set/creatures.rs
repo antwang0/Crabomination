@@ -511,12 +511,10 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
 
 /// Ranger-Captain of Eos — {1}{W}{W}, 3/3 Human Soldier. ETB: search your
 /// library for a creature card with mana value 1 or less, reveal, put it
-/// into your hand, then shuffle.
-///
-/// Approximation: the second activated ability ("{1}, Sacrifice this:
-/// Until end of turn, your opponents can't cast noncreature spells") is
-/// omitted — sac-as-cost activation isn't yet a primitive.
+/// into your hand, then shuffle. Sacrifice this: your opponents can't cast
+/// noncreature spells this turn (`Effect::CantCastNoncreatureThisTurn`).
 pub fn ranger_captain_of_eos() -> CardDefinition {
+    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Ranger-Captain of Eos",
         cost: cost(&[generic(1), w(), w()]),
@@ -540,6 +538,22 @@ pub fn ranger_captain_of_eos() -> CardDefinition {
                     .and(SelectionRequirement::ManaValueAtMost(1)),
                 to: crate::effect::ZoneDest::Hand(PlayerRef::You),
             },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::CantCastNoncreatureThisTurn {
+                who: Selector::Player(PlayerRef::EachOpponent),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None, from_hand: false,
         }],
         ..Default::default()
     }
