@@ -8389,6 +8389,50 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
 #[test]
+fn into_the_roil_unkicked_bounces_without_drawing() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::into_the_roil());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Into the Roil castable for {1}{U}");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "creature bounced to owner's hand");
+    // Caster spent the spell (-1) and didn't draw → hand shrank by 1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "unkicked: no card drawn");
+}
+
+#[test]
+fn into_the_roil_kicked_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::into_the_roil());
+    // {1}{U} + Kicker {1}{U} = {2}{U}{U}.
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("kicked Into the Roil castable for {2}{U}{U}");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "creature bounced");
+    // -1 (cast) +1 (kicked draw) → net unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before, "kicked: drew a replacement card");
+}
+
+#[test]
 fn tear_asunder_exiles_target_artifact() {
     let mut g = two_player_game();
     let relic = g.add_card_to_battlefield(1, catalog::sol_ring());

@@ -3508,6 +3508,25 @@ fn burst_lightning_deals_two_damage_to_player() {
     assert_eq!(g.players[1].life, 18, "P1 takes 2 damage");
 }
 
+#[test]
+fn burst_lightning_kicked_deals_four_damage() {
+    let mut g = two_player_game();
+    let bl = g.add_card_to_hand(0, catalog::burst_lightning());
+    // {R} + Kicker {4} = {4}{R}.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: bl,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked Burst Lightning castable for {4}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "kicked Burst Lightning deals 4 damage");
+}
+
 /// Postmortem Lunge at X=2 lifts a creature with MV=2 from the graveyard
 /// to the battlefield (haste, exile EOT).
 #[test]

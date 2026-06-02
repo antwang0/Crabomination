@@ -5025,6 +5025,31 @@ pub fn tear_asunder() -> CardDefinition {
     }
 }
 
+/// Into the Roil — {1}{U} Instant, Kicker {1}{U}. Return target nonland
+/// permanent to its owner's hand; draw a card if kicked (CR 702.32).
+pub fn into_the_roil() -> CardDefinition {
+    CardDefinition {
+        name: "Into the Roil",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), u()]))],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Assassin's Trophy — {B}{G} Instant. "Destroy target permanent an
 /// opponent controls. Its controller may search their library for a basic
 /// land card, put it onto the battlefield, then shuffle." The destroyed

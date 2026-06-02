@@ -1177,44 +1177,27 @@ pub fn pull_from_tomorrow() -> CardDefinition {
 /// {4} / Burst Lightning deals 2 damage to any target. If this spell was
 /// kicked, it deals 4 damage to that target instead."
 ///
-/// Approximation: collapsed to the unkicked mode — 2 damage to any target
-/// at the printed `{R}`. Kicker is engine-wide ⏳ (no alt-cost-implies-mode
-/// primitive that flips the body's damage value). The 2-damage bolt
-/// captures the most common play pattern (efficient removal on a 2-toughness
-/// creature or chip damage to face).
+/// Burst Lightning — {R} Instant, Kicker {4}. Deals 2 damage to any target;
+/// 4 instead if kicked (CR 702.32).
 pub fn burst_lightning() -> CardDefinition {
+    let any_target = || {
+        target_filtered(
+            SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+        )
+    };
     CardDefinition {
         name: "Burst Lightning",
         cost: cost(&[r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Player)
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(2),
+        keywords: vec![Keyword::Kicker(cost(&[generic(4)]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::DealDamage { to: any_target(), amount: Value::Const(4) }),
+            else_: Box::new(Effect::DealDamage { to: any_target(), amount: Value::Const(2) }),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        ..Default::default()
     }
 }
 
