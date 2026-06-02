@@ -19614,6 +19614,25 @@ fn phantasmal_image_copies_and_keeps_illusion_plus_sacrifice_rider() {
 }
 
 #[test]
+fn phantasmal_image_refires_copied_etb_trigger() {
+    // Copying Elvish Visionary (ETB: draw a card) re-fires the ETB per
+    // CR 707.5 — the controller draws when the Image enters.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::elvish_visionary());
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::phantasmal_image());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {U}");
+    drain_stack(&mut g);
+    // Cast the Image (−1 from hand) then drew 1 from the copied ETB → net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "copied Elvish Visionary ETB draw re-fires (cast −1, draw +1)");
+}
+
+#[test]
 fn mockingbird_copies_your_creature_but_keeps_its_name() {
     let mut g = two_player_game();
     // A creature you control to copy.

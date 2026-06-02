@@ -31,7 +31,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Dandân | 🟡 | {2}{U} 4/1 Fish. Wired with the "if you control no Island at your upkeep, sacrifice this" downside (an upkeep `If(Not(SelectorExists(Island ∧ ControlledByYou)), Move(self → Graveyard))` trigger). The "can attack only if defending player controls an Island" half is omitted (no per-attacker target restriction). Tests: `dandan_sacrifices_at_upkeep_when_no_island`, `dandan_stays_in_play_with_an_island`. |
-| Phantasmal Image | 🟡 | Enters as a copy of any creature via the `enters_as_copy` CR-707 hook, keeping its Illusion type + the "sacrifice when targeted" rider. Copied ETB triggers don't re-fire. Tests: `phantasmal_image_copies_and_keeps_illusion_plus_sacrifice_rider`. (Clone is fully faithful — `clone_enters_as_a_copy_of_a_creature`.) |
 | Thundertrap Trainer | 🟡 | 2/2 Flash; ETB taps target creature an opponent controls. Body fully wired; the trap/discount text is dropped. |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
@@ -97,7 +96,6 @@ work is listed below.
 | Kozilek's Command | 🟡 | {X} Instant wired as a 3-mode `ChooseMode`. The printed "choose two" modal picker collapses to a single mode. |
 | Eldrazi Confluence | 🟡 | {4} Instant wired as a 3-mode `ChooseMode`. The "choose three, modes may repeat" charm structure collapses to one pick. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
-| Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
 | Nettlecyst | ⏳ | Living-equipment + token. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
 | Helm of the Host | ⏳ | Equipment that token-copies on attack. |
