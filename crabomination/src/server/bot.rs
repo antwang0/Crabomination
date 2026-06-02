@@ -595,6 +595,39 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Kicker (CR 702.32): for any hand card with `Keyword::Kicker`, offer a
+    // `CastSpellKicked` candidate. Targets come from the effect tree, whose
+    // slot-0 filter resolves to the kicked (typically broader) branch, so a
+    // kicked Tear Asunder can aim at a creature. `would_accept` validates
+    // the full base+kicker cost, so this is only added when affordable.
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.has_kicker().is_some())
+    {
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots_kicked(effect, seat, None, true);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellKicked {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
     // played-this-turn, etc.). Use the game-level helper so an

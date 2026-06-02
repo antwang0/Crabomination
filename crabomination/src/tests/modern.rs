@@ -8438,6 +8438,26 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
 #[test]
+fn bot_kicks_tear_asunder_to_hit_a_creature() {
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    // Only a creature on board — unkicked Tear Asunder (artifact/enchantment)
+    // has no legal target, so the bot's only castable play is the kicked
+    // cast (nonland permanent). Give it enough mana for {1}{G}+{1}{B}.
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::tear_asunder());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let action = RandomBot::new().next_action(&g, 0);
+    assert!(matches!(action, Some(GameAction::CastSpellKicked { .. })),
+        "bot kicks Tear Asunder when only a creature is targetable: {action:?}");
+}
+
+#[test]
 fn aether_figment_kicked_enters_as_a_three_three() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::aether_figment());

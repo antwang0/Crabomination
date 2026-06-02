@@ -315,12 +315,26 @@ impl GameState {
         controller: usize,
         mode: Option<usize>,
     ) -> (Option<Target>, Vec<Target>) {
+        self.auto_targets_for_effect_all_slots_kicked(eff, controller, mode, false)
+    }
+
+    /// Kicker-aware variant (CR 702.32): slot filters resolve to the
+    /// `If(SpellWasKicked, …)` branch that matches `kicked`, so a bot
+    /// preparing a `CastSpellKicked` aims at the kicked target set (Tear
+    /// Asunder's nonland permanent rather than the base artifact/enchant).
+    pub fn auto_targets_for_effect_all_slots_kicked(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        mode: Option<usize>,
+        kicked: bool,
+    ) -> (Option<Target>, Vec<Target>) {
         // Slot 0 — if it carries its own numbered `TargetFiltered` filter
         // (Rabid Bite's friendly-creature power source lives in slot 0,
         // inside `Value::PowerOf`), pick it by that filter in the loop
         // below. Otherwise (bare `Target(0)` effects like Lightning Bolt)
         // use the source-aware heuristic picker.
-        let slot0_has_filter = eff.target_filter_for_slot_in_mode(0, mode).is_some();
+        let slot0_has_filter = eff.target_filter_for_slot_in_mode_kicked(0, mode, kicked).is_some();
         let mut slot_0 = if slot0_has_filter {
             None
         } else {
@@ -330,7 +344,7 @@ impl GameState {
         let mut slot: u8 = if slot0_has_filter { 0 } else { 1 };
         // Cap at 16 slots — no real card uses more than 4, but cap defensively.
         while slot < 16 {
-            let req = match eff.target_filter_for_slot_in_mode(slot, mode) {
+            let req = match eff.target_filter_for_slot_in_mode_kicked(slot, mode, kicked) {
                 Some(r) => r.clone(),
                 None => break,
             };
