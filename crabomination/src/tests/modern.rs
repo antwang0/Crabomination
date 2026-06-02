@@ -5256,21 +5256,43 @@ fn memory_lapse_counters_target_spell() {
 
 /// Vines of Vastwood: pumps the targeted creature +4/+4 EOT.
 #[test]
-fn vines_of_vastwood_pumps_target_creature_plus_four() {
+fn vines_of_vastwood_kicked_pumps_target_creature_plus_four() {
+    use crate::card::Keyword;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let vines = g.add_card_to_hand(0, catalog::vines_of_vastwood());
-    g.players[0].mana_pool.add(Color::Green, 2);
+    // {G} base + {G}{G} kicker = {G}{G}{G}.
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: vines,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("kicked Vines castable for {G}{G}{G}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).expect("bear still alive");
+    assert_eq!(cp.power, 6, "Grizzly Bears 2/2 + 4 = 6 power");
+    assert_eq!(cp.toughness, 6, "Grizzly Bears 2/2 + 4 = 6 toughness");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "kicked still grants hexproof");
+}
+
+#[test]
+fn vines_of_vastwood_unkicked_only_grants_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let vines = g.add_card_to_hand(0, catalog::vines_of_vastwood());
+    g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: vines,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Vines should accept the bear as a target");
+    }).expect("Vines castable for {G}");
     drain_stack(&mut g);
     let cp = g.computed_permanent(bear).expect("bear still alive");
-    assert_eq!(cp.power, 6, "Grizzly Bears 2/2 + 4 = 6 power");
-    assert_eq!(cp.toughness, 6, "Grizzly Bears 2/2 + 4 = 6 toughness");
+    assert_eq!(cp.power, 2, "unkicked Vines doesn't pump");
+    assert!(cp.keywords.contains(&Keyword::Hexproof), "unkicked grants hexproof");
 }
 
 /// Reckless Charge: pumps +3/+0 and grants haste until end of turn.
@@ -8414,6 +8436,39 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 }
 
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
+
+#[test]
+fn aether_figment_kicked_enters_as_a_three_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::aether_figment());
+    // {1}{U} + Kicker {3} = {4}{U}.
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("kicked Aether Figment castable for {4}{U}");
+    drain_stack(&mut g);
+    let cp = g.battlefield.iter().find(|c| c.definition.name == "Aether Figment")
+        .map(|c| g.computed_permanent(c.id).unwrap()).expect("in play");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "kicked Figment enters with a +1/+1 counter");
+}
+
+#[test]
+fn aether_figment_unkicked_is_a_two_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::aether_figment());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Aether Figment castable for {1}{U}");
+    drain_stack(&mut g);
+    let cp = g.battlefield.iter().find(|c| c.definition.name == "Aether Figment")
+        .map(|c| g.computed_permanent(c.id).unwrap()).expect("in play");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "unkicked Figment is a vanilla 2/2");
+}
 
 #[test]
 fn thraben_inspector_investigates_on_etb() {

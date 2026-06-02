@@ -591,8 +591,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         benthic_biomancer,
         pteramander,
         quandrix_cryptomancer,
-        // ── Kicker (CR 702.32) bounce ──
+        // ── Kicker (CR 702.32) ──
         into_the_roil,
+        aether_figment,
         // ── classic core-set bodies (claude/modern_decks) ──
         air_elemental,
         snapping_drake,

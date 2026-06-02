@@ -876,32 +876,32 @@ pub fn memory_lapse() -> CardDefinition {
     }
 }
 
-/// Vines of Vastwood — {G} Instant. Kicker {G}{G}. Target creature can't
-/// be the target of spells or abilities your opponents control this turn.
-/// If kicked, that creature gets +4/+4 until end of turn.
-///
-/// Approximation: collapse to the kicked mode (paid {G} extra) and grant
-/// +4/+4 EOT. The hexproof half (untargetable by opponents) is omitted —
-/// the engine has no per-permanent "untargetable by opponents" duration
-/// effect distinct from the global `Keyword::Hexproof`. Cost shown as the
-/// kicker total {G}{G} so the engine doesn't surface a separate kicker
-/// decision.
+/// Vines of Vastwood — {G} Instant, Kicker {G}{G}. Target creature gains
+/// hexproof until end of turn (can't be targeted by opponents); if kicked,
+/// it also gets +4/+4 EOT (CR 702.32).
 pub fn vines_of_vastwood() -> CardDefinition {
     CardDefinition {
         name: "Vines of Vastwood",
-        cost: cost(&[g(), g()]),
+        cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(4),
-            toughness: Value::Const(4),
-            duration: Duration::EndOfTurn,
-        },
-        triggered_abilities: vec![],
+        keywords: vec![Keyword::Kicker(cost(&[g(), g()]))],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }

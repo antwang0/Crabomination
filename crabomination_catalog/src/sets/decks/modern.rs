@@ -6364,6 +6364,34 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
     }
 }
 
+/// Aether Figment — {1}{U} Creature — Illusion, 2/2, can't be blocked.
+/// Kicker {3}: enters with a +1/+1 counter if it was kicked (CR 702.32 +
+/// ETB-kicked context).
+pub fn aether_figment() -> CardDefinition {
+    CardDefinition {
+        name: "Aether Figment",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Unblockable, Keyword::Kicker(cost(&[generic(3)]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Thraben Inspector — {W} Creature — Human Soldier, 1/1. ETB: investigate
 /// (create a Clue token; CR 701.13).
 pub fn thraben_inspector() -> CardDefinition {
