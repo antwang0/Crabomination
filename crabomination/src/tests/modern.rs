@@ -8650,6 +8650,63 @@ fn goblin_king_anthems_goblins() {
 }
 
 #[test]
+fn goblin_chieftain_anthems_and_grants_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_chieftain());
+    let raider = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // 1/1 Goblin
+    let cp = g.computed_permanent(raider).expect("raider alive");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "+1/+1 to other Goblins");
+    assert!(cp.keywords.contains(&Keyword::Haste), "other Goblins gain haste");
+}
+
+#[test]
+fn krenko_makes_goblins_equal_to_goblin_count() {
+    let mut g = two_player_game();
+    let krenko = g.add_card_to_battlefield(0, catalog::krenko_mob_boss());
+    g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // 2 Goblins total
+    g.clear_sickness(krenko);
+    let before = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Goblin)).count();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: krenko, ability_index: 0, target: None, x_value: None,
+    }).expect("Krenko taps for Goblins");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Goblin)).count();
+    assert_eq!(after - before, 2, "Krenko makes one Goblin per Goblin you control (2)");
+}
+
+#[test]
+fn goblin_instigator_enters_with_a_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::goblin_instigator());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Goblin Instigator");
+    drain_stack(&mut g);
+    let goblins = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.subtypes.creature_types.contains(&crate::card::CreatureType::Goblin)).count();
+    assert_eq!(goblins, 2, "Instigator plus its 1/1 Goblin token");
+}
+
+#[test]
+fn goblin_trashmaster_sacrifices_a_goblin_to_destroy_an_artifact() {
+    let mut g = two_player_game();
+    let tm = g.add_card_to_battlefield(0, catalog::goblin_trashmaster());
+    g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // sac fodder
+    g.clear_sickness(tm);
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter()); // an artifact
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tm, ability_index: 0, target: Some(Target::Permanent(art)), x_value: None,
+    }).expect("Trashmaster sac-destroys an artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "the artifact is destroyed");
+}
+
+#[test]
 fn phantom_monster_is_a_three_three_flyer() {
     use crate::card::Keyword;
     let def = catalog::phantom_monster();

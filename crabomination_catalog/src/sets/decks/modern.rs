@@ -6758,6 +6758,136 @@ pub fn goblin_king() -> CardDefinition {
     }
 }
 
+/// Goblin Chieftain — {1}{R}{R} 2/2 Goblin with Haste. Other Goblin
+/// creatures you control get +1/+1 and have haste.
+pub fn goblin_chieftain() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Goblin Chieftain",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Goblins you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Goblins you control have haste.",
+                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::Haste },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Krenko, Mob Boss — {2}{R}{R} 3/3 Legendary Goblin Warrior. {T}: Create a
+/// number of 1/1 red Goblin creature tokens equal to the number of Goblins
+/// you control.
+pub fn krenko_mob_boss() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Krenko, Mob Boss",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+                definition: goblin_token(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Instigator — {1}{R} 1/1 Goblin. When this enters, create a 1/1 red
+/// Goblin creature token.
+pub fn goblin_instigator() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Goblin Instigator",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: goblin_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Goblin Trashmaster — {1}{R}{R} 2/2 Goblin. Other Goblins you control get
+/// +1/+1. {T}, Sacrifice a Goblin: Destroy target artifact.
+pub fn goblin_trashmaster() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Goblin Trashmaster",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Goblins you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Destroy {
+                what: crate::effect::shortcut::target_filtered(SelectionRequirement::Artifact),
+            },
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                1,
+            )),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Phantom Monster — {3}{U} Creature — Phantom Monster, 3/3, Flying.
 pub fn phantom_monster() -> CardDefinition {
     CardDefinition {
