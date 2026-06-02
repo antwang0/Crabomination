@@ -2467,11 +2467,12 @@ pub fn doomskar() -> CardDefinition {
 /// becomes the target of a spell or ability an opponent controls, draw
 /// a card."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Big green trampler with a
-/// "becomes target" card-advantage rider. Body 6/5 Trample ships
-/// faithfully. The "becomes target of opp spell or ability" rider is
-/// **omitted** (no `EventKind::BecameTarget` event — engine-wide ⏳).
-/// Tests: `battle_mammoth_is_a_five_mana_six_five_trampler`.
+/// Body 6/5 Trample ships faithfully. The "whenever a permanent you control
+/// becomes the target of an opponent's spell/ability, draw" rider is omitted:
+/// `EventKind::BecameTarget` now fires, but only for SelfSource/OpponentControl
+/// scopes where the targeted permanent IS the trigger source. Battle Mammoth's
+/// "any permanent you control" subject (≠ source) needs a new scope (tracked
+/// in TODO.md). Tests: `battle_mammoth_is_a_five_mana_six_five_trampler`.
 pub fn battle_mammoth() -> CardDefinition {
     CardDefinition {
         name: "Battle Mammoth",

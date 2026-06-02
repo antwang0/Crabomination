@@ -8,6 +8,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **BecameTarget "a permanent you control" scope.** `EventKind::BecameTarget`
+  now fires for SelfSource (targeted permanent IS the source — Goldspan,
+  Phantasmal) and OpponentControl-of-self (Tenured Concocter). Triggers whose
+  subject is *any permanent you control* (Battle Mammoth — "whenever a
+  permanent you control becomes the target of an opponent's spell/ability,
+  draw") need a new scope that drops the implicit `target == source.id`
+  constraint and instead checks the targeted permanent's controller == trigger
+  controller while the caster is an opponent. One card today (Battle Mammoth).
+
 - **Scryfall is blocked by the web-session network policy** (HTTP 403 for
   `api.scryfall.com`, both `scripts/fetch_cards.py` and the `WebFetch`
   tool). Only the 332 cards already in `scripts/.scryfall_cache.json` are
@@ -322,6 +331,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   own simultaneous triggers via `Decision::OrderTriggers`; AutoDecider keeps
   the default. Client modal wired. Server suspend path still ⏳ (see
   Follow-ups). Tests: `same_controller_triggers_*`, `wants_ui_controller_*`.
+
+- ✅ **CR 603.2 — "Becomes the target" SelfSource triggers** (claude/modern_decks).
+  `event_matches` now accepts `GameEvent::BecameTarget` in the SelfSource
+  `scope_ok` arm (previously the implicit target==source check passed but the
+  scope match dropped it, so these triggers silently never fired). Powers
+  Goldspan Dragon (Treasure on attack/target) and Phantasmal Image's
+  sacrifice-when-targeted rider. Tests:
+  `goldspan_dragon_treasure_on_becoming_targeted`,
+  `phantasmal_image_sacrifices_itself_when_targeted`.
 
 - ✅ **CR 119.5 — Set life total** (claude/modern_decks). Biorhythm now uses
   `Effect::SetLifeTotal` over `ForEach(EachPlayer)` with
