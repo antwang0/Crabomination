@@ -1789,6 +1789,50 @@ fn anthem_pumped_creature_uses_computed_toughness_for_lethality() {
 }
 
 #[test]
+fn cr_614_2_double_damage_dealt_doubles_noncombat_damage() {
+    // A Furnace-of-Rath-style permanent doubles a Lightning Bolt's 3 to 6;
+    // a second doubler would compound multiplicatively (3 → 12).
+    let mut g = two_player_game();
+    let mut furnace = catalog::grizzly_bears();
+    furnace.static_abilities = vec![StaticAbility {
+        description: "If a source would deal damage, it deals double instead",
+        effect: StaticEffect::DoubleDamageDealt,
+    }];
+    g.add_card_to_battlefield(0, furnace);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 6, "3 damage doubled to 6");
+}
+
+#[test]
+fn cr_614_2_two_doublers_compound_multiplicatively() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let mut furnace = catalog::grizzly_bears();
+        furnace.static_abilities = vec![StaticAbility {
+            description: "double damage",
+            effect: StaticEffect::DoubleDamageDealt,
+        }];
+        g.add_card_to_battlefield(0, furnace);
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 12, "two doublers: 3 → 6 → 12");
+}
+
+#[test]
 fn layer_keyword_grants_flying() {
     let mut g = two_player_game();
     let mut bear_def = catalog::grizzly_bears();

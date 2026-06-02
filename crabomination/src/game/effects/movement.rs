@@ -89,6 +89,18 @@ impl GameState {
         if amount == 0 {
             return;
         }
+        // CR 614.2 — global damage-doubling replacement (Furnace of Rath /
+        // Gratuitous Violence). Each `DoubleDamageDealt` permanent doubles
+        // the amount; applied before prevention so a shield soaks the
+        // already-doubled total (CR 616 lets the affected player order the
+        // two replacements — doubling-first is the common case and keeps the
+        // event single-pass here).
+        let doublers = self.damage_doublers();
+        let amount = if doublers > 0 {
+            amount.saturating_mul(1u32 << doublers.min(16))
+        } else {
+            amount
+        };
         // CR 615.1 — prevention shields. Before applying the damage, let
         // any shield around the target soak it (unless a "damage can't be
         // prevented this turn" effect is active, CR 615.12). Returns the

@@ -3006,6 +3006,14 @@ pub enum StaticEffect {
     /// `DoubleTokens` for cards that print both halves (Doubling Season
     /// itself ships both static abilities).
     DoubleCounters,
+    /// CR 614.2 — "If a source would deal damage … it deals double that
+    /// damage instead." A *global* damage-replacement (Furnace of Rath,
+    /// Gratuitous Violence-class, Fiery Emancipation as ×2 stacking): read
+    /// off the battlefield by `GameState::damage_doublers`, every active
+    /// instance doubles the dealt amount (2 → 4×, …). Currently wired for
+    /// the non-combat `deal_damage_to_from` path; combat-damage doubling is
+    /// tracked in TODO.md under CR 614.2.
+    DoubleDamageDealt,
     /// CR 614.x — "Permanents entering the battlefield don't cause
     /// abilities of permanents your opponents control to trigger. If a
     /// permanent entering the battlefield causes a triggered ability of

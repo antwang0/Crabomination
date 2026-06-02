@@ -1041,6 +1041,23 @@ impl GameState {
             .sum()
     }
 
+    /// CR 614.2 — number of `StaticEffect::DoubleDamageDealt` permanents on
+    /// the battlefield (controller-agnostic: Furnace of Rath doubles *all*
+    /// damage). Damage is scaled by `2^n`; `n` doublers → `2^n×`.
+    pub fn damage_doublers(&self) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::DoubleDamageDealt))
+                    .count() as u32
+            })
+            .sum()
+    }
+
     /// True if `seat` cannot gain life *right now*, per CR 119.7. ORs:
     /// 1. The directly-settable `Player.cannot_gain_life` flag (set by
     ///    emblems / once-per-game state — currently dormant; reserved for
@@ -4404,6 +4421,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // DoubleCounters — read at `Effect::AddCounter` resolution time
             // via `GameState::counter_doublers_for(seat)`; no layer effect.
             | StaticEffect::DoubleCounters
+            // DoubleDamageDealt — read at non-combat damage time via
+            // `GameState::damage_doublers`; no layer effect.
+            | StaticEffect::DoubleDamageDealt
             // GrantAffinityToISSpells — read at cast time by
             // `cost_reduction_for_spell` directly; no layer effect.
             | StaticEffect::GrantAffinityToISSpells { .. }
