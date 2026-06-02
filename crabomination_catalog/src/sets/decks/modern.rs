@@ -2148,7 +2148,7 @@ pub fn diabolic_edict() -> CardDefinition {
 pub fn geths_verdict() -> CardDefinition {
     CardDefinition {
         name: "Geth's Verdict",
-        cost: cost(&[generic(1), b()]),
+        cost: cost(&[b(), b()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2375,7 +2375,7 @@ pub fn tormenting_voice() -> CardDefinition {
 pub fn wild_guess() -> CardDefinition {
     CardDefinition {
         name: "Wild Guess",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[r(), r()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2455,7 +2455,7 @@ pub fn slagstorm() -> CardDefinition {
     use crate::effect::shortcut::each_creature;
     CardDefinition {
         name: "Slagstorm",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(1), r(), r()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5722,7 +5722,7 @@ pub fn dismember() -> CardDefinition {
     use crate::mana::phyrexian;
     CardDefinition {
         name: "Dismember",
-        cost: cost(&[generic(1), phyrexian(Color::Black), phyrexian(Color::Black), phyrexian(Color::Black)]),
+        cost: cost(&[generic(1), phyrexian(Color::Black), phyrexian(Color::Black)]),
         card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
@@ -7648,7 +7648,7 @@ pub fn despark() -> CardDefinition {
 pub fn crumble_to_dust() -> CardDefinition {
     CardDefinition {
         name: "Crumble to Dust",
-        cost: cost(&[generic(2), r(), r()]),
+        cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ExileSameNameAsTarget {
             what: target_filtered(

@@ -73,7 +73,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
     use crate::effect::{DelayedTriggerKind, ManaPayload, OpeningHandEffect};
     CardDefinition {
         name: "Chancellor of the Tangle",
-        cost: cost(&[generic(5), g(), g()]),
+        cost: cost(&[generic(4), g(), g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Avatar],
@@ -313,7 +313,7 @@ pub fn psychic_frog() -> CardDefinition {
 pub fn quantum_riddler() -> CardDefinition {
     CardDefinition {
         name: "Quantum Riddler",
-        cost: cost(&[generic(3), u(), b()]),
+        cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Sphinx],
@@ -350,7 +350,7 @@ pub fn solitude() -> CardDefinition {
         // extra white pip), which made the spell uncastable in the
         // existing test fixtures and slightly off-flavor (Solitude is a
         // single-white-pip MH2 evoke spell, not a double-white).
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Kor, CreatureType::Cleric],

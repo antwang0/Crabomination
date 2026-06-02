@@ -136,8 +136,8 @@ fn flashback_cast_exiles_spell_on_resolution() {
     g.players[0].graveyard.push(card);
 
     // Pay the flashback cost {2}{R}.
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastFlashback {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -2024,8 +2024,8 @@ fn blasphemous_edict_each_player_sacrifices_a_creature() {
     let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let edict = g.add_card_to_hand(0, catalog::blasphemous_edict());
-    g.players[0].mana_pool.add_colorless(4);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Black, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: edict, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
@@ -2684,17 +2684,15 @@ fn tireless_tracker_investigates_when_a_land_enters() {
 /// future "off by one mana" regression in the catalog (or the auto-tap
 /// path) can't sneak through.
 #[test]
-fn tireless_tracker_requires_two_green_mana_sources() {
+fn tireless_tracker_requires_a_green_mana_source() {
     let mut g = two_player_game();
     g.priority.player_with_priority = 0;
 
-    // Setup A: 1 Forest, 2 Mountains in play, untapped — only 1 green available.
-    let f = g.add_card_to_battlefield(0, catalog::forest());
-    g.battlefield_find_mut(f).unwrap().tapped = false;
-    let m1 = g.add_card_to_battlefield(0, catalog::mountain());
-    g.battlefield_find_mut(m1).unwrap().tapped = false;
-    let m2 = g.add_card_to_battlefield(0, catalog::mountain());
-    g.battlefield_find_mut(m2).unwrap().tapped = false;
+    // Setup A: 3 Mountains untapped — no green available, so {2}{G} fails.
+    for _ in 0..3 {
+        let m = g.add_card_to_battlefield(0, catalog::mountain());
+        g.battlefield_find_mut(m).unwrap().tapped = false;
+    }
     let tracker = g.add_card_to_hand(0, catalog::tireless_tracker());
     let err = g.perform_action(GameAction::CastSpell {
         card_id: tracker,
@@ -2704,17 +2702,17 @@ fn tireless_tracker_requires_two_green_mana_sources() {
         x_value: None,
     });
     assert!(err.is_err(),
-        "{{1}}{{G}}{{G}} cannot be paid from 1 Forest + 2 Mountains: {err:?}");
+        "{{2}}{{G}} cannot be paid with no green source: {err:?}");
 
-    // Setup B: swap a Mountain for a Forest — now we have 2G + 1 generic.
+    // Setup B: 1 Forest + 2 Mountains — one green + two generic pays {2}{G}.
     let mut g = two_player_game();
     g.priority.player_with_priority = 0;
-    let f1 = g.add_card_to_battlefield(0, catalog::forest());
-    g.battlefield_find_mut(f1).unwrap().tapped = false;
-    let f2 = g.add_card_to_battlefield(0, catalog::forest());
-    g.battlefield_find_mut(f2).unwrap().tapped = false;
-    let m = g.add_card_to_battlefield(0, catalog::mountain());
-    g.battlefield_find_mut(m).unwrap().tapped = false;
+    let f = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(f).unwrap().tapped = false;
+    for _ in 0..2 {
+        let m = g.add_card_to_battlefield(0, catalog::mountain());
+        g.battlefield_find_mut(m).unwrap().tapped = false;
+    }
     let tracker = g.add_card_to_hand(0, catalog::tireless_tracker());
     g.perform_action(GameAction::CastSpell {
         card_id: tracker,
@@ -2723,7 +2721,7 @@ fn tireless_tracker_requires_two_green_mana_sources() {
         mode: None,
         x_value: None,
     })
-    .expect("{1}{G}{G} pays from 2 Forests + 1 Mountain");
+    .expect("{2}{G} pays from 1 Forest + 2 Mountains");
 }
 
 #[test]
@@ -5439,8 +5437,8 @@ fn boil_destroys_all_islands() {
     let i2 = g.add_card_to_battlefield(1, catalog::island());
     let f1 = g.add_card_to_battlefield(0, catalog::forest());
     let boil = g.add_card_to_hand(0, catalog::boil());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: boil, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Boil castable for {2}{R}");
@@ -5633,8 +5631,8 @@ fn mine_collapse_sacrifices_mountain_and_deals_four() {
     let mut g = two_player_game();
     let mtn = g.add_card_to_battlefield(0, catalog::mountain());
     let mc = g.add_card_to_hand(0, catalog::mine_collapse());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: mc,
         target: Some(Target::Player(1)),
@@ -5938,10 +5936,10 @@ fn silversmote_ghoul_returns_from_graveyard_on_lifegain() {
     let mending = g.add_card_to_hand(0, catalog::faithful_mending());
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: mending, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
-    }).expect("Faithful Mending castable for {1}{W}");
+        card_id: mending, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Faithful Mending castable for {W}{U}");
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == id),
@@ -5952,13 +5950,12 @@ fn silversmote_ghoul_returns_from_graveyard_on_lifegain() {
 fn bitterbloom_bearer_etb_creates_a_faerie_token() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::bitterbloom_bearer());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 2);
 
     let bf_before = g.battlefield.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bitterbloom Bearer castable for {1}{B}");
+    }).expect("Bitterbloom Bearer castable for {B}{B}");
     drain_stack(&mut g);
 
     assert_eq!(g.battlefield.len(), bf_before + 2,
@@ -6042,9 +6039,9 @@ fn heliod_adds_plus_one_counter_when_you_gain_life_with_lifelink() {
     let mending = g.add_card_to_hand(0, catalog::faithful_mending());
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: mending, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+        card_id: mending, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Faithful Mending castable");
     drain_stack(&mut g);
 
@@ -6261,14 +6258,13 @@ fn geths_verdict_sacs_target_and_drains_one_life() {
     let mut g = two_player_game();
     let p1_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let gv = g.add_card_to_hand(0, catalog::geths_verdict());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: gv,
         target: Some(Target::Player(1)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Geth's Verdict castable for {1}{B}");
+    }).expect("Geth's Verdict castable for {B}{B}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == p1_bear),
         "P1's bear should be sacrificed");
@@ -6505,13 +6501,13 @@ fn wild_guess_discards_one_and_draws_two() {
     }
     g.add_card_to_hand(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::wild_guess());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Wild Guess castable for {2}{R}");
+    }).expect("Wild Guess castable for {R}{R}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "Wild Guess nets 0 hand size");
 }
@@ -6574,11 +6570,11 @@ fn slagstorm_mode_zero_sweeps_creatures() {
     let p1_life_before = g.players[1].life;
 
     let id = g.add_card_to_hand(0, catalog::slagstorm());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
-    }).expect("Slagstorm castable for {2}{R}");
+    }).expect("Slagstorm castable for {1}{R}{R}");
     drain_stack(&mut g);
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
@@ -6598,11 +6594,11 @@ fn slagstorm_mode_one_burns_each_player() {
     let p1_before = g.players[1].life;
 
     let id = g.add_card_to_hand(0, catalog::slagstorm());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
-    }).expect("Slagstorm castable for {2}{R}");
+    }).expect("Slagstorm castable for {1}{R}{R}");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].life, p0_before - 3,
@@ -9655,8 +9651,8 @@ fn stone_rain_destroys_target_land() {
     let mut g = two_player_game();
     let mountain = g.add_card_to_battlefield(1, catalog::mountain());
     let id = g.add_card_to_hand(0, catalog::stone_rain());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -9674,8 +9670,8 @@ fn stone_rain_rejects_creature_target() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::stone_rain());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
 
     let err = g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -9939,10 +9935,10 @@ fn dismember_castable_for_one_and_six_life() {
         target: Some(Target::Permanent(big)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Dismember castable for {1} + 6 life");
+    }).expect("Dismember castable for {1} + 4 life");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before - 6,
-        "three Phyrexian pips paid with 2 life each = 6 life");
+    assert_eq!(g.players[0].life, life_before - 4,
+        "two Phyrexian pips paid with 2 life each = 4 life");
     assert!(!g.battlefield.iter().any(|c| c.id == big));
 }
 
@@ -13906,8 +13902,8 @@ fn carnage_interpreter_etb_makes_each_opp_discard() {
     g.add_card_to_hand(1, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::carnage_interpreter());
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     let opp_hand_before = g.players[1].hand.len();
     cast(&mut g, id);
     assert_eq!(g.players[1].hand.len(), opp_hand_before - 1,
@@ -15963,8 +15959,8 @@ fn chain_lightning_kills_a_three_toughness_creature() {
 fn rift_bolt_deals_three_to_player() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::rift_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     let life_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
@@ -17694,8 +17690,8 @@ fn animated_manland_can_attack() {
 fn char_burns_target_and_pings_caster() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::char());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     let p0_life = g.players[0].life;
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
@@ -18949,8 +18945,8 @@ fn volt_charge_burns_then_proliferates() {
     g.battlefield.iter_mut().find(|c| c.id == mine).unwrap()
         .add_counters(CounterType::PlusOnePlusOne, 1);
     let id = g.add_card_to_hand(0, catalog::volt_charge());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     let life_before = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
@@ -22011,8 +22007,8 @@ fn fire_imp_burns_a_creature_on_etb() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::fire_imp());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(victim)),
         additional_targets: vec![], mode: None, x_value: None,

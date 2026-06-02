@@ -2132,9 +2132,8 @@ fn quantum_riddler_on_cast_draws_a_card() {
     // cantrip.
     let top = g.add_card_to_library(0, catalog::island());
     let qr_id = g.add_card_to_hand(0, catalog::quantum_riddler());
-    // Pay {3}{U}{B}.
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    // Pay {3}{U}{U}.
+    g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
@@ -2859,13 +2858,12 @@ fn quantum_riddler_on_cast_draws_even_if_countered() {
 
     let qr = g.add_card_to_hand(0, catalog::quantum_riddler());
     g.players[0].mana_pool.add_colorless(3);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
 
     g.perform_action(GameAction::CastSpell {
         card_id: qr, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Quantum Riddler is castable for {3}{U}{B}");
+    .expect("Quantum Riddler is castable for {3}{U}{U}");
 
     // P1 counters Quantum Riddler with a Counterspell while the on-cast
     // cantrip is still on the stack above it.
@@ -3228,7 +3226,7 @@ fn elesh_norn_doubles_your_etb_triggers() {
     let opp_b = g.add_card_to_battlefield(1, catalog::llanowar_elves());
 
     let solitude = g.add_card_to_hand(0, catalog::solitude());
-    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: solitude, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -3253,7 +3251,7 @@ fn elesh_norn_suppresses_opponent_etb_triggers() {
     let p0_creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
     let solitude = g.add_card_to_hand(1, catalog::solitude());
-    g.players[1].mana_pool.add(Color::White, 1);
+    g.players[1].mana_pool.add(Color::White, 2);
     g.players[1].mana_pool.add_colorless(3);
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;

@@ -359,33 +359,23 @@ pub fn faithful_mending() -> CardDefinition {
     let flashback_cost = Mc {
         symbols: vec![
             crate::mana::ManaSymbol::Generic(1),
-            crate::mana::ManaSymbol::Colored(Color::Black),
+            crate::mana::ManaSymbol::Colored(Color::White),
+            crate::mana::ManaSymbol::Colored(Color::Blue),
         ],
     };
     CardDefinition {
         name: "Faithful Mending",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[w(), u()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
+        // "You gain 2 life, draw two cards, then discard two cards."
         effect: Effect::Seq(vec![
-            Effect::ChooseMode(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                    random: false,
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::Noop,
-            ]),
-            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
         ]),
         triggered_abilities: vec![],
         ..Default::default()

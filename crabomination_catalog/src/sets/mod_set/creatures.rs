@@ -608,7 +608,7 @@ pub fn haywire_mite() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Haywire Mite",
-        cost: cost(&[g()]),
+        cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Insect],
@@ -743,7 +743,7 @@ pub fn tireless_tracker() -> CardDefinition {
     use crate::game::effects::clue_token;
     CardDefinition {
         name: "Tireless Tracker",
-        cost: cost(&[generic(1), g(), g()]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Scout],
@@ -937,7 +937,7 @@ pub fn tishanas_tidebinder() -> CardDefinition {
     use crate::mana::u;
     CardDefinition {
         name: "Tishana's Tidebinder",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -1881,7 +1881,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Heliod, Sun-Crowned",
-        cost: cost(&[generic(1), w(), w()]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature, CardType::Enchantment],
         subtypes: Subtypes::default(),
@@ -2686,7 +2686,7 @@ pub fn marauding_mako() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Marauding Mako",
-        cost: cost(&[u()]),
+        cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             // Engine has no Shark creature type; classify as Fish (ocean theme).
@@ -2852,7 +2852,7 @@ pub fn bitterbloom_bearer() -> CardDefinition {
     use crate::card::TokenDefinition;
     CardDefinition {
         name: "Bitterbloom Bearer",
-        cost: cost(&[generic(1), b()]),
+        cost: cost(&[b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],

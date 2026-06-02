@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{ManaCost, cost, g, generic};
+use crate::mana::{ManaCost, cost, generic};
 
 /// Ornithopter — {0} Artifact Creature 0/2 with Flying. Pure vanilla; no
 /// abilities beyond Flying.
@@ -46,7 +46,7 @@ pub fn ornithopter() -> CardDefinition {
 pub fn ornithopter_of_paradise() -> CardDefinition {
     CardDefinition {
         name: "Ornithopter of Paradise",
-        cost: cost(&[generic(1), g()]),
+        cost: cost(&[generic(2)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes::default(),

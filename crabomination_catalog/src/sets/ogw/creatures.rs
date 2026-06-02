@@ -1,12 +1,12 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::effect::shortcut::prowess_trigger;
-use crate::mana::{cost, generic, r, u};
+use crate::mana::{cost, r, u};
 
 /// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste Prowess
 pub fn stormchaser_mage() -> CardDefinition {
     CardDefinition {
         name: "Stormchaser Mage",
-        cost: cost(&[generic(1), u(), r()]),
+        cost: cost(&[u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],

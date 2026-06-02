@@ -239,7 +239,7 @@ pub fn fell() -> CardDefinition {
 pub fn blasphemous_edict() -> CardDefinition {
     CardDefinition {
         name: "Blasphemous Edict",
-        cost: cost(&[generic(4), b()]),
+        cost: cost(&[generic(3), b(), b()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
