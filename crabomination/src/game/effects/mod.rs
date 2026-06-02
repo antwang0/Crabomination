@@ -2983,9 +2983,11 @@ impl GameState {
                         self.players[p].hand.push(card);
                     }
                 }
-                // Bottom the remaining revealed cards (random order).
-                let rest: Vec<crate::card::CardId> =
+                // Bottom the remaining revealed cards in a random order (CR 401.4).
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
                     revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
+                rest.shuffle(&mut rand::rng());
                 for id in rest {
                     if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
                         let card = self.players[p].library.remove(pos);

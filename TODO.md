@@ -1284,26 +1284,25 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `::is_colorless()` exposed on the type since modern_decks
   push X. The predicates back the `Monocolored`,
   `Multicolored`, and `Colorless` `SelectionRequirement`s.).
-  (d) **105.3** —
-  ⏳ (no `StaticEffect::AddColor` / `StaticEffect::BecomeColor`
-  primitive. Cards like Kasmina's Transmutation ("becomes a blue
-  Frog"), Mercurial Transformation ("becomes a blue Frog"), Fractalize
-  ("becomes a green and blue Fractal") are doc-tracked as cosmetic
-  approximations — the printed type/color rewrite half is omitted.
-  Same gap blocks the printed color-changing rider on Painter's
-  Servant, Lurking Predators, Shifting Sliver.).
+  (d) **105.3** — ✅
+  (`Effect::BecomeChosenColor` registers a layer-5 `SetColors`
+  continuous effect for the chosen mono color; Wild Mongrel ("becomes
+  the color of your choice until end of turn"). The layer system's
+  `Modification::{AddColor,SetColors,LoseAllColors}` back it. Type-line
+  rewrite riders (Kasmina's Transmutation et al.) remain doc-tracked.)
   (e) **105.4** "Choose a color" decisions exclude multicolored /
-  colorless — ⏳ (no choose-color decision shape; cards like Painter's
-  Servant ("As this enters, choose a color"), Cabal Ritual variants
-  with name choice, etc. aren't in scope today).
+  colorless — ✅ (`Decision::ChooseColor { legal }` offers exactly the
+  five mono colors; `DecisionAnswer::Color`. Used by `BecomeChosenColor`
+  and the mana dorks.)
   (f) **105.5** — ✅
   (`cube.rs::pair_contains` walks two-color tuples; `College::colors`
   returns exactly `[Color; 2]` for each guild; Commander color-identity
   rule rejects 3+ pairs via `format.rs`'s deck validator).
-  Tests: `format.rs::color_identity` is exercised throughout the
-  cube/SOS test suite via Commander deck validation; promote to ✅
-  when 105.3 (color-becomes / color-adds) lands as a runtime
-  primitive backed by at least one catalog card.
+  Tests: `wild_mongrel_pumps_via_discard` asserts the chosen color
+  replaces the printed one via `computed_permanent().colors`;
+  `format.rs::color_identity` is exercised throughout the cube/SOS
+  suite. Promote the section header to ✅ once a type+color rewrite
+  rider (105.3 type-line half) lands.
 
 - 🟡 **CR 705 — Flipping a Coin** (push modern_decks batch 63 — audit
   against `MagicCompRules_20260417.txt`): The coin-flip primitive — what
@@ -1472,15 +1471,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (c) **401.3** — ✅ (`Player.library.len()` is exposed via the public `ClientView`;
   used by `Predicate::ValueAtLeast(LibrarySizeOf, _)` for empty-library
   gates).
-  (d) **401.4** — 🟡 (the engine
-  treats each `Move(library)` as a single-card insertion at the top
-  or bottom; multi-card simultaneous inserts collapse to sequence
-  order. Mass `ShuffleGraveyardIntoLibrary` randomises so 401.4 is
-  trivially satisfied; multi-card scry / Surveil walks pre-selects
-  the order via `DecisionAnswer::Scry` before any insertion, so the
-  decider-side resolves the 401.4 picking via `Decision::Scry`.
-  Engine-wide ⏳ for general "put these N cards on top in any order"
-  cases where the decider doesn't already do the picking).
+  (d) **401.4** — ✅ (controlled reorders go through `Decision::Scry`;
+  mass `ShuffleGraveyardIntoLibrary` and the "put the rest on the
+  bottom in a random order" riders randomise via `rand::rng()`.
+  `Effect::RevealTopTakeOnePerType` (Atraxa) shuffles its bottomed
+  leftovers per CR 401.4.)
   (e) **401.5** — 🟡 (the engine has no `play_with_top_revealed`
   flag yet; cards like Future Sight, Vance's Blasting Cannons, Bolas's
   Citadel are doc-tracked in CUBE_FEATURES.md. The simpler subset —
