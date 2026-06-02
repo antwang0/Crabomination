@@ -8,6 +8,31 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Card-data audit vs Scryfall cache** (`cargo run --bin dump_cards` diffed
+  against `scripts/.scryfall_cache.json`). The claude/modern_decks run fixed
+  18 mana-cost bugs and 4 keyword bugs this way. **Remaining diffs are all
+  legitimate** and should NOT be "fixed": X-spells store the base cost
+  without `{X}` (Banefire, Earthquake, Mind Twist, Repeal, Prismatic
+  Ending); free spells store an empty cost = `{0}` (Ornithopter, the Pacts,
+  Zuran Orb); Adventure/MDFC fronts (Callous Sell-Sword, Cruel Somnophage);
+  cost-reduction approximations (Blasphemous Act ships flat `{4}{R}` vs the
+  printed `{8}{R}` minus a per-creature reduction the engine can't scale);
+  colorless-pip approximations (Devourer of Destiny `{7}` for `{5}{C}{C}`);
+  CDA P/T (Cosmogoyf, Lumra, Cruel Somnophage); and the custom card
+  Crabomination. Re-run the audit after big card batches to catch new typos.
+
+- **Psychic Frog ships a synthesised body** (1/3 flyer with discard-pump +
+  sac-mill) that doesn't match the real MH3 card (1/2 no-fly: combat-damage
+  → draw, discard → +1/+1 *counter*, "exile three from gy: gains flying
+  EOT"). All three faithful clauses are expressible with existing
+  primitives (combat-damage trigger, AddCounter, exile-N-from-gy activation
+  cost + GrantKeyword EOT) — worth a faithful rewrite when picking up Dimir.
+
+- **Multi-slot "up to two target" works** for explicit casts (proved by
+  Read the Tides' modal bounce). Cards still collapsing it to one (Aether
+  Helix's bounce, etc.) can adopt the two-slot `Move` pattern; the
+  remaining gap is the *auto-target* picker only filling slot 0 for bots.
+
 - **Scryfall is blocked by the web-session network policy** (HTTP 403 for
   `api.scryfall.com`, both `scripts/fetch_cards.py` and the `WebFetch`
   tool). Only the 332 cards already in `scripts/.scryfall_cache.json` are
