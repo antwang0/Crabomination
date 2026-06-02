@@ -8188,22 +8188,49 @@ fn telling_time_resolves_and_draws() {
         "Telling Time net 0 hand (cast -1, draw +1)");
 }
 
-/// Read the Tides: -1 cast + 3 draw = +2 hand.
+/// Read the Tides mode 0: -1 cast + 3 draw = +2 hand.
 #[test]
 fn read_the_tides_draws_three() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::read_the_tides());
-    g.players[0].mana_pool.add_colorless(4);
-    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Blue, 1);
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Read the Tides castable for {4}{U}{U}");
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Read the Tides castable for {5}{U}");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
+}
+
+/// Read the Tides mode 1: return up to two target creatures to hand.
+#[test]
+fn read_the_tides_bounces_two_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::read_the_tides());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: Some(1),
+        x_value: None,
+    }).expect("Read the Tides castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == a || c.id == b),
+        "both targeted creatures are returned to hand");
+    assert!(g.players[1].hand.iter().any(|c| c.id == a),
+        "Grizzly Bears returned to owner's hand");
+    assert!(g.players[1].hand.iter().any(|c| c.id == b),
+        "Serra Angel returned to owner's hand");
 }
 
 /// Last Gasp: -3/-3 kills a 3-toughness creature.

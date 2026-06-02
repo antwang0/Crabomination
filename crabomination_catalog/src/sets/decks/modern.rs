@@ -4633,15 +4633,36 @@ pub fn wild_mongrel() -> CardDefinition {
 /// require {U}{U} in the colored pips makes monoblue / splash decks
 /// happy).
 // (Real Oracle: `{3}{U}` Sorcery — Read the Tides is a 4-CMC 3-card draw.)
+/// Read the Tides — {5}{U} Sorcery. Choose one — draw three cards; or
+/// return up to two target creatures to their owners' hands.
 pub fn read_the_tides() -> CardDefinition {
     CardDefinition {
         name: "Read the Tides",
-        cost: cost(&[generic(4), u(), u()]),
+        cost: cost(&[generic(5), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(3),
-        },
+        effect: Effect::ChooseMode(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            // "Return up to two target creatures to their owners' hands."
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+                Effect::Move {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(1)))),
+                },
+            ]),
+        ]),
         ..Default::default()
     }
 }
