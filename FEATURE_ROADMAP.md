@@ -214,6 +214,8 @@ feature; sweep card-batch by card-batch.
   `ChooseMode([+1/+1 counters, 1/1 Servo tokens])`), ✅ Riot
   (`shortcut::riot` — CR 702.137, ETB choose Haste-permanent or a +1/+1
   counter; Zhur-Taa Goblin, Frenzied Arynx),
+  ✅ Raid (`shortcut::raid_etb` — CR 702.108 ability word, ETB gated on
+  `Predicate::PlayerAttackedThisTurn`; Mardu Heart-Piercer),
   ✅ Afterlife (`shortcut::afterlife` — CR 702.135),
   ✅ Explore (`Effect::Explore` + `EventKind::Explored`, CR 701.40 — Merfolk
   Branchwalker, Jadelight Ranger, Wildgrowth Walker, Seekers' Squire,

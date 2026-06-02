@@ -174,6 +174,8 @@ impl GameState {
             // CR 702.142 — record that this creature attacked (gates Boast).
             card.attacked_this_turn = true;
             self.attacking.push(atk);
+            // Raid (CR 702.108 ability word): the controller attacked this turn.
+            self.players[p].attacked_this_turn = true;
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted
             // Attacks triggers (Root Manipulation's "gain 1 life when

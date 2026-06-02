@@ -236,6 +236,10 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.108 — Raid** (claude/modern_decks, ability word).
+  `shortcut::raid_etb(body)` + `Predicate::PlayerAttackedThisTurn` backed by
+  `Player.attacked_this_turn` (set in `declare_attackers`, reset in
+  `do_untap`). Mardu Heart-Piercer in `sets::ktk`. Tests in `tests_ktk`.
 - ✅ **CR 702.110 — Dash** (claude/modern_decks). `shortcut::dash(cost)` —
   `AlternativeCost { dash: true }`; the dashed creature gains haste on ETB
   (`CardInstance.dashed`) and a `NextEndStep` delayed trigger returns it to

@@ -460,6 +460,10 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
+    /// True if any player `who` resolves to attacked with a creature this
+    /// turn (Raid, CR 702.108 ability word). Backed by
+    /// `Player.attacked_this_turn`.
+    PlayerAttackedThisTurn { who: PlayerRef },
     /// True if any player `who` resolves to has cast a blue or black spell
     /// this turn (Veil of Summer's conditional cantrip).
     CastBlueOrBlackThisTurn { who: PlayerRef },
@@ -3457,6 +3461,16 @@ pub mod shortcut {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect,
         }
+    }
+
+    /// Raid (CR 702.108): "When this enters, if you attacked this turn, `body`."
+    /// An ETB trigger gated on `Predicate::PlayerAttackedThisTurn { You }`.
+    pub fn raid_etb(body: Effect) -> TriggeredAbility {
+        etb(Effect::If {
+            cond: Predicate::PlayerAttackedThisTurn { who: PlayerRef::You },
+            then: Box::new(body),
+            else_: Box::new(Effect::Noop),
+        })
     }
     pub fn on_attack(effect: Effect) -> TriggeredAbility {
         TriggeredAbility {

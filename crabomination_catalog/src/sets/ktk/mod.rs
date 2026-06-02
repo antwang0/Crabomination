@@ -9,7 +9,7 @@ use crate::card::{
     EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition,
     TriggeredAbility,
 };
-use crate::effect::shortcut::{dash, etb, on_attack, target_filtered};
+use crate::effect::shortcut::{dash, etb, on_attack, raid_etb, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, Value};
 use crate::mana::{b, cost, generic, r, u, w};
 
@@ -234,6 +234,27 @@ pub fn jeskai_elder() -> CardDefinition {
     }
 }
 
+/// Mardu Heart-Piercer — {3}{R} 3/2 Human Warrior. Raid — When this enters,
+/// if you attacked this turn, it deals 2 damage to any target.
+pub fn mardu_heart_piercer() -> CardDefinition {
+    CardDefinition {
+        name: "Mardu Heart-Piercer",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![raid_etb(Effect::DealDamage {
+            to: target_any(),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Every KTK factory, for snapshot name→factory registration.
 pub fn all_ktk_card_factories() -> &'static [crate::CardFactory] {
     &[
@@ -246,5 +267,6 @@ pub fn all_ktk_card_factories() -> &'static [crate::CardFactory] {
         alesha_who_smiles_at_death,
         seeker_of_the_way,
         jeskai_elder,
+        mardu_heart_piercer,
     ]
 }

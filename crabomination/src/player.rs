@@ -105,6 +105,11 @@ pub struct Player {
     /// back-compat.
     #[serde(default)]
     pub was_dealt_damage_this_turn: bool,
+    /// True once this player has declared an attacker this turn (Raid, CR
+    /// 702.108 ability word). Set in `declare_attackers`, reset at the turn
+    /// boundary in `do_untap`. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub attacked_this_turn: bool,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -263,6 +268,7 @@ impl Player {
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
             was_dealt_damage_this_turn: false,
+            attacked_this_turn: false,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             creatures_cast_this_turn: 0,

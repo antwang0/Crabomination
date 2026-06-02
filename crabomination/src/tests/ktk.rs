@@ -159,3 +159,44 @@ fn advance_to(g: &mut GameState, step: TurnStep) {
         g.perform_action(GameAction::PassPriority).expect("pass priority");
     }
 }
+
+#[test]
+fn raid_etb_does_nothing_without_an_attack() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mardu_heart_piercer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Heart-Piercer");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before, "no raid → no damage");
+}
+
+#[test]
+fn raid_etb_burns_when_you_attacked_this_turn() {
+    let mut g = two_player_game();
+    // Attack with a creature first to satisfy raid.
+    let atk = g.add_card_to_battlefield(0, catalog::screamreach_brawler());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    drain_stack(&mut g);
+    // Now cast Mardu Heart-Piercer post-combat: raid is satisfied → 2 damage.
+    let id = g.add_card_to_hand(0, catalog::mardu_heart_piercer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Heart-Piercer");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 2, "raid satisfied → 2 damage");
+}

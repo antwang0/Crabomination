@@ -319,6 +319,10 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.attacked_this_turn)
                 .unwrap_or(false),
+            Predicate::PlayerAttackedThisTurn { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].attacked_this_turn),
             Predicate::CastBlueOrBlackThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

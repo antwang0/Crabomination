@@ -859,6 +859,8 @@ impl GameState {
         }
         self.players[p].lands_played_this_turn = 0;
         self.players[p].extra_land_plays = 0;
+        // Raid (CR 702.108): the active player hasn't attacked yet this turn.
+        self.players[p].attacked_this_turn = false;
         self.players[p].spells_cast_this_turn = 0;
         // Reset the Bloodthirst "damaged this turn" flag for *every* player
         // at the turn boundary (not just the active player) so a creature
