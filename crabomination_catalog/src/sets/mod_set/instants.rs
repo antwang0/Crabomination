@@ -5,7 +5,7 @@ use crate::card::{
     TokenDefinition,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, Predicate, Selector, Value, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
 /// Path to Exile — {W} Instant. Exile target creature; its controller may
@@ -604,48 +604,31 @@ pub fn bone_shards() -> CardDefinition {
     }
 }
 
-/// Bloodchief's Thirst — {B} Sorcery. Destroy target creature or
-/// planeswalker with mana value 2 or less. Kicker {2}{B}: destroy
-/// target creature or planeswalker (no MV restriction).
+/// Bloodchief's Thirst — {B} Sorcery, Kicker {2}{B}. Destroy target
+/// creature or planeswalker with mana value ≤ 2; if kicked, destroy one of
+/// any mana value (CR 702.32). The kicked branch's broader target filter
+/// is enforced at cast time via kick-aware target validation.
 pub fn bloodchiefs_thirst() -> CardDefinition {
-    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Bloodchief's Thirst",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker)
-                    .and(SelectionRequirement::ManaValueAtMost(2)),
-            ),
-        },
-        triggered_abilities: vec![],
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(2), b()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: false,
-            not_your_turn_only: false,
-            target_filter: Some(
-                SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker),
-            ),
-            condition: None,
-            exile_from_graveyard_count: 0,
-            return_to_hand: None,
-            sacrifice_permanents: None,
-            effect_override: Some(Effect::Destroy {
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), b()]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Destroy {
                 what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
                 ),
             }),
-        }),
+            else_: Box::new(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                ),
+            }),
+        },
         ..Default::default()
     }
 }

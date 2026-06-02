@@ -4413,14 +4413,14 @@ fn bloodchiefs_thirst_kicked_destroys_high_cmc_creature() {
     let mut g = two_player_game();
     let mahamoti = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // CMC 6
     let thirst = g.add_card_to_hand(0, catalog::bloodchiefs_thirst());
-    g.players[0].mana_pool.add(Color::Black, 1);
+    // Kicker is additive (CR 702.32): {B} base + {2}{B} kicker = {2}{B}{B}.
+    g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(2);
 
-    g.perform_action(GameAction::CastSpellAlternative {
+    g.perform_action(GameAction::CastSpellKicked {
         card_id: thirst,
         target: Some(Target::Permanent(mahamoti)),
         additional_targets: vec![],
-        pitch_card: None,
         mode: None,
         x_value: None,
     })

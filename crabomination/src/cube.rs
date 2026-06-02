@@ -832,7 +832,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // dread_return      — 🟡 flashback sac-3-creatures additional cost omitted
         tidehollow_sculler,
         phyrexian_arena,
-        // bloodchiefs_thirst — 🟡 kicker mode (mana value ≤ 6) omitted
+        bloodchiefs_thirst,
         collective_brutality,
         deadly_dispute,
         // indulgent_tormentor — 🟡 opponent choice collapsed to always-drain-3
