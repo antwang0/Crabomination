@@ -78,6 +78,12 @@ impl Bot for RandomBot {
                     crate::decision::Decision::Mulligan { mulligans_taken, .. } => {
                         decide_mulligan(state, seat, *mulligans_taken)
                     }
+                    // Unlike AutoDecider (which declines every tutor), the
+                    // bot actually fetches — preferring a basic land toward
+                    // its weakest color so singleplayer tutors fix mana.
+                    crate::decision::Decision::SearchLibrary { candidates, .. } => {
+                        decide_library_search(state, seat, candidates)
+                    }
                     other => AutoDecider.decide(other),
                 };
                 return Some(GameAction::SubmitDecision(answer));
@@ -376,6 +382,58 @@ fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
         accumulate_mana_colors(&ab.effect, &mut set);
     }
     set
+}
+
+/// Bot heuristic for `Decision::SearchLibrary`: pick a basic land that
+/// adds the bot's least-covered color, else (no basic land among the
+/// candidates) grab the first candidate so tutors fetch *something*
+/// instead of fizzling like the stock `AutoDecider`.
+fn decide_library_search(
+    state: &GameState,
+    seat: usize,
+    candidates: &[(crate::card::CardId, String)],
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::DecisionAnswer;
+    use crate::mana::Color;
+    if candidates.is_empty() {
+        return DecisionAnswer::Search(None);
+    }
+    const COLORS: [Color; 5] =
+        [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+    // How many of our lands already tap for each color.
+    let mut sources: std::collections::HashMap<Color, usize> = std::collections::HashMap::new();
+    for c in state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_land())
+    {
+        let out = land_color_output(&c.definition);
+        for col in COLORS {
+            if out.contains(col) {
+                *sources.entry(col).or_insert(0) += 1;
+            }
+        }
+    }
+    let lib = &state.players[seat].library;
+    let mut best: Option<(crate::card::CardId, usize)> = None;
+    for (id, _) in candidates {
+        let Some(card) = lib.iter().find(|c| c.id == *id) else { continue };
+        if !(card.definition.is_basic() && card.definition.is_land()) {
+            continue;
+        }
+        let out = land_color_output(&card.definition);
+        // Score by the fewest existing sources among the colors it makes.
+        let score = COLORS
+            .iter()
+            .filter(|col| out.contains(**col))
+            .map(|col| sources.get(col).copied().unwrap_or(0))
+            .min()
+            .unwrap_or(usize::MAX);
+        if best.map(|(_, s)| score < s).unwrap_or(true) {
+            best = Some((*id, score));
+        }
+    }
+    DecisionAnswer::Search(Some(best.map(|(id, _)| id).unwrap_or(candidates[0].0)))
 }
 
 fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
@@ -1928,5 +1986,34 @@ mod tests {
             }
         }
         assert!(found, "bot should delve to cast Treasure Cruise");
+    }
+
+    /// The bot fetches toward its weakest color: with two Forests already
+    /// down and a Forest + Island in the library, it grabs the Island.
+    #[test]
+    fn bot_search_fetches_weakest_color_basic() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::forest());
+        g.add_card_to_battlefield(0, catalog::forest());
+        let extra_forest = g.add_card_to_library(0, catalog::forest());
+        let island = g.add_card_to_library(0, catalog::island());
+        let candidates = vec![(extra_forest, "Forest".into()), (island, "Island".into())];
+        let ans = decide_library_search(&g, 0, &candidates);
+        assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == island),
+            "bot fetches the Island (Blue uncovered) over a third Forest");
+    }
+
+    /// With no basic land among the candidates the bot still fetches the
+    /// first option rather than fizzling like AutoDecider.
+    #[test]
+    fn bot_search_fetches_nonland_when_no_basic_offered() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+        let candidates = vec![(bolt, "Lightning Bolt".into())];
+        let ans = decide_library_search(&g, 0, &candidates);
+        assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == bolt),
+            "bot fetches the only candidate");
     }
 }

@@ -9,11 +9,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 ## Follow-ups noticed (not yet done)
 
 - **AutoDecider declines all library searches** (`Decision::SearchLibrary
-  → Search(None)` in `decision.rs`), so tutor ETBs (Pilgrim's Eye,
-  Burnished Hart, Ranger-Captain) fetch nothing under the bot/AutoDecider
-  — tests must script the pick. Give AutoDecider a "pick the first
-  candidate (prefer a basic land matching an unmet color)" heuristic so
-  the singleplayer bot actually tutors.
+  → Search(None)` in `decision.rs`) — kept as-is so tests stay
+  deterministic. The **bot** now overrides this: `RandomBot` handles
+  `Decision::SearchLibrary` via `decide_library_search` (prefer a basic
+  land toward the weakest color, else fetch the first candidate), so
+  singleplayer tutors actually fix mana. Tests: `bot_search_*`. Remaining:
+  a smarter non-land pick (fetch the best spell, not just the first).
 - **Divided damage through a trigger fills only one slot.** Fury's evoke
   ETB (`DealDamageDivided { max_targets: 2 }`) auto-targets a single
   creature and dumps the whole total there; the multi-slot fill in
