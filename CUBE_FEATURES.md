@@ -52,7 +52,6 @@ work is listed below.
 | Mutated Cultist | ⏳ | Mutate primitive needed. |
 | Ichorid | 🟡 | {B} 3/1 Horror with Haste. `StepBegins(Upkeep)` + `FromYourGraveyard` trigger returns Selector::This to the battlefield, then schedules a `NextEndStep` delayed exile (reuses Goryo's reanimate-then-exile pattern). The "opponent's graveyard contains a black creature" gate is omitted (no graveyard-color trigger filter yet). Test: `ichorid_returns_at_upkeep_then_exiles_at_end_step`. |
 | Necrotic Ooze | ⏳ | Gains all activated abilities of creatures in graveyards. Big ability-borrow primitive. |
-| Indulgent Tormentor | 🟡 | `{3}{B}{B}` 5/3 Demon Flying. End-step trigger drains 3 life from each opponent. The full Oracle gives the opponent a choice ("you draw a card or sacrifice a creature; if not, lose 3 life") — we resolve straight to the most punishing line (lose 3) since the multi-player choice primitive isn't wired. Test: `indulgent_tormentor_drains_each_opponent_at_end_step`. |
 | Doomsday Excruciator | 🟡 | 6/6 Flying Demon; ETB each player mills 20. The Doomsday deck-stacking text is approximated by the symmetric mill. |
 | Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
 | Collective Brutality | 🟡 | {1}{B} Sorcery. 3-mode ChooseMode (discard IS from opp / -2/-2 creature / drain 2). Escalate omitted. Tests: `collective_brutality_mode_two_drains`. |

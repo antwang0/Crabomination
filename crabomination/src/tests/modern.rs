@@ -4493,21 +4493,42 @@ fn heliod_sun_crowned_grants_lifelink_until_end_of_turn() {
 }
 
 #[test]
-fn indulgent_tormentor_drains_each_opponent_at_end_step() {
+fn indulgent_tormentor_opponent_pays_3_life_to_deny_the_draw() {
+    use crate::game::types::TurnStep;
     let mut g = two_player_game();
     let _torm = g.add_card_to_battlefield(0, catalog::indulgent_tormentor());
     g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
     g.priority.player_with_priority = 0;
-    let p1_life_before = g.players[1].life;
+    let p1_life = g.players[1].life;
+    let p0_hand = g.players[0].hand.len();
 
-    // Drive to End step on P0's turn.
-    g.step = TurnStep::PostCombatMain;
-    g.perform_action(GameAction::PassPriority).unwrap();
-    g.perform_action(GameAction::PassPriority).unwrap();
+    g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, p1_life_before - 3,
-        "Indulgent Tormentor's end-step trigger should drain 3 life from P1");
+    // High-life opponent pays 3 life rather than let the controller draw.
+    assert_eq!(g.players[1].life, p1_life - 3, "opponent paid 3 life");
+    assert_eq!(g.players[0].hand.len(), p0_hand, "controller drew nothing");
+}
+
+#[test]
+fn indulgent_tormentor_controller_draws_when_opponent_cant_pay() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let _torm = g.add_card_to_battlefield(0, catalog::indulgent_tormentor());
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    // Opponent too low to pay 3 and controls no creature → controller draws.
+    g.players[1].life = 2;
+    g.add_card_to_library(0, catalog::island());
+    let p0_hand = g.players[0].hand.len();
+
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 2, "opponent paid nothing");
+    assert_eq!(g.players[0].hand.len(), p0_hand + 1, "controller drew a card");
 }
 
 /// With the graveyard-source preference in `auto_target_for_effect`,

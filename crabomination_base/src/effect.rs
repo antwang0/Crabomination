@@ -1647,6 +1647,21 @@ pub enum Effect {
     /// matching permanent per player.
     SacrificeGreatestMV { who: Selector, count: Value, filter: SelectionRequirement },
 
+    /// "Punisher" choice (CR 601-style "unless"). Each player `chooser`
+    /// resolves to may avoid `otherwise` by performing one of `options`.
+    /// The engine resolves heuristically: that player performs the first
+    /// option they can afford (LoseLife within their life total, Sacrifice
+    /// with a legal permanent); if none is affordable, `otherwise` runs
+    /// for the ability's controller. Options run with the chooser as the
+    /// effect controller, so they use `Selector::Player(PlayerRef::You)`.
+    /// Indulgent Tormentor: each opponent pays 3 life or sacrifices a
+    /// creature, otherwise the controller draws a card.
+    Punisher {
+        chooser: Selector,
+        options: Vec<Effect>,
+        otherwise: Box<Effect>,
+    },
+
     // ── Counters on players ──────────────────────────────────────────────────
     AddPoison { who: Selector, amount: Value },
 
@@ -2125,6 +2140,11 @@ impl Effect {
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::SacrificeGreatestMV { who, count, .. } => {
                 sel_has_target(who) || value_has_target(count)
+            }
+            Effect::Punisher { chooser, options, otherwise } => {
+                sel_has_target(chooser)
+                    || options.iter().any(|e| e.requires_target())
+                    || otherwise.requires_target()
             }
             Effect::AddPoison { who, amount } => sel_has_target(who) || value_has_target(amount),
             Effect::RevealTopAndDrawIf { who, .. } | Effect::RevealTopCard { who } => {

@@ -358,6 +358,40 @@ impl GameState {
 
     // ── Entry points ─────────────────────────────────────────────────────────
 
+    /// Heuristic for `Effect::Punisher`: would the chooser (`ctx.controller`)
+    /// be willing and able to perform `opt` to dodge the punisher's payoff?
+    /// `LoseLife` is affordable only while it leaves the chooser alive;
+    /// `Sacrifice` needs a matching permanent; `Seq` needs all parts
+    /// affordable. Everything else is treated as freely doable.
+    fn punisher_option_affordable(&self, opt: &Effect, ctx: &EffectContext) -> bool {
+        match opt {
+            Effect::LoseLife { who, amount } => {
+                let cost = self.evaluate_value(amount, ctx).max(0);
+                self.resolve_selector(who, ctx).into_iter().all(|e| match e {
+                    EntityRef::Player(p) => (self.players[p].life as i64) > cost as i64,
+                    _ => true,
+                })
+            }
+            Effect::Sacrifice { who, filter, .. }
+            | Effect::SacrificeGreatestMV { who, filter, .. } => {
+                self.resolve_selector(who, ctx).into_iter().all(|e| match e {
+                    EntityRef::Player(p) => self.battlefield.iter().any(|c| {
+                        c.controller == p
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                ctx.source,
+                            )
+                    }),
+                    _ => true,
+                })
+            }
+            Effect::Seq(v) => v.iter().all(|e| self.punisher_option_affordable(e, ctx)),
+            _ => true,
+        }
+    }
+
     pub(crate) fn resolve_effect(
         &mut self,
         effect: &Effect,
@@ -2688,6 +2722,34 @@ impl GameState {
                         events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
                         events.append(&mut die_evs);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Punisher { chooser, options, otherwise } => {
+                // Resolve the set of choosing players up front (the borrow of
+                // `self` from resolve_selector must end before we mutate).
+                let choosers: Vec<usize> = self
+                    .resolve_selector(chooser, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                for p in choosers {
+                    // The chooser evaluates the options with themselves as the
+                    // effect controller (so `PlayerRef::You` = the chooser).
+                    let opt_ctx = EffectContext { controller: p, ..ctx.clone() };
+                    let picked = options
+                        .iter()
+                        .find(|opt| self.punisher_option_affordable(opt, &opt_ctx));
+                    match picked {
+                        Some(opt) => self.run_effect(opt, &opt_ctx, events)?,
+                        // No affordable option — the ability's controller
+                        // gets the payoff (uses the original ctx).
+                        None => self.run_effect(otherwise, ctx, events)?,
                     }
                 }
                 Ok(())

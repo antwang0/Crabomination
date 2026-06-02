@@ -1911,13 +1911,10 @@ pub fn heliod_sun_crowned() -> CardDefinition {
 }
 
 /// Indulgent Tormentor — {3}{B}{B}, 5/3 Demon Flying. At the beginning of
-/// each end step on your turn, target opponent loses 3 life unless they
-/// sacrifice a creature.
-///
-/// Approximation: instead of giving the *opponent* the choice, we
-/// resolve the most punishing line for the controller — drain 3 from
-/// each opponent. With no creatures on the opponent's side, that's the
-/// real card's worst case anyway. Test exercises the drain.
+/// your upkeep, draw a card unless an opponent sacrifices a creature or
+/// pays 3 life. Wired via `Effect::Punisher`: each opponent dodges the
+/// draw by paying 3 life (if it leaves them alive) or sacrificing a
+/// creature; otherwise the controller draws.
 pub fn indulgent_tormentor() -> CardDefinition {
     CardDefinition {
         name: "Indulgent Tormentor",
@@ -1932,10 +1929,21 @@ pub fn indulgent_tormentor() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::ActivePlayer),
-            effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::ActivePlayer),
+            effect: Effect::Punisher {
+                chooser: Selector::Player(PlayerRef::EachOpponent),
+                options: vec![
+                    Effect::LoseLife { who: Selector::Player(PlayerRef::You), amount: Value::Const(3) },
+                    Effect::Sacrifice {
+                        who: Selector::Player(PlayerRef::You),
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::Creature,
+                    },
+                ],
+                otherwise: Box::new(Effect::Draw {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(1),
+                }),
             },
         }],
         ..Default::default()
