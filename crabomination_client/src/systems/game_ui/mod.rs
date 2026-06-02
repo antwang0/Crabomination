@@ -316,6 +316,12 @@ pub struct InGameRoot;
 #[derive(Component)]
 pub struct StackPanel;
 
+/// Top-center panel showing the projected per-player life swing for the
+/// current attacker/blocker assignment. `update_combat_preview_panel`
+/// toggles `Node::display` and rebuilds its rows; hidden outside combat.
+#[derive(Component)]
+pub struct CombatPreviewPanel;
+
 /// Marker on the text label inside `PassPriorityButton` so `update_pass_button`
 /// can find it without a nested child walk.
 #[derive(Component)]
@@ -806,6 +812,39 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 Text::new("F1 / ?  Shortcuts"),
                 tf(12.0),
                 TextColor(theme::TEXT_MUTED),
+                Pickable::IGNORE,
+            ));
+        });
+
+    // Top-center: combat life-swing preview. Outer node is full-width and
+    // just centers the inner box; `update_combat_preview_panel` toggles the
+    // box's `display` and rebuilds its rows (mirrors the stack panel).
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(12.0),
+                left: Val::Px(0.0),
+                right: Val::Px(0.0),
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            Pickable::IGNORE,
+            InGameRoot,
+        ))
+        .with_children(|wrap| {
+            wrap.spawn((
+                Node {
+                    display: Display::None,
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Center,
+                    padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+                    row_gap: Val::Px(2.0),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::HUD_BG),
+                CombatPreviewPanel,
                 Pickable::IGNORE,
             ));
         });
@@ -1408,6 +1447,73 @@ pub fn update_stack_panel(
                 let label_size = if is_trigger { 13.0 } else { 12.0 };
                 row.spawn((Text::new(label), tf(label_size), TextColor(name_color)));
             });
+        }
+    });
+}
+
+// ── Combat preview ────────────────────────────────────────────────────────────
+
+/// Rebuild the top-center combat-preview panel from `combat_preview`,
+/// showing each player's projected life swing for the *currently declared*
+/// attackers/blocks: `<who>: <life> → <new>` (red when dropping, green when
+/// gaining), with a `(+N lifelink)` note where lifelink applies. Hidden
+/// outside combat or when no player's life actually changes. Surfaces the
+/// damage AND lifelink figures the engine already projects — the "who
+/// dies" half is the red dying-creature borders (`update_dying_highlights`).
+pub fn update_combat_preview_panel(
+    view: Res<CurrentView>,
+    mut commands: Commands,
+    mut panel_q: Query<(Entity, &mut Node), With<CombatPreviewPanel>>,
+    ui_fonts: Res<UiFonts>,
+) {
+    if !view.is_changed() {
+        return;
+    }
+    let Ok((panel, mut node)) = panel_q.single_mut() else { return };
+    commands.entity(panel).despawn_children();
+
+    let hide = |node: &mut Node| node.display = Display::None;
+    let Some(cv) = &view.0 else { hide(&mut node); return };
+    let Some(cp) = &cv.combat_preview else { hide(&mut node); return };
+
+    let lookup = |table: &[(usize, i32)], seat: usize| {
+        table.iter().find(|(s, _)| *s == seat).map(|(_, v)| *v).unwrap_or(0)
+    };
+
+    // One row per player whose life actually changes, ordered by seat.
+    let mut seats: Vec<usize> = cv.players.iter().map(|p| p.seat).collect();
+    seats.sort_unstable();
+    let mut rows: Vec<(String, Color)> = Vec::new();
+    for seat in seats {
+        let Some(p) = cv.players.iter().find(|p| p.seat == seat) else { continue };
+        let dmg = lookup(&cp.damage_to_players, seat);
+        let gain = lookup(&cp.lifegain_to_players, seat);
+        if dmg == 0 && gain == 0 {
+            continue;
+        }
+        let new_life = p.life - dmg + gain;
+        let who = if seat == cv.your_seat { "You".to_string() } else { player_name(cv, seat) };
+        let note = if gain > 0 { format!("  (+{gain} lifelink)") } else { String::new() };
+        let color = if new_life < p.life {
+            theme::TEXT_DANGER
+        } else if new_life > p.life {
+            theme::TEXT_GOOD
+        } else {
+            theme::TEXT_BODY
+        };
+        rows.push((format!("{who}:  {} → {}{}", p.life, new_life, note), color));
+    }
+
+    if rows.is_empty() {
+        hide(&mut node);
+        return;
+    }
+    node.display = Display::Flex;
+    let tf = |s: f32| ui_fonts.tf(s);
+    commands.entity(panel).with_children(|p| {
+        p.spawn((Text::new("Combat"), tf(11.0), TextColor(theme::ACCENT_ORANGE), Pickable::IGNORE));
+        for (text, color) in rows {
+            p.spawn((Text::new(text), tf(14.0), TextColor(color), Pickable::IGNORE));
         }
     });
 }
