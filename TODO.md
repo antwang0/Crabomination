@@ -8,6 +8,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **AutoDecider declines every "may" trigger** (`Decision::OptionalTrigger
+  → Bool(false)`, discovered claude/modern_decks). Faithful for "you may"
+  cards but it means an AutoDecider/bot **never** takes an optional trigger
+  — so Provoke's "you may" had to collapse to a mandatory provoke in
+  `shortcut::provoke`, and a Dragon-token-on-Boast rider would never fire.
+  Fix candidates: a value-aware optional policy on `RandomBot` (accept a
+  trigger when the body is clearly beneficial), and a `wants_ui` suspend so
+  a human is actually prompted.
+
 - **`PlayerRef::DefendingPlayer` doesn't resolve in post-combat-damage
   triggers** (discovered claude/modern_decks). A `DealsCombatDamageToPlayer`
   trigger body using `PlayerRef::DefendingPlayer` (e.g. the Ninja-style Mill
@@ -227,6 +236,18 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 702.110 — Dash** (claude/modern_decks). `shortcut::dash(cost)` —
+  `AlternativeCost { dash: true }`; the dashed creature gains haste on ETB
+  (`CardInstance.dashed`) and a `NextEndStep` delayed trigger returns it to
+  its owner's hand. Khans `sets::ktk`. Tests in `tests_ktk`.
+- ✅ **CR 702.142 — Boast** (claude/modern_decks). `shortcut::boast(cost, eff)`
+  — once-per-turn activated ability gated on `Predicate::SourceAttackedThisTurn`
+  (`CardInstance.attacked_this_turn`, set in `declare_attackers`, reset at the
+  turn boundary). Kaldheim `sets::khm`. Tests in `tests_combat_keywords`.
+- ✅ **CR 702.39 — Provoke** (claude/modern_decks). `shortcut::provoke` /
+  `Effect::Provoke` untaps the target and stamps `CardInstance.must_block`;
+  `declare_blockers` forces that creature to block the provoker if able
+  (cleared at end of combat). Tests in `tests_combat_keywords`.
 - ✅ **CR 702.54 — Bloodthirst** (claude/modern_decks). `shortcut::bloodthirst(n)`
   — ETB `If(Predicate::PlayerDamagedThisTurn{EachOpponent} → AddCounter n)`;
   new `Player.was_dealt_damage_this_turn` (set in `deal_damage_to_from`, reset
