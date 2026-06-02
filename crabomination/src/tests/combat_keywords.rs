@@ -348,3 +348,34 @@ fn cr_702_46_soulshift_returns_a_spirit_from_graveyard() {
     assert!(g.players[0].hand.iter().any(|c| c.id == ghost),
         "Soulshift returned the graveyard Spirit to hand");
 }
+
+// ── Extort / Riot card bodies ────────────────────────────────────────────────
+
+#[test]
+fn extort_creatures_have_correct_bodies() {
+    use crate::card::Keyword;
+    let syndic = catalog::syndic_of_tithes();
+    assert_eq!((syndic.power, syndic.toughness), (2, 3));
+    assert!(!syndic.triggered_abilities.is_empty(), "Syndic has Extort");
+
+    let tithe = catalog::tithe_drinker();
+    assert!(tithe.keywords.contains(&Keyword::Lifelink), "Tithe Drinker has Lifelink");
+
+    let pet = catalog::kingpins_pet();
+    assert!(pet.keywords.contains(&Keyword::Flying), "Kingpin's Pet has Flying");
+}
+
+#[test]
+fn frenzied_arynx_pump_ability_grows_it() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::frenzied_arynx());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump ability activatable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (6, 5), "Frenzied Arynx pumps to 6/5");
+}

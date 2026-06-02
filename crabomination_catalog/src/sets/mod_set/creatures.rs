@@ -1986,6 +1986,87 @@ pub fn zhur_taa_goblin() -> CardDefinition {
     }
 }
 
+/// Syndic of Tithes — {1}{W} 2/3 Human Cleric with Extort.
+pub fn syndic_of_tithes() -> CardDefinition {
+    CardDefinition {
+        name: "Syndic of Tithes",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::extort()],
+        ..Default::default()
+    }
+}
+
+/// Tithe Drinker — {W}{B} 1/2 Vampire Cleric with Lifelink and Extort.
+pub fn tithe_drinker() -> CardDefinition {
+    CardDefinition {
+        name: "Tithe Drinker",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![crate::effect::shortcut::extort()],
+        ..Default::default()
+    }
+}
+
+/// Kingpin's Pet — {1}{W}{B} 2/2 Imp with Flying and Extort.
+pub fn kingpins_pet() -> CardDefinition {
+    CardDefinition {
+        name: "Kingpin's Pet",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::extort()],
+        ..Default::default()
+    }
+}
+
+/// Frenzied Arynx — {4}{R}{G} 4/3 Cat Beast with Riot. {3}{R}{G}: it gets
+/// +2/+2 until end of turn.
+pub fn frenzied_arynx() -> CardDefinition {
+    CardDefinition {
+        name: "Frenzied Arynx",
+        cost: cost(&[generic(4), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::riot()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r(), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Marauding Mako — {U} 1/1 Shark. Whenever you discard a card, put
 /// a +1/+1 counter on Marauding Mako. (The full Oracle pumps on every
 /// discard; we use a `CardDiscarded`+`YourControl` listener.)

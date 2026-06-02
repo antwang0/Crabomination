@@ -337,6 +337,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: Extort (CR 702.99) ──
+        syndic_of_tithes,
         // ── Investigate (CR 701.13) ──
         thraben_inspector,
         selfless_spirit,
@@ -803,6 +805,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: Extort (CR 702.99) ──
         basilica_screecher,
+        tithe_drinker,
+        kingpins_pet,
         // ── claude/modern_decks: Explore (CR 701.40) ──
         seekers_squire,
         // ── classic core-set bodies (claude/modern_decks) ──
@@ -1069,6 +1073,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: Riot (CR 702.137) ──
         zhur_taa_goblin,
+        frenzied_arynx,
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
         goblin_chainwhirler,
