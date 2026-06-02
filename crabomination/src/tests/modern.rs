@@ -1180,6 +1180,19 @@ fn sacred_foundry_pays_two_life_and_stays_untapped_by_default() {
     assert_eq!(g.players[0].life, 18);
 }
 
+#[test]
+fn watery_grave_is_a_ub_shockland() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::watery_grave());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    // Two basic land types + the shock pay-2-or-tap ability; AutoDecider
+    // pays 2 life so it enters untapped.
+    assert!(!card.tapped, "shockland enters untapped after pay-2-life");
+    assert_eq!(g.players[0].life, 18);
+}
+
 // ── Auxiliary instants (mod_set/spells) ──────────────────────────────────────
 
 #[test]
