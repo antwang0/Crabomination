@@ -84,6 +84,19 @@ impl Bot for RandomBot {
                     crate::decision::Decision::SearchLibrary { candidates, .. } => {
                         decide_library_search(state, seat, candidates)
                     }
+                    // Unlike AutoDecider (which declines *every* "you may"
+                    // trigger), the bot takes an optional trigger whose body
+                    // is pure upside — so Provoke's "you may", Boast token
+                    // riders, etc. actually fire under bot play. It still
+                    // declines bodies that impose a self-cost (lose life /
+                    // sacrifice / discard).
+                    crate::decision::Decision::OptionalTrigger { source, description } => {
+                        crate::decision::DecisionAnswer::Bool(optional_trigger_beneficial(
+                            state,
+                            *source,
+                            description,
+                        ))
+                    }
                     other => AutoDecider.decide(other),
                 };
                 return Some(GameAction::SubmitDecision(answer));
@@ -382,6 +395,78 @@ fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
         accumulate_mana_colors(&ab.effect, &mut set);
     }
     set
+}
+
+/// Bot policy for `Decision::OptionalTrigger`: take the trigger unless its
+/// matching `MayDo` body imposes a clear self-cost (lose life / sacrifice /
+/// discard on the bot). `AutoDecider` declines *every* optional trigger,
+/// which means a bot would never take a beneficial "you may" (Provoke's
+/// "you may", Boast token riders, etc.); this makes those fire.
+fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &str) -> bool {
+    // Locate the source card's definition in any zone the bot can see.
+    let def = state
+        .battlefield
+        .iter()
+        .find(|c| c.id == source)
+        .map(|c| &c.definition)
+        .or_else(|| {
+            state
+                .players
+                .iter()
+                .flat_map(|p| p.graveyard.iter().chain(p.hand.iter()))
+                .find(|c| c.id == source)
+                .map(|c| &c.definition)
+        });
+    let Some(def) = def else { return true };
+    // Find the `MayDo` body whose description matches the prompt.
+    let mut body = find_maydo_body(&def.effect, description);
+    if body.is_none() {
+        for t in &def.triggered_abilities {
+            if let Some(b) = find_maydo_body(&t.effect, description) {
+                body = Some(b);
+                break;
+            }
+        }
+    }
+    // Take it unless the body is self-costly; default to taking when the
+    // body can't be introspected (most "you may" on your own permanents is
+    // upside).
+    body.map(|b| !effect_imposes_self_cost(b)).unwrap_or(true)
+}
+
+/// Recursively find the `Effect::MayDo` body with description `desc`.
+fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
+    match eff {
+        Effect::MayDo { description, body } if description == desc => Some(body),
+        Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
+        Effect::Seq(v) => v.iter().find_map(|e| find_maydo_body(e, desc)),
+        Effect::If { then, else_, .. } => {
+            find_maydo_body(then, desc).or_else(|| find_maydo_body(else_, desc))
+        }
+        _ => None,
+    }
+}
+
+/// Whether `eff` (a "you may" body) imposes a clear cost on its controller —
+/// losing life, sacrificing, or discarding. Conservative: the bot declines
+/// such triggers rather than paying for an effect it can't value-judge.
+fn effect_imposes_self_cost(eff: &Effect) -> bool {
+    use crate::effect::{PlayerRef, Selector};
+    let hits_self = |sel: &Selector| {
+        matches!(sel, Selector::You | Selector::This)
+            || matches!(sel, Selector::Player(PlayerRef::You))
+    };
+    match eff {
+        Effect::LoseLife { who, .. } | Effect::Discard { who, .. } => hits_self(who),
+        Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => hits_self(who),
+        Effect::SacrificeAndRemember { .. } => true,
+        Effect::Seq(v) => v.iter().any(effect_imposes_self_cost),
+        Effect::If { then, else_, .. } => {
+            effect_imposes_self_cost(then) || effect_imposes_self_cost(else_)
+        }
+        Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => effect_imposes_self_cost(body),
+        _ => false,
+    }
 }
 
 /// Bot heuristic for `Decision::SearchLibrary`: pick a basic land that
@@ -1383,6 +1468,50 @@ mod tests {
         let mut g = GameState::new(players);
         g.step = TurnStep::PreCombatMain;
         g
+    }
+
+    fn body_card(name: &'static str, body: Effect) -> CardDefinition {
+        use crate::card::{CardType, Subtypes, TriggeredAbility};
+        use crate::effect::{EventKind, EventScope, EventSpec};
+        CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(),
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "you may".to_string(),
+                    body: Box::new(body),
+                },
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn bot_takes_beneficial_optional_trigger() {
+        use crate::effect::{Selector, Value};
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(
+            0,
+            body_card("Upside", Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        );
+        assert!(optional_trigger_beneficial(&g, id, "you may"),
+            "a pure-upside 'you may draw' is taken by the bot");
+    }
+
+    #[test]
+    fn bot_declines_self_costly_optional_trigger() {
+        use crate::effect::{Selector, Value};
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(
+            0,
+            body_card("Downside", Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }),
+        );
+        assert!(!optional_trigger_beneficial(&g, id, "you may"),
+            "a 'you may lose 3 life' optional trigger is declined");
     }
 
     /// Free, fixed-payload mana rocks like Sol Ring should be picked up by

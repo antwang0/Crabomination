@@ -8,14 +8,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **AutoDecider declines every "may" trigger** (`Decision::OptionalTrigger
-  → Bool(false)`, discovered claude/modern_decks). Faithful for "you may"
-  cards but it means an AutoDecider/bot **never** takes an optional trigger
-  — so Provoke's "you may" had to collapse to a mandatory provoke in
-  `shortcut::provoke`, and a Dragon-token-on-Boast rider would never fire.
-  Fix candidates: a value-aware optional policy on `RandomBot` (accept a
-  trigger when the body is clearly beneficial), and a `wants_ui` suspend so
-  a human is actually prompted.
+- **"May" triggers: bot now value-aware; human suspend still ⏳.**
+  `AutoDecider` still declines every `Decision::OptionalTrigger`
+  (`Bool(false)`), but **`RandomBot` now takes beneficial ones**
+  (`optional_trigger_beneficial` — accept unless the matching `MayDo` body
+  imposes a self-cost: lose life / sacrifice / discard). Tests:
+  `bot_takes_beneficial_optional_trigger`,
+  `bot_declines_self_costly_optional_trigger`. Remaining: a `wants_ui`
+  suspend so a networked human is actually prompted (today they land on the
+  AutoDecider `false` default), and revisiting `shortcut::provoke`'s
+  collapse-to-mandatory now that bots can opt in.
 
 - **`PlayerRef::DefendingPlayer` in post-combat-damage triggers** — ✅ fixed
   (claude/modern_decks). The dispatcher already stamps the damaged player as
