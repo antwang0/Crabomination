@@ -338,6 +338,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Investigate (CR 701.13) ──
         thraben_inspector,
         selfless_spirit,
+        champion_of_the_parish,
+        soltari_priest,
         // ── claude/modern_decks: white Ixalan dinosaurs ──
         kinjallis_caller,
         territorial_hammerskull,
@@ -598,6 +600,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         into_the_roil,
         aether_figment,
         glint_nest_crane,
+        merfolk_looter,
         // ── Delve dragon (MH2) ──
         murktide_regent,
         // ── classic core-set bodies (claude/modern_decks) ──
@@ -1061,6 +1064,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_bushwhacker,
         goblin_chainwhirler,
         seasoned_pyromancer,
+        // ── UR spellslinger ──
+        goblin_electromancer,
+        wee_dragonauts,
         // ── Evoke Incarnation (MH2) ──
         fury,
         // ── divided-damage burn (claude/modern_decks) ──

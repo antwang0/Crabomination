@@ -6550,6 +6550,131 @@ pub fn aether_figment() -> CardDefinition {
     }
 }
 
+/// Champion of the Parish — {W} Creature — Human Soldier, 1/1. "Whenever
+/// another Human enters under your control, put a +1/+1 counter on this."
+pub fn champion_of_the_parish() -> CardDefinition {
+    CardDefinition {
+        name: "Champion of the Parish",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Human),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soltari Priest — {W}{W} Creature — Soltari Cleric, 2/1, Shadow,
+/// protection from red.
+pub fn soltari_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Soltari Priest",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soltari, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Shadow, Keyword::Protection(Color::Red)],
+        ..Default::default()
+    }
+}
+
+/// Merfolk Looter — {1}{U} Creature — Merfolk Rogue, 1/1. "{T}: Draw a
+/// card, then discard a card."
+pub fn merfolk_looter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Merfolk Looter",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Electromancer — {U}{R} Creature — Goblin Wizard, 2/2. "Instant
+/// and sorcery spells you cast cost {1} less to cast."
+pub fn goblin_electromancer() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Goblin Electromancer",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wee Dragonauts — {1}{U}{R} Creature — Faerie Wizard, 1/4, Flying.
+/// "Whenever you cast an instant or sorcery spell, this gets +2/+0 until
+/// end of turn."
+pub fn wee_dragonauts() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Wee Dragonauts",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Selfless Spirit — {1}{W} Creature — Spirit, 2/1, Flying. "Sacrifice
 /// this: creatures you control gain indestructible until end of turn."
 pub fn selfless_spirit() -> CardDefinition {

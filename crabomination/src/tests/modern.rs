@@ -8569,6 +8569,75 @@ fn bot_kicks_tear_asunder_to_hit_a_creature() {
 }
 
 #[test]
+fn champion_of_the_parish_grows_when_a_human_enters() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::champion_of_the_parish());
+    // Cast a Human (Thraben Inspector) — Champion gets a +1/+1 counter.
+    let human = g.add_card_to_hand(0, catalog::thraben_inspector());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: human, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a Human");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(champ).expect("champ alive");
+    assert_eq!((cp.power, cp.toughness), (2, 2), "another Human ETB grows the Champion");
+}
+
+#[test]
+fn soltari_priest_has_shadow_and_pro_red() {
+    use crate::card::Keyword;
+    let def = catalog::soltari_priest();
+    assert!(def.keywords.contains(&Keyword::Shadow));
+    assert!(def.keywords.contains(&Keyword::Protection(Color::Red)));
+}
+
+#[test]
+fn merfolk_looter_taps_to_loot() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let looter = g.add_card_to_battlefield(0, catalog::merfolk_looter());
+    g.clear_sickness(looter);
+    let junk = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: looter, ability_index: 0, target: None, x_value: None,
+    }).expect("loot ability activates");
+    drain_stack(&mut g);
+    // Draw 1, discard 1 → hand size unchanged; the discarded card is in gy.
+    assert_eq!(g.players[0].hand.len(), hand_before, "draw 1 + discard 1 nets zero");
+    let _ = junk;
+    assert!(g.battlefield_find(looter).map(|c| c.tapped).unwrap_or(false), "looter tapped");
+}
+
+#[test]
+fn goblin_electromancer_reduces_instant_sorcery_cost() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_electromancer());
+    // Incinerate ({1}{R}) becomes castable for just {R} thanks to the {1}-off.
+    let id = g.add_card_to_hand(0, catalog::incinerate());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Electromancer makes a {1}{R} instant castable for just {R}");
+}
+
+#[test]
+fn wee_dragonauts_pumps_on_instant_cast() {
+    let mut g = two_player_game();
+    let dragonauts = g.add_card_to_battlefield(0, catalog::wee_dragonauts());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lightning Bolt");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(dragonauts).expect("alive");
+    assert_eq!(cp.power, 3, "Wee Dragonauts swings to 3 power after an instant");
+}
+
+#[test]
 fn selfless_spirit_sac_grants_team_indestructible() {
     use crate::card::Keyword;
     let mut g = two_player_game();
