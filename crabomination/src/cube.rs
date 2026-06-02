@@ -1158,6 +1158,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_balloon_brigade,
         lightning_bolt,
         shock,
+        // Copy-with-new-targets (CR 707.12 / 115.7)
+        reverberate,
+        fork,
         // Battle cry (CR 702.92)
         goblin_wardriver,
         sweltering_suns,

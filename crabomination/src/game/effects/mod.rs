@@ -274,6 +274,115 @@ impl EntityRef {
 }
 
 impl GameState {
+    /// CR 707.10 — push `n` copies of the spell `cid` (if it's on the
+    /// stack and copyable) directly above it. Copies inherit the
+    /// original's target / mode / x / converged value and are flagged
+    /// uncounterable + token (so they cease to exist off the stack).
+    /// When `choose_new_targets` is set (Reverberate / Fork), the copy's
+    /// controller may repoint the primary target via `Decision::ChooseTarget`
+    /// (the original target is offered first, so AutoDecider keeps it).
+    pub(crate) fn copy_stack_spell(
+        &mut self,
+        cid: CardId,
+        n: usize,
+        choose_new_targets: bool,
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::game::types::StackItem;
+        // Locate the matching Spell on the stack (topmost wins).
+        let Some(idx) = self.stack.iter().rposition(|s| {
+            matches!(s, StackItem::Spell { card, .. } if card.id == cid)
+        }) else {
+            return;
+        };
+        // CR 707 — a spell with `Keyword::CantBeCopied` is skipped.
+        if let StackItem::Spell { card, .. } = &self.stack[idx]
+            && card.definition.keywords.contains(&crate::card::Keyword::CantBeCopied)
+        {
+            return;
+        }
+        let (orig_card_def, caster, target, additional_targets, mode, x_value, converged_value) =
+            if let StackItem::Spell {
+                card, caster, target, additional_targets, mode, x_value, converged_value, ..
+            } = &self.stack[idx]
+            {
+                (
+                    card.definition.clone(),
+                    *caster,
+                    target.clone(),
+                    additional_targets.clone(),
+                    *mode,
+                    *x_value,
+                    *converged_value,
+                )
+            } else {
+                return;
+            };
+        for _ in 0..n {
+            // Per copy, optionally let the controller choose a new primary
+            // target (CR 115.7). Legal targets are enumerated against the
+            // copy's own effect; the original is offered first so the
+            // default (AutoDecider) keeps it.
+            let copy_target = if choose_new_targets && target.is_some() {
+                self.repoint_copy_target(&orig_card_def, caster, &target)
+            } else {
+                target.clone()
+            };
+            let new_id = self.next_id();
+            let mut copy_inst = crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
+            // CR 707.10a — a copy of a spell ceases to exist off the stack.
+            copy_inst.is_token = true;
+            self.stack.push(StackItem::Spell {
+                card: Box::new(copy_inst),
+                caster,
+                target: copy_target,
+                additional_targets: additional_targets.clone(),
+                mode,
+                x_value,
+                converged_value,
+                mana_spent: 0,
+                uncounterable: true, // copies can't be countered
+            });
+        }
+        events.push(GameEvent::SpellsCopied { original: cid, count: n as u32 });
+    }
+
+    /// Helper for `copy_stack_spell`: enumerate legal targets for the
+    /// copied spell's primary effect and ask `caster`'s decider to pick
+    /// one (original offered first). Returns the chosen target, or the
+    /// original when no choice is made / no legal alternative exists.
+    fn repoint_copy_target(
+        &mut self,
+        def: &crate::card::CardDefinition,
+        caster: usize,
+        original: &Option<crate::game::types::Target>,
+    ) -> Option<crate::game::types::Target> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let mut legal = self.enumerate_legal_targets(&def.effect, caster);
+        if legal.is_empty() {
+            return original.clone();
+        }
+        // Offer the original first so the conservative default keeps it.
+        if let Some(orig) = original {
+            legal.retain(|t| t != orig);
+            legal.insert(0, orig.clone());
+        }
+        let source = match original {
+            Some(crate::game::types::Target::Permanent(c)) => *c,
+            _ => crate::card::CardId(0),
+        };
+        let answer = self.decider.decide(&Decision::ChooseTarget {
+            source,
+            legal: legal.clone(),
+            source_name: def.name.to_string(),
+            description: "choose new targets for the copy".to_string(),
+        });
+        match answer {
+            DecisionAnswer::Target(t) if legal.contains(&t) => Some(t),
+            _ => original.clone(),
+        }
+    }
+
     /// CR 707 — apply a permanent's `enters_as_copy` replacement as it
     /// enters the battlefield. Auto-picks the highest-power matching
     /// permanent (excluding the copier itself); no-op when nothing
@@ -3602,62 +3711,37 @@ impl GameState {
                         .collect(),
                 };
                 for cid in candidate_ids {
-                    // Locate the matching Spell on the stack (topmost wins).
-                    let stack_idx = self.stack.iter().rposition(|s| {
-                        matches!(s, crate::game::types::StackItem::Spell { card, .. }
-                            if card.id == cid)
-                    });
-                    let Some(idx) = stack_idx else { continue; };
-                    // CR 707 — a spell with `Keyword::CantBeCopied`
-                    // (Choreographed Sparks) is skipped as a copy target.
-                    if let crate::game::types::StackItem::Spell { card, .. } = &self.stack[idx]
-                        && card.definition.keywords.contains(&crate::card::Keyword::CantBeCopied)
-                    {
-                        continue;
-                    }
-                    // Snapshot the spell, then push `n` copies above it.
-                    let (orig_card_def, caster, target, additional_targets, mode, x_value, converged_value)
-                        = if let crate::game::types::StackItem::Spell {
-                            card, caster, target, additional_targets, mode, x_value, converged_value, ..
-                        } = &self.stack[idx] {
-                            (
-                                card.definition.clone(),
-                                *caster,
-                                target.clone(),
-                                additional_targets.clone(),
-                                *mode,
-                                *x_value,
-                                *converged_value,
-                            )
-                        } else {
-                            continue;
-                        };
-                    for _ in 0..n {
-                        let new_id = self.next_id();
-                        let mut copy_inst =
-                            crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
-                        // Mark as token so CR 707.10a applies: a copy of a
-                        // spell ceases to exist in any zone other than the
-                        // stack. Token-cleanup SBAs handle the removal when
-                        // the resolved copy lands in graveyard / hand /
-                        // library after resolution.
-                        copy_inst.is_token = true;
-                        self.stack.push(crate::game::types::StackItem::Spell {
-                            card: Box::new(copy_inst),
-                            caster,
-                            target: target.clone(),
-                            additional_targets: additional_targets.clone(),
-                            mode,
-                            x_value,
-                            converged_value,
-                            mana_spent: 0,
-                            uncounterable: true, // copies can't be countered
-                        });
-                    }
-                    events.push(GameEvent::SpellsCopied {
-                        original: cid,
-                        count: n as u32,
-                    });
+                    self.copy_stack_spell(cid, n, false, events);
+                }
+                Ok(())
+            }
+
+            Effect::CopySpellMayChooseTargets { what, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let candidate_ids: Vec<CardId> = match what {
+                    Selector::TriggerSource => ctx
+                        .trigger_source
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                    Selector::This => ctx.source.into_iter().collect(),
+                    _ => self
+                        .resolve_selector(what, ctx)
+                        .into_iter()
+                        .filter_map(|e| match e {
+                            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                            _ => None,
+                        })
+                        .collect(),
+                };
+                for cid in candidate_ids {
+                    self.copy_stack_spell(cid, n, true, events);
                 }
                 Ok(())
             }

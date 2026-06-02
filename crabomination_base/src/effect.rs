@@ -1600,6 +1600,14 @@ pub enum Effect {
         mana_cost: crate::mana::ManaCost,
         count: Value,
     },
+    /// Copy target spell `count` times, then "you may choose new targets
+    /// for the copy/copies" (CR 707.12 + 115.7). Same resolver as
+    /// `CopySpell`, but after each copy is pushed the controller's decider
+    /// is consulted (`Decision::ChooseTarget`, original target offered
+    /// first) to re-point the copy's primary target at any legal object.
+    /// Reverberate / Fork / Twincast. AutoDecider keeps the original
+    /// target (first legal); a scripted/UI decider can repoint it.
+    CopySpellMayChooseTargets { what: Selector, count: Value },
 
     // ── Cast-without-paying / may-play ───────────────────────────────────────
     /// "Until [duration], you may cast/play that card [from where it is]."
@@ -2193,7 +2201,10 @@ impl Effect {
                 sel_has_target(what) || sel_has_target(source)
             }
             Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
-            Effect::CopySpell { what, count } => sel_has_target(what) || value_has_target(count),
+            Effect::CopySpell { what, count }
+            | Effect::CopySpellMayChooseTargets { what, count } => {
+                sel_has_target(what) || value_has_target(count)
+            }
             Effect::CopySpellUnlessPaid { what, count, .. } => {
                 sel_has_target(what) || value_has_target(count)
             }
@@ -2888,6 +2899,7 @@ impl Effect {
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),
                 Effect::CopySpell { what, .. }
+                | Effect::CopySpellMayChooseTargets { what, .. }
                 | Effect::CopySpellUnlessPaid { what, .. } => sel_find(what, slot),
                 Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => {
                     sel_find(who, slot)

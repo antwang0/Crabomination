@@ -95,10 +95,12 @@ not how Magic works" moments.
    copies ride `CreateTokenCopyOf` (Cackling Counterpart). Remaining:
    "becomes a copy" *continuous* layer-1 effects (Helm of the Host's
    haste-token loop, Mirrorform aura) and copied enters-with-counters.
-6. 🟡 **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
-   `CopySpellUnlessPaid` exist and ship Storm / sac-to-copy cards, but the
-   copy keeps the original's targets. Remaining: **new-target choice** on
-   the copy — Twinning, Fork.
+6. ✅ **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
+   `CopySpellUnlessPaid` ship Storm / sac-to-copy cards (copy keeps the
+   original's targets), and `Effect::CopySpellMayChooseTargets`
+   (CR 707.12 / 115.7) adds **new-target choice** on the copy — the copy's
+   controller may repoint the primary target (original offered first, so
+   AutoDecider keeps it). Ships Reverberate, Fork.
 
 ## Tier 2 — Engine rules fidelity (beyond Tier 1)
 

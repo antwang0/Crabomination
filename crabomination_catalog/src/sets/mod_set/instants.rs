@@ -32,6 +32,51 @@ pub fn path_to_exile() -> CardDefinition {
     }
 }
 
+/// Reverberate — {R}{R} Instant. "Copy target instant or sorcery spell.
+/// You may choose new targets for the copy." Wired via
+/// `Effect::CopySpellMayChooseTargets`.
+pub fn reverberate() -> CardDefinition {
+    CardDefinition {
+        name: "Reverberate",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        effect: Effect::CopySpellMayChooseTargets {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            ),
+            count: Value::Const(1),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fork — {R}{R} Instant. "Copy target instant or sorcery spell, except
+/// that the copy is red. You may choose new targets for the copy." The
+/// "copy is red" colour rewrite is cosmetic for the engine; the copy +
+/// new-target choice rides `Effect::CopySpellMayChooseTargets`.
+pub fn fork() -> CardDefinition {
+    CardDefinition {
+        name: "Fork",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        effect: Effect::CopySpellMayChooseTargets {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            ),
+            count: Value::Const(1),
+        },
+        ..Default::default()
+    }
+}
+
 /// Fatal Push — {B} Instant. Destroy target creature with mana value 2 or
 /// less. (Revolt clause — destroying a creature with mana value 4 or less
 /// if a permanent left the battlefield this turn — is omitted; the base

@@ -18732,6 +18732,47 @@ fn containment_priest_allows_cast_creatures() {
         "a cast creature still enters normally under Containment Priest");
 }
 
+/// Reverberate copies a spell and the copy can be repointed at a new
+/// target (CR 115.7). Bolt hits bear1; the copy is steered onto bear2.
+#[test]
+fn reverberate_copies_spell_with_new_target() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // P0 casts Lightning Bolt at bear1.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+
+    // Reverberate the bolt; the copy chooses bear2 as its new target.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Target(Target::Permanent(bear2)),
+    ]));
+    let rev = g.add_card_to_hand(0, catalog::reverberate());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reverberate castable");
+    drain_stack(&mut g);
+
+    // Both bears die — bear1 to the original bolt, bear2 to the repointed copy.
+    assert!(g.battlefield_find(bear1).is_none(), "bear1 killed by original bolt");
+    assert!(g.battlefield_find(bear2).is_none(), "bear2 killed by repointed copy");
+}
+
+/// Fork is a {R}{R} copy-with-new-targets instant.
+#[test]
+fn fork_is_a_red_copy_spell() {
+    let d = catalog::fork();
+    assert!(matches!(d.effect, crate::effect::Effect::CopySpellMayChooseTargets { .. }));
+    assert_eq!(d.cost.cmc(), 2);
+}
+
 #[test]
 fn simian_spirit_guide_is_a_two_two_ape_spirit() {
     let d = catalog::simian_spirit_guide();

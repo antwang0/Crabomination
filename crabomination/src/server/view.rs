@@ -845,6 +845,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::PutOnLibraryFromHand { .. } => "Put on library",
         Effect::RevealTopAndDrawIf { .. } => "Reveal top",
         Effect::CopySpell { .. } => "Copy spell",
+        Effect::CopySpellMayChooseTargets { .. } => "Copy spell (new targets)",
         Effect::GainControl { .. } => "Gain control",
         Effect::ResetCreature { .. } => "Reset creature",
         Effect::BecomeBasicLand { .. } => "Become basic land",
