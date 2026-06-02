@@ -594,6 +594,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Kicker (CR 702.32) ──
         into_the_roil,
         aether_figment,
+        // ── Delve dragon (MH2) ──
+        murktide_regent,
         // ── classic core-set bodies (claude/modern_decks) ──
         air_elemental,
         snapping_drake,
@@ -1050,6 +1052,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
         goblin_chainwhirler,
+        seasoned_pyromancer,
         // ── Evoke Incarnation (MH2) ──
         fury,
         // ── divided-damage burn (claude/modern_decks) ──

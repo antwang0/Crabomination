@@ -8513,6 +8513,48 @@ fn bot_kicks_tear_asunder_to_hit_a_creature() {
 }
 
 #[test]
+fn murktide_regent_enters_with_two_counters_and_grows_on_spellcast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::murktide_regent());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Murktide castable for {5}{U}{U}");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "3/3 base + two +1/+1 counters");
+    // Cast an instant; the magecraft trigger adds a counter.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Lightning Bolt");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "instant cast grows Murktide to 6/6");
+}
+
+#[test]
+fn seasoned_pyromancer_etb_discards_draws_and_makes_tokens() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::seasoned_pyromancer());
+    g.add_card_to_hand(0, catalog::lightning_bolt()); // nonland to discard
+    g.add_card_to_hand(0, catalog::shock());          // nonland to discard
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Seasoned Pyromancer castable for {1}{R}{R}");
+    drain_stack(&mut g);
+    let elementals = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Elemental").count();
+    assert_eq!(elementals, 2, "two nonland discards mint two 1/1 Elementals");
+}
+
+#[test]
 fn aether_figment_kicked_enters_as_a_three_three() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::aether_figment());

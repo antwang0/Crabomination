@@ -6364,6 +6364,77 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
     }
 }
 
+/// Murktide Regent — {5}{U}{U} Creature — Dragon, 3/3, Flying, Delve.
+/// Enters with two +1/+1 counters; whenever you cast an instant or sorcery
+/// spell, put a +1/+1 counter on it.
+pub fn murktide_regent() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Murktide Regent",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Delve],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Seasoned Pyromancer — {1}{R}{R} Creature — Human Shaman, 2/2. ETB:
+/// discard two cards, then draw two; create a 1/1 red Elemental for each
+/// nonland card discarded this way. (The graveyard-exile recursion clause
+/// is omitted.)
+pub fn seasoned_pyromancer() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Seasoned Pyromancer",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::count(Selector::DiscardedThisResolution {
+                    filter: SelectionRequirement::Nonland,
+                }),
+                definition: TokenDefinition {
+                    name: "Elemental".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Elemental],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Aether Figment — {1}{U} Creature — Illusion, 2/2, can't be blocked.
 /// Kicker {3}: enters with a +1/+1 counter if it was kicked (CR 702.32 +
 /// ETB-kicked context).
