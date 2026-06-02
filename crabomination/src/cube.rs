@@ -1120,6 +1120,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_sledder,
         mogg_raider,
         bloodlust_inciter,
+        foundry_street_denizen,
         // ── UR spellslinger ──
         goblin_electromancer,
         wee_dragonauts,

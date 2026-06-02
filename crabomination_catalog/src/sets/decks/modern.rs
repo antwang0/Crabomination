@@ -6983,6 +6983,36 @@ pub fn skirk_prospector() -> CardDefinition {
     }
 }
 
+/// Foundry Street Denizen — {R} 1/1 Goblin. Whenever another red creature
+/// enters under your control, this gets +1/+1 until end of turn.
+pub fn foundry_street_denizen() -> CardDefinition {
+    CardDefinition {
+        name: "Foundry Street Denizen",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::Red),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Goblin Sledder — {R} 1/1 Goblin. Sacrifice a Goblin: Target creature gets
 /// +1/+1 until end of turn.
 pub fn goblin_sledder() -> CardDefinition {

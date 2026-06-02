@@ -8752,6 +8752,21 @@ fn skirk_prospector_sacrifices_a_goblin_for_red() {
 }
 
 #[test]
+fn foundry_street_denizen_grows_when_a_red_creature_enters() {
+    let mut g = two_player_game();
+    let denizen = g.add_card_to_battlefield(0, catalog::foundry_street_denizen());
+    // Cast a red creature (Mons's Goblin Raiders is red) → +1/+1 EOT.
+    let gob = g.add_card_to_hand(0, catalog::mons_goblin_raiders());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gob, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a red creature");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(denizen).unwrap();
+    assert_eq!((s.power(), s.toughness()), (2, 2), "Denizen grew when a red creature entered");
+}
+
+#[test]
 fn goblin_sledder_sacs_a_goblin_to_pump() {
     let mut g = two_player_game();
     let sledder = g.add_card_to_battlefield(0, catalog::goblin_sledder());
