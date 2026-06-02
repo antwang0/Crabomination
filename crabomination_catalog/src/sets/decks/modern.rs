@@ -4299,31 +4299,33 @@ pub fn concentrate() -> CardDefinition {
 }
 
 /// Severed Strands — {1}{B} Sorcery. As an additional cost, sacrifice
-/// a creature. Destroy target creature. You gain life equal to the
-/// sacrificed creature's toughness.
+/// a creature. You gain life equal to the sacrificed creature's
+/// toughness. Destroy target creature an opponent controls.
 ///
-/// Sac is folded as the first step (cost-as-first-step approximation).
-/// We approximate the lifegain as a fixed 2 — `Value::SacrificedPower`
-/// reads power but Severed Strands keys off toughness, and the engine
-/// has no `SacrificedToughness` value yet. The most-played form
-/// sacrifices a 2-toughness creature, so 2 is the central case.
+/// Sac is folded as the first step (cost-as-first-step approximation);
+/// `SacrificeAndRemember` records the toughness so the lifegain reads
+/// `Value::SacrificedToughness` exactly.
 pub fn severed_strands() -> CardDefinition {
+    use crate::effect::PlayerRef;
     CardDefinition {
         name: "Severed Strands",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature,
-            },
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Creature),
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
             },
             Effect::GainLife {
                 who: Selector::You,
-                amount: Value::Const(2),
+                amount: Value::SacrificedToughness,
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
             },
         ]),
         ..Default::default()

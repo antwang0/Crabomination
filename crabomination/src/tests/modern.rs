@@ -7913,11 +7913,12 @@ fn concentrate_draws_three_cards() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3);
 }
 
-/// Severed Strands: sac a creature, destroy a creature, gain 2 life.
+/// Severed Strands: sac a creature, gain life = its toughness, destroy an
+/// opponent's creature. Sacrificing a 3-toughness Hill Giant gains 3.
 #[test]
 fn severed_strands_sacs_and_destroys_for_life() {
     let mut g = two_player_game();
-    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fodder = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
     g.clear_sickness(fodder);
     let target = g.add_card_to_battlefield(1, catalog::serra_angel());
     let id = g.add_card_to_hand(0, catalog::severed_strands());
@@ -7933,14 +7934,12 @@ fn severed_strands_sacs_and_destroys_for_life() {
     }).expect("Severed Strands castable for {1}{B}");
     drain_stack(&mut g);
 
-    // Fodder sacrificed.
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
         "Fodder should be sacrificed");
-    // Target destroyed.
     assert!(!g.battlefield.iter().any(|c| c.id == target),
         "Target should be destroyed");
-    assert_eq!(g.players[0].life, life_before + 2,
-        "P0 should gain 2 life");
+    assert_eq!(g.players[0].life, life_before + 3,
+        "P0 gains life equal to the sacrificed creature's toughness (3)");
 }
 
 /// Anticipate: scry 2 + draw 1 net (-1 cast +1 draw = net 0 hand).

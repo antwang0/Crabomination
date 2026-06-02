@@ -1635,11 +1635,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Phantasmal Image's "Illusion + sacrifice-when-targeted" and Stunt
   Double's "has flash" exceptions are modeled; color/P-T/supertype
   exceptions and the spell-copy path don't take exceptions yet).
-  (m) **707.10** copies of spells: not cast, no targets re-chosen
-  (unless effect says "you may choose new targets") — ✅ (see CR
-  707.10c row earlier: `Effect::CopySpell` resolves under controller =
-  spell controller; the "you may choose new targets" path is wired
-  for spells that opt in via the existing CopySpell parameter).
+  (m) **707.10 / 707.12** copies of spells: not cast, no targets re-chosen
+  unless the effect says "you may choose new targets" — ✅
+  (`Effect::CopySpell` resolves under controller = spell controller and
+  keeps the original targets; `Effect::CopySpellMayChooseTargets`
+  (Reverberate, Fork) lets the copy's controller repoint the primary
+  target via `repoint_copy_target` — original offered first so
+  AutoDecider keeps it. Tests: `reverberate_copies_spell_with_new_target`,
+  `fork_is_a_red_copy_spell`. The per-original change shape rides
+  `Effect::ChooseNewTargetsForSpell` — Redirect, CR 115.7).
   (n) **707.10a** spell copies don't go on the battlefield (creature/
   artifact copies become tokens) — ✅ (`is_token = true` stamped on
   permanent copies so SBA cleanup eats them when they leave the
