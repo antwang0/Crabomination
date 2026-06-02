@@ -334,8 +334,9 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 - ⏳ **Hotkey legend / help overlay**; remappable keys.
 - 🟡 **Highlight legal plays** (castable cards, legal attackers/blockers,
   legal targets) — `ClientView` now carries `castable_hand`,
-  `pitchable_hand`, `kickable_hand`, and **`activatable_permanents`** (each
-  dry-run through `would_accept`). Remaining: legal-attacker/blocker and
+  `pitchable_hand`, `kickable_hand`, **`activatable_permanents`**, and
+  **`legal_attackers` / `legal_blockers`** (step-aware; honor
+  tapped/sickness/Defender and per-attacker block legality). Remaining:
   per-target hint layers (`legal_target_filter` exists to build on).
 - ⏳ **Animations & SFX** polish; **board-state pings / alerts**
   (low life, triggers waiting, your turn).

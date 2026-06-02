@@ -1839,6 +1839,42 @@ impl GameState {
         out
     }
 
+    /// Creatures `seat` controls that could be declared as attackers right
+    /// now — only meaningful during `seat`'s Declare Attackers step while it
+    /// holds priority. Drives the client's legal-attacker highlight
+    /// (roadmap Tier 8). Honors tapped / summoning-sickness / Defender /
+    /// CantAttack via `CardInstance::can_attack`.
+    pub fn legal_attackers(&self, seat: usize) -> Vec<CardId> {
+        if self.step != crate::TurnStep::DeclareAttackers
+            || self.active_player_idx != seat
+            || self.player_with_priority() != seat
+        {
+            return Vec::new();
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.can_attack())
+            .map(|c| c.id)
+            .collect()
+    }
+
+    /// Creatures `seat` controls that could legally block at least one of the
+    /// currently-declared attackers — only meaningful during the Declare
+    /// Blockers step with attackers on the board. Drives the client's
+    /// legal-blocker highlight (roadmap Tier 8). Uses
+    /// `can_block_any_attacker` so flying / menace-style restrictions apply.
+    pub fn legal_blockers(&self, seat: usize) -> Vec<CardId> {
+        if self.step != crate::TurnStep::DeclareBlockers || self.attacking().is_empty() {
+            return Vec::new();
+        }
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.can_block())
+            .filter(|c| self.can_block_any_attacker(c.id))
+            .map(|c| c.id)
+            .collect()
+    }
+
     /// Hand cards the viewer could cast *with their Kicker paid* right now
     /// (CR 702.32) — computed via a `CastSpellKicked` dry-run so it accounts
     /// for the full base+kicker cost, timing, and the kicked target set.

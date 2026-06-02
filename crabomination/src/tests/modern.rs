@@ -18735,6 +18735,38 @@ fn containment_priest_allows_cast_creatures() {
         "a cast creature still enters normally under Containment Priest");
 }
 
+/// `legal_attackers` lists only untapped, non-sick creatures during the
+/// viewer's Declare Attackers step; `legal_blockers` lists creatures that
+/// can block a declared attacker during Declare Blockers.
+#[test]
+fn client_view_legal_attacker_and_blocker_hints() {
+    let mut g = two_player_game();
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let ready = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ready);
+    let tapped = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(tapped);
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == tapped) { c.tapped = true; }
+
+    let atk = g.legal_attackers(0);
+    assert!(atk.contains(&ready), "untapped non-sick creature is a legal attacker");
+    assert!(!atk.contains(&tapped), "tapped creature is not a legal attacker");
+    // Off-step / wrong seat yields nothing.
+    assert!(g.legal_attackers(1).is_empty(), "non-active seat has no legal attackers");
+
+    // Declare an attack, move to blockers, check the defender's blocker hint.
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ready, target: AttackTarget::Player(1),
+    }])).expect("declare attackers");
+    g.step = TurnStep::DeclareBlockers;
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(blocker);
+    let blk = g.legal_blockers(1);
+    assert!(blk.contains(&blocker), "untapped creature can block the declared attacker");
+}
+
 /// Reverberate copies a spell and the copy can be repointed at a new
 /// target (CR 115.7). Bolt hits bear1; the copy is steered onto bear2.
 #[test]

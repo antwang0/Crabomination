@@ -132,6 +132,18 @@ pub struct ClientView {
     /// off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub activatable_permanents: Vec<CardId>,
+    /// Creatures the viewer controls that may be declared as attackers right
+    /// now (only during the viewer's Declare Attackers step). Drives the
+    /// client's legal-attacker highlight. Empty otherwise. `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub legal_attackers: Vec<CardId>,
+    /// Creatures the viewer controls that could legally block one of the
+    /// declared attackers right now (only during Declare Blockers). Drives
+    /// the client's legal-blocker highlight. Empty otherwise.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub legal_blockers: Vec<CardId>,
 }
 
 /// A projected combat-damage summary, computed from the currently
