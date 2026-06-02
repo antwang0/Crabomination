@@ -436,6 +436,19 @@ impl GameState {
                 events.push(GameEvent::PermanentExiled { card_id: cid });
             }
             ZoneDest::Battlefield { controller, tapped } => {
+                // CR 614.x — Containment Priest. A nontoken creature put onto
+                // the battlefield without being cast (reanimate / blink /
+                // reveal-and-put — anything routed through this path rather
+                // than `resolve_spell`) is exiled instead.
+                if !card.is_token
+                    && card.definition.is_creature()
+                    && self.nontoken_creature_etb_exile_active()
+                {
+                    let cid = card.id;
+                    self.exile.push(card);
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    return;
+                }
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);
                 let p = self.resolve_player(controller, &ctx).unwrap_or(default_player);
                 card.controller = p;

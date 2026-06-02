@@ -1041,6 +1041,19 @@ impl GameState {
             .sum()
     }
 
+    /// CR 614.x — true if any active `StaticEffect::ExileNontokenCreaturesNotCast`
+    /// (Containment Priest) is on the battlefield. Consulted by
+    /// `place_card_in_dest` to reroute non-cast nontoken creatures to exile.
+    pub fn nontoken_creature_etb_exile_active(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::ExileNontokenCreaturesNotCast))
+        })
+    }
+
     /// CR 614.2 — number of `StaticEffect::DoubleDamageDealt` permanents on
     /// the battlefield (controller-agnostic: Furnace of Rath doubles *all*
     /// damage). Damage is scaled by `2^n`; `n` doublers → `2^n×`.
@@ -4464,7 +4477,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GrantActivatedAbility { .. }
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
-            | StaticEffect::NotCreatureWhileDevotionBelow { .. } => vec![],
+            | StaticEffect::NotCreatureWhileDevotionBelow { .. }
+            // ExileNontokenCreaturesNotCast (Containment Priest) — read at
+            // battlefield-entry time by `nontoken_creature_etb_exile_active`;
+            // no layer effect.
+            | StaticEffect::ExileNontokenCreaturesNotCast => vec![],
         })
         .collect()
 }

@@ -1074,14 +1074,11 @@ pub fn grim_lavamancer() -> CardDefinition {
 /// so it currently grants haste to every creature you control (over-grant
 /// for sub-4 power creatures). Documented as 🟡; the trigger half is
 /// faithful via the new filter enforcement.
-/// Containment Priest — {1}{W}, 2/2 Human Cleric Flash. **Replacement
-/// effect** (omitted): "If a nontoken creature would enter the battlefield
-/// and it wasn't cast, exile it instead." The replacement primitive
-/// doesn't exist in the engine yet (no creature-ETB-replacement hook),
-/// so this ships as a vanilla 2/2 flash body. Tests verify the body
-/// is correct; the replacement gate will be added when the primitive
-/// lands.
+/// Containment Priest — {1}{W}, 2/2 Human Cleric Flash. "If a nontoken
+/// creature would enter the battlefield and it wasn't cast, exile it
+/// instead" via `StaticEffect::ExileNontokenCreaturesNotCast`.
 pub fn containment_priest() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Containment Priest",
         cost: cost(&[generic(1), w()]),
@@ -1093,8 +1090,10 @@ pub fn containment_priest() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "If a nontoken creature would enter the battlefield and it wasn't cast, exile it instead.",
+            effect: StaticEffect::ExileNontokenCreaturesNotCast,
+        }],
         ..Default::default()
     }
 }

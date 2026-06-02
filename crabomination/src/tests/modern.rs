@@ -18684,6 +18684,54 @@ fn containment_priest_is_a_two_two_with_flash() {
         "Containment Priest has Flash");
 }
 
+/// Containment Priest exiles a reanimated (non-cast) nontoken creature
+/// instead of letting it enter the battlefield.
+#[test]
+fn containment_priest_exiles_reanimated_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::containment_priest());
+
+    let atraxa = g.add_card_to_library(0, catalog::atraxa_grand_unifier());
+    let pos = g.players[0].library.iter().position(|c| c.id == atraxa).unwrap();
+    let card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(card);
+
+    let id = g.add_card_to_hand(0, catalog::reanimate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(atraxa)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Reanimate castable for {B}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == atraxa),
+        "reanimated creature should not reach the battlefield");
+    assert!(g.exile.iter().any(|c| c.id == atraxa),
+        "Containment Priest exiles the non-cast creature instead");
+}
+
+/// Containment Priest does not interfere with a normally-cast creature
+/// spell (it was cast, so the replacement doesn't apply).
+#[test]
+fn containment_priest_allows_cast_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::containment_priest());
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "a cast creature still enters normally under Containment Priest");
+}
+
 #[test]
 fn simian_spirit_guide_is_a_two_two_ape_spirit() {
     let d = catalog::simian_spirit_guide();

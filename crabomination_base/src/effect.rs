@@ -3181,6 +3181,14 @@ pub enum StaticEffect {
         colors: Vec<crate::mana::Color>,
         threshold: u32,
     },
+    /// CR 614.x — "If a nontoken creature would enter the battlefield and it
+    /// wasn't cast, exile it instead." Containment Priest. A global ETB
+    /// replacement read off the battlefield in `place_card_in_dest`'s
+    /// Battlefield arm: any non-cast nontoken creature being put onto the
+    /// battlefield (reanimation, blink-return, reveal-and-put) is rerouted
+    /// to exile. Cast creature spells bypass this path entirely (they enter
+    /// via `resolve_spell` in `stack.rs`), so they are unaffected.
+    ExileNontokenCreaturesNotCast,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

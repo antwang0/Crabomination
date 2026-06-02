@@ -58,7 +58,9 @@ not how Magic works" moments.
    but only models zone-change replacements (Commander "→ command zone
    instead", CR 903.9b); the rest is stubbed per-card. Still to generalize:
    ETB replacement (enters tapped / with counters / as a copy / under your
-   control), damage *redirection* (Maze of Ith), draw/skip replacement, and
+   control; "exile non-cast nontoken creatures instead" ships via
+   `StaticEffect::ExileNontokenCreaturesNotCast` — Containment Priest),
+   damage *redirection* (Maze of Ith), draw/skip replacement, and
    "if it would die, exile instead." Counter-doubling (Doubling Season,
    Hardened Scales — `StaticEffect::DoubleCounters`) and damage-**doubling**
    (Furnace of Rath — `StaticEffect::DoubleDamageDealt`, applied to both the
