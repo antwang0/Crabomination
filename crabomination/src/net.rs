@@ -114,6 +114,12 @@ pub struct ClientView {
     /// highlight. Empty off-priority. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub pitchable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand they could cast with their Kicker paid
+    /// right now (CR 702.32). Lets the client offer a "pay kicker?" toggle
+    /// distinct from the plain castable highlight. Empty off-priority.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub kickable_hand: Vec<CardId>,
 }
 
 /// A projected combat-damage summary, computed from the currently

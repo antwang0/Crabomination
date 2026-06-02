@@ -74,6 +74,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         combat_preview: combat_preview(state),
         castable_hand: state.castable_hand_cards(seat),
         pitchable_hand: state.pitchable_hand_cards(seat),
+        kickable_hand: state.kickable_hand_cards(seat),
     }
 }
 

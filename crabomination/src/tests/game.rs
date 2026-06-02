@@ -540,6 +540,23 @@ fn pitchable_hand_cards_lists_spirit_guides() {
     assert!(g.pitchable_hand_cards(0).is_empty(), "off-priority → empty");
 }
 
+#[test]
+fn kickable_hand_cards_lists_affordable_kickers() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a kicked-only target
+    let ta = g.add_card_to_hand(0, catalog::tear_asunder());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // no kicker
+    // Not enough mana for the full {1}{G}+{1}{B} → not kickable yet.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.kickable_hand_cards(0).is_empty(), "can't afford the kicker → empty");
+    // Top up to the full kicked cost.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert_eq!(g.kickable_hand_cards(0), vec![ta], "Tear Asunder is now kickable");
+}
+
 /// Symmetric: untap step should untap creatures the active player
 /// CONTROLS, not just those they originally owned. A stolen creature
 /// untaps on the new controller's turn, never the original owner's.

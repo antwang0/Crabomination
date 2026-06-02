@@ -1754,6 +1754,51 @@ impl GameState {
         out
     }
 
+    /// Hand cards the viewer could cast *with their Kicker paid* right now
+    /// (CR 702.32) — computed via a `CastSpellKicked` dry-run so it accounts
+    /// for the full base+kicker cost, timing, and the kicked target set.
+    /// Lets the client surface a "pay kicker?" affordance on those cards.
+    /// Empty when the viewer doesn't hold priority.
+    pub fn kickable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.has_kicker().is_some())
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, needs_target, effect) in &hand {
+            // Use the kicked target set (the broader `If(SpellWasKicked, …)`
+            // branch) so a kicked Tear Asunder reports castable at a creature.
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => {
+                        self.auto_targets_for_effect_all_slots_kicked(eff, caster, None, true)
+                    }
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if self.would_accept(GameAction::CastSpellKicked {
+                card_id: *id,
+                target,
+                additional_targets,
+                mode: None,
+                x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// Hand cards the player can activate a `from_hand` ability of right now
     /// (Spirit-Guide-style "Exile this from your hand: Add mana"). Lets the
     /// client surface a pitch affordance distinct from the castable-for-value
