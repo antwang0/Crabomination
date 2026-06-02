@@ -3746,6 +3746,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseNewTargetsForSpell { what } => {
+                // CR 115.7 — repoint the targeted spell's primary target in
+                // place. The controller of *this* effect (Redirect's caster)
+                // chooses; the original target is offered first.
+                let chooser = ctx.controller;
+                let spell_ids: Vec<CardId> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    })
+                    .collect();
+                for sid in spell_ids {
+                    let Some(idx) = self.stack.iter().rposition(|s| {
+                        matches!(s, crate::game::types::StackItem::Spell { card, .. }
+                            if card.id == sid)
+                    }) else {
+                        continue;
+                    };
+                    let (def, orig_target) =
+                        if let crate::game::types::StackItem::Spell { card, target, .. } =
+                            &self.stack[idx]
+                        {
+                            (card.definition.clone(), target.clone())
+                        } else {
+                            continue;
+                        };
+                    if orig_target.is_none() {
+                        continue;
+                    }
+                    let new_target = self.repoint_copy_target(&def, chooser, &orig_target);
+                    if let crate::game::types::StackItem::Spell { target, .. } =
+                        &mut self.stack[idx]
+                    {
+                        *target = new_target;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CopySpellUnlessPaid { what, mana_cost, count } => {
                 // Wandering Archaic shape: the *caster of the spell being
                 // copied* may pay `mana_cost` to avoid being copied. We:

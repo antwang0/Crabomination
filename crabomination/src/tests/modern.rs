@@ -18765,6 +18765,38 @@ fn reverberate_copies_spell_with_new_target() {
     assert!(g.battlefield_find(bear2).is_none(), "bear2 killed by repointed copy");
 }
 
+/// Redirect repoints a spell's target (CR 115.7). Bolt aimed at my bear
+/// is redirected back onto the opponent's bear.
+#[test]
+fn redirect_changes_a_spells_target() {
+    let mut g = two_player_game();
+    let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    // P0 casts Lightning Bolt at its own bear (the spell to be redirected).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(my_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+
+    // P0 redirects the bolt onto opp_bear.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Target(Target::Permanent(opp_bear)),
+    ]));
+    let redir = g.add_card_to_hand(0, catalog::redirect());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: redir, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Redirect castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(my_bear).is_some(), "my bear survives the redirect");
+    assert!(g.battlefield_find(opp_bear).is_none(), "opponent's bear takes the bolt");
+}
+
 /// Fork is a {R}{R} copy-with-new-targets instant.
 #[test]
 fn fork_is_a_red_copy_spell() {

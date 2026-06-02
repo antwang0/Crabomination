@@ -640,6 +640,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         counterspell,
         mana_leak,
         spell_pierce,
+        // Change-target (CR 115.7)
+        redirect,
         negate,
         dispel,
         daze,

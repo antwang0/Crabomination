@@ -846,6 +846,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::RevealTopAndDrawIf { .. } => "Reveal top",
         Effect::CopySpell { .. } => "Copy spell",
         Effect::CopySpellMayChooseTargets { .. } => "Copy spell (new targets)",
+        Effect::ChooseNewTargetsForSpell { .. } => "Choose new targets",
         Effect::GainControl { .. } => "Gain control",
         Effect::ResetCreature { .. } => "Reset creature",
         Effect::BecomeBasicLand { .. } => "Become basic land",

@@ -77,6 +77,22 @@ pub fn fork() -> CardDefinition {
     }
 }
 
+/// Redirect — {U}{U} Instant. "You may choose new targets for target
+/// spell." Repoints the targeted spell's primary target in place via
+/// `Effect::ChooseNewTargetsForSpell` (CR 115.7).
+pub fn redirect() -> CardDefinition {
+    CardDefinition {
+        name: "Redirect",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        effect: Effect::ChooseNewTargetsForSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        ..Default::default()
+    }
+}
+
 /// Fatal Push — {B} Instant. Destroy target creature with mana value 2 or
 /// less. (Revolt clause — destroying a creature with mana value 4 or less
 /// if a permanent left the battlefield this turn — is omitted; the base

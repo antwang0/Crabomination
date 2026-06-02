@@ -1198,13 +1198,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   is an unconditional `Vec` with no per-slot "optional" marker. The
   engine ships the *outcome* of zero-target casts correctly but doesn't
   encode the cast-time CR 115.6 "still requires targets" distinction).
-  (i) **115.7** Change-target / choose-new-target effects — ⏳ (no
-  `Effect::ChangeTarget` / `Effect::ChooseNewTargets` primitive; cards
-  like Redirect, Arcane Denial-style "exchange targets" aren't in the
-  catalog. Choreographed Sparks' "copy target, you may choose new
-  targets" rider on the *copy* is handled via `Effect::CopySpell`'s
-  internal `choose_new_targets: bool` flag, but the per-original change
-  shape from CR 115.7a-d is missing).
+  (i) **115.7** Change-target / choose-new-target effects — ✅ (the
+  *copy* shape rides `Effect::CopySpellMayChooseTargets` — Reverberate,
+  Fork — and the per-original change shape rides
+  `Effect::ChooseNewTargetsForSpell`, which repoints a targeted spell's
+  primary target in place via the same `repoint_copy_target` decider flow
+  — Redirect. Both offer the original target first so AutoDecider keeps
+  it. Remaining nuance: multi-slot "choose new targets for *all*" and
+  cross-spell *exchange* of targets, 115.7a-d corners).
   (j) **115.8** Modal targeting — ✅ (Modal spells declared via
   `Effect::ChooseMode` / `Effect::ChooseN` resolve each mode against
   the spell's `target` slot at resolution time; the
