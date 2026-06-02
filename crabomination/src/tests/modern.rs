@@ -8513,6 +8513,51 @@ fn bot_kicks_tear_asunder_to_hit_a_creature() {
 }
 
 #[test]
+fn selfless_spirit_sac_grants_team_indestructible() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let spirit = g.add_card_to_battlefield(0, catalog::selfless_spirit());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(spirit);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spirit, ability_index: 0, target: None, x_value: None,
+    }).expect("sac ability activates");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).expect("bear alive");
+    assert!(cp.keywords.contains(&Keyword::Indestructible),
+        "ally gains indestructible until end of turn");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == spirit), "Spirit sacrificed");
+}
+
+#[test]
+fn reality_smasher_has_ward_two() {
+    use crate::card::{Keyword, WardCost};
+    let g = two_player_game();
+    let def = catalog::reality_smasher();
+    assert_eq!((def.power, def.toughness), (5, 5));
+    assert!(def.keywords.contains(&Keyword::Ward(WardCost::generic(2))), "Ward {{2}}");
+    assert!(def.keywords.contains(&Keyword::Trample) && def.keywords.contains(&Keyword::Haste));
+    let _ = g;
+}
+
+#[test]
+fn glint_nest_crane_etb_digs_for_an_artifact() {
+    let mut g = two_player_game();
+    // Top of library: an artifact buried under non-artifacts.
+    g.add_card_to_library(0, catalog::sol_ring());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::glint_nest_crane());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Glint-Nest Crane castable for {1}{U}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Sol Ring"),
+        "the artifact in the top four is put into hand");
+}
+
+#[test]
 fn murktide_regent_enters_with_two_counters_and_grows_on_spellcast() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::murktide_regent());

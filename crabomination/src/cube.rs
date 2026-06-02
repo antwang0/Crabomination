@@ -215,6 +215,8 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // ── Eldrazi (colorless {C} cost) ──
+        reality_smasher,
         // ── classic colorless core-set bodies (claude/modern_decks) ──
         obsianus_golem,
         yotian_soldier,
@@ -335,6 +337,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Investigate (CR 701.13) ──
         thraben_inspector,
+        selfless_spirit,
         // ── claude/modern_decks: white Ixalan dinosaurs ──
         kinjallis_caller,
         territorial_hammerskull,
@@ -594,6 +597,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Kicker (CR 702.32) ──
         into_the_roil,
         aether_figment,
+        glint_nest_crane,
         // ── Delve dragon (MH2) ──
         murktide_regent,
         // ── classic core-set bodies (claude/modern_decks) ──

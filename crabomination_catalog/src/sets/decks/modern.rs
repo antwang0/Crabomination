@@ -15,7 +15,7 @@ use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
-use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r, u, w};
 
 // ── Cantrips & card selection ────────────────────────────────────────────────
 
@@ -6458,6 +6458,83 @@ pub fn aether_figment() -> CardDefinition {
                 amount: Value::Const(1),
             }),
             else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Selfless Spirit — {1}{W} Creature — Spirit, 2/1, Flying. "Sacrifice
+/// this: creatures you control gain indestructible until end of turn."
+pub fn selfless_spirit() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Selfless Spirit",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reality Smasher — {4}{C} Creature — Eldrazi, 5/5, Trample, Haste, Ward
+/// {2} (the printed "counter unless pay {2} when targeted by a spell" is
+/// modeled as Ward {2}).
+pub fn reality_smasher() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Reality Smasher",
+        cost: cost(&[generic(4), colorless(1)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Haste,
+            Keyword::Ward(WardCost::generic(2)),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Glint-Nest Crane — {1}{U} Creature — Bird, 1/3, Flying. ETB: look at the
+/// top four cards; put an artifact among them into your hand, rest on the
+/// bottom.
+pub fn glint_nest_crane() -> CardDefinition {
+    CardDefinition {
+        name: "Glint-Nest Crane",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Artifact),
         })],
         ..Default::default()
     }
