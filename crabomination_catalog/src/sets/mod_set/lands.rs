@@ -88,54 +88,6 @@ pub fn blood_crypt() -> CardDefinition {
     )
 }
 
-/// Hallowed Fountain — WU shockland (Plains/Island).
-pub fn hallowed_fountain() -> CardDefinition {
-    dual_land_with(
-        "Hallowed Fountain",
-        LandType::Plains,
-        LandType::Island,
-        Color::White,
-        Color::Blue,
-        vec![shockland_pay_two_or_tap()],
-    )
-}
-
-/// Godless Shrine — WB shockland (Plains/Swamp).
-pub fn godless_shrine() -> CardDefinition {
-    dual_land_with(
-        "Godless Shrine",
-        LandType::Plains,
-        LandType::Swamp,
-        Color::White,
-        Color::Black,
-        vec![shockland_pay_two_or_tap()],
-    )
-}
-
-/// Watery Grave — UB shockland (Island/Swamp).
-pub fn watery_grave() -> CardDefinition {
-    dual_land_with(
-        "Watery Grave",
-        LandType::Island,
-        LandType::Swamp,
-        Color::Blue,
-        Color::Black,
-        vec![shockland_pay_two_or_tap()],
-    )
-}
-
-/// Overgrown Tomb — BG shockland (Swamp/Forest).
-pub fn overgrown_tomb() -> CardDefinition {
-    dual_land_with(
-        "Overgrown Tomb",
-        LandType::Swamp,
-        LandType::Forest,
-        Color::Black,
-        Color::Green,
-        vec![shockland_pay_two_or_tap()],
-    )
-}
-
 // ── Fastlands ────────────────────────────────────────────────────────────────
 
 /// Seachrome Coast — UW fastland (Plains/Island).

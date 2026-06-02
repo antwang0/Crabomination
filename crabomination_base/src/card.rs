@@ -398,6 +398,11 @@ pub enum Keyword {
     /// engine models the single-requirement case; multi-Lure
     /// maximization (CR 509.1c's "as many as possible") is approximated.
     MustBeBlocked,
+    /// CR 509.1c — "All creatures able to block this creature do so" (true
+    /// Lure). Stronger than `MustBeBlocked` (≥1 blocker): every idle
+    /// defender creature that *can* legally block this attacker must be
+    /// assigned to it. Enforced in `declare_blockers`.
+    AllMustBlock,
     /// CR 508.1d — "This creature attacks each combat if able." Enforced in
     /// `declare_attackers`: an untapped, non-sick creature carrying this
     /// keyword whose controller declares attackers must be among them when

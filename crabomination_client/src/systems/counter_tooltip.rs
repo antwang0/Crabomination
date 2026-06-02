@@ -509,6 +509,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::AttacksAlone => "Attacks only alone".into(),
         K::DealsNoCombatDamage => "Deals no combat damage".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
+        K::AllMustBlock => "All creatures able to block this do so".into(),
         K::Skulk => "Skulk".into(),
         K::Fear => "Fear".into(),
         K::Intimidate => "Intimidate".into(),

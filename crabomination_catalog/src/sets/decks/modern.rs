@@ -11,7 +11,9 @@ use crate::card::{
     SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{each_your_creature, etb, etb_explore, explore, target_filtered};
+use crate::effect::shortcut::{
+    each_your_creature, etb, etb_explore, explore, investigate, target_filtered,
+};
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
@@ -6362,6 +6364,24 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
     }
 }
 
+/// Thraben Inspector — {W} Creature — Human Soldier, 1/1. ETB: investigate
+/// (create a Clue token; CR 701.13).
+pub fn thraben_inspector() -> CardDefinition {
+    CardDefinition {
+        name: "Thraben Inspector",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(investigate(1))],
+        ..Default::default()
+    }
+}
+
 /// Goblin Bushwhacker — {R} Creature — Goblin, 1/1, Haste. Kicker {R}.
 /// When it enters, if it was kicked, creatures you control get +1/+0 and
 /// gain haste until end of turn (CR 702.32 + ETB-kicked context).
@@ -10412,6 +10432,12 @@ pub fn pacifism() -> CardDefinition {
         0,
         vec![Keyword::CantAttack, Keyword::CantBlock],
     )
+}
+
+/// Lure — {1}{G}{G} Enchantment — Aura. Enchant creature. "All creatures
+/// able to block enchanted creature do so." (CR 509.1c, `AllMustBlock`.)
+pub fn lure() -> CardDefinition {
+    simple_aura("Lure", cost(&[generic(1), g(), g()]), 0, 0, vec![Keyword::AllMustBlock])
 }
 
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.

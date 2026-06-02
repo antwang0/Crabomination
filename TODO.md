@@ -318,6 +318,22 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   keep-on-top). Merfolk Branchwalker, Jadelight Ranger (double explore),
   Wildgrowth Walker (explore payoff). Tests in `tests/modern`.
 
+- ✅ **CR 701.13 — Investigate** (claude/modern_decks).
+  `shortcut::investigate(n)` mints `n` `clue_token()`s (`{2}, Sac: Draw`);
+  Thraben Inspector (ETB). Test: `thraben_inspector_investigates_on_etb`.
+
+- ✅ **CR 702.32 — Kicker** (claude/modern_decks).
+  `GameAction::CastSpellKicked` folds the optional kicker cost into the
+  spell's mana cost (additive, CR 702.32b) and stamps `CardInstance.kicked`;
+  `Predicate::SpellWasKicked` reads it at resolution
+  (`EffectContext.kicked`) and from a permanent's ETB/other triggers (the
+  source's `kicked` flag is threaded into the trigger context).
+  `target_filter_for_slot_in_mode_kicked` makes cast-time target legality
+  follow the `If(SpellWasKicked, …)` branch that will resolve. Cards: Tear
+  Asunder, Bloodchief's Thirst, Burst Lightning, Into the Roil, Goblin
+  Bushwhacker (ETB-kicked). Tests in `tests/modern` + `tests/stx/part_01`.
+  Remaining: client opt-in affordance + a bot heuristic to kick.
+
 - ✅ **CR 603.6e — Linked "exile until ~ leaves"** (claude/modern_decks).
   `Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves` stamp
   `CardInstance.exiled_by`; `return_linked_exiles` (called from every
@@ -794,8 +810,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (not implemented), Unblockable, etc. Cumulative evasion is naturally
   enforced (each evasion clause is its own gate).
   (d) **509.1c** requirements (creatures that *must* block if able) —
-  ⏳ (no "must block" primitive; cards like Provoke aren't in the
-  catalog).
+  ✅ (claude/modern_decks): `Keyword::MustBeBlocked` ("must be blocked
+  by ≥1" — Academic Dispute) plus `Keyword::AllMustBlock` (true Lure —
+  every idle defender creature able to block this attacker must be
+  assigned to it; the Lure aura). Both enforced in `declare_blockers`
+  off computed keywords. Targeted single-creature Provoke ("that creature
+  must block this") still ⏳ (needs a per-blocker `must_block_attacker`
+  link + untap).
   (e) **509.1d-f** cost-to-block lock-in and payment — ⏳ (no
   blocker-cost activation pipeline; no cards in the catalog have
   "creatures can't block unless their controller pays {N}").

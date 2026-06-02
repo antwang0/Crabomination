@@ -2559,6 +2559,33 @@ fn anjes_ravager_attack_discards_hand_then_draws_three() {
 }
 
 #[test]
+fn lure_forces_all_able_creatures_to_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // Lure's rider on the attacker: all able creatures must block it.
+    g.battlefield_find_mut(attacker).unwrap()
+        .granted_keywords_eot.push(Keyword::AllMustBlock);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    // Blocking with only one of two able creatures is illegal.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker)])).is_err(),
+        "Lure requires every able creature to block");
+    // Assigning both able blockers satisfies the requirement.
+    assert!(g.perform_action(
+        GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)])).is_ok(),
+        "blocking with all able creatures is legal");
+}
+
+#[test]
 fn goldspan_dragon_attack_creates_a_treasure() {
     let mut g = two_player_game();
     let dragon = g.add_card_to_battlefield(0, catalog::goldspan_dragon());
@@ -8387,6 +8414,23 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 }
 
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
+
+#[test]
+fn thraben_inspector_investigates_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::thraben_inspector());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Thraben Inspector castable for {W}");
+    drain_stack(&mut g);
+    // A Clue artifact token entered under the caster's control.
+    let clues = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.subtypes.artifact_subtypes
+            .contains(&crate::card::ArtifactSubtype::Clue)).count();
+    assert_eq!(clues, 1, "ETB investigate mints exactly one Clue");
+}
 
 #[test]
 fn goblin_bushwhacker_kicked_pumps_the_team() {

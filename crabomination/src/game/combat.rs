@@ -413,6 +413,38 @@ impl GameState {
             }
         }
 
+        // CR 509.1c — true Lure ("all creatures able to block this do so").
+        // Every idle defender creature that *can* legally block such an
+        // attacker must be assigned to it in the merged block set.
+        for atk in &self.attacking {
+            if !kws_of(atk.attacker).contains(&Keyword::AllMustBlock) {
+                continue;
+            }
+            let Some(defender_idx) = self.defender_for(atk.target) else { continue };
+            let attacker = match self.battlefield_find(atk.attacker) {
+                Some(a) => a,
+                None => continue,
+            };
+            let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let unmet = self.battlefield.iter().any(|b| {
+                b.definition.is_creature()
+                    && self.same_team(b.controller, defender_idx)
+                    && b.can_block()
+                    && !kws_of(b.id).contains(&Keyword::CantBlock)
+                    && cp_of(b.id).is_some_and(|bcp| {
+                        super::can_block_attacker_computed(
+                            b, attacker, bcp, kws_of(atk.attacker), atk_colors,
+                        )
+                    })
+                    // Able to block it but not assigned to it (here or earlier).
+                    && self.block_map.get(&b.id) != Some(&atk.attacker)
+                    && !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == atk.attacker)
+            });
+            if unmet {
+                return Err(GameError::MustBeBlockedIfAble(atk.attacker));
+            }
+        }
+
         // Combat-keyword P/T adjustments applied on block declaration:
         // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23).
         // Snapshot the +/-N deltas (same value on power and toughness)

@@ -4058,6 +4058,16 @@ pub mod shortcut {
         Effect::Explore { who: Selector::This }
     }
 
+    /// CR 701.13 — "Investigate `n`": create `n` colorless Clue artifact
+    /// tokens (`{2}, Sacrifice this artifact: Draw a card.`).
+    pub fn investigate(n: u32) -> Effect {
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(n as i32),
+            definition: crate::tokens::clue_token(),
+        }
+    }
+
     /// CR 701.31 — "`cost`: Monstrosity `n`." A sorcery-speed activated
     /// ability that grows the source to monstrous once.
     pub fn monstrosity(cost: crate::mana::ManaCost, n: i32) -> ActivatedAbility {

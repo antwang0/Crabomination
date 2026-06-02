@@ -203,8 +203,9 @@ feature; sweep card-batch by card-batch.
   ⏳ Dash, ⏳ Boast,
   ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
   ⏳ Enlist, ⏳ Mobilize, ⏳ Myriad.
-- **Value/ETB:** ⏳ Investigate (verb) + sac-Clue payoff (🟡 Clue tokens
-  exist), ✅ Fabricate (`shortcut::fabricate` — CR 702.122, ETB
+- **Value/ETB:** ✅ Investigate (`shortcut::investigate(n)` — CR 701.13,
+  mints `clue_token()`s; Thraben Inspector. Sac-Clue payoff rides the
+  token's printed `{2}, Sac: Draw`), ✅ Fabricate (`shortcut::fabricate` — CR 702.122, ETB
   `ChooseMode([+1/+1 counters, 1/1 Servo tokens])`), ⏳ Riot,
   ✅ Afterlife (`shortcut::afterlife` — CR 702.135),
   ✅ Explore (`Effect::Explore` + `EventKind::Explored`, CR 701.40 — Merfolk
@@ -248,7 +249,9 @@ feature; sweep card-batch by card-batch.
 - 🟡 **"Must attack/block", "can't attack alone", "attacks each combat"**
   restrictions and requirements. `Keyword::CantAttack` / `CantBlock`
   (Pacifism), `Keyword::AttacksAlone` (CR 508.0 — Master of Cruelties),
-  `Keyword::MustBeBlocked` (CR 509.1c — Lure), and `Keyword::MustAttack`
+  `Keyword::MustBeBlocked` (CR 509.1c — "must be blocked", Academic
+  Dispute), `Keyword::AllMustBlock` (CR 509.1c true Lure — every able
+  creature must block; Lure aura), and `Keyword::MustAttack`
   (CR 508.1d — "attacks each combat if able", Juggernaut) are wired from
   computed keywords in `declare_attackers`/`declare_blockers`. **Goad**
   (CR 701.38) is wired via `CardInstance.goaded_by` + `Effect::Goad`
@@ -258,7 +261,8 @@ feature; sweep card-batch by card-batch.
   goaded "attack a player other than the goader" clause in multiplayer;
   must-block requirements on the blocker side; cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
-- ✅ **Goad** (above). ⏳ **Ninjutsu attacking-creature swap**, **Lure**,
+- ✅ **Goad** (above). ✅ **Lure** (`Keyword::AllMustBlock`).
+  ⏳ **Ninjutsu attacking-creature swap**,
   **provoke**.
 
 ## Tier 7 — UI / UX core (the Arena "feel" gap)

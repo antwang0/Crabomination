@@ -333,6 +333,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Investigate (CR 701.13) ──
+        thraben_inspector,
         // ── claude/modern_decks: white Ixalan dinosaurs ──
         kinjallis_caller,
         territorial_hammerskull,
@@ -1301,6 +1303,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Lure (CR 509.1c all-must-block) ──
+        lure,
         // ── classic core-set bodies (claude/modern_decks) ──
         spined_wurm,
         panther_warriors,
