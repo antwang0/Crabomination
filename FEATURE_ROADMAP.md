@@ -36,7 +36,16 @@ read of the code and should be re-verified before picking up an item.
   (save/restore + round-trip replay foundation).
 - **Client:** 3D board, game-log panel, targeting UI, decision UI,
   attack-all, priority-aware Pass/Respond button, counter tooltips,
-  animations, keyboard cursor.
+  animations, keyboard cursor (incl. WUBRG hotkeys on the ChooseColor modal).
+- **Misc primitives (claude/modern_decks):** layer-5 color change
+  (`Effect::BecomeChosenColor`, CR 105.3 — Wild Mongrel); reveal-top-and-take-
+  one-per-card-type (`Effect::RevealTopTakeOnePerType` — Atraxa); reveal-top-
+  and-replay-permanent (`Effect::RevealTopPutPermanentOntoBattlefield` — Chaos
+  Warp); "opponents can't cast noncreature spells this turn"
+  (`Effect::CantCastNoncreatureThisTurn` — Ranger-Captain of Eos);
+  "becomes the target" triggers now fire for SelfSource and the new
+  `EventScope::YourPermanentTargetedByOpponent` (Goldspan Dragon, Phantasmal
+  Image, Battle Mammoth, Tenured Concocter).
 
 ---
 
