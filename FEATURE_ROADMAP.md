@@ -194,7 +194,9 @@ feature; sweep card-batch by card-batch.
   ⏳ Hideaway, ⏳ Aftermath.
 - **Combat-flavor:** ✅ Bushido / ✅ Flanking / ✅ Rampage
   (`Keyword::{Bushido,Flanking,Rampage}` — combat-step rules in
-  `declare_blockers`), ⏳ Provoke,
+  `declare_blockers`),
+  ✅ Provoke (`shortcut::provoke` — CR 702.39, on-attack untap + force-block
+  via `Effect::Provoke` + `CardInstance.must_block`),
   ✅ Battle Cry (`shortcut::battle_cry` — Goblin Wardriver),
   ✅ Exalted (`shortcut::exalted` — Akrasan/Aven Squire, Silverquill
   Duelmaster), ✅ Frenzy (`shortcut::frenzy` — CR 702.68),
@@ -276,8 +278,8 @@ feature; sweep card-batch by card-batch.
   must-block requirements on the blocker side; cost-to-block (509.1d-f).
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ✅ **Goad** (above). ✅ **Lure** (`Keyword::AllMustBlock`).
-  ⏳ **Ninjutsu attacking-creature swap**,
-  **provoke**.
+  ✅ **Provoke** (`shortcut::provoke`, CR 702.39).
+  ⏳ **Ninjutsu attacking-creature swap**.
 
 ## Tier 7 — UI / UX core (the Arena "feel" gap)
 

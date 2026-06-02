@@ -867,6 +867,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
         Effect::Explore { .. } => "Explore",
         Effect::Goad { .. } => "Goad",
+        Effect::Provoke { .. } => "Provoke",
         Effect::Monstrosity { .. } => "Monstrosity",
         Effect::MoveCounter { .. } => "Move counters",
         Effect::RevealTopCard { .. } => "Reveal top card",

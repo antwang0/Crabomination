@@ -447,6 +447,35 @@ impl GameState {
             }
         }
 
+        // CR 702.39 — Provoke: a creature provoked this combat (`must_block`
+        // set to an attacker still in this combat) must be assigned to block
+        // that attacker if it's able to. It was untapped by the provoke
+        // resolution, so "able" reduces to the normal can-block checks.
+        for b in &self.battlefield {
+            let Some(required) = b.must_block else { continue };
+            // The provoker must still be attacking for the requirement to bind.
+            if !self.attacking.iter().any(|a| a.attacker == required) { continue; }
+            if !b.definition.is_creature()
+                || !b.can_block()
+                || kws_of(b.id).contains(&Keyword::CantBlock)
+            {
+                continue;
+            }
+            let Some(attacker) = self.battlefield_find(required) else { continue };
+            let atk_colors = cp_of(required).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let able = cp_of(b.id).is_some_and(|bcp| {
+                super::can_block_attacker_computed(b, attacker, bcp, kws_of(required), atk_colors)
+            });
+            if !able {
+                continue;
+            }
+            let assigned = self.block_map.get(&b.id) == Some(&required)
+                || assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required);
+            if !assigned {
+                return Err(GameError::MustBeBlockedIfAble(required));
+            }
+        }
+
         // Combat-keyword P/T adjustments applied on block declaration:
         // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23).
         // Snapshot the +/-N deltas (same value on power and toughness)
@@ -570,6 +599,10 @@ impl GameState {
         self.attacking.clear();
         self.block_map.clear();
         self.blockers_declared = false;
+        // CR 702.39 — provoke's "block this combat" requirement ends here.
+        for c in &mut self.battlefield {
+            c.must_block = None;
+        }
 
         events.push(GameEvent::CombatResolved);
         Ok(events)

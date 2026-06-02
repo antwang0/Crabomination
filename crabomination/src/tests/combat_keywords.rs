@@ -72,6 +72,57 @@ fn cr_702_68_frenzy_silent_when_blocked() {
 
 // ── CR 702.158 Connive ─────────────────────────────────────────────────────
 
+// ── CR 702.39 Provoke ────────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_39_provoke_untaps_and_forces_block() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Provoker", 2, 2, vec![shortcut::provoke()]));
+    g.clear_sickness(atk);
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(blk).unwrap().tapped = true; // provoke should untap it
+
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+
+    let b = g.battlefield_find(blk).unwrap();
+    assert!(!b.tapped, "provoke untaps the target");
+    assert_eq!(b.must_block, Some(atk), "provoke links the target to the attacker");
+
+    // Declaring no blockers is illegal — the provoked creature must block.
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![])).is_err(),
+        "provoked creature must block if able");
+    // Blocking the provoker is legal.
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block the provoker");
+}
+
+#[test]
+fn cr_702_39_provoke_doesnt_force_when_unable_to_block() {
+    let mut g = two_player_game();
+    // Flying attacker: a grounded provoked creature can't block it, so the
+    // requirement doesn't bind.
+    let mut def = body("Sky Provoker", 2, 2, vec![shortcut::provoke()]);
+    def.keywords.push(crate::card::Keyword::Flying);
+    let atk = g.add_card_to_battlefield(0, def);
+    g.clear_sickness(atk);
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no reach/flying
+
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(blk).unwrap().must_block, Some(atk), "still provoked");
+
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    // Grounded creature can't block a flier, so declaring no blockers is legal.
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("can't block a flier — no requirement");
+}
+
 // ── CR 702.142 Boast ─────────────────────────────────────────────────────────
 
 #[test]

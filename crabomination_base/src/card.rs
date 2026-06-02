@@ -1220,6 +1220,10 @@ pub struct CardInstance {
     /// this turn"). Cleared in per-turn cleanup. Transient — not
     /// serialized (defaults to false on snapshot reload).
     pub attacked_this_turn: bool,
+    /// CR 702.39 — Provoke: the attacker this creature must block this
+    /// combat if able. Set when an attacker provokes it (untap + force
+    /// block); cleared at end of combat. Transient — not serialized.
+    pub must_block: Option<CardId>,
     /// CR 603.6e — set on a card in exile that a permanent's "exile until
     /// ~ leaves" ability put there. When that source leaves the
     /// battlefield the engine returns this card to `ExileLink::return_to`.
@@ -1299,6 +1303,7 @@ impl CardInstance {
             regeneration_shields: 0,
             skip_next_untap: false,
             attacked_this_turn: false,
+            must_block: None,
             exiled_by: None,
             granted_flashback_eot: None,
             granted_alt_cast_cost_eot: None,

@@ -863,9 +863,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   by ≥1" — Academic Dispute) plus `Keyword::AllMustBlock` (true Lure —
   every idle defender creature able to block this attacker must be
   assigned to it; the Lure aura). Both enforced in `declare_blockers`
-  off computed keywords. Targeted single-creature Provoke ("that creature
-  must block this") still ⏳ (needs a per-blocker `must_block_attacker`
-  link + untap).
+  off computed keywords. Targeted single-creature **Provoke** (CR 702.39)
+  is ✅: `Effect::Provoke` / `shortcut::provoke` untaps the target and
+  stamps `CardInstance.must_block`; `declare_blockers` forces that
+  creature to block the provoker if able, cleared at end of combat.
   (e) **509.1d-f** cost-to-block lock-in and payment — ⏳ (no
   blocker-cost activation pipeline; no cards in the catalog have
   "creatures can't block unless their controller pays {N}").

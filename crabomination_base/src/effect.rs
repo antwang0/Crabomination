@@ -1235,6 +1235,10 @@ pub enum Effect {
     /// than a goader if able, until that goader's next turn. Disrupt Decorum
     /// (mass goad), Bloodthirsty Blade.
     Goad { what: Selector },
+    /// CR 702.39 — *provoke*: untap the creature `what` resolves to and force
+    /// it to block this combat's source attacker if able. Sets the target's
+    /// `must_block` to the effect source. Used by `shortcut::provoke`.
+    Provoke { what: Selector },
     /// CR 701.40 — each permanent `who` resolves to *explores*: its
     /// controller reveals the top card of their library. If it's a land,
     /// it goes to hand; otherwise the exploring permanent gets a +1/+1
@@ -2076,6 +2080,7 @@ impl Effect {
             }
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),
+            Effect::Provoke { what } => sel_has_target(what),
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
@@ -2110,6 +2115,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
+            | Effect::Provoke { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
@@ -2264,6 +2270,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
+            | Effect::Provoke { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
@@ -3456,6 +3463,21 @@ pub mod shortcut {
         TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect,
+        }
+    }
+    /// CR 702.39 — Provoke: "Whenever this attacks, you may have target
+    /// creature defending player controls untap and block it this combat
+    /// if able." (The "you may" collapses — the attacker provokes a legal
+    /// opponent creature when one exists.)
+    pub fn provoke() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Provoke {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
         }
     }
     pub fn on_dies(effect: Effect) -> TriggeredAbility {
