@@ -204,6 +204,8 @@ mod tests {
             kickable_hand: vec![],
             dashable_hand: vec![],
             activatable_permanents: vec![],
+            legal_attackers: vec![],
+            legal_blockers: vec![],
         }
     }
 

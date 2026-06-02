@@ -32,6 +32,11 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
+use ab_glyph::{FontVec, PxScale};
+use image::{Rgba, RgbaImage};
+use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut, text_size};
+use imageproc::rect::Rect;
+
 /// One image to fetch. Built from the catalog walk; consumed by
 /// [`ensure_card_images`].
 #[derive(Debug, Clone)]
@@ -63,6 +68,16 @@ impl CardImage {
             CardImage::Front(n) => (*n).to_string(),
             CardImage::MdfcBack { front, back } => format!("{back} (back of {front})"),
             CardImage::Token { name } => format!("{name} token"),
+        }
+    }
+
+    /// The card's own display name, used as the text on the white
+    /// name-placeholder when there's no Scryfall art.
+    fn display_name(&self) -> &str {
+        match self {
+            CardImage::Front(n)
+            | CardImage::MdfcBack { back: n, .. }
+            | CardImage::Token { name: n } => n,
         }
     }
 
@@ -112,17 +127,17 @@ fn is_fictional(name: &str) -> bool {
 /// Blocks until done. Idempotent: existing files are skipped, fresh
 /// downloads are rate-limited to â‰¤10 req/s per Scryfall's guidance.
 ///
-/// Fictional cards (engine-invented MDFCs + token names) get a
-/// **cardback copy** as a placeholder file so the runtime asset
-/// loader doesn't spam `Path not found` errors when those cards
-/// enter play. The placeholder is visually a card-back; replacing it
-/// with a real token image is a future improvement.
+/// Cards with no Scryfall art — engine-invented synthesized cards, MDFC
+/// backs that 404, etc. — get a generated **white card carrying the
+/// card's name** as a placeholder file, so the runtime asset loader has
+/// something to serve and doesn't spam `Path not found`. These are a few
+/// KB each (vs. the 10 MB cardback copy this used to stamp, which bloated
+/// `cards/` by tens of GB).
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     let cards_dir = assets_dir.join("cards");
     fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
-    // `cards/` is gitignored (downloaded card art); the cardback ships
-    // at the asset-dir root so it survives a fresh clone.
-    let cardback_placeholder = assets_dir.join("cardback.png");
+    // Load the UI font once for placeholder text (None → blank white card).
+    let placeholder_font = load_placeholder_font(assets_dir);
 
     // Tallies for a one-line summary instead of per-card spam. The audit
     // catalog contains ~3500 synthesised STX cards that aren't on Scryfall;
@@ -137,26 +152,15 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
             continue;
         }
         if spec.is_fictional() {
-            // Stamp a cardback copy so the asset loader has *something*
-            // to serve when the token / fictional card enters play.
-            // Best-effort: if the cardback itself isn't on disk yet
-            // we silently skip â€” Bevy will still log a missing-asset
-            // warning for that single token instance, but the rest of
-            // the prefetch keeps running.
-            if cardback_placeholder.exists() {
-                if let Err(e) = fs::copy(&cardback_placeholder, &path) {
-                    eprintln!(
-                        "  Failed to write placeholder for {}: {e}",
-                        spec.label(),
-                    );
-                } else {
-                    fictional += 1;
-                }
+            // Generate a white name-placeholder so the asset loader has
+            // something to serve when this catalog-invented card enters
+            // play (it has no Scryfall printing).
+            if let Err(e) =
+                write_name_placeholder(&path, spec.display_name(), placeholder_font.as_ref())
+            {
+                eprintln!("  Failed to write placeholder for {}: {e}", spec.label());
             } else {
-                eprintln!(
-                    "  Skipping {}: not a real Scryfall card (cardback placeholder missing too)",
-                    spec.label(),
-                );
+                fictional += 1;
             }
             continue;
         }
@@ -172,8 +176,8 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
                 // 404s are expected here: the audit catalog holds many
                 // synthesised STX cards with clean, real-looking names
                 // we can't pre-filter, so they only reveal themselves as
-                // "not found" on the first prefetch. Stamp the cardback
-                // placeholder (so the runtime has a file to serve and so
+                // "not found" on the first prefetch. Write the white
+                // name placeholder (so the runtime has a file to serve and so
                 // re-runs skip via the `path.exists()` check above) and
                 // count it â€” a per-card error line here is the flood.
                 let is_404 = e
@@ -183,11 +187,11 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
                     eprintln!("  Failed to download {}: {e}", spec.label());
                 }
                 unavailable += 1;
-                if cardback_placeholder.exists()
-                    && let Err(copy_err) = fs::copy(&cardback_placeholder, &path)
+                if let Err(ph_err) =
+                    write_name_placeholder(&path, spec.display_name(), placeholder_font.as_ref())
                 {
                     eprintln!(
-                        "  Also failed to stamp cardback placeholder for {}: {copy_err}",
+                        "  Also failed to write placeholder for {}: {ph_err}",
                         spec.label(),
                     );
                 }
@@ -201,9 +205,93 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
         println!(
             "Card image prefetch: {downloaded} downloaded, \
              {fictional} fictional placeholder(s), \
-             {unavailable} unavailable (cardback placeholder)."
+             {unavailable} unavailable (name placeholder)."
         );
     }
+}
+
+/// Generated name-placeholder dimensions, in Scryfall "normal" card
+/// proportions (63 × 88).
+const PLACEHOLDER_W: u32 = 488;
+const PLACEHOLDER_H: u32 = 680;
+
+/// Load the UI font once for placeholder text. Returns `None` if the font
+/// file isn't where we expect — the placeholder then renders as a blank
+/// white card (still far better than the old 10 MB cardback copy).
+fn load_placeholder_font(assets_dir: &Path) -> Option<FontVec> {
+    let bytes = fs::read(assets_dir.join(crate::theme::FONT_PATH)).ok()?;
+    FontVec::try_from_vec(bytes).ok()
+}
+
+/// Write a white "card" PNG carrying `name` as centered, word-wrapped
+/// text — the placeholder for cards with no Scryfall art (synthesized
+/// cards, MDFC backs, 404s). A few KB each, vs. the 10 MB cardback copy
+/// this replaced.
+fn write_name_placeholder(
+    path: &Path,
+    name: &str,
+    font: Option<&FontVec>,
+) -> image::ImageResult<()> {
+    let mut img =
+        RgbaImage::from_pixel(PLACEHOLDER_W, PLACEHOLDER_H, Rgba([245, 245, 245, 255]));
+
+    // Card frame: a couple of nested dark rectangles.
+    let frame = Rgba([70, 70, 70, 255]);
+    draw_hollow_rect_mut(
+        &mut img,
+        Rect::at(6, 6).of_size(PLACEHOLDER_W - 12, PLACEHOLDER_H - 12),
+        frame,
+    );
+    draw_hollow_rect_mut(
+        &mut img,
+        Rect::at(7, 7).of_size(PLACEHOLDER_W - 14, PLACEHOLDER_H - 14),
+        frame,
+    );
+
+    if let Some(font) = font {
+        let ink = Rgba([25, 25, 25, 255]);
+        let scale = PxScale::from(34.0);
+        let margin = 30u32;
+        let max_w = (PLACEHOLDER_W - margin * 2) as i32;
+
+        // Greedy word-wrap measured against the real glyph metrics.
+        let mut lines: Vec<String> = Vec::new();
+        let mut cur = String::new();
+        for word in name.split_whitespace() {
+            let trial = if cur.is_empty() {
+                word.to_string()
+            } else {
+                format!("{cur} {word}")
+            };
+            if text_size(scale, font, &trial).0 as i32 > max_w && !cur.is_empty() {
+                lines.push(std::mem::take(&mut cur));
+                cur = word.to_string();
+            } else {
+                cur = trial;
+            }
+        }
+        if !cur.is_empty() {
+            lines.push(cur);
+        }
+
+        let line_h = 42i32;
+        let total_h = line_h * lines.len() as i32;
+        let mut y = (PLACEHOLDER_H as i32 - total_h) / 2;
+        for line in &lines {
+            let line_w = text_size(scale, font, line).0 as i32;
+            let x = (PLACEHOLDER_W as i32 - line_w) / 2;
+            draw_text_mut(&mut img, ink, x, y, scale, font, line);
+            y += line_h;
+        }
+    }
+
+    // Write atomically (temp file + rename) so a prefetch interrupted
+    // mid-write never leaves a 0-byte placeholder that the `path.exists()`
+    // skip would treat as done on the next run.
+    let tmp = path.with_extension("png.tmp");
+    img.save_with_format(&tmp, image::ImageFormat::Png)?;
+    fs::rename(&tmp, path)?;
+    Ok(())
 }
 
 /// Convert a card name to a filename: lowercase, spaces to underscores, .png extension.
@@ -456,7 +544,7 @@ mod tests {
     }
 
     #[test]
-    fn ensure_card_images_stamps_cardback_for_fictional_cards() {
+    fn ensure_card_images_writes_name_placeholder_for_fictional_cards() {
         use std::fs;
         // Use a temp asset dir so we don't pollute the repo.
         let tmp = std::env::temp_dir().join(format!(
@@ -465,10 +553,8 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(tmp.join("cards")).expect("temp setup");
-        // Stamp a 1-byte fake cardback so the placeholder logic has
-        // something to copy from. Lives at the asset-dir root since
-        // `cards/` is gitignored.
-        fs::write(tmp.join("cardback.png"), b"FAKE").expect("write fake cardback");
+        // No fonts dir here, so the placeholder renders as a blank white
+        // card (the font-missing fallback) — still a valid PNG.
 
         let specs = vec![CardImage::Front("Mount Tyrhus")];
         ensure_card_images(&specs, &tmp);
@@ -476,13 +562,16 @@ mod tests {
         let path = tmp.join("cards").join("mount_tyrhus.png");
         assert!(
             path.exists(),
-            "fictional card must get a cardback placeholder at {}",
+            "fictional card must get a name placeholder at {}",
             path.display(),
         );
+        // It's a freshly generated PNG of placeholder dimensions — not a
+        // 10 MB cardback copy.
+        let img = image::open(&path).expect("placeholder must be a valid PNG");
         assert_eq!(
-            fs::read(&path).unwrap(),
-            b"FAKE",
-            "placeholder should be a copy of the cardback bytes",
+            (img.width(), img.height()),
+            (PLACEHOLDER_W, PLACEHOLDER_H),
+            "placeholder should be a card-proportioned canvas",
         );
         let _ = fs::remove_dir_all(&tmp);
     }
