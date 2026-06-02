@@ -206,12 +206,16 @@ feature; sweep card-batch by card-batch.
 - **Value/ETB:** ✅ Investigate (`shortcut::investigate(n)` — CR 701.13,
   mints `clue_token()`s; Thraben Inspector. Sac-Clue payoff rides the
   token's printed `{2}, Sac: Draw`), ✅ Fabricate (`shortcut::fabricate` — CR 702.122, ETB
-  `ChooseMode([+1/+1 counters, 1/1 Servo tokens])`), ⏳ Riot,
+  `ChooseMode([+1/+1 counters, 1/1 Servo tokens])`), ✅ Riot
+  (`shortcut::riot` — CR 702.137, ETB choose Haste-permanent or a +1/+1
+  counter; Zhur-Taa Goblin, Frenzied Arynx),
   ✅ Afterlife (`shortcut::afterlife` — CR 702.135),
   ✅ Explore (`Effect::Explore` + `EventKind::Explored`, CR 701.40 — Merfolk
   Branchwalker, Jadelight Ranger, Wildgrowth Walker, Seekers' Squire,
   Emperor's Vanguard, Path of Discovery), ⏳ Squad, ⏳ Forage,
-  ⏳ Exploit, ⏳ Extort, ⏳ Cohort, ⏳ Support.
+  ⏳ Exploit, ✅ Extort (`shortcut::extort` — CR 702.99, SpellCast
+  `MayPay({W/B}, drain 1)`; Basilica Screecher, Syndic of Tithes, Tithe
+  Drinker, Kingpin's Pet), ⏳ Cohort, ⏳ Support.
 - **Spell-matters:** ⏳ Splice, ⏳ Replicate, ⏳ Overload, ⏳ Cipher,
   ⏳ Surge, ⏳ Spectacle, ⏳ Addendum, ⏳ Conspire, ⏳ Demonstrate.
 - **Resource systems:** ⏳ Energy ({E}), ⏳ Experience counters,
@@ -223,7 +227,8 @@ feature; sweep card-batch by card-batch.
   + HUD chip), ⏳ Ascend / city's blessing,
   ⏳ Initiative / monarch, ⏳ Day/Night, ⏳ Ring-bearer (the Ring tempts you).
 - **Fading family:** ⏳ Fading, ⏳ Vanishing (Parallax cards in cube).
-- **Older mechanics:** ⏳ Soulshift, ⏳ Offering, ⏳ Epic, ⏳ Absorb,
+- **Older mechanics:** ✅ Soulshift (`shortcut::soulshift(n)` — CR 702.46,
+  dies → `MayDo(return target Spirit MV≤n from your graveyard)`), ⏳ Offering, ⏳ Epic, ⏳ Absorb,
   ⏳ Affinity (have artifact count?), ⏳ Entwine, ⏳ Buyback, ⏳ Miracle,
   ⏳ Bloodrush, ⏳ Unleash, ⏳ Scavenge, ⏳ Bestow, ⏳ Tribute.
 
@@ -298,9 +303,11 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 - ⏳ **Hand sorting / auto-tap preferences / "play tapped land" prompt**.
 - ⏳ **Reminder text & rules tooltips** on keywords; **oracle text panel**.
 - ⏳ **Hotkey legend / help overlay**; remappable keys.
-- ⏳ **Highlight legal plays** (castable cards, legal attackers/blockers,
-  legal targets) — `legal_target_filter` exists; extend to a full hint
-  layer.
+- 🟡 **Highlight legal plays** (castable cards, legal attackers/blockers,
+  legal targets) — `ClientView` now carries `castable_hand`,
+  `pitchable_hand`, `kickable_hand`, and **`activatable_permanents`** (each
+  dry-run through `would_accept`). Remaining: legal-attacker/blocker and
+  per-target hint layers (`legal_target_filter` exists to build on).
 - ⏳ **Animations & SFX** polish; **board-state pings / alerts**
   (low life, triggers waiting, your turn).
 - ⏳ **Settings menu** (graphics quality exists; add audio, gameplay,
