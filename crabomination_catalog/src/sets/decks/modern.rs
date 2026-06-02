@@ -6410,6 +6410,41 @@ pub fn thraben_inspector() -> CardDefinition {
     }
 }
 
+/// Goblin Chainwhirler — {R}{R}{R} Creature — Goblin Soldier, 3/3, First
+/// strike. ETB: deal 1 damage to each creature an opponent controls and to
+/// each opponent.
+pub fn goblin_chainwhirler() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Chainwhirler",
+        cost: cost(&[r(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(1),
+                }),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Goblin Bushwhacker — {R} Creature — Goblin, 1/1, Haste. Kicker {R}.
 /// When it enters, if it was kicked, creatures you control get +1/+0 and
 /// gain haste until end of turn (CR 702.32 + ETB-kicked context).

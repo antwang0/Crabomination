@@ -1049,6 +1049,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Kicker (CR 702.32) ──
         goblin_bushwhacker,
+        goblin_chainwhirler,
         // ── Evoke Incarnation (MH2) ──
         fury,
         // ── divided-damage burn (claude/modern_decks) ──

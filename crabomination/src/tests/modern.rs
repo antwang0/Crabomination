@@ -8438,6 +8438,23 @@ fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
 // ── modern_decks-11: Multi-color removal + sweepers + body ───────────────────
 
 #[test]
+fn goblin_chainwhirler_etb_pings_opponents_board() {
+    let mut g = two_player_game();
+    let x1 = g.add_card_to_battlefield(1, catalog::mons_goblin_raiders()); // 1/1
+    let _own = g.add_card_to_battlefield(0, catalog::mons_goblin_raiders()); // our 1/1, unscathed
+    let id = g.add_card_to_hand(0, catalog::goblin_chainwhirler());
+    g.players[0].mana_pool.add(Color::Red, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Goblin Chainwhirler castable for {R}{R}{R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == x1), "opp 1/1 dies to the 1-damage ping");
+    assert!(g.battlefield.iter().any(|c| c.id == _own), "our own creature is unscathed");
+    assert_eq!(g.players[1].life, 19, "the opponent also takes 1");
+}
+
+#[test]
 fn grief_etb_discards_a_nonland_card() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::grief());
