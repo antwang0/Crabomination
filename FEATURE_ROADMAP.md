@@ -51,7 +51,10 @@ read of the code and should be re-verified before picking up an item.
   (`StaticEffect::CapDrawsPerTurn`, surfaced in `PlayerView.draw_cap` + HUD);
   dynamic MV-vs-graveyard target gate
   (`SelectionRequirement::ManaValueAtMostControllerGraveyard` — Drown in the
-  Loch).
+  Loch); self-buff scaled by controlled permanents
+  (`StaticEffect::PumpSelfByControlledPermanents` + `TokenDefinition.
+  static_abilities` — Karn, Scion of Urza's Construct token gets +1/+1 per
+  artifact you control).
 
 ---
 

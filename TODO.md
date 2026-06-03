@@ -8,6 +8,21 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Reuse `StaticEffect::PumpSelfByControlledPermanents`** — the new
+  self-buff-scaled-by-controlled-permanents static (Karn's Construct token)
+  also fits Master of Etherium, Tempered Steel-style self-counts, and any
+  "this gets +1/+1 for each [type] you control" body currently stubbed as a
+  fixed P/T. Apply opportunistically when real card data is available.
+- **`SelectionRequirement::NamedBySource`** — to finish Spoils of the Vault
+  (name a card, then reveal-until-that-name), `Effect::RevealUntilFind`
+  needs a `find` filter that matches the source permanent's `named_card`.
+  `SelectionRequirement::HasName(String)` exists but the name is dynamic;
+  add a variant that reads `named_card` off the resolving source.
+- **Client build in CI/web env** — `crabomination_client` (Bevy) fails to
+  build here because `wayland-client` system libs aren't installed, so
+  client-side changes can't be compiled/tested in this environment. UI
+  parity is fed through the server `view.rs` projection (cost labels,
+  static/triggered ability labels) which *is* testable.
 - **Entwine (CR 702.41)** — Plunge into Darkness (cached) is the only entwine
   card; needs an `entwine_cost` cast-mode that flips a `ChooseMode` to "run
   all modes" when paid (kicker-style additional cost + `kicked`-style flag).
