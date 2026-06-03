@@ -59,11 +59,12 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
   target slots (Steal the Show). **Divided damage** ("deal N damage divided
   as you choose among 1+ targets") is now wired via `Effect::DealDamageDivided`
   + `Decision::DivideDamage` (Forked Bolt, Pyrokinesis, Crackle with Power,
-  Magma Opus; AutoDecider spreads evenly). "Up to N targets" with a per-slot
-  effect is wired via the two-slot `Move`/`Tap` pattern (Snow Day ✅ taps +
-  stuns up to two; Devious Cover-Up ✅ counters + strips one graveyard card).
-  The remaining gap is true "exile **any number** of target cards" prompts
-  (Devious Cover-Up collapses its multi-strip to one).
+  Magma Opus; AutoDecider spreads evenly). **"Exile any number of target
+  cards from graveyards"** is now wired via `Effect::ExileAnyNumberFromGraveyards`
+  + `Decision::ChooseCards` (Devious Cover-Up ✅ counters + strips *any number*;
+  AutoDecider exiles nothing, the bot exiles opponents' cards). "Up to N
+  targets" with a per-slot effect rides the two-slot `Move`/`Tap` pattern
+  (Snow Day ✅ taps + stuns up to two).
 
 All printed SOS cards are now ✅, and the Learn / Lessons-sideboard mechanic
 is wired end-to-end (engine + every Learn card + cube/format/draft sideboards

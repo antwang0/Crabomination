@@ -1355,6 +1355,12 @@ pub enum Effect {
     /// Dust, Spreading Plague-style name sweeps. `what` resolves the
     /// anchor permanent (slot 0); its printed name keys the sweep.
     ExileSameNameAsTarget { what: Selector },
+    /// "Exile any number of target cards from graveyards." The controller
+    /// picks a subset (via `Decision::ChooseCards`) of every graveyard card
+    /// matching `filter`; chosen cards move to exile. AutoDecider exiles
+    /// nothing (the conservative "up to" default); the bot exiles opponents'
+    /// cards. Devious Cover-Up's graveyard-strip rider.
+    ExileAnyNumberFromGraveyards { filter: crate::card::SelectionRequirement },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the
@@ -2280,6 +2286,7 @@ impl Effect {
             Effect::SacrificeAndRemember { .. } => false,
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
             Effect::PayLifeLookTake { .. } => false,
+            Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

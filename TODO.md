@@ -25,10 +25,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   and drop their Foretell alt-cost — needs a face-down exile zone + a
   foretell action + cast-from-exile-for-foretell-cost. Highest-leverage STX
   keyword still ⏳.
-- **"Exile any number of target cards" (graveyard hate).** Devious Cover-Up,
-  and several STX graveyard-strip riders collapse their multi-strip to one
-  target. Needs a variable-count target primitive (companion to
-  `Decision::ChooseAmount`, which only covers self-sacrifice counts today).
+- **"Exile any number of target cards" (graveyard hate).** ✅ Wired via
+  `Effect::ExileAnyNumberFromGraveyards` + `Decision::ChooseCards`
+  (AutoDecider exiles nothing; the bot exiles opponents' cards). Devious
+  Cover-Up is now faithful. Remaining: extend `ChooseCards` to *battlefield*
+  / hand "any number of target permanents" pickers (it's graveyard-only
+  today) and surface a client multi-select modal.
 - **Enduring cycle breadth.** `Effect::ReturnSelfAsEnchantment` handles the
   "return as enchantment" half (Enduring Innocence). The other Enduring
   cards (Vitality, Tenacity, Courage, Curiosity) keep distinct enchantment-

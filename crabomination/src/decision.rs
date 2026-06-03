@@ -244,6 +244,22 @@ pub enum Decision {
         /// Inclusive upper bound (creatures you control, current life, …).
         max: u32,
     },
+
+    /// "Choose any number of cards" — pick a subset of `candidates` (e.g.
+    /// "exile any number of target cards from graveyards", Devious Cover-Up).
+    /// The decider answers `Cards(ids)` with any subset (≤ `max`) of the
+    /// offered ids; ids outside `candidates` are dropped and the list is
+    /// truncated to `max`. `AutoDecider` returns an empty set (the
+    /// conservative "up to" default — choose nothing unprompted).
+    ChooseCards {
+        source: CardId,
+        /// A short human-readable prompt ("Exile which cards?").
+        prompt: String,
+        /// The selectable cards (id + display name), already filtered.
+        candidates: Vec<(CardId, String)>,
+        /// Inclusive upper bound on how many may be chosen.
+        max: u32,
+    },
 }
 
 /// The decider's answer to a `Decision::Learn`.
@@ -319,6 +335,9 @@ pub enum DecisionAnswer {
     /// A chosen number answering `Decision::ChooseAmount`. Clamped to the
     /// decision's `max` by the engine.
     Amount(u32),
+    /// A chosen subset of cards answering `Decision::ChooseCards`. Ids outside
+    /// the offered candidates are dropped; the list is truncated to `max`.
+    Cards(Vec<CardId>),
 }
 
 /// Spread `total` damage across `n` targets as evenly as possible, with the
@@ -464,6 +483,9 @@ impl Decider for AutoDecider {
             // Conservative default — never pay life / sacrifice unprompted.
             // ScriptedDecider supplies a positive amount.
             Decision::ChooseAmount { .. } => DecisionAnswer::Amount(0),
+            // Conservative "up to" default — choose nothing unprompted.
+            // ScriptedDecider / the bot supply a positive subset.
+            Decision::ChooseCards { .. } => DecisionAnswer::Cards(vec![]),
         }
     }
 }

@@ -101,6 +101,11 @@ impl Bot for RandomBot {
                             description,
                         ))
                     }
+                    // AutoDecider chooses nothing; the bot exiles opponents'
+                    // graveyard cards (deny graveyard value) up to the cap.
+                    crate::decision::Decision::ChooseCards { candidates, max, .. } => {
+                        decide_choose_cards(state, seat, candidates, *max)
+                    }
                     other => AutoDecider.decide(other),
                 };
                 return Some(GameAction::SubmitDecision(answer));
@@ -566,6 +571,32 @@ fn decide_library_search(
         }
     }
     DecisionAnswer::Search(Some(best.map(|(id, _)| id).unwrap_or(candidates[0].0)))
+}
+
+/// Bot heuristic for `Decision::ChooseCards` ("exile any number of target
+/// cards from graveyards"): exile every offered card an opponent owns, up to
+/// `max`. Skips the bot's own graveyard cards (no reason to self-mill into
+/// exile). Falls back to nothing when only own cards are offered.
+fn decide_choose_cards(
+    state: &GameState,
+    seat: usize,
+    candidates: &[(crate::card::CardId, String)],
+    max: u32,
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::DecisionAnswer;
+    let owner_of = |id: crate::card::CardId| -> Option<usize> {
+        state
+            .players
+            .iter()
+            .position(|p| p.graveyard.iter().any(|c| c.id == id))
+    };
+    let chosen: Vec<_> = candidates
+        .iter()
+        .filter(|(id, _)| owner_of(*id).is_some_and(|o| !state.same_team(o, seat)))
+        .map(|(id, _)| *id)
+        .take(max as usize)
+        .collect();
+    DecisionAnswer::Cards(chosen)
 }
 
 fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {

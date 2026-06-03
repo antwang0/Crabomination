@@ -1737,16 +1737,8 @@ pub fn charge_through() -> CardDefinition {
 
 /// Devious Cover-Up — {2}{U}{U} Instant (Mono-U STX).
 /// "Counter target spell. Then exile any number of target cards from
-/// graveyards."
-///
-/// ✅ The Cancel-grade counter ships full via `Effect::CounterSpell`
-/// against `IsSpellOnStack`. The "exile any number of target cards
-/// from graveyards" rider collapses to "exile up to one graveyard
-/// card across all players" — the engine-wide multi-target prompt gap
-/// shared with Vibrant Outburst ✅, Snow Day ✅, Spell Satchel,
-/// Crackle with Power ✅. The single-strip captures the headline play
-/// pattern (counter + take one threat off the graveyard pile);
-/// tracked in TODO.md.
+/// graveyards." The graveyard-strip rider ships via
+/// `Effect::ExileAnyNumberFromGraveyards` (`Decision::ChooseCards`).
 pub fn devious_cover_up() -> CardDefinition {
     CardDefinition {
         name: "Devious Cover-Up",
@@ -1754,17 +1746,7 @@ pub fn devious_cover_up() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
-            // "Any number of target cards" collapses to one — the engine
-            // doesn't yet thread a multi-target prompt through CastSpell.
-            Effect::Exile {
-                what: Selector::take(
-                    Selector::EachMatching {
-                        zone: crate::effect::ZoneRef::Graveyard(PlayerRef::EachPlayer),
-                        filter: SelectionRequirement::Any,
-                    },
-                    Value::Const(1),
-                ),
-            },
+            Effect::ExileAnyNumberFromGraveyards { filter: SelectionRequirement::Any },
         ]),
         ..Default::default()
     }

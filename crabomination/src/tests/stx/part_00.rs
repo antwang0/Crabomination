@@ -3196,10 +3196,12 @@ fn charge_through_pumps_and_grants_trample() {
 }
 
 #[test]
-fn devious_cover_up_counters_a_spell_and_exiles_gy_card() {
+fn devious_cover_up_counters_a_spell_and_exiles_chosen_gy_cards() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // P1 casts Bolt; P0 counters with Devious Cover-Up. Also seed P1's gy.
-    let extra_gy = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    // P1 casts Bolt; P0 counters with Devious Cover-Up. Also seed two gy cards.
+    let extra0 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let extra1 = g.add_card_to_graveyard(1, catalog::lightning_bolt());
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.players[1].mana_pool.add(Color::Red, 1);
     g.active_player_idx = 1;
@@ -3209,6 +3211,8 @@ fn devious_cover_up_counters_a_spell_and_exiles_gy_card() {
     }).expect("Bolt castable");
 
     g.priority.player_with_priority = 0;
+    // "Exile any number" — choose both seeded gy cards (across both players).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![extra0, extra1])]));
     let cover = g.add_card_to_hand(0, catalog::devious_cover_up());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(2);
@@ -3217,19 +3221,38 @@ fn devious_cover_up_counters_a_spell_and_exiles_gy_card() {
     }).expect("Cover-Up castable for {2}{U}{U}");
     drain_stack(&mut g);
 
-    // P0's life unchanged (Bolt countered).
     assert_eq!(g.players[0].life, 20, "Bolt countered");
-    // The countered Bolt is in P1's graveyard. The exile-1 rider runs on
-    // some graveyard card; total graveyard size of P1 should drop.
-    // Before exile: 1 (extra_gy) + 1 (countered Bolt). After: at least one
-    // should have moved to exile.
-    let p1_gy_count = g.players[1].graveyard.len();
-    assert!(
-        p1_gy_count <= 1,
-        "exactly one gy card should be exiled by the rider (was {})",
-        p1_gy_count
-    );
-    let _ = extra_gy;
+    // Both chosen graveyard cards are now in exile; the countered Bolt
+    // (not chosen) remains in P1's graveyard.
+    assert!(g.exile.iter().any(|c| c.id == extra0), "P0 gy card exiled");
+    assert!(g.exile.iter().any(|c| c.id == extra1), "P1 gy card exiled");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "countered Bolt stays");
+}
+
+#[test]
+fn devious_cover_up_auto_decider_exiles_nothing() {
+    // AutoDecider answers ChooseCards with the empty set ("up to" default).
+    let mut g = two_player_game();
+    let gy = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    g.priority.player_with_priority = 0;
+    let cover = g.add_card_to_hand(0, catalog::devious_cover_up());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cover, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cover-Up castable");
+    drain_stack(&mut g);
+    // Nothing exiled; both the seed and the countered Bolt remain.
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == gy));
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+    assert!(g.exile.is_empty(), "AutoDecider exiles nothing");
 }
 
 #[test]

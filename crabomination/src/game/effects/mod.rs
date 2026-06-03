@@ -1832,6 +1832,45 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileAnyNumberFromGraveyards { filter } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                // Gather every graveyard card matching `filter`, across all
+                // players. Each is offered as a `ChooseCards` candidate.
+                let mut candidates: Vec<(CardId, String)> = Vec::new();
+                for p in 0..self.players.len() {
+                    for c in &self.players[p].graveyard {
+                        if self.evaluate_requirement_static(
+                            filter, &Target::Permanent(c.id), p, ctx.source,
+                        ) {
+                            candidates.push((c.id, c.definition.name.to_string()));
+                        }
+                    }
+                }
+                if candidates.is_empty() { return Ok(()); }
+                let max = candidates.len() as u32;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Exile which cards from graveyards?".to_string(),
+                    candidates: candidates.clone(),
+                    max,
+                });
+                let valid: std::collections::HashSet<CardId> =
+                    candidates.iter().map(|(id, _)| *id).collect();
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(ids) => ids
+                        .into_iter()
+                        .filter(|id| valid.contains(id))
+                        .take(max as usize)
+                        .collect(),
+                    _ => vec![],
+                };
+                for cid in chosen {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ExileSameNameAsTarget { what } => {
                 // Crumble to Dust: exile the anchor permanent, then exile every
                 // same-named card from its owner's graveyard, hand, and library,

@@ -888,6 +888,14 @@ pub enum DecisionWire {
         prompt: String,
         max: u32,
     },
+    /// Choose any number of cards (exile any number from graveyards).
+    /// Decider answers `Cards(ids)`.
+    ChooseCards {
+        source: CardId,
+        prompt: String,
+        candidates: Vec<(CardId, String)>,
+        max: u32,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -1007,6 +1015,14 @@ impl From<&Decision> for DecisionWire {
                 prompt: prompt.clone(),
                 max: *max,
             },
+            Decision::ChooseCards { source, prompt, candidates, max } => {
+                DecisionWire::ChooseCards {
+                    source: *source,
+                    prompt: prompt.clone(),
+                    candidates: candidates.clone(),
+                    max: *max,
+                }
+            }
         }
     }
 }
