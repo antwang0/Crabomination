@@ -242,6 +242,8 @@ pub fn fractal_summoning() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Fractal Summoning",
@@ -341,6 +343,7 @@ fn quandrix_fractal_token() -> TokenDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -12184,6 +12187,8 @@ pub fn quandrix_sumtotal_b191() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Quandrix Sumtotal (b191)",
@@ -12518,6 +12523,8 @@ pub fn quandrix_fractal_tutor_b187() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Quandrix Fractal-Tutor (b187)",

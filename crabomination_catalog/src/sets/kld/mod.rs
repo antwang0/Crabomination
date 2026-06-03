@@ -315,6 +315,8 @@ pub fn aether_swooper() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Aether Swooper",

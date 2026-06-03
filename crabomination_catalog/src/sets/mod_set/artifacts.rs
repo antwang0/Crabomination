@@ -823,6 +823,8 @@ pub fn hangarback_walker() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Hangarback Walker",

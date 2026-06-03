@@ -45,6 +45,7 @@ pub fn pest_token() -> TokenDefinition {
                 amount: Value::Const(1),
             },
         }],
+        static_abilities: vec![],
     }
 }
 
@@ -74,6 +75,7 @@ pub fn elemental_token() -> TokenDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 

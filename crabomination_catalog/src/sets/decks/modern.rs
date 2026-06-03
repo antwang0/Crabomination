@@ -2702,6 +2702,8 @@ pub fn raise_the_alarm() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         },
         triggered_abilities: vec![],
@@ -3431,6 +3433,8 @@ pub fn regisaur_alpha() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         })],
         ..Default::default()
@@ -3664,6 +3668,8 @@ pub fn raptor_hatchling() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         }],
@@ -3800,6 +3806,8 @@ pub fn spectral_procession() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         },
         triggered_abilities: vec![],
@@ -3870,6 +3878,8 @@ pub fn beast_within() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
             Effect::Destroy {
@@ -5157,6 +5167,8 @@ pub fn doomed_dissenter() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         })],
         ..Default::default()
@@ -6120,11 +6132,14 @@ pub fn biorhythm() -> CardDefinition {
 /// * +1 collapses to "draw 1, mill 1" — the opp-pile-split is information-
 ///   only at this engine fidelity.
 /// * -1 grants +1/+1 counter to each Construct (via `ForEach` + `AddCounter`).
-/// * -2 creates a vanilla 1/1 colorless Construct token (no artifact-count
-///   scaling primitive yet).
+/// * -2 creates a 0/0 colorless Construct token whose
+///   `StaticEffect::PumpSelfByControlledPermanents` grants +1/+1 for each
+///   artifact its controller controls (the token itself is an artifact, so
+///   it's at least 1/1).
 pub fn karn_scion_of_urza() -> CardDefinition {
     use crate::card::{
-        LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup, TokenDefinition,
+        LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, StaticEffect, Supertype as Sup,
+        TokenDefinition,
     };
     CardDefinition {
         name: "Karn, Scion of Urza",
@@ -6179,13 +6194,18 @@ pub fn karn_scion_of_urza() -> CardDefinition {
                             creature_types: vec![CreatureType::Construct],
                             ..Default::default()
                         },
-                        supertypes: vec![],
-                        power: 1,
-                        toughness: 1,
-                        keywords: vec![],
-                        colors: vec![],
-                        activated_abilities: vec![],
-                        triggered_abilities: vec![],
+                        power: 0,
+                        toughness: 0,
+                        static_abilities: vec![StaticAbility {
+                            description:
+                                "This creature gets +1/+1 for each artifact you control.",
+                            effect: StaticEffect::PumpSelfByControlledPermanents {
+                                filter: SelectionRequirement::Artifact,
+                                per_power: 1,
+                                per_toughness: 1,
+                            },
+                        }],
+                        ..Default::default()
                     },
                 },
             },
@@ -6663,6 +6683,8 @@ pub fn seasoned_pyromancer() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         ]))],
@@ -8454,6 +8476,8 @@ pub fn murmuring_mystic() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         })],
         ..Default::default()
@@ -9445,6 +9469,8 @@ pub fn ophiomancer() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Ophiomancer",
@@ -9610,6 +9636,8 @@ pub fn white_suns_zenith() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "White Sun's Zenith",
@@ -10628,6 +10656,8 @@ pub fn lingering_souls() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         },
         ..Default::default()
@@ -11762,6 +11792,8 @@ pub fn decree_of_justice() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         },
         ..Default::default()
@@ -11913,6 +11945,7 @@ fn treasure_token() -> TokenDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -12958,6 +12991,8 @@ pub fn young_pyromancer() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         })],
         ..Default::default()
@@ -13008,6 +13043,8 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
                 amount: Value::Const(3),
             },
         }],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Omnath, Locus of Rage",
@@ -13441,6 +13478,8 @@ pub fn kozileks_command() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
             Effect::PumpPT {
@@ -13505,6 +13544,8 @@ pub fn eldrazi_confluence() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
             Effect::Move {
@@ -13826,6 +13867,8 @@ pub fn kari_zev_skyship_raider() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         }],
@@ -14331,6 +14374,8 @@ pub fn esikas_chariot() -> CardDefinition {
                         },
                         activated_abilities: vec![],
                         triggered_abilities: vec![],
+                    
+                        static_abilities: vec![],
                     },
                 },
             },

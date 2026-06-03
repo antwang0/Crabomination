@@ -421,6 +421,8 @@ pub fn strixhaven_spawner() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         supertypes: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Strixhaven Spawner",

@@ -71,6 +71,8 @@ pub fn mascot_exhibition() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     let cat = TokenDefinition {
         name: "Cat".to_string(),
@@ -86,6 +88,8 @@ pub fn mascot_exhibition() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     let bird = TokenDefinition {
         name: "Bird".to_string(),
@@ -101,6 +105,8 @@ pub fn mascot_exhibition() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Mascot Exhibition",
@@ -282,6 +288,8 @@ pub fn body_of_research() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Body of Research",
@@ -432,6 +440,8 @@ pub fn multiple_choice() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Multiple Choice",
@@ -718,6 +728,8 @@ pub fn elemental_expressionism() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         ]),

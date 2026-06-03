@@ -502,6 +502,8 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
                     subtypes: Subtypes::default(),
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                static_abilities: vec![],
+
                 },
             },
         }],
@@ -1472,6 +1474,8 @@ pub fn siege_gang_commander() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Siege-Gang Commander",
@@ -2345,6 +2349,8 @@ pub fn sporemound() -> CardDefinition {
                     subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         }],
@@ -2586,6 +2592,8 @@ pub fn penumbra_spider() -> CardDefinition {
                 subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         })],
         ..Default::default()
@@ -2880,6 +2888,8 @@ pub fn bitterbloom_bearer() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         }],
@@ -3034,6 +3044,8 @@ pub fn blade_splicer() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         }],
@@ -3133,6 +3145,8 @@ pub fn grave_titan() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     let make_zombies = Effect::CreateToken {
         who: PlayerRef::You,
@@ -3399,6 +3413,8 @@ pub fn thragtusk() -> CardDefinition {
                         },
                         activated_abilities: vec![],
                         triggered_abilities: vec![],
+                    
+                        static_abilities: vec![],
                     },
                 },
             },
@@ -3463,6 +3479,8 @@ pub fn wurmcoil_engine() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     let wurm_lifelink = TokenDefinition {
         name: "Phyrexian Wurm".into(),
@@ -3478,6 +3496,8 @@ pub fn wurmcoil_engine() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Wurmcoil Engine",
@@ -3847,6 +3867,8 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Koma, Cosmos Serpent",
@@ -4060,6 +4082,8 @@ pub fn growing_ranks() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
         }],
@@ -4138,6 +4162,8 @@ pub fn basking_broodscale() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Basking Broodscale",
@@ -4359,6 +4385,8 @@ pub fn descendant_of_storms() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Descendant of Storms",
@@ -4443,6 +4471,8 @@ pub fn elder_gargaroth() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Elder Gargaroth",
@@ -4628,6 +4658,8 @@ pub fn doomed_traveler() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         })],
         ..Default::default()

@@ -495,6 +495,8 @@ pub fn lorehold_excavation() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Lorehold Excavation",
@@ -1929,6 +1931,8 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Lorehold Pilgrimwarden",
@@ -6289,6 +6293,8 @@ pub fn lorehold_spiritsage() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Lorehold Spiritsage",
@@ -19291,6 +19297,8 @@ pub fn lorehold_battlescroll_b159() -> CardDefinition {
         subtypes: Subtypes::default(),
         activated_abilities: vec![] as Vec<ActivatedAbility>,
         triggered_abilities: vec![],
+    static_abilities: vec![],
+
     };
     CardDefinition {
         name: "Lorehold Battlescroll (b159)",
@@ -19640,6 +19648,8 @@ pub fn lorehold_cavalcade_b161() -> CardDefinition {
         },
         activated_abilities: vec![] as Vec<ActivatedAbility>,
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Lorehold Cavalcade (b161)",
@@ -20467,6 +20477,8 @@ pub fn lorehold_command() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     // Real Oracle: "Choose two — / • Lorehold Command deals 4 damage to
     // target player or planeswalker. / • Target player creates two 2/2

@@ -2897,6 +2897,8 @@ pub fn mascot_summoning() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+            
+                static_abilities: vec![],
             },
         },
         activated_abilities: no_abilities(),

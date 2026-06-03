@@ -2953,8 +2953,13 @@ fn zonedest_has_target(z: &ZoneDest) -> bool {
 /// A static ability description — what continuous effect(s) it emits while
 /// its source is on the battlefield. Translated at layer-computation time
 /// into concrete [`ContinuousEffect`] values by the engine.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StaticAbility {
+    // Widen the `&'static str` description to an owned `String` on the wire
+    // (and re-intern on load) so `StaticAbility: Deserialize<'de>` holds for
+    // any `'de` — required now that `TokenDefinition` (a non-`'static`-bound
+    // serde type embedded in `Effect`) carries a `Vec<StaticAbility>`.
+    #[serde(with = "crate::static_str_serde")]
     pub description: &'static str,
     pub effect: StaticEffect,
 }
@@ -2962,10 +2967,22 @@ pub struct StaticAbility {
 /// A continuous effect produced by a static ability. Subsumes the old
 /// `StaticAbilityTemplate` enum; maps 1-to-1 to one or more
 /// `layers::Modification`s.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StaticEffect {
     /// Grant +p/+t to everything the selector picks.
     PumpPT { applies_to: Selector, power: i32, toughness: i32 },
+    /// Self-buff scaled by the number of the controller's battlefield
+    /// permanents matching `filter`: "this creature gets `+per_power`/
+    /// `+per_toughness` for each [filter] you control." Resolved live in
+    /// `gather_continuous_effects` (the count needs the GameState). Powers
+    /// Karn's Construct token ("+1/+1 for each artifact you control") and
+    /// similar self-scaling bodies (Master of Etherium, Ornithopter of
+    /// Paradise-style counts).
+    PumpSelfByControlledPermanents {
+        filter: SelectionRequirement,
+        per_power: i32,
+        per_toughness: i32,
+    },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
@@ -4926,6 +4943,7 @@ pub mod shortcut {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
+                static_abilities: vec![],
             },
         })
     }
@@ -5123,6 +5141,7 @@ pub mod shortcut {
             },
             activated_abilities: vec![],
             triggered_abilities: vec![],
+            static_abilities: vec![],
         };
         etb(Effect::ChooseMode(vec![
             Effect::AddCounter {

@@ -646,6 +646,7 @@ impl SelectionRequirement {
 
 /// Describes a token to be created on the battlefield.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(bound = "")]
 pub struct TokenDefinition {
     /// Token name. Stored as `String` (rather than `&'static str` like
     /// `CardDefinition.name`) so `Effect::CreateToken { definition: ... }`
@@ -673,6 +674,13 @@ pub struct TokenDefinition {
     /// `token_to_card_definition`.
     #[serde(default)]
     pub triggered_abilities: Vec<TriggeredAbility>,
+    /// Static abilities the token enters with. Used for self-scaling token
+    /// bodies — Karn's Construct ("+1/+1 for each artifact you control") via
+    /// `StaticEffect::PumpSelfByControlledPermanents`, and any future "the
+    /// token has [static]" rider. Copied into the resulting `CardDefinition`
+    /// by `token_to_card_definition`.
+    #[serde(skip)]
+    pub static_abilities: Vec<StaticAbility>,
 }
 
 // ── Card definition ───────────────────────────────────────────────────────────

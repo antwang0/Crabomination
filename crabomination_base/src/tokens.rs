@@ -54,6 +54,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: token.activated_abilities.clone(),
         triggered_abilities: token.triggered_abilities.clone(),
+        static_abilities: token.static_abilities.clone(),
         ..Default::default()
     }
 }
@@ -92,6 +93,7 @@ pub fn food_token() -> TokenDefinition {
             tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -127,6 +129,7 @@ pub fn treasure_token() -> TokenDefinition {
             tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -199,6 +202,7 @@ pub fn blood_token() -> TokenDefinition {
             tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -232,6 +236,7 @@ pub fn stx_pest_token() -> TokenDefinition {
                 amount: Value::Const(1),
             },
         }],
+        static_abilities: vec![],
     }
 }
 
@@ -252,6 +257,7 @@ pub fn inkling_token() -> TokenDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -272,6 +278,7 @@ pub fn fractal_token() -> TokenDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -292,6 +299,7 @@ pub fn spirit_token() -> TokenDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -312,6 +320,7 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }
 
@@ -349,5 +358,6 @@ pub fn clue_token() -> TokenDefinition {
             tap_other_filter: None, from_hand: false,
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
     }
 }

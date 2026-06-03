@@ -25558,6 +25558,8 @@ pub fn witherbloom_verdance_b202() -> CardDefinition {
         supertypes: vec![],
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Witherbloom Verdance (b202)",

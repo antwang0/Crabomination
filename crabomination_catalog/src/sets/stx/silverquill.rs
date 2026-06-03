@@ -2952,6 +2952,8 @@ pub fn inkling_verseweaver() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Inkling Verseweaver",
@@ -17231,6 +17233,8 @@ pub fn silverquill_sergeant_b196() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Silverquill Sergeant (b196)",

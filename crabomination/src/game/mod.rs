@@ -1347,6 +1347,45 @@ impl GameState {
                 }
             }
         }
+        // "This creature gets +X/+Y for each [filter] you control."
+        // (`StaticEffect::PumpSelfByControlledPermanents`) — count the
+        // controller's matching battlefield permanents live and emit a
+        // layer-7 ModifyPowerToughness self-effect.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpSelfByControlledPermanents {
+                    filter,
+                    per_power,
+                    per_toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let count = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == card.controller
+                            && self.evaluate_requirement_on_card(filter, c, card.controller)
+                    })
+                    .count() as i32;
+                if count == 0 {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(
+                        count * per_power,
+                        count * per_toughness,
+                    ),
+                });
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -4541,6 +4580,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }
+            // PumpSelfByControlledPermanents — needs a live battlefield
+            // count; resolved in `gather_continuous_effects`.
+            | StaticEffect::PumpSelfByControlledPermanents { .. }
             // ExileNontokenCreaturesNotCast (Containment Priest) — read at
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.

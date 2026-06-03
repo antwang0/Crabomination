@@ -10429,6 +10429,32 @@ fn karn_scion_of_urza_minus_two_creates_a_construct_token() {
         .expect("Construct token present");
     assert!(token.definition.card_types.contains(&crate::card::CardType::Artifact));
     assert!(token.definition.card_types.contains(&crate::card::CardType::Creature));
+    // The token itself is an artifact, so with no other artifacts it is 1/1.
+    let tid = token.id;
+    let cp = g.compute_battlefield();
+    let view = cp.iter().find(|c| c.id == tid).unwrap();
+    assert_eq!(view.power, 1);
+    assert_eq!(view.toughness, 1);
+}
+
+#[test]
+fn karn_construct_token_scales_with_artifact_count() {
+    let mut g = two_player_game();
+    let karn = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
+    // Two more artifacts under our control.
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: karn, ability_index: 2, target: None,
+    }).expect("Karn -2");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Construct").unwrap();
+    let tid = token.id;
+    // 3 artifacts you control (Ornithopter, Mind Stone, the Construct itself).
+    let cp = g.compute_battlefield();
+    let view = cp.iter().find(|c| c.id == tid).unwrap();
+    assert_eq!(view.power, 3, "+1/+1 per artifact");
+    assert_eq!(view.toughness, 3);
 }
 
 #[test]

@@ -144,6 +144,8 @@ pub fn reduce_to_memory() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Reduce to Memory",
@@ -731,6 +733,8 @@ pub fn resculpt() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Resculpt",
@@ -1814,6 +1818,8 @@ pub fn manifestation_sage() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Manifestation Sage",
@@ -2005,6 +2011,8 @@ pub fn quintorius_field_historian() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Quintorius, Field Historian",

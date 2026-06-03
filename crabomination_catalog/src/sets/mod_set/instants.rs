@@ -385,6 +385,8 @@ pub fn pact_of_the_titan() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
             Effect::DelayUntil {
@@ -485,6 +487,8 @@ pub fn swan_song() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
+                
+                    static_abilities: vec![],
                 },
             },
             Effect::CounterSpell {
@@ -1106,6 +1110,8 @@ pub fn pongify() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
+    
+        static_abilities: vec![],
     };
     CardDefinition {
         name: "Pongify",
