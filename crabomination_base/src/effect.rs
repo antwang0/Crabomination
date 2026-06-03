@@ -1500,6 +1500,14 @@ pub enum Effect {
     },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// Create `count` tokens already tapped and attacking (CR 508.3a). The
+    /// new tokens join the current combat attacking the same defender the
+    /// effect's source is attacking (falling back to the controller's first
+    /// opponent when the source isn't itself an attacker). Powers "create N
+    /// tokens tapped and attacking" riders and Myriad-style token mints.
+    /// No-op outside the combat phase. (The "sacrifice at end of combat"
+    /// rider that Mobilize adds is tracked separately in TODO.md.)
+    CreateTokenAttacking { who: PlayerRef, count: Value, definition: TokenDefinition },
     /// Create `count` token copies of the permanent resolved by `source`,
     /// controlled by `who`. The copy inherits the source's printed
     /// CardDefinition (name, P/T, types, keywords, activated/triggered
@@ -2251,7 +2259,8 @@ impl Effect {
             }
             Effect::Proliferate => false,
             Effect::GainControl { what, .. } => sel_has_target(what),
-            Effect::CreateToken { who, count, .. } => {
+            Effect::CreateToken { who, count, .. }
+            | Effect::CreateTokenAttacking { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::BecomeBasicLand { what, .. }

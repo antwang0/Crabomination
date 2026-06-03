@@ -8,13 +8,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Create-token-tapped-and-attacking primitive + EndOfCombat delayed
-  trigger.** Mobilize (CR 702.169) and Myriad (CR 702.116) both need a way
-  to mint tokens already tapped and attacking (the Ninjutsu path at
-  `game/mod.rs:3029` shows the `self.attacking.push(Attack{..})` mechanism to
-  reuse), plus a `DelayedTriggerKind::EndOfCombat` (today only `NextEndStep`
-  exists) to sacrifice the Mobilize Warriors at end of combat. Both are
-  reusable; once landed, Mobilize/Myriad/Battalion-token cards unblock.
+- **Mobilize/Myriad eot-sacrifice (`DelayedTriggerKind::EndOfCombat`).** The
+  create-token-tapped-and-attacking half is ✅ — `Effect::CreateTokenAttacking
+  { who, count, definition }` mints tokens tapped + attacking the source's
+  defender (test `create_token_attacking_joins_combat_tapped`). Remaining for
+  full Mobilize (CR 702.169): a `DelayedTriggerKind::EndOfCombat` (today only
+  `NextEndStep` exists) to sacrifice the Warriors at end of combat — hook a
+  delayed-trigger sweep where `expire_end_of_combat_effects` runs
+  (`game/stack.rs` leaving the EndCombat step). Myriad (CR 702.116) needs the
+  token to be a *copy* of the source attacking *each other* player.
 - **Bot accepts beneficial Exploit/Devour.** `shortcut::exploit` /
   `devour` resolve their sacrifice via `MayDo` / `SacrificeAnyNumber`;
   `AutoDecider` and the current bot decline (the body is self-costly by

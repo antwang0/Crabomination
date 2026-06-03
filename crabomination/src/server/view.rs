@@ -926,6 +926,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CreateEmblem { .. } => "Get an emblem",
         Effect::TakeExtraTurn { .. } => "Take an extra turn",
         Effect::ExileAnyNumberFromGraveyards { .. } => "Exile cards from graveyards",
+        Effect::CreateTokenAttacking { .. } => "Create attacking tokens",
         _ => "Activate",
     }
 }

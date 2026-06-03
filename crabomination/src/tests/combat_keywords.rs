@@ -510,3 +510,51 @@ fn activatable_permanents_empty_off_priority() {
     let view = crate::server::view::project(&g, 0);
     assert!(view.activatable_permanents.is_empty(), "no affordance off-priority");
 }
+
+// ── CR 508.3a — create tokens tapped and attacking ──────────────────────────
+
+#[test]
+fn create_token_attacking_joins_combat_tapped() {
+    use crate::card::{CreatureType, TokenDefinition};
+    use crate::effect::{Effect, PlayerRef, Value};
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+    };
+    let trig = shortcut::on_attack(Effect::CreateTokenAttacking {
+        who: PlayerRef::You,
+        count: Value::Const(2),
+        definition: soldier,
+    });
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Warcaller", 2, 2, vec![trig]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // Two Soldier tokens minted, tapped and attacking the same player.
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Soldier")
+        .collect();
+    assert_eq!(tokens.len(), 2, "two soldier tokens minted");
+    assert!(tokens.iter().all(|c| c.tapped), "tokens enter tapped");
+    let token_ids: Vec<_> = tokens.iter().map(|c| c.id).collect();
+    for id in token_ids {
+        assert!(g.attacking.iter().any(|a| a.attacker == id
+            && a.target == AttackTarget::Player(1)), "token attacking P1");
+    }
+}

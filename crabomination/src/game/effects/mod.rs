@@ -2604,6 +2604,51 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CreateTokenAttacking { who, count, definition } => {
+                use crate::game::types::{Attack, AttackTarget};
+                // Only meaningful while a combat is in progress.
+                if self.attacking.is_empty() {
+                    return Ok(());
+                }
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Attack the same defender the source is attacking; else the
+                // controller's first opponent.
+                let target = ctx
+                    .source
+                    .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
+                    .map(|a| a.target)
+                    .or_else(|| {
+                        (0..self.players.len())
+                            .find(|&q| !self.same_team(q, p))
+                            .map(AttackTarget::Player)
+                    });
+                let Some(target) = target else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                for _ in 0..n {
+                    let id = self.next_id();
+                    let def = token_to_card_definition(definition);
+                    let mut inst = CardInstance::new_token(id, def, p);
+                    inst.controller = p;
+                    inst.tapped = true;
+                    self.battlefield.push(inst);
+                    events.push(GameEvent::TokenCreated { card_id: id });
+                    events.push(GameEvent::PermanentEntered { card_id: id });
+                    self.last_created_token = Some(id);
+                    self.last_created_tokens.push(id);
+                    self.fire_self_etb_triggers(id, p);
+                    // Join combat tapped + attacking (CR 508.3a) — bypasses the
+                    // declare-attackers timing/sickness gates, like Ninjutsu.
+                    if self.battlefield.iter().any(|c| c.id == id) {
+                        self.attacking.push(Attack { attacker: id, target });
+                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                            c.attacked_this_turn = true;
+                        }
+                        events.push(GameEvent::AttackerDeclared(id));
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CreateTokenCopyOf {
                 who,
                 count,
