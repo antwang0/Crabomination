@@ -1233,6 +1233,32 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard(id);
         }
 
+        // World rule (CR 704.5k): if two or more permanents have the World
+        // supertype, all except the one that has been a World permanent for
+        // the shortest time (the newest, i.e. highest CardId) go to their
+        // owners' graveyards. Unlike the legend rule this is global, not
+        // per-controller.
+        let world_victims: Vec<CardId> = {
+            let worlds: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.definition.supertypes.contains(&Supertype::World))
+                .map(|c| c.id)
+                .collect();
+            if worlds.len() > 1 {
+                let keep = worlds.iter().copied().max().unwrap();
+                worlds.into_iter().filter(|id| *id != keep).collect()
+            } else {
+                Vec::new()
+            }
+        };
+        for id in world_victims {
+            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+                self.died_card_snapshots.insert(id, c.clone());
+            }
+            self.remove_from_battlefield_to_graveyard(id);
+        }
+
         // Collect dead creatures using layer-computed toughness.
         let computed = self.compute_battlefield();
         let dead: Vec<CardId> = self

@@ -22764,3 +22764,29 @@ fn parallax_tide_exiles_land_and_returns_it_tapped_when_it_fades() {
     assert_eq!(returned.controller, 1, "returns under owner's control");
     assert!(returned.tapped, "returns tapped");
 }
+
+/// CR 704.5k — the World rule: a second World permanent (any controller)
+/// sends all but the newest to their owners' graveyards.
+#[test]
+fn world_rule_keeps_only_the_newest_world_permanent() {
+    use crate::card::Supertype;
+    let world = |name: &'static str| crate::card::CardDefinition {
+        name,
+        cost: crate::mana::cost(&[crate::mana::generic(2)]),
+        supertypes: vec![Supertype::World],
+        card_types: vec![CardType::Enchantment],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let old = g.add_card_to_battlefield(0, world("Old World"));
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(old).is_some(), "lone World permanent survives");
+
+    // A second World permanent (different controller) triggers the rule.
+    let new = g.add_card_to_battlefield(1, world("New World"));
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(new).is_some(), "newest World permanent is kept");
+    assert!(g.battlefield_find(old).is_none(), "older World permanent dies");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == old),
+        "older World goes to its owner's graveyard");
+}

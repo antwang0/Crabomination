@@ -395,6 +395,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   plus exiling N other graveyard cards. Instants/sorceries resolve back to
   the graveyard (re-escapable). Ships Cling to Dust. Tests in `tests/modern`.
 
+- ✅ **CR 702.32 — Fading** (claude/modern_decks). `Keyword::Fading(N)` enters
+  with N fade counters (both ETB paths via `apply_fading_vanishing_etb`);
+  `process_fading_vanishing` (turn-based at upkeep) removes one each turn and
+  sacrifices when it can't. Parallax Nexus / Parallax Tide. Tests:
+  `fading_ticks_down_then_sacrifices_when_empty`, `parallax_tide_*`.
+- ✅ **CR 702.62 — Vanishing** (claude/modern_decks). `Keyword::Vanishing(N)`
+  enters with N time counters; same upkeep routine sacrifices when the last is
+  removed. Test: `vanishing_sacrifices_when_last_time_counter_removed`.
+
 - ✅ **CR 603.3b — Same-controller trigger ordering** (claude/modern_decks).
   `order_same_controller_triggers` lets a `wants_ui` controller order their
   own simultaneous triggers via `Decision::OrderTriggers`; AutoDecider keeps
@@ -651,8 +660,9 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `cr_704_5j_legend_rule_controller_chooses_which_to_keep`. Server-side
   *suspend* for a networked human mid-SBA is still ⏳ — same limitation as
   the OrderTriggers prompt; the decider is consulted inline.).
-  (o) **704.5k — World rule** — ⏳ (no World supertype
-  in the catalog; no engine path; Ice Age / Mirage era only).
+  (o) **704.5k — World rule** — ✅ (global SBA in `check_state_based_actions`:
+  2+ `Supertype::World` permanents → all but the newest, highest-CardId one go
+  to their owners' graveyards. Test: `world_rule_keeps_only_the_newest_world_permanent`).
   (p) **704.5m — Aura attachment** — ✅ (the `orphaned_auras` walk at
   `stack.rs:1017` filters auras where `attached_to` is `None` or
   points to a non-battlefield CardId; Pacifism-class tested).
