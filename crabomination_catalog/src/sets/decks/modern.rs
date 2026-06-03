@@ -278,6 +278,58 @@ pub fn lotus_bloom() -> CardDefinition {
     }
 }
 
+/// Search for Tomorrow — {2}{G} Sorcery. Search your library for a basic land
+/// card and put it onto the battlefield. Suspend 2—{G}.
+pub fn search_for_tomorrow() -> CardDefinition {
+    CardDefinition {
+        name: "Search for Tomorrow",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Suspend(2, cost(&[g()]))],
+        effect: search_to_battlefield(SelectionRequirement::IsBasicLand, false),
+        ..Default::default()
+    }
+}
+
+/// Errant Ephemeron — {6}{U} 6/4 Flying. Suspend 4—{1}{U}.
+pub fn errant_ephemeron() -> CardDefinition {
+    CardDefinition {
+        name: "Errant Ephemeron",
+        cost: cost(&[generic(6), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Suspend(4, cost(&[generic(1), u()]))],
+        ..Default::default()
+    }
+}
+
+/// Riftwing Cloudskate — {3}{U} 2/2 Flying. ETB: return target permanent to
+/// its owner's hand. Suspend 3—{1}{U}.
+pub fn riftwing_cloudskate() -> CardDefinition {
+    CardDefinition {
+        name: "Riftwing Cloudskate",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Suspend(3, cost(&[generic(1), u()]))],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        })],
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 

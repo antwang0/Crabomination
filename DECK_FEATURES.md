@@ -38,7 +38,7 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | X-cost creature side-effects | 🟡 | Thud / Burn at the Stake ride `SacrificeAndRemember` + `Value::SacrificedPower`. Casualty's "copy this spell" branch still ⏳ (no Casualty cost-mode primitive); Adventure cost-modes (Burn Together) ⏳. |
 | Sacrifice-as-cost effects | 🟡 | Thud ✅ via `SacrificeAndRemember` + `Value::SacrificedPower`. Variable-count sacrifice ✅ via `Effect::SacrificeAnyNumber` + `Decision::ChooseAmount` (Plunge into Darkness). Flashback-with-additional-cost (Lava Dart sac-a-Mountain, Dread Return sac-three) ✅ via `flashback_additional_cost_for_name` + `cast_flashback`. |
 | Variable-count / pay-any-amount choices | ✅ | `Decision::ChooseAmount` (number 0..=max) backs `Effect::SacrificeAnyNumber` (sacrifice any number) and `Effect::PayLifeLookTake` (pay X life, dig X, take one, exile rest). Entwine modeled as `Keyword::Kicker` + `SpellWasKicked` branch (Plunge into Darkness). |
-| Suspend (CR 702.62) | ✅ | `Keyword::Suspend(n, cost)` + `GameAction::Suspend` + `process_suspend` (tick at owner's upkeep, free-cast when last time counter comes off). Rift Bolt, Ancestral Vision, Lotus Bloom. Creature-suspend haste + a UI/targeting prompt for the free cast are TODO.md follow-ups. |
+| Suspend (CR 702.62) | ✅ | `Keyword::Suspend(n, cost)` + `GameAction::Suspend` + `process_suspend` (tick at owner's upkeep, free-cast when last time counter comes off). Rift Bolt, Ancestral Vision, Lotus Bloom, Search for Tomorrow, Errant Ephemeron, Riftwing Cloudskate. Creature-suspend haste + a UI/targeting prompt for the free cast are TODO.md follow-ups. |
 
 ## Plan
 

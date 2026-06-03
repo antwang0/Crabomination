@@ -83,6 +83,66 @@ fn suspend_ancestral_vision_draws_three() {
     assert_eq!(g.players[0].hand.len(), hand_before + 3, "controller draws three");
 }
 
+/// Search for Tomorrow, when its suspend resolves, fetches a basic land onto
+/// the battlefield.
+#[test]
+fn suspend_search_for_tomorrow_fetches_a_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::lightning_bolt()); // padding
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let sft = g.add_card_to_hand(0, catalog::search_for_tomorrow());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::Suspend { card_id: sft }).expect("suspend");
+
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..2 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == forest),
+        "the fetched basic land is on the battlefield");
+}
+
+/// Errant Ephemeron suspends for {1}{U} and resolves into a 6/4 flyer.
+#[test]
+fn suspend_errant_ephemeron_resolves_as_flyer() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let eph = g.add_card_to_hand(0, catalog::errant_ephemeron());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::Suspend { card_id: eph }).expect("suspend");
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+    let e = g.battlefield_find(eph).expect("Ephemeron on battlefield");
+    assert_eq!((e.power(), e.toughness()), (6, 4));
+    assert!(e.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// Riftwing Cloudskate's suspend resolves into a creature whose ETB bounces a
+/// permanent to its owner's hand.
+#[test]
+fn suspend_riftwing_cloudskate_bounces_on_etb() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cloud = g.add_card_to_hand(0, catalog::riftwing_cloudskate());
+    g.players[0].mana_pool.add(Color::Blue, 2); // {1}{U} suspend cost
+    g.perform_action(GameAction::Suspend { card_id: cloud }).expect("suspend");
+
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == cloud), "Cloudskate resolved onto the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "ETB bounced the bear to its owner's hand");
+}
+
 #[test]
 fn ponder_resolves_and_draws_a_card() {
     let mut g = two_player_game();
