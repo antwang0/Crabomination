@@ -2939,25 +2939,27 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   "Your opponents can't gain life" static; lock-in tests
   `witherbloom_lifeglobe_b143_prevents_opp_lifegain`,
   `witherbloom_lifeglobe_b143_releases_lifegain_lock_when_it_leaves`.
-  Remaining ⏳ for full CR 119.7 / 119.8 parity: (a) the lose-life
-  half ("can't lose life") needs the same shape via
-  `StaticEffect::PlayerCannotLoseLife { target }` consulted in the
-  loss path (`damage_player`, `Effect::LoseLife`); (b) the
-  redistribute-life-totals + exchange-life-totals clauses (CR 119.7,
+  The lose-life half (CR 119.8) is also ✅ — `StaticEffect::
+  PlayerCannotLoseLife { target }` + `player_cannot_lose_life_now(seat)`
+  drops negative deltas in `adjust_life` (covering both `Effect::LoseLife`
+  and the damage path). Silverquill Lifeward (b146) ships "Your opponents
+  can't lose life"; tests `cr_119_8_player_cannot_lose_life_blocks_lose_life_paths`,
+  `cr_119_8_player_cannot_lose_life_blocks_burn_damage`. Remaining ⏳: (b)
+  the redistribute-life-totals + exchange-life-totals clauses (CR 119.7,
   last sentence) need a check at `Effect::ExchangeLifeTotals` /
-  `Effect::DistributeLifeTotals` resolve time; (c) Tainted Remedy's
-  "instead, that player loses that much life" replacement needs an
-  on-gain redirect rather than a drop.
+  `Effect::DistributeLifeTotals` resolve time. (c) Tainted Remedy's
+  "instead, that player loses that much life" replacement is now ✅ via
+  `StaticEffect::LifeGainBecomesLoss` + `life_gain_becomes_loss_now`
+  (redirects positive deltas in `adjust_life`; Silverquill Reproach b209;
+  test `cr_614_life_gain_becomes_loss_for_opponent`).
 
-- ⏳ **Keyword counters (CR 122.1b)** — no `CounterType::Keyword(Keyword)`
-  variant yet. Cards that print this rider (Mortarpod variants,
-  Helix Pinnacle, Decayed-counter zombies) would need a new
-  enum variant + a layer-6 keyword-grant pass in `compute_battlefield`
-  that reads `counter_count(Keyword(K))` per permanent. Same shape
-  as the existing `PlusOnePlusOne` layer-7c pass but for keywords.
-  Tracked as engine work — no STX/SOS card prints keyword counters,
-  but eventually a Mortarpod-style "keyword counter for {2}" card
-  would land here.
+- ✅ **Keyword counters (CR 122.1b)** — wired via `CardInstance.
+  keyword_counters: HashMap<Keyword, u32>` (a dedicated map rather than a
+  `CounterType::Keyword` payload variant). The layer pass in `layers.rs`
+  grants each counted keyword to the permanent; `Effect::AddCounter` /
+  `RemoveCounter` of a keyword route here; snapshots round-trip them;
+  `DoubleCounters` doubles them (`cr_614_16_keyword_counters_are_doubled_*`).
+  `has_keyword` reads them. (This row was stale.)
 
 - ⏳ **Damage-source choice primitive (CR 120.7)** (push
   claude/modern_decks batch 119 — new suggestion, paired with the new
@@ -2975,15 +2977,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   artifact creature EOT (layer-4 `AddCardType(Creature)`); combat reads the
   computed view so a crewed Vehicle can attack. (This TODO row was stale.)
 
-- ⏳ **`Effect::CreateCopyToken { source, who, count, modifiers }`
-  primitive**.
-  Five+ cube/STX cards need this (Phantasmal Image, Helm of the Host,
-  Saheeli Rai's -2, Mockingbird, Applied Geometry); only Saheeli Rai
-  has a partial implementation today (token mint without copying the
-  source's printed characteristics). A dedicated copy-token primitive
-  with optional modifier list (e.g. "except it's also a Fractal" /
-  "except its base P/T is 4/4") would unblock all of them in one
-  engine landing.
+- 🟡 **Copy-token primitive** — `Effect::CreateTokenCopyOf { who, count,
+  source, extra_creature_types, override_pt }` ships the token-copy half
+  (Cackling Counterpart-style), and `Effect::BecomeCopyOf` ships the
+  enter-as-a-copy half (Clone, Phantasmal Image, Mockingbird). Both carry
+  `extra_creature_types`; the token variant also has `override_pt`.
+  Remaining: a *continuous* layer-1 "becomes a copy" effect (Helm of the
+  Host's per-combat haste-token loop, Mirrorform aura) — these still need a
+  layer-1 copy effect rather than the one-shot definition rewrite.
 
 - 🟡 **CR 602 — Activating Activated Abilities** (push
   claude/modern_decks — audit against `MagicCompRules_20260417.txt`).

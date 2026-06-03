@@ -3082,6 +3082,12 @@ pub enum StaticEffect {
     /// ("your life total can't change") and by future "your opponent
     /// can't lose life" payoffs.
     PlayerCannotLoseLife { target: PlayerStaticTarget },
+    /// CR 614 — life-gain replacement: while active, when a targeted player
+    /// *would* gain life, they lose that much life instead (Tainted Remedy:
+    /// "If an opponent would gain life, that player loses that much life
+    /// instead."). Consulted in `adjust_life` for positive deltas before the
+    /// gain applies; the redirected loss is itself final (not re-replaced).
+    LifeGainBecomesLoss { target: PlayerStaticTarget },
     /// CR 121.2b — Targeted players can't draw more than `max` cards each
     /// turn. While active, an `Effect::Draw` that would push a player past
     /// `max` (counting `Player.cards_drawn_this_turn`) is truncated. Models

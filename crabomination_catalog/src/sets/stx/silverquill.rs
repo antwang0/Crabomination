@@ -11917,6 +11917,27 @@ pub fn silverquill_lifeward_b146() -> CardDefinition {
     }
 }
 
+/// Silverquill Reproach (b209) — {2}{B} Enchantment. Static (CR 614,
+/// Tainted Remedy template): "If an opponent would gain life, that player
+/// loses that much life instead." Wires `StaticEffect::LifeGainBecomesLoss`
+/// end-to-end with a representative card.
+pub fn silverquill_reproach_b209() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{PlayerStaticTarget, StaticEffect};
+    CardDefinition {
+        name: "Silverquill Reproach (b209)",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If an opponent would gain life, that player loses that much life instead.",
+            effect: StaticEffect::LifeGainBecomesLoss {
+                target: PlayerStaticTarget::EachOpponent,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Batch 147 ───────────────────────────────────────────────────────────────
 
 /// Silverquill Penmaster (b147) — {1}{W}{B} 2/2 Inkling Wizard Flying.

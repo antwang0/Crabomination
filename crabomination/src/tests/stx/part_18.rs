@@ -2053,6 +2053,22 @@ fn cr_119_8_player_cannot_lose_life_blocks_burn_damage() {
 }
 
 #[test]
+fn cr_614_life_gain_becomes_loss_for_opponent() {
+    // CR 614 (Tainted Remedy template): while Silverquill Reproach is in
+    // play, an opponent's would-be life gain becomes an equal life loss.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silverquill_reproach_b209());
+    g.players[1].life = 20;
+    // P1 (the opponent) tries to gain 4 — it becomes a 4-life loss instead.
+    g.adjust_life(1, 4);
+    assert_eq!(g.players[1].life, 16, "opponent's life gain redirected to loss");
+    // The controller (P0) gains life normally.
+    g.players[0].life = 20;
+    g.adjust_life(0, 4);
+    assert_eq!(g.players[0].life, 24, "controller still gains normally");
+}
+
+#[test]
 fn cr_117_3a_no_player_gets_priority_during_untap_step() {
     // CR 117.3a — "No player receives priority during the untap step."
     // The do_untap turn-based action runs without yielding priority.

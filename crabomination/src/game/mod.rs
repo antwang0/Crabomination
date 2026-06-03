@@ -765,6 +765,13 @@ impl GameState {
         // dynamic battlefield scan via `player_cannot_gain_life_now`
         // (consults `StaticEffect::PlayerCannotGainLife` statics on
         // the live battlefield).
+        // CR 614 — Tainted Remedy-style replacement: a would-be life *gain*
+        // becomes an equal life *loss* instead. Applied before the cannot-
+        // gain drop (the gain is replaced, not prevented) and re-routed as a
+        // negative delta so the loss honors cannot-lose-life / shared pools.
+        if delta > 0 && self.life_gain_becomes_loss_now(seat) {
+            return self.adjust_life(seat, -delta);
+        }
         if delta > 0 && self.player_cannot_gain_life_now(seat) {
             return self.effective_life(seat);
         }
@@ -1255,6 +1262,27 @@ impl GameState {
         self.battlefield.iter().any(|src| {
             src.definition.static_abilities.iter().any(|sa| {
                 if let StaticEffect::PlayerCannotLoseLife { target } = &sa.effect {
+                    match target {
+                        PlayerStaticTarget::Controller => src.controller == seat,
+                        PlayerStaticTarget::EachOpponent => src.controller != seat,
+                        PlayerStaticTarget::EachPlayer => true,
+                    }
+                } else {
+                    false
+                }
+            })
+        })
+    }
+
+    /// CR 614 — True if a would-be life *gain* by `seat` should be replaced
+    /// with an equal life *loss* (Tainted Remedy). Scans the battlefield for
+    /// any active `StaticEffect::LifeGainBecomesLoss` whose `target` includes
+    /// `seat`.
+    pub fn life_gain_becomes_loss_now(&self, seat: usize) -> bool {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        self.battlefield.iter().any(|src| {
+            src.definition.static_abilities.iter().any(|sa| {
+                if let StaticEffect::LifeGainBecomesLoss { target } = &sa.effect {
                     match target {
                         PlayerStaticTarget::Controller => src.controller == seat,
                         PlayerStaticTarget::EachOpponent => src.controller != seat,
@@ -4954,6 +4982,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PlayerCannotLoseLife — consulted dynamically by adjust_life /
             // damage paths via player_cannot_lose_life_now; no layer effect.
             | StaticEffect::PlayerCannotLoseLife { .. }
+            // LifeGainBecomesLoss — consulted dynamically by adjust_life via
+            // life_gain_becomes_loss_now (Tainted Remedy); no layer effect.
+            | StaticEffect::LifeGainBecomesLoss { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
             // layer effect.
             | StaticEffect::CapDrawsPerTurn { .. }
