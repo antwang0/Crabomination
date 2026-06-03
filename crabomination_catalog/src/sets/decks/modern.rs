@@ -13142,15 +13142,33 @@ pub fn thought_erasure() -> CardDefinition {
 }
 
 /// Coveted Jewel — {6} Artifact. ETB draw 3. {T}: Add 3 mana any color.
+/// "Whenever a creature attacks you or a planeswalker you control, that
+/// creature's controller gains control of Coveted Jewel and untaps it."
 pub fn coveted_jewel() -> CardDefinition {
-    use crate::card::ActivatedAbility;
+    use crate::card::{ActivatedAbility, TriggeredAbility};
+    use crate::effect::{Duration, EventKind, EventScope, EventSpec};
     CardDefinition {
         name: "Coveted Jewel",
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact],
-        triggered_abilities: vec![etb(
-            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
-        )],
+        triggered_abilities: vec![
+            etb(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+            // The attacking creature's controller is bound to target slot 0.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::Attacks,
+                    EventScope::ControllerAttackedByOpponent,
+                ),
+                effect: Effect::Seq(vec![
+                    Effect::GainControl {
+                        what: Selector::This,
+                        to: Some(PlayerRef::Target(0)),
+                        duration: Duration::Permanent,
+                    },
+                    Effect::Untap { what: Selector::This, up_to: None },
+                ]),
+            },
+        ],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),

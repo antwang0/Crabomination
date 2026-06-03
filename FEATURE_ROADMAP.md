@@ -72,7 +72,14 @@ read of the code and should be re-verified before picking up an item.
   the Army token + amass (`Effect::Amass`, CR 701.43); the Map explore-token
   (`map_token` — CR 111.10s); conditional `Value::IfAtLeast` (Mossborn Hydra's
   X≥4 doubling); one-shot "next instant/sorcery costs {N} less"
-  (`Effect::GrantNextInstantOrSorceryDiscountThisTurn` + `pending_is_discounts`).
+  (`Effect::GrantNextInstantOrSorceryDiscountThisTurn` + `pending_is_discounts`);
+  **temporary control reversion** (`GameState.temporary_control` +
+  `revert_temporary_control`, CR 800.4 — Act of Treason / Threaten now snap
+  back to the pre-steal controller at end of turn / end of combat instead of
+  stealing permanently); **opponent-attacks-you control flip**
+  (`EventScope::ControllerAttackedByOpponent`, an `Attacks` listener on the
+  defending player's permanents binding the attacker's controller into the
+  target slot — Coveted Jewel gains control + untaps).
 
 ---
 

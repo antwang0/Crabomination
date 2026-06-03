@@ -2590,7 +2590,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::GainControl { what, to, duration: _ } => {
+            Effect::GainControl { what, to, duration } => {
+                use crate::effect::Duration;
                 let new_ctrl = match to {
                     Some(pref) => match self.resolve_player(pref, ctx) {
                         Some(p) => p,
@@ -2599,10 +2600,28 @@ impl GameState {
                     None => ctx.controller,
                 };
                 for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id()
-                        && let Some(c) = self.battlefield_find_mut(cid) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let prev = match self.battlefield_find_mut(cid) {
+                        Some(c) if c.controller != new_ctrl => {
+                            let prev = c.controller;
                             c.controller = new_ctrl;
+                            prev
                         }
+                        _ => continue,
+                    };
+                    // For non-permanent steals, remember the pre-steal
+                    // controller so control reverts when the duration ends
+                    // (CR 800.4). Keep the earliest entry if the permanent is
+                    // re-stolen so it unwinds all the way back.
+                    if !matches!(duration, Duration::Permanent)
+                        && !self.temporary_control.iter().any(|t| t.card == cid)
+                    {
+                        self.temporary_control.push(crate::game::TempControl {
+                            card: cid,
+                            original_controller: prev,
+                            duration: duration.clone(),
+                        });
+                    }
                 }
                 Ok(())
             }

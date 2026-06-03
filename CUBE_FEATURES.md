@@ -85,7 +85,6 @@ work is listed below.
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
 | Helm of the Host | ⏳ | Equipment that token-copies on attack. |
 | The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
-| Coveted Jewel | 🟡 | {6} Artifact; ETB Draw 3; `{T}`: Add 3 mana of any color. The "steal on combat damage / must-attack" control mechanic is omitted. |
 | The Endstone | ⏳ | TBD. |
 
 ### Multicolor

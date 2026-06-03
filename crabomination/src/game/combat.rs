@@ -243,6 +243,43 @@ impl GameState {
                 };
                 triggers.push((id, sac_effect, p, None));
             }
+            // ControllerAttackedByOpponent (CR 508.1g listeners): permanents
+            // the defending player controls that fire "when a creature an
+            // opponent attacks me" — Coveted Jewel's control-flip. The
+            // attacking creature's controller is bound to the trigger's
+            // target slot ("that creature's controller").
+            if let Some(defender) = self.defender_for(atk.target)
+                && defender != p
+            {
+                let listeners: Vec<(CardId, Effect)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == defender)
+                    .flat_map(|c| {
+                        c.definition.triggered_abilities.iter().filter_map(move |t| {
+                            (t.event.kind == EventKind::Attacks
+                                && t.event.scope
+                                    == crate::effect::EventScope::ControllerAttackedByOpponent)
+                                .then(|| (c.id, t.effect.clone()))
+                        })
+                    })
+                    .collect();
+                for (src, effect) in listeners {
+                    self.stack.push(StackItem::Trigger {
+                        source: src,
+                        controller: defender,
+                        effect: Box::new(effect),
+                        target: Some(Target::Player(p)),
+                        mode: None,
+                        x_value: 0,
+                        converged_value: 0,
+                        trigger_source: None,
+                        mana_spent: 0,
+                        event_amount: 0,
+                        intervening_if: None,
+                    });
+                }
+            }
         }
         // YourControl-scoped Attacks triggers (e.g. Battle Banner,
         // Sparring Regimen) are NOT walked here — the unified

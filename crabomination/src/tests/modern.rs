@@ -805,6 +805,30 @@ fn crop_rotation_sacrifices_land_and_searches_for_one() {
         "Tutored land should be on the battlefield");
 }
 
+/// Coveted Jewel changes hands when an opponent's creature attacks its
+/// controller, and untaps under the new controller (CR 800.4 control flip).
+#[test]
+fn coveted_jewel_steals_to_attacking_player() {
+    let mut g = two_player_game();
+    // P0 controls a (tapped) Coveted Jewel; P1 is the active attacker.
+    let jewel = g.add_card_to_battlefield(0, catalog::coveted_jewel());
+    g.battlefield_find_mut(jewel).unwrap().tapped = true;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(0),
+    }])).expect("P1 attacks P0");
+    drain_stack(&mut g);
+
+    let j = g.battlefield_find(jewel).unwrap();
+    assert_eq!(j.controller, 1, "the attacking player gains control of the Jewel");
+    assert!(!j.tapped, "the Jewel untaps under its new controller");
+}
+
 #[test]
 fn karakas_taps_for_white() {
     let mut g = two_player_game();

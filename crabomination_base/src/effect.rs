@@ -917,6 +917,12 @@ pub enum EventScope {
     /// checks the targeted permanent's controller == trigger controller and
     /// the caster is an opponent.
     YourPermanentTargetedByOpponent,
+    /// A creature an **opponent** controls attacks the source's controller
+    /// (or a planeswalker they control). Used with `EventKind::Attacks`; the
+    /// dispatcher binds the attacking creature's controller into the
+    /// trigger's target slot (so "that creature's controller gains control"
+    /// resolves via `PlayerRef::Target(0)` — Coveted Jewel).
+    ControllerAttackedByOpponent,
 }
 
 /// A structural filter over the unified `GameEvent` stream. The trigger fires

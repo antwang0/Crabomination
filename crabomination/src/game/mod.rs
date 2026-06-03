@@ -438,6 +438,22 @@ pub struct GameState {
     /// for snapshot back-compat.
     #[serde(default)]
     pub(crate) dies_to_exile_eot: std::collections::HashSet<CardId>,
+    /// Temporary control changes awaiting reversion (Act of Treason /
+    /// Threaten / Tempted by the Oriq). `Effect::GainControl` with a
+    /// non-`Permanent` duration records the controller the permanent had
+    /// immediately before the steal so control snaps back when the
+    /// duration ends (CR 800.4 control-changing effects). `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) temporary_control: Vec<TempControl>,
+}
+
+/// A pending control-reversion entry — see `GameState.temporary_control`.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub(crate) struct TempControl {
+    pub(crate) card: CardId,
+    pub(crate) original_controller: usize,
+    pub(crate) duration: crate::effect::Duration,
 }
 
 /// Manual `Clone` impl so the bot can dry-run an action against a copy
@@ -495,6 +511,7 @@ impl Clone for GameState {
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
+            temporary_control: self.temporary_control.clone(),
         }
     }
 }
@@ -565,6 +582,7 @@ impl GameState {
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
+            temporary_control: Vec::new(),
         }
     }
 
@@ -1817,6 +1835,29 @@ impl GameState {
             e.duration != EffectDuration::UntilEndOfTurn
                 && e.duration != EffectDuration::UntilEndOfCombat
         });
+    }
+
+    /// Revert temporary control changes (Act of Treason / Threaten) whose
+    /// `Duration` is in `which`. The stolen permanent returns to whoever
+    /// controlled it immediately before the steal. Entries whose card has
+    /// since left the battlefield are dropped without effect (CR 800.4 —
+    /// the control-changing effect simply ends).
+    pub(crate) fn revert_temporary_control(&mut self, which: &[crate::effect::Duration]) {
+        let mut kept = Vec::new();
+        for tc in std::mem::take(&mut self.temporary_control) {
+            let on_battlefield = self.battlefield.iter().any(|c| c.id == tc.card);
+            if !on_battlefield {
+                continue; // card left play — nothing to revert
+            }
+            if which.contains(&tc.duration) {
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card) {
+                    c.controller = tc.original_controller;
+                }
+            } else {
+                kept.push(tc);
+            }
+        }
+        self.temporary_control = kept;
     }
 
     /// Expire all `UntilEndOfCombat` continuous effects (CR 511.2 —

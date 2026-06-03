@@ -1027,6 +1027,56 @@ fn cleanup_resets_end_of_turn_pump() {
     assert_eq!(bear.power_bonus, 0);
 }
 
+/// CR 800.4 — a "gain control until end of turn" steal (Act of Treason /
+/// Threaten) reverts to the original controller at cleanup, not permanently.
+#[test]
+fn gain_control_until_end_of_turn_reverts_at_cleanup() {
+    use crate::effect::{Duration, Effect, Selector};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    // P1 owns/controls a bear; P0 (active) steals it until end of turn.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0);
+    g.resolve_effect(
+        &Effect::GainControl {
+            what: Selector::Target(0),
+            to: None,
+            duration: Duration::EndOfTurn,
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen by P0");
+
+    // Run P0's cleanup; control snaps back to P1.
+    g.step = TurnStep::Cleanup;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().controller,
+        1,
+        "control reverts to the original controller at end of turn"
+    );
+
+    // Sanity: a Permanent-duration steal (Mind Control) does NOT revert.
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ctx2 = EffectContext::for_spell(0, Some(Target::Permanent(bear2)), 0, 0);
+    g.resolve_effect(
+        &Effect::GainControl {
+            what: Selector::Target(0),
+            to: None,
+            duration: Duration::Permanent,
+        },
+        &ctx2,
+    )
+    .unwrap();
+    g.step = TurnStep::Cleanup;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(g.battlefield_find(bear2).unwrap().controller, 0, "permanent steal stays");
+}
+
 // ── New effects ───────────────────────────────────────────────────────────────
 
 fn one_u_spell() -> crate::card::CardDefinition {

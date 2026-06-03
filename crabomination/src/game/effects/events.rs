@@ -199,6 +199,10 @@ pub(crate) fn event_matches_spec(
                 false
             }
         }
+        // Dispatched manually in `declare_attackers` (the defending player's
+        // listeners get the attacker's controller bound into the target
+        // slot), so the unified dispatcher must not also fire it.
+        EventScope::ControllerAttackedByOpponent => false,
     };
 
     if !scope_ok {
@@ -361,7 +365,9 @@ pub(crate) fn emblem_event_matches(
             event_actor(state, event).is_some_and(|p| !state.same_team(p, controller))
         }
         EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
-        EventScope::FromYourGraveyard | EventScope::YourPermanentTargetedByOpponent => false,
+        EventScope::FromYourGraveyard
+        | EventScope::YourPermanentTargetedByOpponent
+        | EventScope::ControllerAttackedByOpponent => false,
     }
 }
 

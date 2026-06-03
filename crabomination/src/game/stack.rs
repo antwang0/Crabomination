@@ -110,6 +110,7 @@ impl GameState {
         // main phase.
         if self.step == TurnStep::EndCombat && !next.is_combat_phase() {
             self.expire_end_of_combat_effects();
+            self.revert_temporary_control(&[crate::effect::Duration::EndOfCombat]);
             let mut cleanup = self.process_attacking_token_cleanup();
             events.append(&mut cleanup);
         }
@@ -230,6 +231,7 @@ impl GameState {
                         EventScope::AnotherOfYours => false,
                         EventScope::FromYourGraveyard => false, // walked separately below
                         EventScope::YourPermanentTargetedByOpponent => false, // event-based
+                        EventScope::ControllerAttackedByOpponent => false, // combat-based
                     })
                     .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
             })
@@ -994,6 +996,12 @@ impl GameState {
         }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();
+        // Snap control of EOT-stolen permanents (Act of Treason / Threaten)
+        // back to their pre-steal controllers (CR 800.4).
+        self.revert_temporary_control(&[
+            crate::effect::Duration::EndOfTurn,
+            crate::effect::Duration::UntilNextTurn,
+        ]);
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;
