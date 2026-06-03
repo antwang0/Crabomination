@@ -327,6 +327,8 @@ fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {
         flashback_cost: card.definition.has_flashback().cloned(),
         retrace: card.definition.has_retrace(),
         escape: card.definition.has_escape().map(|(c, n)| (c.clone(), n)),
+        bestow_cost: card.definition.has_bestow().cloned(),
+        buyback_cost: card.definition.has_buyback().cloned(),
     }
 }
 

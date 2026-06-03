@@ -445,6 +445,14 @@ pub struct GraveyardCardView {
     /// `GameAction::CastEscape`. `None` otherwise.
     #[serde(default)]
     pub escape: Option<(crate::mana::ManaCost, u32)>,
+    /// Bestow cost (CR 702.103) if this card can be cast as an Aura via
+    /// `GameAction::CastBestow`. `None` otherwise.
+    #[serde(default)]
+    pub bestow_cost: Option<crate::mana::ManaCost>,
+    /// Buyback cost (CR 702.27) if this card can be cast paying buyback via
+    /// `GameAction::CastSpellBuyback`. `None` otherwise.
+    #[serde(default)]
+    pub buyback_cost: Option<crate::mana::ManaCost>,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so
