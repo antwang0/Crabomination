@@ -22735,3 +22735,32 @@ fn vanishing_sacrifices_when_last_time_counter_removed() {
     assert!(g.battlefield_find(bear).is_none(), "sacrificed when the last time counter is removed");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
 }
+
+/// Parallax Tide: {0} exiles a land; when the Tide fades out (Fading) the
+/// exiled land returns tapped under its owner's control.
+#[test]
+fn parallax_tide_exiles_land_and_returns_it_tapped_when_it_fades() {
+    let mut g = two_player_game();
+    let tide = g.add_card_to_battlefield(0, catalog::parallax_tide());
+    g.battlefield_find_mut(tide).unwrap().add_counters(CounterType::Fade, 1);
+    let opp_land = g.add_card_to_battlefield(1, catalog::island());
+
+    // {0}: Exile the opponent's land until the Tide leaves.
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tide, ability_index: 0,
+        target: Some(Target::Permanent(opp_land)), x_value: None,
+    }).expect("Parallax Tide exiles a land");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == opp_land), "land exiled");
+    assert!(g.battlefield_find(opp_land).is_none());
+
+    // Fade it out: first upkeep removes the last fade counter, second sacrifices.
+    g.active_player_idx = 0;
+    g.process_fading_vanishing();
+    g.process_fading_vanishing();
+    assert!(g.battlefield_find(tide).is_none(), "Tide sacrificed by Fading");
+    let returned = g.battlefield_find(opp_land).expect("land returned");
+    assert_eq!(returned.controller, 1, "returns under owner's control");
+    assert!(returned.tapped, "returns tapped");
+}

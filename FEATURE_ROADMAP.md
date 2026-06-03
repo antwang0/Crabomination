@@ -274,7 +274,12 @@ feature; sweep card-batch by card-batch.
   `ManaPayload::DevotionOfChosenColor`; surfaced in `PlayerView.devotion`
   + HUD chip), ⏳ Ascend / city's blessing,
   ⏳ Initiative / monarch, ⏳ Day/Night, ⏳ Ring-bearer (the Ring tempts you).
-- **Fading family:** ⏳ Fading, ⏳ Vanishing (Parallax cards in cube).
+- **Fading family:** ✅ Fading (`Keyword::Fading(N)`, CR 702.32),
+  ✅ Vanishing (`Keyword::Vanishing(N)`, CR 702.62) — enter with N fade/time
+  counters; `process_fading_vanishing` ticks them down at the controller's
+  upkeep and sacrifices when empty. Parallax Nexus / Parallax Tide ship the
+  keyword (Tide uses `ExileReturnZone::BattlefieldTapped` linked exile).
+  Remaining: Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift (`shortcut::soulshift(n)` — CR 702.46,
   dies → `MayDo(return target Spirit MV≤n from your graveyard)`), ⏳ Offering, ⏳ Epic, ⏳ Absorb,
   ⏳ Affinity (have artifact count?), ⏳ Entwine,

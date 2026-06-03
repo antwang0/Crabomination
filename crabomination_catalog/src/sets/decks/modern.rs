@@ -12874,6 +12874,27 @@ pub fn parallax_nexus() -> CardDefinition {
     }
 }
 
+/// Parallax Tide — {2}{U} Enchantment. Fading 5 (CR 702.32). "{0}: Exile
+/// target land." When Parallax Tide leaves the battlefield, the exiled lands
+/// return tapped under their owners' control (CR 603.6e linked exile).
+pub fn parallax_tide() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ExileReturnZone, Keyword};
+    CardDefinition {
+        name: "Parallax Tide",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Fading(5)],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(SelectionRequirement::Land),
+                return_to: ExileReturnZone::BattlefieldTapped,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Push XIX: cube creatures ───────────────────────────────────────────
 
 // ── Push (claude/modern_decks session 5): new cube cards ────────────────

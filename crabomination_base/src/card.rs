@@ -1171,6 +1171,10 @@ pub enum ExileReturnZone {
     /// Return to the battlefield under its owner's control (Banisher
     /// Priest, Fiend Hunter, Oblivion Ring).
     Battlefield,
+    /// Return to the battlefield tapped under its owner's control
+    /// (Parallax Tide — "return all cards exiled with it to the
+    /// battlefield tapped").
+    BattlefieldTapped,
     /// Return to its owner's hand (Brain Maggot, Tidehollow Sculler,
     /// Kitesail Freebooter).
     Hand,

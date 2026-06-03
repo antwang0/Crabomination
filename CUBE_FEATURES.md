@@ -36,7 +36,6 @@ work is listed below.
 | Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
-| Parallax Tide | ⏳ | Fading + exile lands. Needs fade counters. |
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
 | Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
 | Concealing Curtains | ⏳ | DFC into Revealing Eye creature. |
@@ -50,8 +49,7 @@ work is listed below.
 | Doomsday Excruciator | 🟡 | 6/6 Flying Demon; ETB each player mills 20. The Doomsday deck-stacking text is approximated by the symmetric mill. |
 | Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
 | Collective Brutality | 🟡 | {1}{B} Sorcery. 3-mode ChooseMode (discard IS from opp / -2/-2 creature / drain 2). Escalate omitted. Tests: `collective_brutality_mode_two_drains`. |
-| Parallax Dementia | ⏳ | Fading + reanimate; needs fade counters. |
-| Parallax Nexus | 🟡 | Enters with 5 charge counters; upkeep removes one and it's sacrificed at 0 (Fading approximation). `{0}`: target opponent discards a card (proxy for "exile target card from a hand"). |
+| Parallax Dementia | ⏳ | Fading + reanimate-on-leave; Fading ✅, the steal-on-leave rider still needs a primitive. |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
 
 ### Red

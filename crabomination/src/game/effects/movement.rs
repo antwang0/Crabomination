@@ -558,6 +558,10 @@ impl GameState {
             let owner = card.owner;
             let dest = match return_to {
                 Some(ExileReturnZone::Hand) => ZoneDest::Hand(PlayerRef::Seat(owner)),
+                Some(ExileReturnZone::BattlefieldTapped) => ZoneDest::Battlefield {
+                    controller: PlayerRef::Seat(owner),
+                    tapped: true,
+                },
                 _ => ZoneDest::Battlefield {
                     controller: PlayerRef::Seat(owner),
                     tapped: false,
