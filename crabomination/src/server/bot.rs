@@ -164,6 +164,23 @@ impl Bot for RandomBot {
                                     .map(|cp| {
                                         !cp.keywords.contains(&Keyword::Defender)
                                             && !cp.keywords.contains(&Keyword::CantAttack)
+                                            // CR 508.1a — "can attack only if
+                                            // defending player controls [X]"
+                                            // (Dandân). Don't declare it into a
+                                            // defender whose board fails the
+                                            // filter, or the whole batch is
+                                            // rejected.
+                                            && cp.keywords.iter().all(|kw| match kw {
+                                                Keyword::CanAttackOnlyIfDefenderControls(req) => {
+                                                    state.battlefield.iter().any(|d| {
+                                                        d.controller == target_player
+                                                            && state.evaluate_requirement_on_card(
+                                                                req, d, target_player,
+                                                            )
+                                                    })
+                                                }
+                                                _ => true,
+                                            })
                                     })
                                     .unwrap_or(true)
                         })
@@ -1696,6 +1713,38 @@ mod tests {
             GameAction::DeclareAttackers(a) => {
                 assert!(a.iter().any(|atk_decl| atk_decl.attacker == atk),
                     "menace attacker should swing past a lone blocker");
+            }
+            other => panic!("expected DeclareAttackers, got {:?}", other),
+        }
+    }
+
+    /// The bot won't declare a CanAttackOnlyIfDefenderControls attacker
+    /// (Dandân) into a defender whose board fails the filter — doing so
+    /// would get the whole batch rejected by the engine.
+    #[test]
+    fn bot_holds_back_dandan_when_defender_has_no_island() {
+        let mut g = two_player_game();
+        g.step = TurnStep::DeclareAttackers;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let dd = g.add_card_to_battlefield(0, catalog::dandan());
+        g.clear_sickness(dd);
+        g.add_card_to_battlefield(0, catalog::island()); // your Island, not the defender's
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0) {
+            Some(GameAction::DeclareAttackers(a)) => {
+                assert!(!a.iter().any(|x| x.attacker == dd),
+                    "Dandân must not be declared when the defender controls no Island");
+            }
+            _ => {} // declaring no attackers is also fine
+        }
+        // Now give the defender an Island — Dandân becomes a legal attacker.
+        g.add_card_to_battlefield(1, catalog::island());
+        let mut bot2 = RandomBot::new();
+        match bot2.next_action(&g, 0).expect("bot acts") {
+            GameAction::DeclareAttackers(a) => {
+                assert!(a.iter().any(|x| x.attacker == dd),
+                    "Dandân should attack once the defender controls an Island");
             }
             other => panic!("expected DeclareAttackers, got {:?}", other),
         }

@@ -18999,6 +18999,22 @@ fn client_view_legal_attacker_and_blocker_hints() {
     assert!(blk.contains(&blocker), "untapped creature can block the declared attacker");
 }
 
+#[test]
+fn legal_attackers_honors_defender_board_restriction() {
+    let mut g = two_player_game();
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::island()); // your Island doesn't count
+    let dd = g.add_card_to_battlefield(0, catalog::dandan());
+    g.clear_sickness(dd);
+    assert!(!g.legal_attackers(0).contains(&dd),
+        "Dandân isn't a legal attacker while no opponent controls an Island");
+    g.add_card_to_battlefield(1, catalog::island());
+    assert!(g.legal_attackers(0).contains(&dd),
+        "Dandân becomes a legal attacker once an opponent controls an Island");
+}
+
 /// Reverberate copies a spell and the copy can be repointed at a new
 /// target (CR 115.7). Bolt hits bear1; the copy is steered onto bear2.
 #[test]

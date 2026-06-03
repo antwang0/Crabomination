@@ -1941,9 +1941,37 @@ impl GameState {
         {
             return Vec::new();
         }
+        use crate::card::Keyword;
         self.battlefield
             .iter()
             .filter(|c| c.controller == seat && c.can_attack())
+            .filter(|c| {
+                // Honor layer-granted Defender / can't-attack and the
+                // per-defender attack restriction (Dandân) so the client's
+                // highlight matches what `declare_attackers` will accept.
+                let kws = self
+                    .computed_permanent(c.id)
+                    .map(|cp| cp.keywords.clone())
+                    .unwrap_or_else(|| c.definition.keywords.clone());
+                if kws.contains(&Keyword::Defender) || kws.contains(&Keyword::CantAttack) {
+                    return false;
+                }
+                kws.iter().all(|kw| match kw {
+                    Keyword::CanAttackOnlyIfDefenderControls(req) => {
+                        // Legal if at least one alive opponent's board satisfies
+                        // the filter (they could be chosen as the defender).
+                        (0..self.players.len()).any(|d| {
+                            d != seat
+                                && self.players[d].is_alive()
+                                && self.battlefield.iter().any(|p| {
+                                    p.controller == d
+                                        && self.evaluate_requirement_on_card(req, p, d)
+                                })
+                        })
+                    }
+                    _ => true,
+                })
+            })
             .map(|c| c.id)
             .collect()
     }

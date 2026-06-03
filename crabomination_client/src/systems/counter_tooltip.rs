@@ -450,6 +450,9 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::Dredge(_) => "Instead of drawing, you may mill that many cards to return this from your graveyard to your hand.",
         K::Rebound => "If cast from your hand, it's exiled instead of going to the graveyard, and you may cast it for free next turn.",
         K::CantBeCountered => "Can't be countered.",
+        K::CanAttackOnlyIfDefenderControls(_) => {
+            "Can attack only if the defending player controls a matching permanent."
+        }
         _ => return None,
     })
 }
@@ -541,6 +544,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Equip(cost) => format!("Equip {}", cost.summary()),
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),
+        K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),
         _ => format!("{kw:?}"),
     }
 }
