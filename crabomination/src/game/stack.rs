@@ -156,6 +156,10 @@ impl GameState {
                 // turn-based action at upkeep, before step triggers.
                 let mut fv = self.process_fading_vanishing();
                 events.append(&mut fv);
+                // CR 702.62d/e — Suspend time counters tick at the owner's
+                // upkeep; the spell is cast for free when the last comes off.
+                let mut susp = self.process_suspend();
+                events.append(&mut susp);
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }

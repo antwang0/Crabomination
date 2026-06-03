@@ -1218,6 +1218,72 @@ impl GameState {
         events
     }
 
+    /// CR 702.62d/e — remove one time counter from each suspended card the
+    /// active player owns in exile; when the last counter comes off, cast
+    /// the card without paying its mana cost (a creature so cast clears its
+    /// summoning sickness — Suspend grants haste). Targets are auto-chosen,
+    /// matching AutoDecider behavior for other free casts.
+    pub(crate) fn process_suspend(&mut self) -> Vec<crate::game::GameEvent> {
+        use crate::card::{CounterType, Keyword};
+        let active = self.active_player_idx;
+        let mut events = Vec::new();
+        // Snapshot suspended exiled cards (Suspend keyword + ≥1 time counter)
+        // owned by the active player, so the borrow is released before casting.
+        let suspended: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| {
+                c.owner == active
+                    && c.counter_count(CounterType::Time) > 0
+                    && c.definition
+                        .keywords
+                        .iter()
+                        .any(|k| matches!(k, Keyword::Suspend(..)))
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in suspended {
+            let Some(card) = self.exile.iter_mut().find(|c| c.id == id) else { continue };
+            card.remove_counters(CounterType::Time, 1);
+            events.push(crate::game::GameEvent::CounterRemoved {
+                card_id: id,
+                counter_type: CounterType::Time,
+                count: 1,
+            });
+            if card.counter_count(CounterType::Time) > 0 {
+                continue;
+            }
+            // Last counter removed — cast it for free from exile. Compute an
+            // auto-target against the card's effect (the owner chooses in
+            // real play; we collapse to the AutoDecider's first-legal pick).
+            let effect = card.definition.effect.clone();
+            let auto_target = self.auto_target_for_effect_avoiding(&effect, active, Some(id));
+            // The suspending owner casts it; route priority so the cast helper
+            // attributes it correctly.
+            let saved_priority = self.priority.player_with_priority;
+            self.priority.player_with_priority = active;
+            let cast = self.cast_card_for_free(
+                active,
+                id,
+                crate::card::Zone::Exile,
+                auto_target,
+                vec![],
+                None,
+                None,
+                false,
+            );
+            self.priority.player_with_priority = saved_priority;
+            // If it can't be cast (e.g. no legal target) CR 702.62e leaves it
+            // exiled with 0 time counters. (A creature so cast gains haste —
+            // CR 702.62f; not yet modeled, so a suspended creature is
+            // summoning-sick the turn it resolves. Tracked in TODO.md.)
+            if let Ok(mut evs) = cast {
+                events.append(&mut evs);
+            }
+        }
+        events
+    }
+
     /// CR 614.x — true if any active `StaticEffect::ExileNontokenCreaturesNotCast`
     /// (Containment Priest) is on the battlefield. Consulted by
     /// `place_card_in_dest` to reroute non-cast nontoken creatures to exile.
@@ -2388,6 +2454,27 @@ impl GameState {
             .collect()
     }
 
+    /// Cards in `caster`'s hand they could suspend right now (CR 702.62):
+    /// the card has `Keyword::Suspend` and the suspend action would be
+    /// accepted (cost affordable + timing legal). Surfaced in
+    /// `PlayerView.suspendable_hand` so the client can offer a "Suspend"
+    /// affordance.
+    pub fn suspendable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        use crate::card::Keyword;
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| {
+                c.definition.keywords.iter().any(|k| matches!(k, Keyword::Suspend(..)))
+            })
+            .map(|c| c.id)
+            .filter(|&id| self.would_accept(GameAction::Suspend { card_id: id }))
+            .collect()
+    }
+
     /// Extra generic mana the caster owes on top of `card`'s printed
     /// cost — Damping Sphere's "+1 after the first spell each turn,"
     /// Chancellor of the Annex's first-spell tax, etc. Public so the
@@ -2554,6 +2641,7 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_bestow(card_id, target, additional_targets, mode, x_value),
+            GameAction::Suspend { card_id } => self.suspend_card(card_id),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,

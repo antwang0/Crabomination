@@ -570,6 +570,17 @@ fn dashable_hand_cards_lists_affordable_dash_creatures() {
     assert_eq!(g.dashable_hand_cards(0), vec![scout], "Mardu Scout is dashable for one red");
 }
 
+#[test]
+fn suspendable_hand_cards_lists_affordable_suspend_cards() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    let bolt = g.add_card_to_hand(0, catalog::rift_bolt()); // Suspend 1—{R}
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // no suspend
+    assert!(g.suspendable_hand_cards(0).is_empty(), "no red → can't pay suspend cost");
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert_eq!(g.suspendable_hand_cards(0), vec![bolt], "Rift Bolt is suspendable for one red");
+}
+
 /// Symmetric: untap step should untap creatures the active player
 /// CONTROLS, not just those they originally owned. A stolen creature
 /// untaps on the new controller's turn, never the original owner's.

@@ -8,6 +8,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Suspend (CR 702.62) — ✅ DONE (primitive), two follow-ups.**
+  `Keyword::Suspend(n, cost)` + `GameAction::Suspend` + `process_suspend`
+  ship the exile-with-time-counters → tick-at-upkeep → free-cast loop
+  (Rift Bolt, Ancestral Vision, Lotus Bloom). Remaining: (1) a suspended
+  *creature* gains haste (CR 702.62f) — not modeled, so it's summoning-sick
+  the turn it resolves; needs a "cast-from-suspend" flag plumbed onto the
+  resolved permanent. (2) The free cast auto-targets via the AutoDecider's
+  first-legal pick; a `wants_ui` human should be prompted for the targets
+  (and X) of the cast spell. Also: no client affordance exists to suspend a
+  card from hand.
 - **One-shot spell-cost discount — ✅ DONE (primitive).**
   `Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount }` pushes a
   `(amount, granted_at)` entry onto `Player.pending_is_discounts`;
@@ -1440,8 +1450,8 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ability with "you may ignore" rider in the catalog).
   (f) **116.2e** Circling Vultures "may discard at any time" — ⏳ (the
   card isn't in the catalog).
-  (g) **116.2f** Suspend — exile from hand at priority — 🟡 (suspend
-  primitive partially modelled; see TODO row for Suspend).
+  (g) **116.2f** Suspend — exile from hand at priority — ✅
+  (`GameAction::Suspend` + `Keyword::Suspend(n, cost)` + `process_suspend`).
   (h) **116.2g** Companion {3}: hand from outside game — ⏳ (no
   companion sideboard / outside-game model).
   (i) **116.2h** Foretell — exile from hand for {2} — ⏳ (no foretell
@@ -2547,8 +2557,8 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (f) **116.2e** Discard Circling Vultures any time you could cast
   an instant — ⏳ (the literal card is not in the catalog; no general
   "discard as a special action" primitive).
-  (g) **116.2f** Suspend: exile a card from hand — ⏳ (no Suspend
-  keyword primitive; suspend triggers + time-counter framework absent).
+  (g) **116.2f** Suspend: exile a card from hand — ✅
+  (`GameAction::Suspend`; time-counter tick + free-cast in `process_suspend`).
   (h) **116.2g** Companion {3} pay to put into hand — ⏳ (no
   companion sideboard model; the engine has no "outside the game"
   zone wiring for companion picks).
@@ -2713,8 +2723,8 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   static-effect bypass primitive — none of the printed catalog uses it).
   (e) **116.2e** Circling Vultures-style "discard at instant speed" —
   ⏳ (single-card corner; not in catalog).
-  (f) **116.2f** exile a Suspend card from hand — ⏳ (no Suspend
-  keyword primitive).
+  (f) **116.2f** exile a Suspend card from hand — ✅
+  (`GameAction::Suspend`).
   (g) **116.2g** Companion {3}-to-hand — ⏳ (no Companion primitive).
   (h) **116.2h** Foretell exile from hand — ⏳ (no Foretell primitive
   — same gap tracked under "Foretell alt-cost primitive" in the

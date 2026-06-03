@@ -553,6 +553,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Landwalk(lt) => format!("{lt:?}walk"),
         K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),
         K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
+        K::Suspend(n, cost) => format!("Suspend {n}—{}", cost.summary()),
         _ => format!("{kw:?}"),
     }
 }

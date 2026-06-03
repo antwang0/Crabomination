@@ -240,6 +240,44 @@ pub fn lava_dart() -> CardDefinition {
     }
 }
 
+/// Ancestral Vision — Sorcery with no mana cost. Target player draws three
+/// cards. Suspend 4—{U}.
+pub fn ancestral_vision() -> CardDefinition {
+    CardDefinition {
+        name: "Ancestral Vision",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Suspend(4, cost(&[u()]))],
+        effect: Effect::Draw {
+            who: Selector::Player(PlayerRef::You),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lotus Bloom — Artifact with no mana cost. Suspend 3—{0}.
+/// "{T}, Sacrifice Lotus Bloom: Add three mana of any one color."
+pub fn lotus_bloom() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Lotus Bloom",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Suspend(3, ManaCost::default())],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(3)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 
@@ -13668,13 +13706,13 @@ pub fn messenger_falcons() -> CardDefinition {
 }
 
 /// Rift Bolt — {2}{R} Sorcery. Deal 3 damage to any target.
-///
-/// Suspend 1 — {R} is omitted (no suspend primitive).
+/// Suspend 1—{R} (CR 702.62).
 pub fn rift_bolt() -> CardDefinition {
     CardDefinition {
         name: "Rift Bolt",
         cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Suspend(1, cost(&[r()]))],
         effect: Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Any),
             amount: Value::Const(3),

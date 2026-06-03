@@ -12,6 +12,77 @@ use crate::mana::Color;
 
 // ── Cantrips ─────────────────────────────────────────────────────────────────
 
+// ── Suspend (CR 702.62) ──────────────────────────────────────────────────────
+
+/// Rift Bolt suspends for {R}, ticks down at upkeep, then casts itself for
+/// free when the last time counter is removed — dealing 3 to the opponent.
+#[test]
+fn suspend_rift_bolt_ticks_down_and_casts_for_free() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::rift_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::Suspend { card_id: bolt }).expect("suspend Rift Bolt");
+
+    let exiled = g.exile.iter().find(|c| c.id == bolt).expect("suspended card in exile");
+    assert_eq!(exiled.counter_count(CounterType::Time), 1, "enters exile with N=1 time counters");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == bolt), "left hand");
+
+    // Simulate the suspender's next upkeep: last counter off → free cast.
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let _ = g.process_suspend();
+    drain_stack(&mut g);
+
+    assert!(!g.exile.iter().any(|c| c.id == bolt), "the spell left exile when cast");
+    assert_eq!(g.players[1].life, 17, "Rift Bolt deals 3 to the opponent");
+}
+
+/// Lotus Bloom suspends for {0} with three time counters; after three upkeep
+/// ticks it resolves as an artifact on the battlefield.
+#[test]
+fn suspend_lotus_bloom_enters_after_three_ticks() {
+    let mut g = two_player_game();
+    let bloom = g.add_card_to_hand(0, catalog::lotus_bloom());
+    g.perform_action(GameAction::Suspend { card_id: bloom }).expect("suspend Lotus Bloom");
+    assert_eq!(
+        g.exile.iter().find(|c| c.id == bloom).unwrap().counter_count(CounterType::Time),
+        3,
+    );
+
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Three upkeeps: only the third removes the last counter and casts it.
+    for _ in 0..3 {
+        let _ = g.process_suspend();
+    }
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bloom && c.definition.name == "Lotus Bloom"),
+        "Lotus Bloom resolves onto the battlefield after its third tick");
+}
+
+/// Ancestral Vision suspends for {U} (no mana cost) and draws three cards
+/// for its controller when the last of four time counters is removed.
+#[test]
+fn suspend_ancestral_vision_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let av = g.add_card_to_hand(0, catalog::ancestral_vision());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::Suspend { card_id: av }).expect("suspend Ancestral Vision");
+    let hand_before = g.players[0].hand.len();
+
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 3, "controller draws three");
+}
+
 #[test]
 fn ponder_resolves_and_draws_a_card() {
     let mut g = two_player_game();

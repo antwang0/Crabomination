@@ -137,6 +137,12 @@ pub struct ClientView {
     /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub dashable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand they could Suspend right now (CR 702.62):
+    /// the card has `Keyword::Suspend` and the suspend cost is affordable at
+    /// legal timing. Lets the client offer a "Suspend" affordance. Empty
+    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub suspendable_hand: Vec<CardId>,
     /// CardIds of permanents the viewer controls with an activated ability
     /// they could use right now (timing/mana/tap/target all checked). Lets
     /// the client highlight "this permanent can do something." Empty

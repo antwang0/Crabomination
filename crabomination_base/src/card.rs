@@ -347,6 +347,13 @@ pub enum Keyword {
     /// instead of the graveyard as it resolves. Cast via
     /// `GameAction::CastSpellBuyback`.
     Buyback(crate::mana::ManaCost),
+    /// CR 702.62 — Suspend N—[cost]. You may pay the suspend cost to exile
+    /// the card from your hand with N time counters on it. At each of the
+    /// owner's upkeeps a time counter is removed; when the last is removed
+    /// the owner casts it without paying its mana cost (and a creature so
+    /// cast has haste). First field = N, second = the suspend cost. Cast
+    /// via `GameAction::Suspend`.
+    Suspend(u32, crate::mana::ManaCost),
     Convoke,
     Delve,
     Cascade,

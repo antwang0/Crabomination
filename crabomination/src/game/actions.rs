@@ -892,6 +892,56 @@ impl GameState {
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, true, false)
     }
 
+    /// CR 702.62 — suspend a card from hand: pay its suspend cost and exile
+    /// it with N time counters. Timing follows the card's normal cast
+    /// timing (sorcery-speed unless the card is instant-speed). Removal +
+    /// the free cast happen later in `process_suspend`.
+    pub(crate) fn suspend_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::{CounterType, Keyword};
+        let p = self.priority.player_with_priority;
+        // Locate the card in the priority player's hand and its Suspend params.
+        let (n, cost, is_instant) = {
+            let card = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .ok_or(GameError::CardNotInHand(card_id))?;
+            let suspend = card.definition.keywords.iter().find_map(|k| match k {
+                Keyword::Suspend(n, cost) => Some((*n, cost.clone())),
+                _ => None,
+            });
+            let Some((n, cost)) = suspend else {
+                return Err(GameError::CardNotInHand(card_id));
+            };
+            (n, cost, card.definition.is_instant_speed())
+        };
+        // CR 702.62a — you may suspend only when you could cast the card.
+        if !is_instant && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        // Pay the suspend cost.
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let mut events = receipt.auto_events;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        // Exile from hand with N time counters.
+        let mut card = self
+            .players[p]
+            .remove_from_hand(card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        card.add_counters(CounterType::Time, n);
+        self.exile.push(card);
+        events.push(GameEvent::PermanentExiled { card_id });
+        events.push(GameEvent::CounterAdded {
+            card_id,
+            counter_type: CounterType::Time,
+            count: n,
+        });
+        Ok(events)
+    }
+
     /// CR 702.103 — cast an enchantment-creature for its Bestow cost as an
     /// Aura targeting a creature (`target`). The resolving permanent enters
     /// attached and is an Aura (not a creature) while bestowed.
