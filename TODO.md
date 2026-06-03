@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **One-shot spell-cost discount ("next instant/sorcery costs {2} less this
+  turn").** Would finish Thundertrap Trainer's dropped discount rider. Needs a
+  `Player.pending_spell_discounts: Vec<(filter, amount)>` consumed by the next
+  matching cast (and cleared at cleanup). The tricky part is consuming exactly
+  once at the real cast-commit point — `cost_reduction_for_spell` is also
+  called for cost *preview* (actions.rs:1756/1877), so the consume must be
+  gated to the committing call only. Distinct from the existing *static*
+  `StaticEffect::CostReduction`.
+- **Squad / Backup / Bargain keywords.** Squad (CR 702.157) needs "pay an
+  additional cost any number of times" tracking + copy-of-self tokens (the
+  `CreateTokenCopyOf` half exists). Backup N (CR 702.164) is ETB +N/+N on a
+  target plus a keyword-grant-if-another rider. Bargain (CR 702.176) is an
+  optional sacrifice-as-additional-cost (shares the unbuilt Casualty cost-mode
+  primitive).
 - **Mobilize / Myriad / Enlist — ✅ DONE.** `Effect::CreateTokenAttacking`
   carries an `AttackingTokenCleanup` (None / SacrificeAtEndOfCombat /
   ExileAtEndOfCombat); `GameState.attacking_token_cleanup` +
