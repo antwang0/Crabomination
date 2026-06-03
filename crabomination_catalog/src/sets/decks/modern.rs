@@ -13709,6 +13709,30 @@ pub fn trenchpost() -> CardDefinition {
     }
 }
 
+/// Maze of Ith — Land. "{T}: Untap target attacking creature. Prevent all
+/// combat damage that would be dealt to and dealt by that creature this turn."
+pub fn maze_of_ith() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Maze of Ith",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Untap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                    ),
+                    up_to: None,
+                },
+                Effect::PreventAllCombatDamageInvolving { target: Selector::Target(0) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Exquisite Firecraft — {1}{R}{R} Sorcery. Deal 4 damage to any target.
 ///
 /// The "spell mastery — this spell can't be countered" rider is omitted.

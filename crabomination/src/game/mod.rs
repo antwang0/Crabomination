@@ -334,6 +334,13 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
+    /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
+    /// directions for the rest of the turn (Maze of Ith: "prevent all combat
+    /// damage that would be dealt to and dealt by that creature"). The combat
+    /// resolver skips dealing *and* receiving combat damage for any creature
+    /// in this set. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -471,6 +478,7 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
+            combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             replacement_effects: self.replacement_effects.clone(),
@@ -539,6 +547,7 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             prevent_combat_damage_this_turn: false,
+            combat_damage_prevented_creatures: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
             replacement_effects: Vec::new(),

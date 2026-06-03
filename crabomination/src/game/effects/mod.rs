@@ -3993,6 +3993,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllCombatDamageInvolving { target } => {
+                // CR 614.9 — Maze of Ith: prevent all combat damage to and by
+                // the target creature for the rest of the turn.
+                for ent in self.resolve_selector(target, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent
+                        && !self.combat_damage_prevented_creatures.contains(&id)
+                    {
+                        self.combat_damage_prevented_creatures.push(id);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventNextDamage { target, amount } => {
                 // CR 615.7 — push a "prevent the next N damage to target"
                 // shield consumed by `apply_prevention_shields`.

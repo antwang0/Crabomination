@@ -902,6 +902,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CastFreeParadigmCopy => "Cast paradigm copy",
         Effect::WinGame { .. } => "Win the game",
         Effect::PreventAllCombatDamageThisTurn => "Prevent combat damage",
+        Effect::PreventAllCombatDamageInvolving { .. } => "Prevent combat damage to/from target",
         Effect::SkipTurns { .. } => "Skip turns",
         Effect::SetLifeTotal { .. } => "Set life total",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",

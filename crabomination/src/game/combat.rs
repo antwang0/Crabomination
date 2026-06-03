@@ -807,9 +807,11 @@ impl GameState {
                     }).sum(),
                     // CR 510.1 — a creature with "deals no combat damage this
                     // turn" (Master of Cruelties) is skipped in both damage
-                    // steps even though it's a legal attacker/blocker.
+                    // steps even though it's a legal attacker/blocker. CR 614.9
+                    // — a Maze-of-Ith'd attacker deals no combat damage either.
                     should_deal: attacker_filter(kws)
-                        && !kws.contains(&Keyword::DealsNoCombatDamage),
+                        && !kws.contains(&Keyword::DealsNoCombatDamage)
+                        && !self.combat_damage_prevented_creatures.contains(&cp.id),
                 })
             })
             .collect();
@@ -902,6 +904,10 @@ impl GameState {
                     if assign == 0 {
                         continue;
                     }
+                    // CR 614.9 — a Maze-of-Ith'd blocker takes no combat damage.
+                    if self.combat_damage_prevented_creatures.contains(&blocker_id) {
+                        continue;
+                    }
                     // CR 615 — route attacker→blocker combat damage through
                     // the blocker's prevention shields. Lifelink and the
                     // wither/infect -1/-1 counters scale off the actual
@@ -975,9 +981,14 @@ impl GameState {
                     .copied()
                     .filter(|&bid| computed_of(bid)
                         .is_some_and(|bc| blocker_filter(&bc.keywords)))
+                    // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
+                    .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
                     .collect();
 
-                let blocker_damage_to_attacker: i32 = if prevent_combat_damage {
+                let blocker_damage_to_attacker: i32 = if prevent_combat_damage
+                    // CR 614.9 — a Maze-of-Ith'd attacker takes no combat damage.
+                    || self.combat_damage_prevented_creatures.contains(&atk.id)
+                {
                     0
                 } else {
                     dealing_blocker_ids

@@ -303,6 +303,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         kozileks_command,
         eldrazi_confluence,
         planar_nexus,
+        maze_of_ith,
         // ── modern_decks-17 ──
         lightning_greaves,
         stonecoil_serpent,

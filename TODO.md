@@ -2146,9 +2146,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (j) **614.8** Regeneration as destruction-replacement — ✅
   (`Regeneration::regen_shields` on `CardInstance` + the destroy
   pipeline check at `effects/mod.rs`).
-  (k) **614.9** redirection effects — ⏳ (no general
-  damage-redirection primitive; Maze of Ith / Lightning Greaves /
-  Boros Guildmage-style redirects aren't modelled).
+  (k) **614.9** redirection / per-source prevention — 🟡
+  (`Effect::PreventAllCombatDamageInvolving` +
+  `GameState.combat_damage_prevented_creatures` model Maze of Ith:
+  "prevent all combat damage dealt to and by target creature this
+  turn", checked in both directions by the combat resolver. Test:
+  `maze_of_ith_prevents_combat_damage_to_and_from_attacker`. True
+  *redirection* — "the next damage … is dealt to X instead" — is
+  still ⏳).
   (l) **614.10** skip-effects (see row (b)) — 🟡.
   (m) **614.12** — ✅ (see row (c) above;
   full audit row at `TODO.md:2222`).

@@ -22403,3 +22403,41 @@ fn vanilla_keyword_bodies_round_two() {
     let ox = catalog::pillarfield_ox();
     assert_eq!((ox.power, ox.toughness), (2, 4));
 }
+
+#[test]
+fn maze_of_ith_prevents_combat_damage_to_and_from_attacker() {
+    // CR 614.9 — Maze of Ith's controller untaps a target attacker and
+    // prevents all combat damage to and by it for the turn, so the defender
+    // takes nothing from a 5-power Juggernaut.
+    use crate::game::types::AttackTarget;
+    let mut g = two_player_game();
+    let jug = g.add_card_to_battlefield(0, catalog::juggernaut());
+    g.clear_sickness(jug);
+    let maze = g.add_card_to_battlefield(1, catalog::maze_of_ith());
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: jug, target: AttackTarget::Player(1) },
+    ])).expect("Juggernaut attacks");
+    drain_stack(&mut g);
+
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no block");
+    drain_stack(&mut g);
+
+    let life_before = g.players[1].life;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: maze, ability_index: 0, target: Some(Target::Permanent(jug)), x_value: None,
+    }).expect("Maze of Ith targets the attacker");
+    drain_stack(&mut g);
+
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("advance combat");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, life_before,
+        "Maze prevents all of the Juggernaut's combat damage");
+}

@@ -1918,6 +1918,12 @@ pub enum Effect {
     /// family of effects.
     PreventAllCombatDamageThisTurn,
 
+    /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
+    /// by `target` this turn." Adds the target creature to
+    /// `GameState.combat_damage_prevented_creatures`; the combat resolver
+    /// then skips that creature in both directions. Maze of Ith.
+    PreventAllCombatDamageInvolving { target: Selector },
+
     /// "Prevent the next N damage that would be dealt to `target` this
     /// turn." (CR 615.7) Pushes a per-target prevention shield consumed
     /// by the non-combat damage path; the shield expires at cleanup.
@@ -2280,6 +2286,7 @@ impl Effect {
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
+            Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
             Effect::PreventNextDamage { target, amount } => {
                 sel_has_target(target) || value_has_target(amount)
             }
@@ -2871,7 +2878,8 @@ impl Effect {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
                 Effect::PreventNextDamage { target, .. }
-                | Effect::PreventAllDamageThisTurn { target } => sel_find(target, slot),
+                | Effect::PreventAllDamageThisTurn { target }
+                | Effect::PreventAllCombatDamageInvolving { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
