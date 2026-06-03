@@ -560,6 +560,38 @@ fn create_token_attacking_joins_combat_tapped() {
     }
 }
 
+// ── CR 702.151 Enlist ─────────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_151_enlist_taps_a_creature_and_adds_its_power() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Enlister", 2, 2, vec![shortcut::enlist()]));
+    let helper = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(atk);
+    g.clear_sickness(helper);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // Helper tapped; attacker is 2+2 = 4 power until end of turn.
+    assert!(g.battlefield_find(helper).unwrap().tapped, "enlisted creature is tapped");
+    assert_eq!(g.battlefield_find(atk).unwrap().power(), 4, "attacker gains the helper's power");
+}
+
+#[test]
+fn cr_702_151_enlist_does_nothing_with_no_eligible_helper() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Enlister", 2, 2, vec![shortcut::enlist()]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(atk).unwrap().power(), 2, "no helper → no pump");
+}
+
 // ── CR 702.169 Mobilize ──────────────────────────────────────────────────────
 
 #[test]

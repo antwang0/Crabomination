@@ -2770,6 +2770,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Enlist => {
+                // CR 702.151 — tap a nonattacking, non-sick creature you
+                // control and add its power to the attacker until end of turn.
+                let Some(src) = ctx.source else { return Ok(()); };
+                let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
+                    return Ok(());
+                };
+                let attacking_ids: Vec<CardId> = self.attacking.iter().map(|a| a.attacker).collect();
+                // Highest-power eligible creature, only if its power is positive.
+                let best = self.battlefield.iter()
+                    .filter(|c| c.controller == ctrl
+                        && c.id != src
+                        && c.definition.is_creature()
+                        && !c.tapped
+                        && !c.summoning_sick
+                        && !attacking_ids.contains(&c.id))
+                    .max_by_key(|c| c.power())
+                    .filter(|c| c.power() > 0)
+                    .map(|c| (c.id, c.power()));
+                if let Some((helper, power)) = best {
+                    if let Some(c) = self.battlefield_find_mut(helper) {
+                        c.tapped = true;
+                    }
+                    events.push(GameEvent::PermanentTapped { card_id: helper });
+                    if let Some(c) = self.battlefield_find_mut(src) {
+                        c.power_bonus += power;
+                        events.push(GameEvent::PumpApplied { card_id: src, power, toughness: 0 });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CreateTokenCopyOf {
                 who,
                 count,

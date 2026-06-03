@@ -1538,6 +1538,12 @@ pub enum Effect {
     /// are exiled at end of combat. No-op outside combat / when the source
     /// isn't attacking a player.
     Myriad,
+    /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
+    /// creature you control without summoning sickness. When you do, add its
+    /// power to this creature's power until end of turn." The "you may" /
+    /// "which creature" collapses to auto-tapping the highest-power eligible
+    /// creature (only when its power is positive, so it's never a downgrade).
+    Enlist,
     /// Create `count` token copies of the permanent resolved by `source`,
     /// controlled by `who`. The copy inherits the source's printed
     /// CardDefinition (name, P/T, types, keywords, activated/triggered
@@ -2167,6 +2173,7 @@ impl Effect {
         match self {
             Effect::Noop => false,
             Effect::Myriad => false,
+            Effect::Enlist => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {
@@ -5057,6 +5064,12 @@ pub mod shortcut {
     /// at end of combat.
     pub fn myriad() -> TriggeredAbility {
         on_attack(Effect::Myriad)
+    }
+
+    /// Enlist (CR 702.151): an `Attacks / SelfSource` trigger that taps a
+    /// nonattacking creature and adds its power to the attacker EOT.
+    pub fn enlist() -> TriggeredAbility {
+        on_attack(Effect::Enlist)
     }
 
     /// Mobilize N (CR 702.169): "Whenever this creature attacks, create N

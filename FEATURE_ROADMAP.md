@@ -254,7 +254,9 @@ feature; sweep card-batch by card-batch.
   ✅ Boast (`shortcut::boast` — CR 702.142, once-per-turn activated ability
   gated on `Predicate::SourceAttackedThisTurn`; Kaldheim `sets::khm`),
   ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
-  ⏳ Enlist, ✅ Mobilize (`shortcut::mobilize(n)` — CR 702.169, on-attack
+  ✅ Enlist (`shortcut::enlist` / `Effect::Enlist` — CR 702.151, on-attack
+  taps the highest-power eligible creature and adds its power EOT),
+  ✅ Mobilize (`shortcut::mobilize(n)` — CR 702.169, on-attack
   mints N 1/1 red Warriors tapped + attacking via `Effect::CreateTokenAttacking`
   with `AttackingTokenCleanup::SacrificeAtEndOfCombat`), ✅ Myriad
   (`shortcut::myriad` / `Effect::Myriad` — CR 702.115, on-attack mints a

@@ -929,6 +929,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CreateTokenAttacking { .. } => "Create attacking tokens",
         Effect::Amass { .. } => "Amass",
         Effect::Myriad => "Myriad",
+        Effect::Enlist => "Enlist",
         _ => "Activate",
     }
 }
