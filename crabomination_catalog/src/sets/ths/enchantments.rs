@@ -203,35 +203,89 @@ fn your_creatures() -> Selector {
 }
 
 /// Spear of Heliod — {1}{W}{W} Legendary Enchantment. Creatures you control
-/// get +1/+1. (The "destroy a creature that damaged you" activated ability
-/// is omitted — no per-turn "damaged you" tracking primitive.)
+/// get +1/+1. {1}{W}{W}, {T}: Destroy target creature that dealt damage to
+/// you this turn.
 pub fn spear_of_heliod() -> CardDefinition {
-    god_weapon(
-        "Spear of Heliod",
-        cost(&[generic(1), w(), w()]),
-        "Creatures you control get +1/+1.",
-        StaticEffect::PumpPT { applies_to: your_creatures(), power: 1, toughness: 1 },
-    )
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), w(), w()]),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::DealtDamageToControllerThisTurn),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..god_weapon(
+            "Spear of Heliod",
+            cost(&[generic(1), w(), w()]),
+            "Creatures you control get +1/+1.",
+            StaticEffect::PumpPT { applies_to: your_creatures(), power: 1, toughness: 1 },
+        )
+    }
 }
 
 /// Whip of Erebos — {2}{B}{B} Legendary Enchantment. Creatures you control
-/// have lifelink. (The reanimate activated ability is omitted.)
+/// have lifelink. {2}{B}{B}, {T}: Return target creature card from your
+/// graveyard to the battlefield. It gains haste. Exile it at the next end
+/// step.
 pub fn whip_of_erebos() -> CardDefinition {
-    god_weapon(
-        "Whip of Erebos",
-        cost(&[generic(2), b(), b()]),
-        "Creatures you control have lifelink.",
-        StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Lifelink },
-    )
+    use crate::effect::{DelayedTriggerKind, ZoneDest};
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), b(), b()]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..god_weapon(
+            "Whip of Erebos",
+            cost(&[generic(2), b(), b()]),
+            "Creatures you control have lifelink.",
+            StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Lifelink },
+        )
+    }
 }
 
 /// Hammer of Purphoros — {2}{R} Legendary Enchantment. Creatures you control
-/// have haste. (The land-sacrifice Golem-token ability is omitted.)
+/// have haste. {1}{R}, Sacrifice a land: Create a 3/3 colorless Golem
+/// artifact creature token. Activate only as a sorcery.
 pub fn hammer_of_purphoros() -> CardDefinition {
-    god_weapon(
-        "Hammer of Purphoros",
-        cost(&[generic(2), r()]),
-        "Creatures you control have haste.",
-        StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Haste },
-    )
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            sorcery_speed: true,
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::golem_3_3_token(),
+            },
+            ..Default::default()
+        }],
+        ..god_weapon(
+            "Hammer of Purphoros",
+            cost(&[generic(2), r()]),
+            "Creatures you control have haste.",
+            StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Haste },
+        )
+    }
 }

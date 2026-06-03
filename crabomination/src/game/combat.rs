@@ -1132,6 +1132,16 @@ impl GameState {
                         amount,
                     });
                 }
+                // Mark the player damaged this turn (Bloodthirst window, CR
+                // 702.54) and record the attacker so "destroy target creature
+                // that dealt damage to you this turn" (Spear of Heliod) can
+                // filter targets.
+                if amount > 0 {
+                    self.players[p].was_dealt_damage_this_turn = true;
+                    if !self.players[p].creatures_that_damaged_me_this_turn.contains(&atk.id) {
+                        self.players[p].creatures_that_damaged_me_this_turn.push(atk.id);
+                    }
+                }
                 // CR 702.180c — Toxic N adds N poison on combat damage to a
                 // player, on top of any life loss (and stacks with Infect's
                 // poison). Only when damage was actually dealt.

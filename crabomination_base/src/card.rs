@@ -512,6 +512,12 @@ pub enum SelectionRequirement {
     IsBasicLand,
     IsAttacking,
     IsBlocking,
+    /// True when the candidate creature dealt damage to the ability's
+    /// controller this turn (combat or non-combat). Reads the controller's
+    /// `Player.creatures_that_damaged_me_this_turn`. Battlefield-only;
+    /// powers Spear of Heliod's "destroy target creature that dealt damage
+    /// to you this turn".
+    DealtDamageToControllerThisTurn,
     /// CR 506.5: "A creature attacks alone if it's the only creature
     /// declared as an attacker during the declare attackers step. A
     /// creature is attacking alone if it's attacking but no other

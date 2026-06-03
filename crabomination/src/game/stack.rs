@@ -871,6 +871,7 @@ impl GameState {
         // cast on your turn reads damage dealt since this turn began.
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
+            pl.creatures_that_damaged_me_this_turn.clear();
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).
             pl.spells_uncounterable_this_turn = false;

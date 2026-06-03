@@ -22583,3 +22583,98 @@ fn hopeful_eidolon_bestow_grants_lifelink_to_host() {
     assert!(!g.computed_permanent(eid).unwrap().card_types.contains(&CardType::Creature),
         "bestowed Hopeful Eidolon is not a creature");
 }
+
+// ── Theros god-weapons (THS) ──────────────────────────────────────────────────
+
+/// Spear of Heliod: {1}{W}{W}, {T}: Destroy target creature that dealt
+/// damage to you this turn.
+#[test]
+fn spear_of_heliod_destroys_creature_that_damaged_you() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let spear = g.add_card_to_battlefield(0, catalog::spear_of_heliod());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    // Bob's bear attacks Alice and connects.
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(0),
+    }])).expect("bear attacks P0");
+    g.step = TurnStep::CombatDamage;
+    let life_before = g.players[0].life;
+    g.resolve_combat().expect("combat resolves");
+    assert_eq!(g.players[0].life, life_before - 2, "bear dealt 2 combat damage");
+    assert!(g.players[0].creatures_that_damaged_me_this_turn.contains(&bear),
+        "bear recorded as having damaged P0");
+
+    // Alice spears the bear that hit her.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spear, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Spear activates on the attacker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "bear in graveyard");
+}
+
+/// Hammer of Purphoros: {1}{R}, Sacrifice a land: Create a 3/3 colorless
+/// Golem (sorcery speed).
+#[test]
+fn hammer_of_purphoros_sacs_land_for_golem() {
+    let mut g = two_player_game();
+    let hammer = g.add_card_to_battlefield(0, catalog::hammer_of_purphoros());
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hammer, ability_index: 0, target: None, x_value: None,
+    }).expect("Hammer activates at sorcery speed");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).is_none(), "land sacrificed");
+    let golem = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Golem");
+    assert!(golem.is_some(), "3/3 Golem created");
+    let g3 = g.computed_permanent(golem.unwrap().id).unwrap();
+    assert_eq!((g3.power, g3.toughness), (3, 3));
+}
+
+/// Whip of Erebos: {2}{B}{B}, {T}: Reanimate a creature with haste; exile it
+/// at the next end step.
+#[test]
+fn whip_of_erebos_reanimates_with_haste_then_exiles() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let whip = g.add_card_to_battlefield(0, catalog::whip_of_erebos());
+    // Seed a bear in P0's graveyard.
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let pos = g.players[0].library.iter().position(|c| c.id == bear).unwrap();
+    let card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(card);
+
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: whip, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Whip reanimates the bear");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear reanimated");
+    assert_eq!(c.controller, 0);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+        "reanimated creature has haste");
+
+    // At the next end step it's exiled (not returned to the graveyard).
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear left the battlefield");
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear exiled, not in graveyard");
+}

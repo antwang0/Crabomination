@@ -124,6 +124,18 @@ impl GameState {
                 // (combat or not, incl. infect→poison) marks them damaged
                 // this turn.
                 self.players[p].was_dealt_damage_this_turn = true;
+                // Record the damaging creature so "destroy target creature
+                // that dealt damage to you this turn" (Spear of Heliod) can
+                // filter targets. Only track battlefield creatures.
+                if let Some(src) = source {
+                    let is_creature = self
+                        .computed_permanent(src)
+                        .map(|cp| cp.card_types.contains(&crate::card::CardType::Creature))
+                        .unwrap_or(false);
+                    if is_creature && !self.players[p].creatures_that_damaged_me_this_turn.contains(&src) {
+                        self.players[p].creatures_that_damaged_me_this_turn.push(src);
+                    }
+                }
                 if source_has_infect {
                     self.players[p].poison_counters =
                         self.players[p].poison_counters.saturating_add(amount);

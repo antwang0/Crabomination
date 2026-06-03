@@ -59,6 +59,27 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
     }
 }
 
+/// 3/3 colorless Golem artifact creature token (Blade Splicer, Hammer of
+/// Purphoros, Wirewood Lodge-style makers).
+pub fn golem_3_3_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Golem".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+    }
+}
+
 pub fn food_token() -> TokenDefinition {
     TokenDefinition {
         name: "Food".into(),

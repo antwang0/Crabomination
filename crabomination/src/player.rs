@@ -105,6 +105,14 @@ pub struct Player {
     /// back-compat.
     #[serde(default)]
     pub was_dealt_damage_this_turn: bool,
+    /// Card ids of creatures that have dealt damage to this player so far
+    /// this turn (combat or non-combat). Reset for all players at the
+    /// active player's `do_untap`. Powers "destroy target creature that
+    /// dealt damage to you this turn" (Spear of Heliod, CR uses
+    /// `SelectionRequirement::DealtDamageToControllerThisTurn`). Defaults
+    /// empty for snapshot back-compat.
+    #[serde(default)]
+    pub creatures_that_damaged_me_this_turn: Vec<crate::card::CardId>,
     /// True once this player has declared an attacker this turn (Raid, CR
     /// 702.108 ability word). Set in `declare_attackers`, reset at the turn
     /// boundary in `do_untap`. `#[serde(default)]` for snapshot back-compat.
@@ -274,6 +282,7 @@ impl Player {
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
             was_dealt_damage_this_turn: false,
+            creatures_that_damaged_me_this_turn: Vec::new(),
             attacked_this_turn: false,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,

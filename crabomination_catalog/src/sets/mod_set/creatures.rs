@@ -2997,7 +2997,6 @@ pub fn temur_ascendancy() -> CardDefinition {
 /// Blade Splicer — {2}{W}, 1/1 Human Artificer. ETB: create a 3/3
 /// colorless Golem artifact creature token.
 pub fn blade_splicer() -> CardDefinition {
-    use crate::card::TokenDefinition;
     CardDefinition {
         name: "Blade Splicer",
         cost: cost(&[generic(2), w()]),
@@ -3013,23 +3012,7 @@ pub fn blade_splicer() -> CardDefinition {
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: TokenDefinition {
-                    name: "Golem".into(),
-                    power: 3,
-                    toughness: 3,
-                    keywords: vec![],
-                    card_types: vec![CardType::Artifact, CardType::Creature],
-                    colors: vec![],
-                    supertypes: vec![],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Golem],
-                        ..Default::default()
-                    },
-                    activated_abilities: vec![],
-                    triggered_abilities: vec![],
-                
-                    static_abilities: vec![],
-                },
+                definition: crabomination_base::tokens::golem_3_3_token(),
             },
         }],
         ..Default::default()

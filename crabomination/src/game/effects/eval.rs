@@ -654,6 +654,12 @@ impl GameState {
                     .unwrap_or(false),
                 Target::Player(p) => !self.same_team(*p, controller),
             },
+            R::DealtDamageToControllerThisTurn => match target {
+                Target::Permanent(cid) => self.players[controller]
+                    .creatures_that_damaged_me_this_turn
+                    .contains(cid),
+                Target::Player(_) => false,
+            },
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
                 // Look on the battlefield first; fall through to graveyards,
@@ -954,7 +960,7 @@ impl GameState {
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
-            | R::IsSpellOnStack => false,
+            | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn => false,
         }
     }
 }
