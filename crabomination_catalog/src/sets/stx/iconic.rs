@@ -1663,8 +1663,9 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
 
 // ── Adventurous Impulse ────────────────────────────────────────────────────
 
-/// Adventurous Impulse — {G} Sorcery. Look at top 3, put a creature/land
-/// to hand, rest on bottom. Approximated as Scry 2 + Draw 1.
+/// Adventurous Impulse — {G} Sorcery. Look at the top 3 cards; put a creature
+/// or land card from among them into your hand and the rest on the bottom.
+/// Ships via `Effect::LookPickToHand` with a creature-or-land pick filter.
 pub fn adventurous_impulse() -> CardDefinition {
     CardDefinition {
         name: "Adventurous Impulse",
@@ -1674,16 +1675,14 @@ pub fn adventurous_impulse() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: false,
+            pick_filter: Some(
+                SelectionRequirement::Creature.or(SelectionRequirement::Land),
+            ),
+        },
         triggered_abilities: vec![],
         ..Default::default()
     }

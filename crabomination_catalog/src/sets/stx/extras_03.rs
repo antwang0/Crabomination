@@ -1051,11 +1051,10 @@ pub fn inkfathom_divers() -> CardDefinition {
 /// hand and the rest on the bottom of your library in any order. Untap
 /// target land you control."
 ///
-/// Push (modern_decks, NEW, `stx::extras`): Quandrix-flavor card velocity
-/// and ramp. Approximated as `Seq(Scry 2 then Draw 1, Untap target Land
-/// you control)`. The "look at top 3, put 1 in hand, rest on bottom" half
-/// collapses to scry-2-then-draw — engine-wide gap shared with Curate and
-/// Adventurous Impulse. Tests:
+/// Push (modern_decks, `stx::extras`): Quandrix-flavor card velocity and
+/// ramp. The "look at the top three cards, put one into your hand, the rest
+/// on the bottom" half ships faithfully via `Effect::LookPickToHand`
+/// (rest → bottom of library). Test:
 /// `quandrix_quickener_scries_and_untaps_target_land`.
 pub fn quandrix_quickener() -> CardDefinition {
     CardDefinition {
@@ -1068,13 +1067,11 @@ pub fn quandrix_quickener() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Scry {
+            Effect::LookPickToHand {
                 who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: None,
             },
             Effect::Untap {
                 what: target_filtered(

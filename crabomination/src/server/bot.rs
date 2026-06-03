@@ -2382,10 +2382,12 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.active_player_idx = 0;
 
-        let action = main_phase_action(&g, 0);
-        // With lands exhausted the only line is the bestow cast onto the bear.
-        assert!(matches!(action,
-            GameAction::CastBestow { target: Some(crate::game::Target::Permanent(t)), .. } if t == host),
-            "bot bestows Hopeful Eidolon onto its creature, got {action:?}");
+        // The bot can cast Hopeful Eidolon normally *or* bestow it; with the
+        // random pick, the bestow line must appear over repeated draws.
+        let bestowed = (0..40).any(|_| {
+            matches!(main_phase_action(&g, 0),
+                GameAction::CastBestow { target: Some(crate::game::Target::Permanent(t)), .. } if t == host)
+        });
+        assert!(bestowed, "bot offers a Bestow line enchanting its creature");
     }
 }

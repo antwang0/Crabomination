@@ -4346,20 +4346,18 @@ pub fn severed_strands() -> CardDefinition {
 
 /// Anticipate — {1}{U} Instant. Look at the top three cards of your
 /// library, put one of them into your hand and the rest on the bottom in
-/// any order.
-///
-/// Approximation: `Scry 2 + Draw 1` — under-counts the breadth of the
-/// real "look at 3, take any" by one card, but the gameplay-relevant
-/// "smooth your draws / take the best of N" axis is preserved.
+/// any order. Ships via `Effect::LookPickToHand` (rest → bottom).
 pub fn anticipate() -> CardDefinition {
     CardDefinition {
         name: "Anticipate",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: false,
+            pick_filter: None,
+        },
         ..Default::default()
     }
 }

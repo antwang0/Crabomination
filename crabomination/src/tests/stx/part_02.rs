@@ -3168,6 +3168,8 @@ fn quandrix_quickener_scries_and_untaps_target_land() {
 
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -3180,6 +3182,10 @@ fn quandrix_quickener_scries_and_untaps_target_land() {
 
     let l = g.battlefield_find(land).expect("forest on bf");
     assert!(!l.tapped, "Forest untapped via Quickener");
+    // Look at top 3, one to hand (net: cast -1 + pick +1 = 0), rest stay in
+    // the library (on the bottom).
+    assert_eq!(g.players[0].hand.len(), hand_before, "one card picked into hand");
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "only the picked card left the library");
 }
 
 // ── Search for Glory (modern_decks push) ────────────────────────────────

@@ -600,9 +600,9 @@ pub fn snow_day() -> CardDefinition {
 /// Put one of them into your hand and the rest on the bottom of your
 /// library in a random order."
 ///
-/// Approximated as `Scry 3 → Draw 1` (same pattern as Flow State's
-/// mainline mode). "Random order on bottom" is an engine-wide gap
-/// (no RNG hook in `resolve_effect`) tracked in TODO.md.
+/// Ships via `Effect::LookPickToHand` (look at top 4, one to hand, rest to
+/// the bottom). The "random order" on the bottom is cosmetic (those cards
+/// aren't seen again until reshuffled).
 pub fn curate() -> CardDefinition {
     CardDefinition {
         name: "Curate",
@@ -613,16 +613,12 @@ pub fn curate() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(3),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: false,
+            pick_filter: None,
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
