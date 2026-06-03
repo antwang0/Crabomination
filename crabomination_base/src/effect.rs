@@ -1058,15 +1058,15 @@ pub enum Effect {
     /// order. Full cast-time mode selection is tracked in TODO.md.
     ChooseN { picks: Vec<u8>, modes: Vec<Effect> },
     /// CR 702.119 — Escalate. "Choose one or more. You pay the escalate cost
-    /// for each mode chosen beyond the first." The controller picks a subset
-    /// of `modes` (≥1) via `Decision::ChooseModes`; the `cost` effect runs
-    /// once per mode beyond the first (Collective Brutality's "discard a
-    /// card"). Each chosen target-bearing mode owns a cast-time target slot
-    /// (same assignment as `ChooseN`). AutoDecider keeps `default_picks`
-    /// (mode 0 only → no escalate cost). Modeled at resolution since the
-    /// escalate cards are sorceries with no cost/effect response window.
+    /// for each mode chosen beyond the first." The cast-time `mode` is the
+    /// base (always-chosen) mode; a `Decision::ChooseModes` answer escalates
+    /// to additional distinct modes, running `cost` (Collective Brutality's
+    /// "discard a card", capped by hand size) once per extra mode. Each
+    /// chosen target-bearing mode owns a target slot in run order. AutoDecider
+    /// keeps just the base mode → no escalate cost, so a plain modal cast is
+    /// unaffected. Modeled at resolution (escalate cards are sorceries with
+    /// no cost/effect response window).
     Escalate {
-        default_picks: Vec<u8>,
         modes: Vec<Effect>,
         cost: Box<Effect>,
     },

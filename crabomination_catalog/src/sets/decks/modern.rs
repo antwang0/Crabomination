@@ -10043,7 +10043,6 @@ pub fn collective_brutality() -> CardDefinition {
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Escalate {
-            default_picks: vec![0],
             cost: Box::new(Effect::Discard {
                 who: Selector::You,
                 amount: Value::Const(1),

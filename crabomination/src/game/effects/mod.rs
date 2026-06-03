@@ -765,7 +765,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Escalate { default_picks: _, modes, cost } => {
+            Effect::Escalate { modes, cost } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
                 // The cast-time `mode` is the base (always-chosen) mode; the

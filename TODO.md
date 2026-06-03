@@ -8,6 +8,24 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Create-token-tapped-and-attacking primitive + EndOfCombat delayed
+  trigger.** Mobilize (CR 702.169) and Myriad (CR 702.116) both need a way
+  to mint tokens already tapped and attacking (the Ninjutsu path at
+  `game/mod.rs:3029` shows the `self.attacking.push(Attack{..})` mechanism to
+  reuse), plus a `DelayedTriggerKind::EndOfCombat` (today only `NextEndStep`
+  exists) to sacrifice the Mobilize Warriors at end of combat. Both are
+  reusable; once landed, Mobilize/Myriad/Battalion-token cards unblock.
+- **Bot accepts beneficial Exploit/Devour.** `shortcut::exploit` /
+  `devour` resolve their sacrifice via `MayDo` / `SacrificeAnyNumber`;
+  `AutoDecider` and the current bot decline (the body is self-costly by
+  `optional_trigger_beneficial`). A value-aware bot would accept when it
+  controls a spare token/weak creature and the payoff outweighs it
+  (`Decision::ChooseAmount` for devour, `OptionalTrigger` for exploit).
+- **Client `Decision::ChooseCards` modal.** The new "exile any number of
+  target cards" decision (`ExileAnyNumberFromGraveyards`, Devious Cover-Up)
+  has wire + bot + AutoDecider support but no Bevy multi-select modal yet —
+  a `wants_ui` human degrades to the AutoDecider "exile nothing". Add a
+  graveyard multi-pick modal (mirrors the Discard hand-pick UI).
 - **Buyback / Bestow client + bot.** `GameAction::CastSpellBuyback` (CR
   702.27) and `GameAction::CastBestow` (CR 702.103) are wired + tested and
   surfaced in `PlayerView.buyback_hand` / `bestowable_hand`. The bot now
@@ -474,7 +492,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   counters on `Selector::This`. Demo: Witherbloom Devourer b209. Test
   `cr_702_83_devour_enters_with_counters_per_sacrifice`.
 - ✅ **CR 702.119 — Escalate** (claude/modern_decks). `Effect::Escalate
-  { default_picks, modes, cost }` — the cast-time `mode` is the base pick; a
+  { modes, cost }` — the cast-time `mode` is the base pick; a
   `Decision::ChooseModes` answer escalates to more distinct modes, paying
   `cost` (Collective Brutality's discard-a-card, capped by hand size) per
   extra. Per-mode target slots assigned in run order. Collective Brutality
