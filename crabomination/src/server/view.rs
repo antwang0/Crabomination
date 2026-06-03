@@ -925,6 +925,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CreateTokenCopyOf { .. } => "Copy permanent",
         Effect::CreateEmblem { .. } => "Get an emblem",
         Effect::TakeExtraTurn { .. } => "Take an extra turn",
+        Effect::ExileAnyNumberFromGraveyards { .. } => "Exile cards from graveyards",
         _ => "Activate",
     }
 }
@@ -1344,6 +1345,15 @@ mod tests {
         let label = ability_effect_label(&good.activated_abilities[0].effect);
         assert_eq!(label, "Draw cards",
             "Greater Good's payoff label should be Draw cards");
+    }
+
+    #[test]
+    fn devious_cover_up_exile_rider_has_graveyard_label() {
+        use crate::card::SelectionRequirement;
+        let eff = Effect::ExileAnyNumberFromGraveyards {
+            filter: SelectionRequirement::Any,
+        };
+        assert_eq!(ability_effect_label(&eff), "Exile cards from graveyards");
     }
 
     /// Pure-sacrifice abilities (Cankerbloom-style sac to do X) still
