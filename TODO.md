@@ -47,7 +47,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `scripts/.scryfall_cache.json` are implemented; new cube/STX TBDs (Baloth
   Prime, Icetill Explorer, Ouroboroid, …) still need a session with Scryfall
   access. Prefer promoting documented 🟡 partials + engine primitives until
-  then (this run promoted Callous Sell-Sword and Drown in the Loch).
+  then. The `claude/modern_decks` runs promoted Callous Sell-Sword, Drown in
+  the Loch, **Spoils of the Vault** (NamedBySource), **Plunge into Darkness**
+  (ChooseAmount + entwine), and added **Maze of Ith** (per-source combat
+  prevention). Most remaining cube 🟡s (Keen-Eyed Curator, Doomsday
+  Excruciator, Collective Brutality escalate, the Parallax fade cards) are
+  **not in the cache** and have synthesised bodies, so faithful completion is
+  blocked until egress opens — don't guess their text.
 - **Card-data audit vs Scryfall cache** (`cargo run --bin dump_cards` diffed
   against `scripts/.scryfall_cache.json`). The claude/modern_decks run fixed
   18 mana-cost bugs and 4 keyword bugs this way. **Remaining diffs are all
