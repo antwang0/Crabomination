@@ -38,6 +38,7 @@ pub fn ornithopter() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -87,6 +88,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -137,6 +139,7 @@ pub fn millstone() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -209,6 +212,7 @@ pub fn mind_stone() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -284,6 +288,7 @@ pub fn aether_spellbomb() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -338,6 +343,7 @@ pub fn zuran_orb() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -421,6 +427,7 @@ pub fn chromatic_star() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -509,6 +516,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -571,6 +579,7 @@ pub fn cankerbloom() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -628,6 +637,7 @@ pub fn fellwar_stone() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -681,6 +691,7 @@ pub fn monument_to_endurance() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 

@@ -75,6 +75,7 @@ pub fn take_up_the_shield() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -141,6 +142,7 @@ pub fn star_pupils_papers() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -206,6 +208,7 @@ fn snarl_land(
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -337,6 +340,7 @@ pub fn dragons_approach() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -390,6 +394,7 @@ pub fn defiant_strike() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -468,6 +473,7 @@ pub fn divine_gambit() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -513,6 +519,7 @@ pub fn cram_session() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -572,6 +579,7 @@ pub fn soothsayer_adept() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -642,6 +650,7 @@ pub fn crux_of_fate() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -741,6 +750,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -806,6 +816,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     };
     CardDefinition {
         name: "Pestilent Cauldron",
@@ -859,6 +870,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -930,6 +942,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -969,6 +982,7 @@ fn diamond(name: &'static str, color: Color) -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1049,6 +1063,7 @@ pub fn goblin_lore() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1094,6 +1109,7 @@ pub fn whirlwind_denial() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1138,6 +1154,7 @@ pub fn eliminate() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1186,6 +1203,7 @@ pub fn pull_from_tomorrow() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1294,6 +1312,7 @@ pub fn postmortem_lunge() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1340,6 +1359,7 @@ pub fn curious_cryomancer() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1392,6 +1412,7 @@ pub fn verdant_pledgemage() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1438,6 +1459,7 @@ pub fn channeled_force() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1496,6 +1518,7 @@ pub fn stonebound_mentor() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1560,6 +1583,7 @@ pub fn inscription_of_insight() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1647,6 +1671,7 @@ pub fn manifold_key() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1708,6 +1733,7 @@ pub fn leyline_invocation() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1756,6 +1782,7 @@ pub fn spitfire_lagac() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1811,6 +1838,7 @@ pub fn settle_the_score() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1860,6 +1888,7 @@ pub fn exsanguinate() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1920,6 +1949,7 @@ pub fn fire_prophecy() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1972,6 +2002,7 @@ pub fn divide_by_zero() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2050,6 +2081,7 @@ pub fn maelstrom_muse() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2121,6 +2153,7 @@ pub fn approach_of_the_second_sun() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2169,6 +2202,7 @@ pub fn resurrection() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2261,6 +2295,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2305,6 +2340,7 @@ pub fn eladamris_call() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2353,6 +2389,7 @@ pub fn yawning_fissure() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2415,6 +2452,7 @@ pub fn cleansing_wildfire() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2471,6 +2509,7 @@ pub fn tendrils_of_agony() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2479,14 +2518,9 @@ pub fn tendrils_of_agony() -> CardDefinition {
 /// Saw It Coming — {2}{U} Instant (Strixhaven Mystical Archive). "Counter
 /// target spell. Foretell {1}{U}."
 ///
-/// Kaldheim's foretell counterspell — typically held for two turns and
-/// then "foretold" at {1}{U}. Wired as a vanilla `Effect::CounterSpell`
-/// at the printed {2}{U} regular cost; the Foretell discount is engine-
-/// wide ⏳ (no Foretell-as-alt-cost primitive — would need a turn-delayed
-/// alt-cost discount tracked via a per-card "foretold this turn" flag).
-/// In practice the regular cost is the more common play pattern in
-/// non-Foretell decks; the discount-from-foretell rider is a niche
-/// optimization shared with all Foretell cards.
+/// Kaldheim's foretell counterspell — cast for {2}{U}, or foretold (exile
+/// face-down for {2}) and cast from exile for `foretell_cost` {1}{U} on a
+/// later turn via `GameAction::CastForetold`.
 pub fn saw_it_coming() -> CardDefinition {
     CardDefinition {
         name: "Saw It Coming",
@@ -2500,6 +2534,7 @@ pub fn saw_it_coming() -> CardDefinition {
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
         },
+        foretell_cost: Some(cost(&[generic(1), u()])),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2601,6 +2636,7 @@ pub fn dueling_coach() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2666,6 +2702,7 @@ pub fn increasing_vengeance() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2709,6 +2746,7 @@ pub fn quench() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2782,6 +2820,7 @@ pub fn spined_karok() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2842,6 +2881,7 @@ pub fn inspiring_veteran() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2904,6 +2944,7 @@ pub fn snipe() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2974,6 +3015,7 @@ pub fn witherbloom_pest_eater() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3027,6 +3069,7 @@ pub fn inkmoth_initiate() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3075,6 +3118,7 @@ pub fn stoic_tutelage() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3128,5 +3172,6 @@ pub fn lorehold_recovery() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }

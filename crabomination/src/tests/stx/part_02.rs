@@ -2399,6 +2399,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     };
 
     let mut g = two_player_game();
@@ -3806,6 +3807,34 @@ fn doomskar_destroys_each_creature() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear1), "bear1 destroyed");
     assert!(!g.battlefield.iter().any(|c| c.id == bear2), "bear2 destroyed");
     assert!(!g.battlefield.iter().any(|c| c.id == bear3), "bear3 destroyed");
+}
+
+/// Doomskar can be foretold ({2}, exile face-down) and cast from exile for
+/// its foretell cost ({1}{W}{W}) on a later turn (CR 702.143).
+#[test]
+fn doomskar_foretell_then_cast_next_turn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::doomskar());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell for {2}");
+    let card = g.exile.iter().find(|c| c.id == id).expect("foretold card in exile");
+    assert!(card.face_down, "foretold cards are exiled face-down");
+    // Can't cast it the turn it was foretold.
+    assert!(g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "not castable the turn it was foretold");
+
+    // Simulate a later turn: foretold-this-turn cleared, board has a creature.
+    g.foretold_this_turn.clear();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Doomskar for {1}{W}{W}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Doomskar wraths the board");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cast Doomskar goes to graveyard");
 }
 
 // ── Battle Mammoth ─────────────────────────────────────────────────────────

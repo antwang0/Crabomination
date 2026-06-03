@@ -143,6 +143,11 @@ pub struct ClientView {
     /// off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub suspendable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand they could Foretell right now (CR
+    /// 702.143): the card has a `foretell_cost` and paying {2} at sorcery
+    /// speed is legal. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub foretellable_hand: Vec<CardId>,
     /// CardIds of permanents the viewer controls with an activated ability
     /// they could use right now (timing/mana/tap/target all checked). Lets
     /// the client highlight "this permanent can do something." Empty

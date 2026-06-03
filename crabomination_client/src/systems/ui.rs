@@ -148,6 +148,7 @@ pub fn update_castable_highlights(
             .chain(cv.pitchable_hand.iter())
             .chain(cv.kickable_hand.iter())
             .chain(cv.suspendable_hand.iter())
+            .chain(cv.foretellable_hand.iter())
             .copied()
             .filter(|id| !hard.contains(id))
             .collect();

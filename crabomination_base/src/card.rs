@@ -878,6 +878,12 @@ pub struct CardDefinition {
     /// `None` for snapshot back-compat.
     #[serde(default)]
     pub bestow: Option<crate::mana::ManaCost>,
+    /// CR 702.143 — Foretell. `Some(cost)` marks the card as foretellable:
+    /// pay {2} to exile it face-down (`GameAction::Foretell`); on a later
+    /// turn cast it from exile for this foretell `cost`
+    /// (`GameAction::CastForetell`). Defaults to `None`.
+    #[serde(default)]
+    pub foretell_cost: Option<crate::mana::ManaCost>,
 }
 
 /// CR 707 — "enters as a copy of [filter] permanent" spec, stored on

@@ -209,7 +209,11 @@ feature; sweep card-batch by card-batch.
   702.35), ✅ Escape (`Keyword::Escape(cost, n)` + `GameAction::CastEscape`,
   CR 702.139 — cast from graveyard for escape cost + exile N other gy cards;
   instants/sorceries re-escape), ⏳ Adventure,
-  ⏳ Soulbond, ⏳ Mutate, ⏳ Companion, ⏳ Foretell, ⏳ Disturb,
+  ⏳ Soulbond, ⏳ Mutate, ⏳ Companion, ✅ Foretell
+  (`CardDefinition.foretell_cost` + `GameAction::Foretell` /
+  `CastForetold` — CR 702.143: pay {2} to exile face-down, cast from exile
+  for the foretell cost on a later turn; Saw It Coming, Doomskar, Behold the
+  Multiverse), ⏳ Disturb,
   ⏳ Daybound/Nightbound, ⏳ Blitz, 🟡 Casualty,
   ✅ Connive (`shortcut::connive` — CR 702.158, draw/discard +
   +1/+1-per-nonland via `Selector::DiscardedThisResolution`; Quandrix

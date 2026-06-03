@@ -83,6 +83,7 @@ pub fn sigardian_savior() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -145,6 +146,7 @@ pub fn sneaky_snacker() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -204,6 +206,7 @@ pub fn soulknife_spy() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -286,6 +289,7 @@ pub fn daring_diversion() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -333,6 +337,7 @@ pub fn possibility_storm() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -397,6 +402,7 @@ pub fn pilgrim_of_the_ages() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -474,6 +480,7 @@ pub fn strixhaven_spawner() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -519,6 +526,7 @@ pub fn mage_hunter_defender() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -568,6 +576,7 @@ pub fn detention_sphere() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -631,6 +640,7 @@ pub fn mascot_trainer() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -687,6 +697,7 @@ pub fn quandrix_cryptidkeeper() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -753,6 +764,7 @@ pub fn ember_anvil() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -809,6 +821,7 @@ pub fn witherbloom_strangler() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -860,6 +873,7 @@ pub fn glasspool_embellisher() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -923,6 +937,7 @@ pub fn lorehold_reanimator() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -982,6 +997,7 @@ pub fn prismari_eruption() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1037,6 +1053,7 @@ pub fn silverquill_inquisitor() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1099,6 +1116,7 @@ pub fn lorehold_spectral_lecturer() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1171,6 +1189,7 @@ pub fn pop_quiz_recital() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1250,6 +1269,7 @@ pub fn fascinating_lecture() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1306,6 +1326,7 @@ pub fn quandrix_sphinx() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1382,6 +1403,7 @@ pub fn lorehold_excavator() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1441,6 +1463,7 @@ pub fn stridehollow_vampire() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1500,6 +1523,7 @@ pub fn witherbloom_necrotutor() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1546,6 +1570,7 @@ pub fn silverquill_pledge() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1590,6 +1615,7 @@ pub fn inkwell_strider() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1642,6 +1668,7 @@ pub fn scolding_detention() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1696,6 +1723,7 @@ pub fn lesson_recall() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1748,6 +1776,7 @@ pub fn pestilent_acolyte() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1804,6 +1833,7 @@ pub fn stoneglare_lecturer() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1854,6 +1884,7 @@ pub fn critical_critique() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1908,6 +1939,7 @@ pub fn quandrix_manipulator() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1957,6 +1989,7 @@ pub fn prismari_iteration() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1999,6 +2032,7 @@ pub fn lorehold_battle_priest() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2053,6 +2087,7 @@ pub fn witherbloom_reaper() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2099,6 +2134,7 @@ pub fn pyromancers_bolt() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2154,6 +2190,7 @@ pub fn symmetry_lecturer() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2197,6 +2234,7 @@ pub fn wisdom_of_the_ancients() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2269,6 +2307,7 @@ pub fn mob_mentality() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2314,6 +2353,7 @@ pub fn witherbloom_drain_ritual() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2360,6 +2400,7 @@ pub fn mystical_inquiry() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2422,6 +2463,7 @@ pub fn conjurers_bauble() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2464,6 +2506,7 @@ pub fn quartzwood_inkling() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2513,6 +2556,7 @@ pub fn pop_quiz_lecturer() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2570,6 +2614,7 @@ pub fn brilliant_restoration() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2616,6 +2661,7 @@ pub fn inkling_studies() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2669,6 +2715,7 @@ pub fn spirit_banner() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2709,6 +2756,7 @@ pub fn spectral_adjudicator() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2770,6 +2818,7 @@ pub fn quandrix_doubling_tutor() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2812,6 +2861,7 @@ pub fn inkling_scholar() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2855,6 +2905,7 @@ pub fn inkling_squire() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2908,6 +2959,7 @@ pub fn silverquill_scholar() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -2954,6 +3006,7 @@ pub fn inkling_reinforcement() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3003,6 +3056,7 @@ pub fn pestilent_verse() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3045,6 +3099,7 @@ pub fn inkling_ambusher() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3097,6 +3152,7 @@ pub fn silver_quill_scholarship() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3150,6 +3206,7 @@ pub fn silvercrown_lecturer() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3194,6 +3251,7 @@ pub fn demolishing_lecture() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -3257,5 +3315,6 @@ pub fn inkling_mentor() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }

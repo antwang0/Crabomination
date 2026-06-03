@@ -86,6 +86,7 @@ pub fn square_up() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -138,6 +139,7 @@ pub fn brilliant_plan() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -187,6 +189,7 @@ pub fn fortifying_draught() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -239,6 +242,7 @@ pub fn guiding_voice() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -288,6 +292,7 @@ pub fn expanded_anatomy() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -351,6 +356,7 @@ pub fn mercurial_transformation() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -404,6 +410,7 @@ pub fn pest_inheritance() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -457,6 +464,7 @@ pub fn mascot_interpretation() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -509,6 +517,7 @@ pub fn reduce_rubble() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -561,6 +570,7 @@ pub fn containment_studies() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -622,6 +632,7 @@ pub fn reflective_anatomy() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -670,6 +681,7 @@ pub fn pest_studies() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -723,6 +735,7 @@ pub fn lecture_in_strategy() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -769,6 +782,7 @@ pub fn necrotic_studies() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -815,6 +829,7 @@ pub fn pyromathematics() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -859,6 +874,7 @@ pub fn inkling_lesson() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -931,6 +947,7 @@ pub fn fractal_studies() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -976,6 +993,7 @@ pub fn spirit_lesson() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1029,6 +1047,7 @@ pub fn advanced_cartography() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1088,6 +1107,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1136,6 +1156,7 @@ pub fn confront_the_doubt() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }
 
@@ -1249,5 +1270,6 @@ pub fn plant_adept_lesson() -> CardDefinition {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     }
 }

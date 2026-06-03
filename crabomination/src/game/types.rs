@@ -81,6 +81,19 @@ pub enum GameAction {
     /// it with N time counters. Removed one per owner's upkeep; the spell is
     /// cast for free when the last counter comes off.
     Suspend { card_id: CardId },
+    /// CR 702.143 — Foretell a card from hand: pay {2} and exile it
+    /// face-down to cast later for its foretell cost.
+    Foretell { card_id: CardId },
+    /// CR 702.143c — cast a previously foretold card from exile for its
+    /// foretell cost.
+    CastForetold {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a modal-double-faced card via its **back face**. Mirrors
     /// `PlayLandBack` but for non-land back faces (creature/instant/
     /// sorcery). The card's `definition` is swapped to the back face's

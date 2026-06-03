@@ -446,6 +446,11 @@ pub struct GameState {
     /// for snapshot back-compat.
     #[serde(default)]
     pub(crate) temporary_control: Vec<TempControl>,
+    /// CR 702.143b — cards foretold this turn can't be cast from exile until
+    /// a later turn. Tracks the cards a player foretold during the current
+    /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) foretold_this_turn: std::collections::HashSet<CardId>,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -512,6 +517,7 @@ impl Clone for GameState {
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             temporary_control: self.temporary_control.clone(),
+            foretold_this_turn: self.foretold_this_turn.clone(),
         }
     }
 }
@@ -583,6 +589,7 @@ impl GameState {
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
             temporary_control: Vec::new(),
+            foretold_this_turn: std::collections::HashSet::new(),
         }
     }
 
@@ -2475,6 +2482,22 @@ impl GameState {
             .collect()
     }
 
+    /// Cards in `caster`'s hand they could Foretell right now (CR 702.143):
+    /// the card has a `foretell_cost` and paying {2} at sorcery speed is
+    /// legal. Surfaced in `PlayerView.foretellable_hand`.
+    pub fn foretellable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.foretell_cost.is_some())
+            .map(|c| c.id)
+            .filter(|&id| self.would_accept(GameAction::Foretell { card_id: id }))
+            .collect()
+    }
+
     /// Extra generic mana the caster owes on top of `card`'s printed
     /// cost — Damping Sphere's "+1 after the first spell each turn,"
     /// Chancellor of the Annex's first-spell tax, etc. Public so the
@@ -2642,6 +2665,14 @@ impl GameState {
                 x_value,
             } => self.cast_bestow(card_id, target, additional_targets, mode, x_value),
             GameAction::Suspend { card_id } => self.suspend_card(card_id),
+            GameAction::Foretell { card_id } => self.foretell_card(card_id),
+            GameAction::CastForetold {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_foretold(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,

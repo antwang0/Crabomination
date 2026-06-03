@@ -66,10 +66,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   md-described cards (Spear/Whip/Hammer, Parallax Nexus/Tide, Enduring
   Innocence) rather than guessing unverified definitions. Re-enable Scryfall
   (or seed the cache) to lift the new-card floor.
-- **Foretell (CR 702.143).** Several STX cards (e.g. extras_03) ship body-only
-  and drop their Foretell alt-cost — needs a face-down exile zone + a
-  foretell action + cast-from-exile-for-foretell-cost. Highest-leverage STX
-  keyword still ⏳.
+- **Foretell (CR 702.143) — ✅ DONE.** `CardDefinition.foretell_cost` +
+  `GameAction::Foretell` (pay {2}, exile face-down, sorcery speed) +
+  `GameAction::CastForetold` (cast from exile for the foretell cost on a
+  later turn; gated by `GameState.foretold_this_turn`). Wired Saw It Coming,
+  Doomskar, Behold the Multiverse; surfaced as `PlayerView.foretellable_hand`
+  + cyan client highlight. Remaining: a client affordance to invoke Foretell /
+  cast a foretold card (no Bevy modal yet), and AI never foretells.
 - **"Exile any number of target cards" (graveyard hate).** ✅ Wired via
   `Effect::ExileAnyNumberFromGraveyards` + `Decision::ChooseCards`
   (AutoDecider exiles nothing; the bot exiles opponents' cards). Devious

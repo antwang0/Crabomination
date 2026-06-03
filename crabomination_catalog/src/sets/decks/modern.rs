@@ -330,6 +330,22 @@ pub fn riftwing_cloudskate() -> CardDefinition {
     }
 }
 
+/// Behold the Multiverse — {3}{U} Instant. Scry 2, then draw two cards.
+/// Foretell {1}{U} (CR 702.143).
+pub fn behold_the_multiverse() -> CardDefinition {
+    CardDefinition {
+        name: "Behold the Multiverse",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        foretell_cost: Some(cost(&[generic(1), u()])),
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 

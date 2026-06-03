@@ -2501,6 +2501,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     };
 
     let mut g = two_player_game();
@@ -2588,6 +2589,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         equipped_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        foretell_cost: None,
     };
 
     let mut g = two_player_game();

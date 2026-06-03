@@ -942,6 +942,111 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.143 — foretell a card from hand: pay {2} and exile it
+    /// face-down. Sorcery-speed only (CR 702.143b). The card can be cast for
+    /// its foretell cost on a later turn via `cast_foretold`.
+    pub(crate) fn foretell_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let has_foretell = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.foretell_cost.is_some())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        if !has_foretell {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        // The foretell *action* always costs {2}.
+        let cost = crate::mana::ManaCost {
+            symbols: vec![crate::mana::ManaSymbol::Generic(2)],
+        };
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let mut events = receipt.auto_events;
+        let mut card = self
+            .players[p]
+            .remove_from_hand(card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        card.face_down = true;
+        self.exile.push(card);
+        self.foretold_this_turn.insert(card_id);
+        events.push(GameEvent::PermanentExiled { card_id });
+        Ok(events)
+    }
+
+    /// CR 702.143c — cast a foretold card from exile for its foretell cost.
+    /// Legal only on a turn after the card was foretold; timing follows the
+    /// card's normal cast timing.
+    pub(crate) fn cast_foretold(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let pos = self
+            .exile
+            .iter()
+            .position(|c| c.id == card_id && c.face_down && c.owner == p)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 702.143b — not on the turn it was foretold.
+        if self.foretold_this_turn.contains(&card_id) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let foretell_cost = self.exile[pos]
+            .definition
+            .foretell_cost
+            .clone()
+            .ok_or(GameError::SorcerySpeedOnly)?;
+        let is_instant = self.exile[pos].definition.is_instant_speed();
+        let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality(tgt, p)?;
+        }
+        let mut cost = if foretell_cost.has_x() {
+            foretell_cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            foretell_cost
+        };
+        apply_spell_cost_floor(self, &mut cost);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self.exile.remove(pos);
+        card.face_down = false;
+        let mut events = receipt.auto_events;
+        events.push(GameEvent::SpellCast {
+            player: p,
+            card_id,
+            face: CastFace::Front,
+        });
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            mana_spent,
+        );
+        Ok(events)
+    }
+
     /// CR 702.103 — cast an enchantment-creature for its Bestow cost as an
     /// Aura targeting a creature (`target`). The resolving permanent enters
     /// attached and is an Aura (not a creature) while bestowed.

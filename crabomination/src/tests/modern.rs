@@ -12,6 +12,24 @@ use crate::mana::Color;
 
 // ── Cantrips ─────────────────────────────────────────────────────────────────
 
+/// Behold the Multiverse draws two when cast for its foretell cost from exile.
+#[test]
+fn foretell_behold_the_multiverse_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::behold_the_multiverse());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell for {2}");
+    g.foretold_this_turn.clear(); // simulate a later turn
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 2); // {1}{U} foretell cost
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Behold");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "draws two cards");
+}
+
 // ── Suspend (CR 702.62) ──────────────────────────────────────────────────────
 
 /// Rift Bolt suspends for {R}, ticks down at upkeep, then casts itself for

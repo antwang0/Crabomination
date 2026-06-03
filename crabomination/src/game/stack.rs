@@ -1006,6 +1006,8 @@ impl GameState {
             crate::effect::Duration::EndOfTurn,
             crate::effect::Duration::UntilNextTurn,
         ]);
+        // CR 702.143b — foretold-this-turn cards become castable next turn.
+        self.foretold_this_turn.clear();
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;
