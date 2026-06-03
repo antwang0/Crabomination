@@ -4735,6 +4735,24 @@ fn marauding_mako_grows_when_you_discard() {
     assert_eq!(counters, 1, "Discarding a card should add one +1/+1 counter");
 }
 
+#[test]
+fn marauding_mako_has_cycling_and_grows_when_you_cycle_another_card() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    assert!(catalog::marauding_mako().keywords.iter()
+        .any(|k| matches!(k, Keyword::Cycling(_))), "Marauding Mako has Cycling {{2}}");
+    let mako = g.add_card_to_battlefield(0, catalog::marauding_mako());
+    g.clear_sickness(mako);
+    // Cycle a different card; the discard pumps Mako on the battlefield.
+    let other = g.add_card_to_hand(0, catalog::marauding_mako());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Cycle { card_id: other }).expect("cycle for {2}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mako).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "cycling a card discards it, pumping the Mako on the battlefield");
+}
+
 // ── New cards (claude/modern_decks: sweepers / tutors / burn / lands) ────────
 
 /// Pyroclasm: 2 damage to each creature destroys 2-toughness creatures

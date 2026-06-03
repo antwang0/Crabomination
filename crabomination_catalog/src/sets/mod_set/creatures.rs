@@ -1015,17 +1015,9 @@ pub fn sylvan_safekeeper() -> CardDefinition {
 }
 
 /// Grim Lavamancer — {R}, 1/1 Human Wizard. {R}, {T}, Exile two cards from
-/// your graveyard: Grim Lavamancer deals 2 damage to any target.
-///
-/// The "exile two cards from your graveyard" cost is approximated by a
-/// Push (modern_decks batch 114): the "exile two cards from your
-/// graveyard" additional cost is now wired via the extended
-/// `exile_other_filter: Some((SelectionRequirement, u32))` shape —
-/// the `u32` field carries the count (2 here). The pre-flight check
-/// at activation time confirms the player has ≥ 2 other cards in
-/// their graveyard; if not, activation is rejected without burning
-/// tap/mana. The two exiled cards are auto-picked by lowest-CMC so the
-/// activator keeps higher-value cards.
+/// your graveyard: deals 2 damage to any target. The exile-two cost is a
+/// real activation cost (`exile_other_filter: (Any, 2)`) gated on having ≥ 2
+/// other graveyard cards; the two are auto-picked lowest-CMC first.
 pub fn grim_lavamancer() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::shortcut::target_filtered;
@@ -1066,16 +1058,6 @@ pub fn grim_lavamancer() -> CardDefinition {
     }
 }
 
-/// Temur Ascendancy — {U}{R}{G} Enchantment. Creatures you control with
-/// power 4 or greater have haste. Whenever a creature with power 4 or
-/// greater enters under your control, draw a card.
-///
-/// The haste-grant static is wired via
-/// `StaticEffect::GrantKeyword { applies_to: each_your_creature_with_power_at_least(4) }` —
-/// but our static-selector decomposer doesn't understand `PowerAtLeast`,
-/// so it currently grants haste to every creature you control (over-grant
-/// for sub-4 power creatures). Documented as 🟡; the trigger half is
-/// faithful via the new filter enforcement.
 /// Containment Priest — {1}{W}, 2/2 Human Cleric Flash. "If a nontoken
 /// creature would enter the battlefield and it wasn't cast, exile it
 /// instead" via `StaticEffect::ExileNontokenCreaturesNotCast`.
@@ -2687,9 +2669,9 @@ pub fn viashino_pyromancer() -> CardDefinition {
     }
 }
 
-/// Marauding Mako — {U} 1/1 Shark. Whenever you discard a card, put
-/// a +1/+1 counter on Marauding Mako. (The full Oracle pumps on every
-/// discard; we use a `CardDiscarded`+`YourControl` listener.)
+/// Marauding Mako — {R} 1/1 Shark Pirate. Cycling {2}. Whenever you discard
+/// one or more cards, put that many +1/+1 counters on it (`CardDiscarded`
+/// fires per card, so one counter per discarded card sums correctly).
 pub fn marauding_mako() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -2697,14 +2679,13 @@ pub fn marauding_mako() -> CardDefinition {
         cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            // Engine has no Shark creature type; classify as Fish (ocean theme).
+            // Engine has no Shark/Pirate creature type; classify as Fish.
             creature_types: vec![CreatureType::Fish],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -2973,6 +2954,11 @@ pub fn tidehollow_sculler() -> CardDefinition {
     }
 }
 
+/// Temur Ascendancy — {U}{R}{G} Enchantment. Creatures you control with
+/// power 4 or greater have haste; when one enters under your control, draw
+/// a card. 🟡 the haste static over-grants (the `PowerAtLeast` selector
+/// isn't decomposed), so it currently grants haste to all your creatures;
+/// the draw trigger is filtered faithfully.
 pub fn temur_ascendancy() -> CardDefinition {
     use crate::effect::{Predicate, Selector as Sel, StaticEffect};
     CardDefinition {
