@@ -14463,8 +14463,13 @@ pub fn smugglers_copter() -> CardDefinition {
 }
 
 /// Robber of the Rich — {1}{R} Creature — Human Archer Rogue 2/2.
-/// Reach, Haste. (Cast-from-opponent's-library ability omitted.)
+/// Reach, Haste. "Whenever this attacks, if defending player has more cards
+/// in hand than you, exile the top card of your library. You may play that
+/// card this turn." (The "mana of any type" rider on the free cast collapses
+/// to the standard may-play permission.)
 pub fn robber_of_the_rich() -> CardDefinition {
+    use crate::card::{MayPlayDuration, TriggeredAbility};
+    use crate::effect::{EventKind, EventScope, EventSpec, PlayerRef, Predicate, Value};
     CardDefinition {
         name: "Robber of the Rich",
         cost: cost(&[generic(1), r()]),
@@ -14476,6 +14481,20 @@ pub fn robber_of_the_rich() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Reach, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::HandSizeOf(PlayerRef::DefendingPlayer),
+                    Value::Sum(vec![Value::HandSizeOf(PlayerRef::You), Value::Const(1)]),
+                ),
+                then: Box::new(Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
         ..Default::default()
     }
 }

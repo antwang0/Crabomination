@@ -60,7 +60,6 @@ work is listed below.
 |---|---|---|
 | Amped Raptor | 🟡 | 2/1 Dinosaur; ETB now grants real energy ({E}{E}) via `Effect::AddEnergy` (energy system shipped in `sets::kld`). The exile-then-pay-energy-to-cast-free clause is still omitted (no energy-gated free-cast-from-exile path). |
 | Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves + "whenever a Dwarf you control becomes tapped, create a Treasure" (via the new `EventKind::Tapped` + CR 508.1f attack-tap event). Only the five-Treasure-sacrifice Dragon/artifact tutor is omitted. |
-| Robber of the Rich | 🟡 | 2/2 Reach + Haste body. The attack-trigger exile + cast-from-opponent's-library clause is omitted. |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
 
 ### Green
@@ -167,7 +166,7 @@ are listed in `DECK_FEATURES.md`.
 | Cycling | ✅ | Engine support complete: `Keyword::Cycling(cost)` + `GameAction::Cycle` (`cycle_card`) pay the cost, discard, draw, and fire `CardCycled`. Catalog cards already use it. The listed cube cards (Aether Spellbomb, Sundering Eruption-adjacent) just aren't added yet. |
 | Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
-| Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm`, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Cast-from-top / cast-from-exile (Mind's Desire, Amped Raptor, Robber of the Rich) is still ⏳. |
+| Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm`, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich's attack trigger. Cast-from-top-of-library mid-resolution (Mind's Desire) and energy-gated free cast-from-exile (Amped Raptor) are still ⏳. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
 | Soulbond | ⏳ | Deadeye Navigator. |
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |

@@ -16273,6 +16273,46 @@ fn robber_of_the_rich_has_reach_and_haste() {
     assert!(card.keywords.contains(&crate::card::Keyword::Haste));
 }
 
+#[test]
+fn robber_of_the_rich_exiles_top_when_defender_has_more_cards() {
+    let mut g = two_player_game();
+    let robber = g.add_card_to_battlefield(0, catalog::robber_of_the_rich());
+    g.clear_sickness(robber);
+    // Defender (p1) holds 2 cards; attacker (p0) holds 0 — condition met.
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: robber, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == top);
+    assert!(exiled.is_some(), "the top card is exiled by Robber's attack trigger");
+    assert!(exiled.unwrap().may_play_until.is_some(),
+        "the exiled card carries a may-play permission");
+}
+
+#[test]
+fn robber_of_the_rich_no_exile_when_defender_has_fewer_cards() {
+    let mut g = two_player_game();
+    let robber = g.add_card_to_battlefield(0, catalog::robber_of_the_rich());
+    g.clear_sickness(robber);
+    g.add_card_to_hand(0, catalog::island()); // attacker has more — no exile
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: robber, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.exile.iter().any(|c| c.id == top),
+        "no exile when the defender doesn't have more cards in hand");
+}
+
 // ── Push XXIV: 3 more body stubs ──────────────────────────────────────────
 
 #[test]
