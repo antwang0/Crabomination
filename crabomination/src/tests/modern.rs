@@ -17306,6 +17306,23 @@ fn three_tree_city_enters_with_charge_and_taps_for_any_color() {
 }
 
 #[test]
+fn three_tree_city_sacrifices_itself_when_last_charge_removed() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::three_tree_city());
+    // Seed with a single charge so the next activation empties it.
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::Charge, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Green)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("removing the last charge taps for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "produced green mana");
+    assert!(g.battlefield_find(id).is_none(), "sacrificed once charges hit zero");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "in the graveyard");
+}
+
+#[test]
 fn wight_of_the_reliquary_sacrifices_a_land_to_fetch_a_land() {
     let mut g = two_player_game();
     let wight = g.add_card_to_battlefield(0, catalog::wight_of_the_reliquary());

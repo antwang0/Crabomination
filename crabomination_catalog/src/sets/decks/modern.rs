@@ -13704,13 +13704,13 @@ pub fn exquisite_firecraft() -> CardDefinition {
 ///  {T}, Remove a charge counter: Add one mana of any color.
 ///  When the last charge counter is removed, sacrifice Three Tree City."
 ///
-/// Approximation: enters with 3 charge counters via ETB trigger.
-/// Tap + remove counter for any-color mana. Sacrifice when empty
-/// is approximated by the natural counter-depletion — the card becomes
-/// a dead land once all counters are removed. The sacrifice-on-empty
-/// trigger is omitted (no last-counter-removed event).
+/// Enters with 3 charge counters via ETB trigger; `{T}, remove a charge
+/// counter: add one mana of any color`. The "when the last charge counter
+/// is removed, sacrifice" rider folds into the ability's resolution (remove
+/// → add mana → if no counters left, sacrifice), matching Gemstone Mine.
 pub fn three_tree_city() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::ZoneDest;
     CardDefinition {
         name: "Three Tree City",
         supertypes: vec![Supertype::Legendary],
@@ -13732,6 +13732,20 @@ pub fn three_tree_city() -> CardDefinition {
                 Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Charge,
+                        },
+                        Value::Const(0),
+                    ),
+                    then: Box::new(Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Graveyard,
+                    }),
+                    else_: Box::new(Effect::Noop),
                 },
             ]),
             once_per_turn: false,
