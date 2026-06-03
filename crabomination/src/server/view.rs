@@ -762,7 +762,41 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
             parts.push(format!("Exile {n} cards from gy"));
         }
     }
+    // Sacrifice-another-permanent activations (Phyrexian Tower, Witherbloom
+    // sac-outlets, Carrion Feeder, etc.) — `sac_other_filter: Some((req, n))`.
+    // Without this the ability looks free for its tap+mana alone.
+    if let Some((req, n)) = ability.sac_other_filter.as_ref() {
+        let noun = requirement_noun(req);
+        if *n == 1 {
+            parts.push(format!("Sacrifice a {noun}"));
+        } else {
+            parts.push(format!("Sacrifice {n} {noun}s"));
+        }
+    }
+    // Tap-another-creature activations (Convoke-style outlets, "Tap an
+    // untapped creature you control" costs) — `tap_other_filter`.
+    if let Some(req) = ability.tap_other_filter.as_ref() {
+        parts.push(format!("Tap a {}", requirement_noun(req)));
+    }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
+}
+
+/// Short noun for the common `SelectionRequirement` shapes used in cost
+/// riders ("Sacrifice a [noun]"). Falls back to "permanent" for filters
+/// without a crisp single-word label.
+fn requirement_noun(req: &crate::card::SelectionRequirement) -> &'static str {
+    use crate::card::SelectionRequirement as R;
+    match req {
+        R::Creature => "creature",
+        R::Artifact => "artifact",
+        R::Enchantment => "enchantment",
+        R::Land => "land",
+        R::Planeswalker => "planeswalker",
+        // Peel a leading And to read the primary type (e.g. Creature ∧
+        // ControlledByYou → "creature").
+        R::And(a, _) => requirement_noun(a),
+        _ => "permanent",
+    }
 }
 
 fn ability_effect_label(effect: &Effect) -> &'static str {
@@ -1414,6 +1448,40 @@ mod tests {
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),
             "{label} = `{{T}}, Sac`-style for Lotus Petal");
+    }
+
+    /// `sac_other_filter` / `tap_other_filter` additional costs must show
+    /// in the tooltip so the ability doesn't look free for tap+mana alone.
+    #[test]
+    fn ability_cost_label_renders_sac_other_and_tap_other_riders() {
+        use crate::card::SelectionRequirement as R;
+        use crate::effect::{ActivatedAbility, Effect};
+        // "{T}, Sacrifice a creature: ..." (a sac-outlet).
+        let sac_outlet = ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((R::Creature.and(R::ControlledByYou), 1)),
+            ..Default::default()
+        };
+        let label = ability_cost_label(&sac_outlet);
+        assert!(label.contains("Sacrifice a creature"), "got: {label}");
+
+        // "Tap an untapped creature you control: ..." (a tap-outlet).
+        let tap_outlet = ActivatedAbility {
+            tap_other_filter: Some(R::Creature.and(R::Untapped)),
+            effect: Effect::Noop,
+            ..Default::default()
+        };
+        assert!(
+            ability_cost_label(&tap_outlet).contains("Tap a creature"),
+            "tap-other rider should render"
+        );
+
+        // Plural sac count.
+        let sac_two = ActivatedAbility {
+            sac_other_filter: Some((R::Artifact, 2)),
+            ..Default::default()
+        };
+        assert!(ability_cost_label(&sac_two).contains("Sacrifice 2 artifacts"));
     }
 
     /// `AbilityView.once_per_turn_used` must reflect the engine's
