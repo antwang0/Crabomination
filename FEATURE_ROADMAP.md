@@ -58,7 +58,15 @@ read of the code and should be re-verified before picking up an item.
   `Effect::SacrificeAnyNumber` / `Effect::PayLifeLookTake` — Plunge into
   Darkness, with entwine modeled as `Keyword::Kicker` + `SpellWasKicked`);
   reveal-until-the-named-card (`SelectionRequirement::NamedBySource` +
-  `named_card_this_resolution` — Spoils of the Vault).
+  `named_card_this_resolution` — Spoils of the Vault); per-source "dealt
+  damage to you this turn" tracking (`Player.creatures_that_damaged_me_this_turn`
+  + `SelectionRequirement::DealtDamageToControllerThisTurn` — Spear of Heliod;
+  combat damage to a player now also opens the Bloodthirst window); the
+  Theros god-weapon abilities (Spear/Whip/Hammer); Fading / Vanishing
+  (`Keyword::Fading(N)` / `Vanishing(N)` + `process_fading_vanishing`); the
+  World rule SBA (CR 704.5k); linked-exile return-tapped
+  (`ExileReturnZone::BattlefieldTapped` — Parallax Tide); the Enduring
+  self-revive (`Effect::ReturnSelfAsEnchantment` — Enduring Innocence).
 
 ---
 

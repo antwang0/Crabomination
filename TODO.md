@@ -10,11 +10,30 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 - **Buyback / Bestow client + bot.** `GameAction::CastSpellBuyback` (CR
   702.27) and `GameAction::CastBestow` (CR 702.103) are wired + tested and
-  surfaced in `PlayerView.buyback_hand` / `bestowable_hand`, but the Bevy
-  client has no "pay buyback?" / "bestow on a creature?" affordance and the
-  bot never chooses either path (it casts the base spell). Add UI toggles
-  and a bot heuristic (buyback when mana-flush and the spell repeats value;
-  bestow on a creature that's likely to stick).
+  surfaced in `PlayerView.buyback_hand` / `bestowable_hand`. The bot now
+  offers a Bestow line (enchant its sturdiest creature) in
+  `main_phase_action`; **Buyback** is still bot-TODO, and the Bevy client
+  still has no "pay buyback?" / "bestow on a creature?" affordance.
+- **New-card pipeline is Scryfall-gated.** `api.scryfall.com` is blocked by
+  the network policy and `scripts/.scryfall_cache.json` (332 cube cards) is
+  fully implemented, so faithful *new* cards can only come from text already
+  in code comments / the md trackers. This run completed 🟡 partials and
+  md-described cards (Spear/Whip/Hammer, Parallax Nexus/Tide, Enduring
+  Innocence) rather than guessing unverified definitions. Re-enable Scryfall
+  (or seed the cache) to lift the new-card floor.
+- **Foretell (CR 702.143).** Several STX cards (e.g. extras_03) ship body-only
+  and drop their Foretell alt-cost — needs a face-down exile zone + a
+  foretell action + cast-from-exile-for-foretell-cost. Highest-leverage STX
+  keyword still ⏳.
+- **"Exile any number of target cards" (graveyard hate).** Devious Cover-Up,
+  and several STX graveyard-strip riders collapse their multi-strip to one
+  target. Needs a variable-count target primitive (companion to
+  `Decision::ChooseAmount`, which only covers self-sacrifice counts today).
+- **Enduring cycle breadth.** `Effect::ReturnSelfAsEnchantment` handles the
+  "return as enchantment" half (Enduring Innocence). The other Enduring
+  cards (Vitality, Tenacity, Courage, Curiosity) keep distinct enchantment-
+  side static abilities, which this primitive doesn't preserve/swap — extend
+  it to carry the enchantment-side ability set when those cards are added.
 - **Discard / exile-from-gy as real activation costs.** Psychic Frog (and
   similar) model "Discard a card:" / "Exile three cards from your graveyard:"
   as the first step of the resolved effect rather than a paid activation
