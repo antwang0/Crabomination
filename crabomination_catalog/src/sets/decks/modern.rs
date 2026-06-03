@@ -346,6 +346,39 @@ pub fn behold_the_multiverse() -> CardDefinition {
     }
 }
 
+/// Demon Bolt — {1}{R} Instant. Deal 4 damage to target creature or
+/// planeswalker. Foretell {R} (CR 702.143).
+pub fn demon_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Demon Bolt",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(4),
+        },
+        foretell_cost: Some(cost(&[r()])),
+        ..Default::default()
+    }
+}
+
+/// Augury Raven — {3}{U} 2/3 Flying. Foretell {2}{U} (CR 702.143).
+pub fn augury_raven() -> CardDefinition {
+    CardDefinition {
+        name: "Augury Raven",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        foretell_cost: Some(cost(&[generic(2), u()])),
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 

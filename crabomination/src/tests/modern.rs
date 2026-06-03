@@ -12,6 +12,43 @@ use crate::mana::Color;
 
 // ── Cantrips ─────────────────────────────────────────────────────────────────
 
+/// Augury Raven resolves as a 2/3 flyer when cast for its foretell cost.
+#[test]
+fn foretell_augury_raven_resolves_as_flyer() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::augury_raven());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
+    g.foretold_this_turn.clear();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{U}
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Augury Raven");
+    drain_stack(&mut g);
+    let r = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!((r.power(), r.toughness()), (2, 3));
+    assert!(r.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// Demon Bolt deals 4 to a creature when cast from its foretold exile.
+#[test]
+fn foretell_demon_bolt_kills_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::demon_bolt());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
+    g.foretold_this_turn.clear();
+    g.players[0].mana_pool.add(Color::Red, 1); // {R} foretell cost
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Demon Bolt");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "4 damage kills the 2/2");
+}
+
 /// Behold the Multiverse draws two when cast for its foretell cost from exile.
 #[test]
 fn foretell_behold_the_multiverse_draws_two() {
