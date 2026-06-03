@@ -289,6 +289,10 @@ pub enum Value {
     Max(Box<Value>, Box<Value>),
     /// Clamp the inner value to ≥0.
     NonNeg(Box<Value>),
+    /// Conditional: if `value` ≥ `threshold`, evaluate `then`, else `else_`.
+    /// Powers "if X is 4 or more, …" scaling (Mossborn Hydra's doubled
+    /// counters at X≥4).
+    IfAtLeast { value: Box<Value>, threshold: i32, then: Box<Value>, else_: Box<Value> },
     /// Power of the most recently sacrificed creature this resolution
     /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
     /// Gargadon-style sacrifice + damage spells.

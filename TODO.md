@@ -8,15 +8,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Mobilize/Myriad eot-sacrifice (`DelayedTriggerKind::EndOfCombat`).** The
-  create-token-tapped-and-attacking half is ✅ — `Effect::CreateTokenAttacking
-  { who, count, definition }` mints tokens tapped + attacking the source's
-  defender (test `create_token_attacking_joins_combat_tapped`). Remaining for
-  full Mobilize (CR 702.169): a `DelayedTriggerKind::EndOfCombat` (today only
-  `NextEndStep` exists) to sacrifice the Warriors at end of combat — hook a
-  delayed-trigger sweep where `expire_end_of_combat_effects` runs
-  (`game/stack.rs` leaving the EndCombat step). Myriad (CR 702.116) needs the
-  token to be a *copy* of the source attacking *each other* player.
+- **Mobilize / Myriad / Enlist — ✅ DONE.** `Effect::CreateTokenAttacking`
+  carries an `AttackingTokenCleanup` (None / SacrificeAtEndOfCombat /
+  ExileAtEndOfCombat); `GameState.attacking_token_cleanup` +
+  `process_attacking_token_cleanup` (run where `expire_end_of_combat_effects`
+  fires) sacrifice/exile the tokens as the combat phase ends. `shortcut::
+  mobilize(n)` (CR 702.169), `shortcut::myriad` / `Effect::Myriad` (CR 702.115),
+  and `shortcut::enlist` / `Effect::Enlist` (CR 702.151) are wired + tested.
+  Real printed cards using these keywords still need Scryfall-verified stats
+  (the api.scryfall.com host is blocked by the environment network policy).
 - **Bot accepts beneficial Exploit/Devour.** `shortcut::exploit` /
   `devour` resolve their sacrifice via `MayDo` / `SacrificeAnyNumber`;
   `AutoDecider` and the current bot decline (the body is self-costly by
@@ -201,7 +201,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee/
   Bloodthirst this run): **Monstrosity** ✅ (`CardInstance.monstrous` +
   `Effect::Monstrosity` + `EventKind::BecameMonstrous`; Nessian Wilds Ravager,
-  Ember Swallower); **Devour/Amass** need sac-as-ETB and an Army token.
+  Ember Swallower); **Devour** ✅ and **Amass** ✅ (`Effect::Amass` grows /
+  creates a 0/0 black Army with N +1/+1 counters; `CreatureType::Army`).
   **Melee** is a
   flat +1/+1 — wants a per-combat attacked-opponent tally for multiplayer.
   **Renown** is gated on "no +1/+1 counters" as a renowned-once proxy; a real

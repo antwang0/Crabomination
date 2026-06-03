@@ -11684,13 +11684,8 @@ pub fn firebolt() -> CardDefinition {
     }
 }
 
-/// Mossborn Hydra — {X}{G} Creature — Hydra. 0/0. "This creature
-/// enters with X +1/+1 counters on it."
-///
-/// Synthesised body for the ⏳ cube row. Reuses the existing
-/// `enters_with_counters` field with a Value::XFromCost reader so the
-/// counters scale with the X paid at cast time. The "double counters
-/// if X ≥ 4" rider is collapsed.
+/// Mossborn Hydra — {X}{G} Creature — Hydra. 0/0. Enters with X +1/+1
+/// counters; if X is 4 or more, it enters with twice X instead.
 pub fn mossborn_hydra() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -11706,7 +11701,18 @@ pub fn mossborn_hydra() -> CardDefinition {
         },
         power: 0,
         toughness: 0,
-        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::IfAtLeast {
+                value: Box::new(Value::XFromCost),
+                threshold: 4,
+                then: Box::new(Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::XFromCost),
+                )),
+                else_: Box::new(Value::XFromCost),
+            },
+        )),
         ..Default::default()
     }
 }

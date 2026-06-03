@@ -146,6 +146,13 @@ impl GameState {
             Value::Min(a, b) => self.evaluate_value(a, ctx).min(self.evaluate_value(b, ctx)),
             Value::Max(a, b) => self.evaluate_value(a, ctx).max(self.evaluate_value(b, ctx)),
             Value::NonNeg(v) => self.evaluate_value(v, ctx).max(0),
+            Value::IfAtLeast { value, threshold, then, else_ } => {
+                if self.evaluate_value(value, ctx) >= *threshold {
+                    self.evaluate_value(then, ctx)
+                } else {
+                    self.evaluate_value(else_, ctx)
+                }
+            }
             Value::SacrificedPower => self.sacrificed_power.unwrap_or(0),
             Value::SacrificedToughness => self.sacrificed_toughness.unwrap_or(0),
             Value::CardsDiscardedThisEffect => self.cards_discarded_this_resolution as i32,

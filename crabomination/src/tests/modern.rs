@@ -14006,7 +14006,24 @@ fn mossborn_hydra_enters_with_x_counters() {
     drain_stack(&mut g);
     let hydra = g.battlefield_find(id).expect("Hydra on bf");
     assert_eq!(hydra.counter_count(CounterType::PlusOnePlusOne), 3,
-        "Mossborn enters with X +1/+1 counters");
+        "Mossborn enters with X +1/+1 counters (X<4: not doubled)");
+}
+
+#[test]
+fn mossborn_hydra_doubles_counters_at_x_four_or_more() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mossborn_hydra());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: Some(4),
+    }).expect("Mossborn castable at X=4");
+    drain_stack(&mut g);
+    let hydra = g.battlefield_find(id).expect("Hydra on bf");
+    assert_eq!(hydra.counter_count(CounterType::PlusOnePlusOne), 8,
+        "X≥4 doubles the entering counters (2×4 = 8)");
 }
 
 #[test]

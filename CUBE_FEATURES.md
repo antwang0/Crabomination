@@ -64,7 +64,6 @@ work is listed below.
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
 | Enduring Vitality | ⏳ | Roomba-style return on death + creature mana untap. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
-| Mossborn Hydra | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {X}{G} 0/0 Hydra. Enters with X +1/+1 counters via `enters_with_counters: Some((PlusOnePlusOne, XFromCost))`. The "double counters if X ≥ 4" rider is collapsed (no counter-multiplier-on-cast primitive). Test: `mossborn_hydra_enters_with_x_counters`. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
 | Baloth Prime | ⏳ | TBD. |
 | Icetill Explorer | ⏳ | TBD. |
