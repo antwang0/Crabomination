@@ -559,29 +559,19 @@ pub fn snow_day() -> CardDefinition {
     CardDefinition {
         name: "Snow Day",
         cost: cost(&[u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             // Slot 0: tap + stun the first creature.
-            Effect::Tap {
-                what: target_filtered(SelectionRequirement::Creature),
-            },
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
             Effect::AddCounter {
                 what: Selector::Target(0),
                 kind: CounterType::Stun,
                 amount: Value::Const(1),
             },
-            // Slot 1: tap + stun the second creature (optional —
-            // resolves to no-op when only one target was chosen).
+            // Slot 1: tap + stun the second creature (optional — resolves to
+            // no-op when only one target was chosen).
             Effect::Tap {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature,
-                },
+                what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
             },
             Effect::AddCounter {
                 what: Selector::Target(1),
@@ -589,21 +579,7 @@ pub fn snow_day() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        ..Default::default()
     }
 }
 
@@ -1751,19 +1727,11 @@ pub fn devious_cover_up() -> CardDefinition {
     CardDefinition {
         name: "Devious Cover-Up",
         cost: cost(&[generic(2), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::CounterSpell {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
-            },
-            // "Any number of target cards" collapses to one — the
-            // engine doesn't yet thread a multi-target prompt through
-            // CastSpell.
+            Effect::CounterSpell { what: target_filtered(SelectionRequirement::IsSpellOnStack) },
+            // "Any number of target cards" collapses to one — the engine
+            // doesn't yet thread a multi-target prompt through CastSpell.
             Effect::Exile {
                 what: Selector::take(
                     Selector::EachMatching {
@@ -1774,21 +1742,7 @@ pub fn devious_cover_up() -> CardDefinition {
                 ),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        ..Default::default()
     }
 }
 
