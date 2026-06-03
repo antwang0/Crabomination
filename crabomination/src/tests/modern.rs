@@ -32,6 +32,146 @@ fn foretell_augury_raven_resolves_as_flyer() {
     assert!(r.definition.keywords.contains(&Keyword::Flying));
 }
 
+/// Durkwood Baloth suspends for {G} and resolves into a 5/5 after 5 ticks.
+#[test]
+fn suspend_durkwood_baloth_resolves() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::durkwood_baloth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..5 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+    let b = g.battlefield_find(id).expect("Baloth on battlefield");
+    assert_eq!((b.power(), b.toughness()), (5, 5));
+}
+
+/// Keldon Halberdier suspends for {R} and resolves into a 4/1 first striker.
+#[test]
+fn suspend_keldon_halberdier_resolves() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::keldon_halberdier());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+    let h = g.battlefield_find(id).expect("Halberdier on battlefield");
+    assert_eq!((h.power(), h.toughness()), (4, 1));
+    assert!(h.definition.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Deep-Sea Kraken suspends for {1}{U} and resolves into a 6/6.
+#[test]
+fn suspend_deep_sea_kraken_resolves() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::deep_sea_kraken());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    assert_eq!(g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time), 9);
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..9 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+    let k = g.battlefield_find(id).expect("Kraken on battlefield");
+    assert_eq!((k.power(), k.toughness()), (6, 6));
+}
+
+/// Beskir Shieldmate leaves two 1/1 tokens behind when it dies.
+#[test]
+fn beskir_shieldmate_dies_into_two_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::beskir_shieldmate());
+    // Kill it via lethal damage + SBA.
+    g.battlefield_find_mut(id).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter().filter(|c| c.definition.name == "Human Warrior").count();
+    assert_eq!(tokens, 2, "two 1/1 Human Warriors on death");
+}
+
+/// Sarulf's Packmate cantrips on ETB when cast from its foretold exile.
+#[test]
+fn foretell_sarulfs_packmate_draws_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::sarulfs_packmate());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
+    g.foretold_this_turn.clear();
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{G}
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Packmate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draws a card");
+}
+
+/// Dwarven Reinforcements makes two 2/1 tokens when cast from its foretold exile.
+#[test]
+fn foretell_dwarven_reinforcements_makes_two_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::dwarven_reinforcements());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
+    g.foretold_this_turn.clear();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1); // {1}{R}
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Reinforcements");
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Dwarf Berserker").count();
+    assert_eq!(tokens, 2, "two 2/1 Dwarf Berserkers");
+}
+
+/// Mistwalker can be foretold and cast for {U} as a 2/1 flyer.
+#[test]
+fn foretell_mistwalker_resolves_as_flyer() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mistwalker());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
+    g.foretold_this_turn.clear();
+    g.players[0].mana_pool.add(Color::Blue, 1); // {U}
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Mistwalker");
+    drain_stack(&mut g);
+    let m = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!((m.power(), m.toughness()), (2, 1));
+    assert!(m.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// Ravenous Lindwurm's ETB gains 4 life when cast from its foretold exile.
+#[test]
+fn foretell_ravenous_lindwurm_gains_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::ravenous_lindwurm());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Foretell { card_id: id }).expect("foretell");
+    g.foretold_this_turn.clear();
+    let life_before = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3); // {3}{G}
+    g.perform_action(GameAction::CastForetold {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast foretold Lindwurm");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 4, "ETB gains 4 life");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "4/4 on the battlefield");
+}
+
 /// Demon Bolt deals 4 to a creature when cast from its foretold exile.
 #[test]
 fn foretell_demon_bolt_kills_a_creature() {

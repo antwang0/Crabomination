@@ -2619,7 +2619,7 @@ impl GameState {
                         self.temporary_control.push(crate::game::TempControl {
                             card: cid,
                             original_controller: prev,
-                            duration: duration.clone(),
+                            duration: *duration,
                         });
                     }
                 }

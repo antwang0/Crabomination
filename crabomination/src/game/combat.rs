@@ -256,12 +256,15 @@ impl GameState {
                     .iter()
                     .filter(|c| c.controller == defender)
                     .flat_map(|c| {
-                        c.definition.triggered_abilities.iter().filter_map(move |t| {
-                            (t.event.kind == EventKind::Attacks
-                                && t.event.scope
-                                    == crate::effect::EventScope::ControllerAttackedByOpponent)
-                                .then(|| (c.id, t.effect.clone()))
-                        })
+                        c.definition
+                            .triggered_abilities
+                            .iter()
+                            .filter(|t| {
+                                t.event.kind == EventKind::Attacks
+                                    && t.event.scope
+                                        == crate::effect::EventScope::ControllerAttackedByOpponent
+                            })
+                            .map(move |t| (c.id, t.effect.clone()))
                     })
                     .collect();
                 for (src, effect) in listeners {

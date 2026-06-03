@@ -379,6 +379,157 @@ pub fn augury_raven() -> CardDefinition {
     }
 }
 
+/// Mistwalker — {1}{U} 2/1 Flying. Foretell {U} (CR 702.143).
+pub fn mistwalker() -> CardDefinition {
+    CardDefinition {
+        name: "Mistwalker",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        foretell_cost: Some(cost(&[u()])),
+        ..Default::default()
+    }
+}
+
+/// Ravenous Lindwurm — {4}{G} 4/4. ETB: gain 4 life. Foretell {3}{G}.
+pub fn ravenous_lindwurm() -> CardDefinition {
+    CardDefinition {
+        name: "Ravenous Lindwurm",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(4),
+        })],
+        foretell_cost: Some(cost(&[generic(3), g()])),
+        ..Default::default()
+    }
+}
+
+/// Sarulf's Packmate — {3}{G} 3/3. ETB: draw a card. Foretell {2}{G}.
+pub fn sarulfs_packmate() -> CardDefinition {
+    CardDefinition {
+        name: "Sarulf's Packmate",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
+        foretell_cost: Some(cost(&[generic(2), g()])),
+        ..Default::default()
+    }
+}
+
+/// Dwarven Reinforcements — {4}{R} Sorcery. Create two 2/1 red Dwarf Berserker
+/// creature tokens. Foretell {1}{R}.
+pub fn dwarven_reinforcements() -> CardDefinition {
+    CardDefinition {
+        name: "Dwarven Reinforcements",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Dwarf Berserker".into(),
+                power: 2,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Red],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Dwarf, CreatureType::Berserker],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        foretell_cost: Some(cost(&[generic(1), r()])),
+        ..Default::default()
+    }
+}
+
+/// Deep-Sea Kraken — {8}{U} 6/6 Kraken that can't be countered. Suspend 9—{1}{U}.
+/// (The "remove a time counter whenever another spell is suspended" accelerant
+/// is dropped — no cross-suspend trigger; tracked in TODO.md.)
+pub fn deep_sea_kraken() -> CardDefinition {
+    CardDefinition {
+        name: "Deep-Sea Kraken",
+        cost: cost(&[generic(8), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kraken], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::CantBeCountered, Keyword::Suspend(9, cost(&[generic(1), u()]))],
+        ..Default::default()
+    }
+}
+
+/// Beskir Shieldmate — {1}{W} 2/1. When this dies, create two 1/1 white Human
+/// Warrior creature tokens. Foretell {W}.
+pub fn beskir_shieldmate() -> CardDefinition {
+    CardDefinition {
+        name: "Beskir Shieldmate",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Human Warrior".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        foretell_cost: Some(cost(&[w()])),
+        ..Default::default()
+    }
+}
+
+/// Durkwood Baloth — {5}{G} 5/5. Suspend 5—{G} (CR 702.62).
+pub fn durkwood_baloth() -> CardDefinition {
+    CardDefinition {
+        name: "Durkwood Baloth",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Suspend(5, cost(&[g()]))],
+        ..Default::default()
+    }
+}
+
+/// Keldon Halberdier — {4}{R} 4/1 First strike. Suspend 4—{R}.
+pub fn keldon_halberdier() -> CardDefinition {
+    CardDefinition {
+        name: "Keldon Halberdier",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Warrior], ..Default::default() },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike, Keyword::Suspend(4, cost(&[r()]))],
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 
