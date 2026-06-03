@@ -1546,6 +1546,11 @@ pub enum Effect {
     /// less to cast" (Thundertrap Trainer). Pushes a one-shot discount onto
     /// `Player.pending_is_discounts` that lapses after the next such spell.
     GrantNextInstantOrSorceryDiscountThisTurn { amount: u32 },
+    /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
+    /// creatures." Each of slots `0..max_targets` is an optional creature
+    /// target (filtered by `filter`); every supplied target gains one +1/+1
+    /// counter at resolution.
+    SupportCounters { max_targets: u8, filter: SelectionRequirement },
     /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /
@@ -2211,6 +2216,7 @@ impl Effect {
             Effect::DealDamage { to, amount } => sel_has_target(to) || value_has_target(amount),
             // Divided damage always targets (one or more chosen targets).
             Effect::DealDamageDivided { .. } => true,
+            Effect::SupportCounters { .. } => true,
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
@@ -2771,6 +2777,8 @@ impl Effect {
             // match a player (Crackle with Power "any target"); creature-only
             // divide spells (Forked Bolt, Pyrokinesis) reject players.
             Effect::DealDamageDivided { filter, .. } => filter.can_match_player(),
+            // Support puts +1/+1 counters on creatures only — never players.
+            Effect::SupportCounters { .. } => false,
             // Stack-targeted counter spells take a permanent slot but the
             // target is a stack item, not a player. Reject player target.
             Effect::CounterSpell { .. }
@@ -2989,6 +2997,9 @@ impl Effect {
                 // Each of slots 0..max_targets carries the divide filter, so
                 // the cast/auto-target machinery collects "up to N targets".
                 Effect::DealDamageDivided { filter, max_targets, .. } => {
+                    if slot < *max_targets { Some(filter) } else { None }
+                }
+                Effect::SupportCounters { filter, max_targets } => {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
                 Effect::PreventNextDamage { target, .. }
@@ -5050,6 +5061,12 @@ pub mod shortcut {
                 amount: Value::Const(n),
             },
         }
+    }
+
+    /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
+    /// creatures." A bare `Effect` for use as a spell effect or ability body.
+    pub fn support(n: u8) -> Effect {
+        Effect::SupportCounters { max_targets: n, filter: SelectionRequirement::Creature }
     }
 
     /// Amass N (CR 701.43): grow (or create) an Army by N +1/+1 counters.

@@ -285,7 +285,9 @@ feature; sweep card-batch by card-batch.
   sacrifice-a-creature → run payoff; declining skips it),
   ✅ Extort (`shortcut::extort` — CR 702.99, SpellCast
   `MayPay({W/B}, drain 1)`; Basilica Screecher, Syndic of Tithes, Tithe
-  Drinker, Kingpin's Pet), ⏳ Cohort, ⏳ Support.
+  Drinker, Kingpin's Pet), ⏳ Cohort, ✅ Support (`shortcut::support(n)` /
+  `Effect::SupportCounters` — CR 701.32, a +1/+1 counter on each of up to N
+  target creatures via the slot-based "up to N targets" machinery).
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
   per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,

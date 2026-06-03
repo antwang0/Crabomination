@@ -587,3 +587,28 @@ fn cr_701_43_amass_grows_existing_army_instead_of_making_a_second() {
     assert_eq!(armies.len(), 1, "still one Army (grown, not duplicated)");
     assert_eq!(armies[0].counter_count(CounterType::PlusOnePlusOne), 4, "1 + 3 amassed counters");
 }
+
+// ── Support (CR 701.32) ──────────────────────────────────────────────────
+
+#[test]
+fn cr_701_32_support_two_puts_a_counter_on_each_of_two_targets() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::shortcut;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = CardDefinition {
+        name: "Rally", cost: crate::mana::cost(&[crate::mana::generic(1)]),
+        card_types: vec![CardType::Sorcery], effect: shortcut::support(2), ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, spell);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("Support sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}

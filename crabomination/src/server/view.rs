@@ -931,6 +931,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Myriad => "Myriad",
         Effect::Enlist => "Enlist",
         Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => "Discount next spell",
+        Effect::SupportCounters { .. } => "Support",
         _ => "Activate",
     }
 }

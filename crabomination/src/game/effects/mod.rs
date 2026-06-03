@@ -973,6 +973,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SupportCounters { .. } => {
+                // CR 701.32 — put one +1/+1 counter on each still-present
+                // target creature (up to N targets, supplied per slot).
+                use crate::card::CounterType;
+                let targets: Vec<CardId> = ctx.targets.iter()
+                    .filter_map(|t| match t {
+                        Target::Permanent(id) => Some(*id),
+                        _ => None,
+                    })
+                    .filter(|id| self.battlefield_find(*id).is_some_and(|c| c.definition.is_creature()))
+                    .collect();
+                for id in targets {
+                    let ctrl = self.battlefield_find(id).map(|c| c.controller);
+                    let mut n = 1u32;
+                    if let Some(ctrl) = ctrl {
+                        for _ in 0..self.counter_doublers_for(ctrl) {
+                            n = n.saturating_mul(2);
+                        }
+                    }
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.add_counters(CounterType::PlusOnePlusOne, n);
+                        events.push(GameEvent::CounterAdded {
+                            card_id: id, counter_type: CounterType::PlusOnePlusOne, count: n,
+                        });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(id);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::Fight { attacker, defender } => {
                 // Two creatures simultaneously deal damage equal to
                 // their power to each other. Snapshot powers up-front
