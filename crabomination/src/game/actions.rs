@@ -253,6 +253,20 @@ pub(crate) fn cost_reduction_for_spell(
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
+    // One-shot "the next instant or sorcery you cast this turn costs {N}
+    // less" discounts (Thundertrap Trainer). Each was stamped with the
+    // caster's instant/sorcery tally at grant time; it applies only while
+    // that tally is unchanged — i.e. to the *next* such spell — and then
+    // naturally lapses once the tally ticks up on cast (no consume hook
+    // needed). The tally increments at spell-commit, after this read.
+    if card.definition.is_instant() || card.definition.is_sorcery() {
+        let cast_so_far = state.players[caster].instants_or_sorceries_cast_this_turn;
+        for &(amount, granted_at) in &state.players[caster].pending_is_discounts {
+            if granted_at == cast_so_far {
+                reduction = reduction.saturating_add(amount);
+            }
+        }
+    }
     reduction
 }
 

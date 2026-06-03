@@ -136,6 +136,13 @@ pub struct Player {
     /// back-compat.
     #[serde(default)]
     pub instants_or_sorceries_cast_this_turn: u32,
+    /// One-shot "next instant/sorcery you cast this turn costs {N} less"
+    /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
+    /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
+    /// time; the discount applies only while the tally still equals it.
+    /// Cleared each turn alongside the tally.
+    #[serde(default)]
+    pub pending_is_discounts: Vec<(u32, u32)>,
     /// Number of creature spells this player has cast on the current
     /// turn. Reset to 0 in `do_untap`. Powers creature-cast magecraft
     /// payoffs ("if you've cast a creature spell this turn, …") and
@@ -286,6 +293,7 @@ impl Player {
             attacked_this_turn: false,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
+            pending_is_discounts: Vec::new(),
             creatures_cast_this_turn: 0,
             cannot_gain_life_this_turn: false,
             spells_uncounterable_this_turn: false,

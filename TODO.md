@@ -8,14 +8,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **One-shot spell-cost discount ("next instant/sorcery costs {2} less this
-  turn").** Would finish Thundertrap Trainer's dropped discount rider. Needs a
-  `Player.pending_spell_discounts: Vec<(filter, amount)>` consumed by the next
-  matching cast (and cleared at cleanup). The tricky part is consuming exactly
-  once at the real cast-commit point — `cost_reduction_for_spell` is also
-  called for cost *preview* (actions.rs:1756/1877), so the consume must be
-  gated to the committing call only. Distinct from the existing *static*
-  `StaticEffect::CostReduction`.
+- **One-shot spell-cost discount — ✅ DONE (primitive).**
+  `Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount }` pushes a
+  `(amount, granted_at)` entry onto `Player.pending_is_discounts`;
+  `cost_reduction_for_spell` adds it for IS spells while the player's
+  `instants_or_sorceries_cast_this_turn` tally still equals `granted_at`, so it
+  self-expires on the next IS cast with no consume hook. Cleared in lockstep
+  with the tally each turn. A real consumer card (Thundertrap Trainer's dropped
+  discount rider) needs Scryfall-verified text — the catalog body is
+  synthesized, so the exact amount is unknown (api.scryfall.com is firewalled).
 - **Squad / Backup / Bargain keywords.** Squad (CR 702.157) needs "pay an
   additional cost any number of times" tracking + copy-of-self tokens (the
   `CreateTokenCopyOf` half exists). Backup N (CR 702.164) is ETB +N/+N on a

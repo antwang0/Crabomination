@@ -2770,6 +2770,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount } => {
+                // Stamp the discount with the controller's current IS tally so
+                // it applies only to the *next* instant/sorcery they cast.
+                let p = ctx.controller;
+                let granted_at = self.players[p].instants_or_sorceries_cast_this_turn;
+                self.players[p].pending_is_discounts.push((*amount, granted_at));
+                Ok(())
+            }
+
             Effect::Enlist => {
                 // CR 702.151 — tap a nonattacking, non-sick creature you
                 // control and add its power to the attacker until end of turn.

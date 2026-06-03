@@ -1542,6 +1542,10 @@ pub enum Effect {
     /// are exiled at end of combat. No-op outside combat / when the source
     /// isn't attacking a player.
     Myriad,
+    /// "The next instant or sorcery spell you cast this turn costs {amount}
+    /// less to cast" (Thundertrap Trainer). Pushes a one-shot discount onto
+    /// `Player.pending_is_discounts` that lapses after the next such spell.
+    GrantNextInstantOrSorceryDiscountThisTurn { amount: u32 },
     /// Enlist (CR 702.151): "As this attacks, you may tap a nonattacking
     /// creature you control without summoning sickness. When you do, add its
     /// power to this creature's power until end of turn." The "you may" /
@@ -2178,6 +2182,7 @@ impl Effect {
             Effect::Noop => false,
             Effect::Myriad => false,
             Effect::Enlist => false,
+            Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {

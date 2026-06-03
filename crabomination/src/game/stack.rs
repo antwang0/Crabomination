@@ -914,6 +914,10 @@ impl GameState {
         // need exact-type filtering (Potioner's Trove "instant or
         // sorcery only" gate, future Magecraft variants).
         self.players[p].instants_or_sorceries_cast_this_turn = 0;
+        // One-shot IS-spell discounts are keyed off that tally, so they must
+        // be cleared in lockstep with it (a stale `granted_at == 0` entry
+        // would otherwise re-match after the reset).
+        self.players[p].pending_is_discounts.clear();
         self.players[p].creatures_cast_this_turn = 0;
         // Clear Teferi, Time Raveler's "you may cast sorceries as though they
         // had flash" flag — it expires on the start of your next turn.

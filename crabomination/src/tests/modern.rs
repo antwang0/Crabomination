@@ -13981,6 +13981,28 @@ fn loot_the_pathfinder_etb_creates_map_token() {
 }
 
 #[test]
+fn one_shot_is_discount_applies_to_next_spell_then_lapses() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::Effect;
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    // A {3} generic instant.
+    let make = || CardDefinition {
+        name: "Test Bolt", cost: crate::mana::cost(&[crate::mana::generic(3)]),
+        card_types: vec![CardType::Instant], effect: Effect::Noop, ..Default::default()
+    };
+    let spell = crate::card::CardInstance::new(crate::card::CardId(999), make(), 0);
+    // No discount yet.
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0);
+    // Grant "next instant/sorcery costs {2} less".
+    g.players[0].pending_is_discounts.push((2, 0));
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2, "discount applies to next IS spell");
+    // After one IS spell resolves, the tally ticks up and the discount lapses.
+    g.players[0].instants_or_sorceries_cast_this_turn = 1;
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "discount is spent after one spell");
+}
+
+#[test]
 fn map_token_sacrifices_to_explore_a_creature() {
     use crabomination_base::tokens::map_token;
     use crate::game::types::Target;
