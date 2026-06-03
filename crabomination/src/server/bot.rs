@@ -1731,13 +1731,10 @@ mod tests {
         g.clear_sickness(dd);
         g.add_card_to_battlefield(0, catalog::island()); // your Island, not the defender's
         let mut bot = RandomBot::new();
-        match bot.next_action(&g, 0) {
-            Some(GameAction::DeclareAttackers(a)) => {
-                assert!(!a.iter().any(|x| x.attacker == dd),
-                    "Dandân must not be declared when the defender controls no Island");
-            }
-            _ => {} // declaring no attackers is also fine
-        }
+        if let Some(GameAction::DeclareAttackers(a)) = bot.next_action(&g, 0) {
+            assert!(!a.iter().any(|x| x.attacker == dd),
+                "Dandân must not be declared when the defender controls no Island");
+        } // declaring no attackers is also fine
         // Now give the defender an Island — Dandân becomes a legal attacker.
         g.add_card_to_battlefield(1, catalog::island());
         let mut bot2 = RandomBot::new();
