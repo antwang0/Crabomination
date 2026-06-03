@@ -863,6 +863,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::CounterUnlessPaid { .. } => "Counter unless paid",
         Effect::CounterUnless { .. } => "Ward (counter unless cost paid)",
         Effect::Sacrifice { .. } | Effect::SacrificeAndRemember { .. } => "Sacrifice",
+        Effect::SacrificeAnyNumber { .. } => "Sacrifice any number",
+        Effect::PayLifeLookTake { .. } => "Pay life, dig, take one",
         Effect::DiscardChosen { .. } => "Discard chosen",
         Effect::PayOrLoseGame { .. } => "Pay or lose",
         Effect::DelayUntil { .. } => "Delayed trigger",

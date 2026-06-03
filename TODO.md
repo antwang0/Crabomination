@@ -29,14 +29,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   client-side changes can't be compiled/tested in this environment. UI
   parity is fed through the server `view.rs` projection (cost labels,
   static/triggered ability labels) which *is* testable.
-- **Entwine (CR 702.41)** — Plunge into Darkness (cached) is the only entwine
-  card; needs an `entwine_cost` cast-mode that flips a `ChooseMode` to "run
-  all modes" when paid (kicker-style additional cost + `kicked`-style flag).
-  Plunge's two modes are also approximations (variable-count sacrifice;
-  pay-X-life-look-at-X), so a full promotion needs those too.
-- **Variable-count sacrifice / "sacrifice any number"** — Plunge into Darkness
-  mode 0, Devour, Fling-with-count. No primitive that sacrifices a
-  player-chosen count and feeds the count to a payoff Value.
+- **`Decision::ChooseAmount` UI suspend** — `SacrificeAnyNumber` /
+  `PayLifeLookTake` resolve the number-choice synchronously via the decider
+  (AutoDecider picks 0). A `wants_ui` player should suspend on a number-picker
+  modal instead of degrading to 0. Add a `ChooseAmountPending` suspend path +
+  client widget (like the Learn modal).
+- **Entwine as a first-class cost** — Plunge into Darkness models entwine {B}
+  via `Keyword::Kicker` + a `SpellWasKicked` branch. A dedicated
+  `Keyword::Entwine(cost)` (cost-line naming + "choose both") would be
+  cleaner, but is functionally identical today. (CR 702.41.)
+- **`SacrificeAnyNumber` reuse** — Devour and Fling-with-count can now ride
+  `Effect::SacrificeAnyNumber` + `Value`-scaled payoffs.
 - **Opponent-controlled pay-to-copy** — Chain Lightning's "the damaged player
   may pay {R}{R} to copy this spell." `Effect::CopySpell*` exist but are all
   controller-side; needs a copy offered to a different player.

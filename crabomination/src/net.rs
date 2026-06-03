@@ -862,6 +862,13 @@ pub enum DecisionWire {
         name: String,
         duplicates: Vec<(CardId, String)>,
     },
+    /// Choose a number (sacrifice any number / pay any amount of life).
+    /// Decider answers `Amount(n)`.
+    ChooseAmount {
+        source: CardId,
+        prompt: String,
+        max: u32,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -976,6 +983,11 @@ impl From<&Decision> for DecisionWire {
                     duplicates: duplicates.clone(),
                 }
             }
+            Decision::ChooseAmount { source, prompt, max } => DecisionWire::ChooseAmount {
+                source: *source,
+                prompt: prompt.clone(),
+                max: *max,
+            },
         }
     }
 }

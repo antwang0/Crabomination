@@ -3804,13 +3804,16 @@ fn callous_sell_sword_enters_with_counter_per_creature_died() {
 }
 
 #[test]
-fn plunge_into_darkness_mode_one_pays_four_life_and_tutors() {
-    // Mode 1 (`ChooseMode` index 1): pay 4 life and search any card
-    // from the library into hand.
+fn plunge_into_darkness_mode_one_pays_x_life_looks_and_exiles_rest() {
+    // Mode 1: pay 2 life (ChooseAmount), look at the top 2, take Bolt into
+    // hand, exile the Swamp.
     let mut g = two_player_game();
-    let target = g.add_card_to_library(0, catalog::lightning_bolt());
-    g.add_card_to_library(0, catalog::swamp());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target))]));
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // top
+    let swamp = g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(2),
+        DecisionAnswer::Search(Some(bolt)),
+    ]));
 
     let plunge = g.add_card_to_hand(0, catalog::plunge_into_darkness());
     g.players[0].mana_pool.add_colorless(1);
@@ -3821,10 +3824,39 @@ fn plunge_into_darkness_mode_one_pays_four_life_and_tutors() {
     }).expect("Plunge castable for {1}{B}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, life_before - 4,
-        "Mode 1 deducts 4 life as the X cost");
-    assert!(g.players[0].hand.iter().any(|c| c.id == target),
-        "tutored card should land in hand");
+    assert_eq!(g.players[0].life, life_before - 2, "pays the chosen X = 2 life");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "Bolt goes to hand");
+    assert!(g.exile.iter().any(|c| c.id == swamp), "the rest are exiled");
+}
+
+#[test]
+fn plunge_into_darkness_entwine_runs_both_modes() {
+    // Kicked (entwine {B}): sacrifice the one creature for 3 life AND pay 2
+    // life to dig — net +3 -2 = +1 life, with the dug card in hand.
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Amount(1),          // sacrifice 1 creature
+        DecisionAnswer::Amount(2),          // pay 2 life
+        DecisionAnswer::Search(Some(bolt)), // take Bolt
+    ]));
+    assert!(catalog::plunge_into_darkness().keywords.iter()
+        .any(|k| matches!(k, Keyword::Kicker(_))), "entwine modeled as kicker");
+
+    let plunge = g.add_card_to_hand(0, catalog::plunge_into_darkness());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 2); // {1}{B} + entwine {B}
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: plunge, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Plunge castable entwined");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(creature).is_none(), "creature sacrificed");
+    assert_eq!(g.players[0].life, life_before + 3 - 2, "+3 from sac, -2 from dig");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "dug Bolt in hand");
 }
 
 #[test]

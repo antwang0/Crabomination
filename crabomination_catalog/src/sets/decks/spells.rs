@@ -42,59 +42,31 @@ pub fn pact_of_negation() -> CardDefinition {
     }
 }
 
-/// Plunge into Darkness — {1}{B} Instant. Modal — choose one:
-///   • Sacrifice any number of creatures. You gain 3 life for each one.
-///   • Pay any amount of life. Look at that many cards from the top of your
-///     library, then put one into your hand and the rest on the bottom.
-///
-/// Engine model: `ChooseMode` between two simplified branches.
-/// * **Mode 0** — sacrifice one creature you control + gain 3 life.
-/// * **Mode 1** — pay 4 life + Search-your-library-into-hand. The full
-///   Oracle is "pay X life, look at the top X, take one, bottom the rest";
-///   we collapse that to "pay 4 (a typical X), tutor any card directly"
-///   reusing the same Search primitive Spoils of the Vault rides on. The
-///   tutored card is chosen via the standard `SearchLibrary` decision.
-///
-/// AutoDecider picks mode 0 (sac for life), which matches the typical play.
+/// Plunge into Darkness — {1}{B} Instant. Choose one (or both if entwined):
+///   • Sacrifice any number of creatures. Gain 3 life for each one.
+///   • Pay any amount of life X. Look at the top X cards, put one into your
+///     hand, exile the rest.
+/// Entwine {B} (choose both) is modeled via `Keyword::Kicker` + a
+/// `SpellWasKicked` branch that runs both modes. AutoDecider sacrifices none
+/// / pays no life; a UI/scripted decider answers `ChooseAmount`.
 pub fn plunge_into_darkness() -> CardDefinition {
+    use crate::card::Keyword;
+    let mode0 = Effect::SacrificeAnyNumber {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        per_each: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(3) }),
+    };
+    let mode1 = Effect::PayLifeLookTake { who: PlayerRef::You };
     CardDefinition {
         name: "Plunge into Darkness",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Sacrifice a creature, gain 3 life. (Simplified from
-            // "any number of creatures" — currently sacrifices one.)
-            Effect::Seq(vec![
-                Effect::SacrificeAndRemember {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(3),
-                },
-            ]),
-            // Mode 1: pay 4 life, then tutor any card from your library.
-            // Approximation of "pay X life, look at top X, take one,
-            // bottom the rest": picks 4 as a representative X.
-            Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::You,
-                    amount: Value::Const(4),
-                },
-                Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Any,
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-            ]),
-        ]),
-        triggered_abilities: vec![],
+        keywords: vec![Keyword::Kicker(cost(&[b()]))],
+        effect: Effect::If {
+            cond: crate::effect::Predicate::SpellWasKicked,
+            then: Box::new(Effect::Seq(vec![mode0.clone(), mode1.clone()])),
+            else_: Box::new(Effect::ChooseMode(vec![mode0, mode1])),
+        },
         ..Default::default()
     }
 }

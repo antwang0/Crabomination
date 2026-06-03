@@ -14,16 +14,10 @@ remaining 🟡/⏳ work is listed below. Full per-card history is in git.
 - 🟡 partial — card exists with simplified or stub effect; key behavior missing
 - ⏳ todo — not yet implemented
 
-### BRG main deck
+### BRG main deck / sideboard
 
-| Count | Card | Status | Notes |
-|---|---|---|---|
-| 4 | Plunge into Darkness | 🟡 | `ChooseMode([SacrificeAndRemember + GainLife 3, LoseLife 4 + Search → Hand])`. Mode 0 sacrifices one creature for 3 life. Mode 1 pays 4 life and tutors any card (approximation of "pay X life, look at top X, take one"). Tests: `plunge_into_darkness_mode_one_pays_four_life_and_tutors`. |
+All BRG cards are ✅ and elided. Full per-card history is in git.
 
-### BRG sideboard
-
-| Count | Card | Status | Notes |
-|---|---|---|---|
 ## Modern supplement (catalog::sets::decks::modern)
 
 A pack of additional Modern-playable cards built entirely on existing
@@ -42,7 +36,8 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 |---|---|---|
 | Uncounterable spell flag | 🟡 | `StackItem::Spell.uncounterable: bool` + `CounterSpell` respects it. Cavern of Souls flags any creature spell its controller casts as uncounterable. Turn-scoped grants ride `Player.spells_uncounterable_this_turn` (`Effect::GrantSpellsUncounterableThisTurn`) — Veil of Summer ✅. (Mana-provenance / name-a-type gates still collapse.) |
 | X-cost creature side-effects | 🟡 | Thud / Burn at the Stake ride `SacrificeAndRemember` + `Value::SacrificedPower`. Casualty's "copy this spell" branch still ⏳ (no Casualty cost-mode primitive); Adventure cost-modes (Burn Together) ⏳. |
-| Sacrifice-as-cost effects | 🟡 | Thud ✅ via `SacrificeAndRemember` + `Value::SacrificedPower`; Plunge into Darkness still ⏳. Flashback-with-additional-cost (Lava Dart sac-a-Mountain, Dread Return sac-three) ✅ via `flashback_additional_cost_for_name` + `cast_flashback`. |
+| Sacrifice-as-cost effects | 🟡 | Thud ✅ via `SacrificeAndRemember` + `Value::SacrificedPower`. Variable-count sacrifice ✅ via `Effect::SacrificeAnyNumber` + `Decision::ChooseAmount` (Plunge into Darkness). Flashback-with-additional-cost (Lava Dart sac-a-Mountain, Dread Return sac-three) ✅ via `flashback_additional_cost_for_name` + `cast_flashback`. |
+| Variable-count / pay-any-amount choices | ✅ | `Decision::ChooseAmount` (number 0..=max) backs `Effect::SacrificeAnyNumber` (sacrifice any number) and `Effect::PayLifeLookTake` (pay X life, dig X, take one, exile rest). Entwine modeled as `Keyword::Kicker` + `SpellWasKicked` branch (Plunge into Darkness). |
 
 ## Plan
 

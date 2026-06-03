@@ -231,6 +231,19 @@ pub enum Decision {
         name: String,
         duplicates: Vec<(CardId, String)>,
     },
+
+    /// "Choose a number" — sacrifice *any number* of permanents, pay *any
+    /// amount* of life, etc. The decider answers `Amount(n)` with `n` in
+    /// `0..=max`. `AutoDecider` returns 0 (the conservative default — never
+    /// pay life / sacrifice unprompted). Used by Plunge into Darkness
+    /// (sacrifice any number of creatures; pay any amount of life).
+    ChooseAmount {
+        source: CardId,
+        /// A short human-readable prompt ("Sacrifice how many creatures?").
+        prompt: String,
+        /// Inclusive upper bound (creatures you control, current life, …).
+        max: u32,
+    },
 }
 
 /// The decider's answer to a `Decision::Learn`.
@@ -303,6 +316,9 @@ pub enum DecisionAnswer {
     /// CR 704.5j — the legendary permanent the controller keeps. An id not
     /// among the tied duplicates falls back to keeping the newest.
     KeptLegend(CardId),
+    /// A chosen number answering `Decision::ChooseAmount`. Clamped to the
+    /// decision's `max` by the engine.
+    Amount(u32),
 }
 
 /// Spread `total` damage across `n` targets as evenly as possible, with the
@@ -445,6 +461,9 @@ impl Decider for AutoDecider {
             Decision::ChooseLegendToKeep { duplicates, .. } => DecisionAnswer::KeptLegend(
                 duplicates.iter().map(|(id, _)| *id).max().unwrap_or(CardId(0)),
             ),
+            // Conservative default — never pay life / sacrifice unprompted.
+            // ScriptedDecider supplies a positive amount.
+            Decision::ChooseAmount { .. } => DecisionAnswer::Amount(0),
         }
     }
 }

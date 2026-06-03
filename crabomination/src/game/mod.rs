@@ -3944,6 +3944,31 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::PayLifeLookPending { player, revealed } => {
+                let DecisionAnswer::Search(chosen_id) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Default (AutoDecider / out-of-set): take the top revealed.
+                let pick = chosen_id
+                    .filter(|id| revealed.contains(id))
+                    .or_else(|| revealed.first().copied());
+                let mut events = vec![];
+                if let Some(pick) = pick
+                    && let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
+                    let card = self.players[player].library.remove(pos);
+                    self.players[player].hand.push(card);
+                    events.push(GameEvent::CardDrawn { player, card_id: pick });
+                }
+                // Exile the rest of the revealed set.
+                for rid in &revealed {
+                    if Some(*rid) == pick { continue; }
+                    if let Some(pos) = self.players[player].library.iter().position(|c| c.id == *rid) {
+                        let card = self.players[player].library.remove(pos);
+                        self.exile.push(card);
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::PutOnLibraryPending { player, .. } => {
                 let DecisionAnswer::PutOnLibrary(chosen) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

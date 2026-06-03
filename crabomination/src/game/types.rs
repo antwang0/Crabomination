@@ -438,6 +438,13 @@ pub enum PendingEffectState {
         #[serde(default)]
         eligible: Option<Vec<CardId>>,
     },
+    /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
+    /// (Plunge into Darkness mode 1): the chosen card goes to hand and the
+    /// rest of `revealed` are exiled.
+    PayLifeLookPending {
+        player: usize,
+        revealed: Vec<CardId>,
+    },
     PutOnLibraryPending { player: usize, count: usize },
     /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana
     /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks

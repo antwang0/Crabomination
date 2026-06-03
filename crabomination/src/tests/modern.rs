@@ -18141,9 +18141,13 @@ fn mystical_dispute_counters_unpaid_spell() {
 
 /// Plunge into Darkness mode 0 sacrifices a creature to gain 3 life.
 #[test]
-fn plunge_into_darkness_mode0_sacrifices_for_life() {
+fn plunge_into_darkness_mode0_sacrifices_any_number_for_life() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Sacrifice both → gain 3 each = 6.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
     let id = g.add_card_to_hand(0, catalog::plunge_into_darkness());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
@@ -18152,8 +18156,9 @@ fn plunge_into_darkness_mode0_sacrifices_for_life() {
         card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
     }).expect("Plunge mode 0 castable");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear sacrificed");
-    assert_eq!(g.players[0].life, life + 3, "gained 3 life");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear || c.id == bear2),
+        "both creatures sacrificed");
+    assert_eq!(g.players[0].life, life + 6, "gained 3 life per creature");
 }
 
 /// Coveted Jewel draws three cards when it enters.

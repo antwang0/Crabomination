@@ -1709,6 +1709,20 @@ pub enum Effect {
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
+    /// "Sacrifice any number of [filter]. [payoff] for each one." The
+    /// controller chooses how many to sacrifice via `Decision::ChooseAmount`
+    /// (AutoDecider sacrifices none). For each sacrifice, `per_each` runs
+    /// once — so a `GainLife 3` body pays 3 × count. Plunge into Darkness.
+    SacrificeAnyNumber {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        per_each: Box<Effect>,
+    },
+    /// "Pay any amount of life. Look at that many cards from the top of your
+    /// library, put one into your hand, and exile the rest." The controller
+    /// chooses the amount via `Decision::ChooseAmount` (capped at current
+    /// life; AutoDecider pays 0). Plunge into Darkness mode 1.
+    PayLifeLookTake { who: PlayerRef },
     /// "Sacrifice a [filter] with the greatest mana value" picker.
     /// Mirrors `Sacrifice` but the candidate sort prefers maximum CMC.
     /// Used by Soul Shatter ("Each opponent sacrifices a creature or
@@ -2255,6 +2269,8 @@ impl Effect {
             Effect::WhenTargetDiesThisTurn { .. } => true,
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { .. } => false,
+            Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
+            Effect::PayLifeLookTake { .. } => false,
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

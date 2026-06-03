@@ -3361,6 +3361,96 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeAnyNumber { who, filter, per_each } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Candidate set, cheapest/weakest first (the player keeps their
+                // best creatures when sacrificing for value).
+                let mut candidates: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source))
+                    .map(|c| (c.id, c.is_token, c.definition.cost.cmc(), c.power()))
+                    .collect::<Vec<_>>()
+                    .into_iter()
+                    .map(|(id, ..)| id)
+                    .collect();
+                candidates.sort_by_key(|id| {
+                    let c = self.battlefield_find(*id);
+                    (c.map(|c| !c.is_token).unwrap_or(true),
+                     c.map(|c| c.definition.cost.cmc()).unwrap_or(0),
+                     c.map(|c| c.power()).unwrap_or(0))
+                });
+                let max = candidates.len() as u32;
+                if max == 0 { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseAmount {
+                    source,
+                    prompt: "Sacrifice how many?".to_string(),
+                    max,
+                });
+                let n = match answer {
+                    DecisionAnswer::Amount(v) => v.min(max),
+                    _ => 0,
+                } as usize;
+                for &cid in candidates.iter().take(n) {
+                    let is_creature = self.battlefield_find(cid)
+                        .map(|c| c.definition.is_creature()).unwrap_or(false);
+                    if is_creature {
+                        if let Some(c) = self.battlefield_find(cid) {
+                            self.died_card_snapshots.insert(cid, c.clone());
+                        }
+                        events.push(GameEvent::CreatureSacrificed { card_id: cid, who: p });
+                        events.push(GameEvent::CreatureDied { card_id: cid });
+                    }
+                    events.push(GameEvent::PermanentSacrificed { card_id: cid, who: p });
+                    let mut die_evs = self.remove_to_graveyard_with_triggers(cid);
+                    events.append(&mut die_evs);
+                    // Run the per-sacrifice payoff once (GainLife 3 → 3 × count).
+                    self.run_effect(per_each, ctx, events)?;
+                }
+                Ok(())
+            }
+
+            Effect::PayLifeLookTake { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let life = self.players[p].life.max(0) as u32;
+                if life == 0 { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseAmount {
+                    source,
+                    prompt: "Pay how much life?".to_string(),
+                    max: life,
+                });
+                let x = match answer {
+                    DecisionAnswer::Amount(v) => v.min(life),
+                    _ => 0,
+                };
+                if x == 0 { return Ok(()); }
+                self.adjust_life(p, -(x as i32));
+                events.push(GameEvent::LifeLost { player: p, amount: x });
+                // Look at top X; pick one to hand, exile the rest.
+                let revealed: Vec<CardId> =
+                    self.players[p].library.iter().take(x as usize).map(|c| c.id).collect();
+                if revealed.is_empty() { return Ok(()); }
+                let candidates: Vec<(CardId, String)> = revealed.iter().filter_map(|id| {
+                    self.players[p].library.iter().find(|c| c.id == *id)
+                        .map(|c| (*id, c.definition.name.to_string()))
+                }).collect();
+                let decision = Decision::SearchLibrary { player: p, candidates };
+                let pending = PendingEffectState::PayLifeLookPending { player: p, revealed };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::DelayUntil { kind, body } => {
                 // Capture the current target slot so the delayed body can
                 // reference it via `Selector::Target(0)` later (e.g. Goryo's
