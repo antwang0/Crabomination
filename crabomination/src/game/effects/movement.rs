@@ -518,6 +518,8 @@ impl GameState {
                         });
                     }
                 }
+                // CR 702.32 / 702.62 — Fading / Vanishing enter-with-counters.
+                self.apply_fading_vanishing_etb(cid, events);
                 events.push(GameEvent::PermanentEntered { card_id: cid });
                 // Fire self-source ETB triggers so reanimate / flicker /
                 // search-to-battlefield paths trigger creature ETBs the same

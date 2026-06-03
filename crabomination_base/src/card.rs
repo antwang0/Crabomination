@@ -349,6 +349,14 @@ pub enum Keyword {
     Cycling(crate::mana::ManaCost),
     Echo(crate::mana::ManaCost),
     CumulativeUpkeep(crate::mana::ManaCost),
+    /// CR 702.32 — Fading N. Enters with N fade counters. At the beginning
+    /// of its controller's upkeep, remove a fade counter from it; if you
+    /// can't, sacrifice it.
+    Fading(u32),
+    /// CR 702.62 — Vanishing N. Enters with N time counters. At the
+    /// beginning of its controller's upkeep, remove a time counter from it;
+    /// when the last is removed, sacrifice it.
+    Vanishing(u32),
     Retrace,
     /// CR 702.139 — Escape. Cast this card from your graveyard by paying
     /// its escape mana cost plus exiling N other cards from your

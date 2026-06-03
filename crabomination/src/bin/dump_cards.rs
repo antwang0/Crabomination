@@ -93,6 +93,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Buyback(_) => "Buyback",
         Keyword::Echo(_) => "Echo",
         Keyword::CumulativeUpkeep(_) => "Cumulative upkeep",
+        Keyword::Fading(_) => "Fading",
+        Keyword::Vanishing(_) => "Vanishing",
         Keyword::Cycling(_) => "Cycling",
         Keyword::Madness(_) => "Madness",
         Keyword::Morph(_) => "Morph",

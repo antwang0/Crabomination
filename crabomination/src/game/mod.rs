@@ -1086,6 +1086,106 @@ impl GameState {
             .sum()
     }
 
+    /// CR 702.32 / 702.62 — a permanent with Fading N / Vanishing N enters
+    /// with N fade / time counters. Called from both ETB paths after the
+    /// permanent is on the battlefield.
+    pub(crate) fn apply_fading_vanishing_etb(
+        &mut self,
+        cid: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        use crate::card::{CounterType, Keyword};
+        let Some(card) = self.battlefield_find(cid) else { return };
+        let spec = card.definition.keywords.iter().find_map(|k| match k {
+            Keyword::Fading(n) => Some((CounterType::Fade, *n)),
+            Keyword::Vanishing(n) => Some((CounterType::Time, *n)),
+            _ => None,
+        });
+        let Some((kind, n)) = spec else { return };
+        if n == 0 {
+            return;
+        }
+        if let Some(card_mut) = self.battlefield_find_mut(cid) {
+            card_mut.add_counters(kind, n);
+        }
+        events.push(crate::game::GameEvent::CounterAdded {
+            card_id: cid,
+            counter_type: kind,
+            count: n,
+        });
+    }
+
+    /// CR 702.32 / 702.62 — at the beginning of the active player's upkeep,
+    /// each Fading / Vanishing permanent they control removes a counter (and
+    /// is sacrificed when it runs out). Processed as a turn-based action at
+    /// upkeep before priority.
+    pub(crate) fn process_fading_vanishing(&mut self) -> Vec<crate::game::GameEvent> {
+        use crate::card::{CounterType, Keyword};
+        let active = self.active_player_idx;
+        let mut events = Vec::new();
+        // Snapshot the affected (id, fading?) pairs first to avoid borrow churn.
+        let affected: Vec<(CardId, bool)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == active)
+            .filter_map(|c| {
+                c.definition.keywords.iter().find_map(|k| match k {
+                    Keyword::Fading(_) => Some((c.id, true)),
+                    Keyword::Vanishing(_) => Some((c.id, false)),
+                    _ => None,
+                })
+            })
+            .collect();
+        for (id, is_fading) in affected {
+            let kind = if is_fading { CounterType::Fade } else { CounterType::Time };
+            let had = self.battlefield_find(id).map(|c| c.counter_count(kind)).unwrap_or(0);
+            let sacrifice = if is_fading {
+                // Fading: remove one; if none to remove, sacrifice.
+                if had == 0 {
+                    true
+                } else {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.remove_counters(kind, 1);
+                    }
+                    events.push(crate::game::GameEvent::CounterRemoved {
+                        card_id: id,
+                        counter_type: kind,
+                        count: 1,
+                    });
+                    false
+                }
+            } else {
+                // Vanishing: remove one; sacrifice when the last is removed.
+                if had > 0 {
+                    if let Some(c) = self.battlefield_find_mut(id) {
+                        c.remove_counters(kind, 1);
+                    }
+                    events.push(crate::game::GameEvent::CounterRemoved {
+                        card_id: id,
+                        counter_type: kind,
+                        count: 1,
+                    });
+                }
+                had <= 1
+            };
+            if sacrifice {
+                events.push(crate::game::GameEvent::PermanentSacrificed {
+                    card_id: id,
+                    who: active,
+                });
+                if self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false) {
+                    events.push(crate::game::GameEvent::CreatureSacrificed {
+                        card_id: id,
+                        who: active,
+                    });
+                }
+                let mut die = self.remove_to_graveyard_with_triggers(id);
+                events.append(&mut die);
+            }
+        }
+        events
+    }
+
     /// CR 614.x — true if any active `StaticEffect::ExileNontokenCreaturesNotCast`
     /// (Containment Priest) is on the battlefield. Consulted by
     /// `place_card_in_dest` to reroute non-cast nontoken creatures to exile.

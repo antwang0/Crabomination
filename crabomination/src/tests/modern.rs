@@ -14476,10 +14476,10 @@ fn parallax_nexus_enters_with_counters_and_forces_discard() {
     }).expect("Parallax Nexus castable for {1}{B}{B}");
     drain_stack(&mut g);
 
-    // Verify it enters with 5 charge counters.
+    // Verify it enters with 5 fade counters (Fading 5).
     let n = g.battlefield.iter().find(|c| c.id == nexus).unwrap();
-    assert_eq!(n.counter_count(CounterType::Charge), 5,
-        "Parallax Nexus should enter with 5 charge counters");
+    assert_eq!(n.counter_count(CounterType::Fade), 5,
+        "Parallax Nexus should enter with 5 fade counters");
 
     let opp_hand_before = g.players[1].hand.len();
 
@@ -22677,4 +22677,61 @@ fn whip_of_erebos_reanimates_with_haste_then_exiles() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear left the battlefield");
     assert!(g.exile.iter().any(|c| c.id == bear), "bear exiled, not in graveyard");
+}
+
+// ── Fading / Vanishing (CR 702.32 / 702.62) ────────────────────────────────
+
+/// Fading N: enters with N fade counters; each upkeep removes one, and when
+/// none remain to remove the permanent is sacrificed.
+#[test]
+fn fading_ticks_down_then_sacrifices_when_empty() {
+    let mut g = two_player_game();
+    let nexus = g.add_card_to_hand(0, catalog::parallax_nexus());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: nexus, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Parallax Nexus castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(nexus).unwrap().counter_count(CounterType::Fade), 5);
+
+    g.active_player_idx = 0;
+    // Five upkeeps drain the counters one at a time.
+    for expected in [4u32, 3, 2, 1, 0] {
+        g.process_fading_vanishing();
+        assert_eq!(g.battlefield_find(nexus).unwrap().counter_count(CounterType::Fade), expected);
+    }
+    // The sixth upkeep finds no fade counter to remove → sacrifice.
+    g.process_fading_vanishing();
+    assert!(g.battlefield_find(nexus).is_none(), "sacrificed once it can't pay Fading");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == nexus));
+}
+
+/// Vanishing N: enters with N time counters; each upkeep removes one, and it's
+/// sacrificed the upkeep the last time counter is removed.
+#[test]
+fn vanishing_sacrifices_when_last_time_counter_removed() {
+    use crate::card::{CreatureType, Keyword, Subtypes};
+    let mut g = two_player_game();
+    let def = crate::card::CardDefinition {
+        name: "Test Vanishing Bear",
+        cost: crate::mana::cost(&[crate::mana::generic(2)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vanishing(2)],
+        ..Default::default()
+    };
+    let bear = g.add_card_to_battlefield(0, def);
+    // add_card_to_battlefield bypasses the ETB-counters pipeline; seed them.
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::Time, 2);
+    g.active_player_idx = 0;
+
+    g.process_fading_vanishing();
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Time), 1,
+        "one time counter removed, still alive");
+    g.process_fading_vanishing();
+    assert!(g.battlefield_find(bear).is_none(), "sacrificed when the last time counter is removed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
 }

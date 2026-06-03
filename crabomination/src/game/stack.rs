@@ -149,6 +149,10 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::Upkeep => {
+                // CR 702.32 / 702.62 — Fading / Vanishing tick down as a
+                // turn-based action at upkeep, before step triggers.
+                let mut fv = self.process_fading_vanishing();
+                events.append(&mut fv);
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
@@ -486,6 +490,8 @@ impl GameState {
                             });
                         }
                     }
+                    // CR 702.32 / 702.62 — Fading / Vanishing enter-with-counters.
+                    self.apply_fading_vanishing_etb(card_id, &mut events);
                     // CR 707 — "enters as a copy of [filter]" replacement.
                     // Applied here, before the first SBA sweep, so a 0/0
                     // copier (Clone, Phantasmal Image) never dies as a 0/0.

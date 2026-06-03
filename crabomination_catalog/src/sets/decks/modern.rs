@@ -12850,75 +12850,26 @@ pub fn dreadhorde_arcanist() -> CardDefinition {
     }
 }
 
-/// Parallax Nexus — {1}{B}{B} Enchantment. Fading 5 (enters with five fade
-/// counters; at the beginning of your upkeep, remove a fade counter; when the
-/// last is removed, sacrifice this).
-/// "{0}: Exile target card from an opponent's hand."
+/// Parallax Nexus — {1}{B}{B} Enchantment. Fading 5 (CR 702.32). "{0}: Exile
+/// target card from an opponent's hand."
 ///
-/// Approximation: enters with 5 charge counters. Upkeep trigger removes one
-/// counter, and when the counter total hits 0 the permanent is sacrificed.
-/// Activated ability ({0}, no tap) forces the opponent to discard one card
-/// (the closest engine proxy for "exile target card from opponent's hand").
+/// The opponent-discard activated ability ({0}, no tap) is the closest engine
+/// proxy for "exile target card from opponent's hand".
 pub fn parallax_nexus() -> CardDefinition {
-    use crate::card::{ActivatedAbility, CounterType};
-    use crate::effect::Predicate;
-    use crate::game::types::TurnStep;
+    use crate::card::{ActivatedAbility, Keyword};
     CardDefinition {
         name: "Parallax Nexus",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
+        keywords: vec![Keyword::Fading(5)],
         activated_abilities: vec![ActivatedAbility {
-            tap_cost: false,
-            mana_cost: ManaCost::default(),
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
                 random: false,
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
             ..Default::default()
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(TurnStep::Upkeep),
-                EventScope::YourControl,
-            ),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::Charge,
-                    amount: Value::Const(1),
-                },
-                Effect::If {
-                    cond: Predicate::Not(Box::new(Predicate::SelectorExists(
-                        Selector::EachPermanent(
-                            SelectionRequirement::WithCounter(CounterType::Charge)
-                                .and(SelectionRequirement::ControlledByYou)
-                                .and(SelectionRequirement::Enchantment),
-                        ),
-                    ))),
-                    then: Box::new(Effect::Sacrifice {
-                        who: Selector::You,
-                        count: Value::Const(1),
-                        filter: SelectionRequirement::Enchantment,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
-        }],
-        enters_with_counters: Some((CounterType::Charge, Value::Const(5))),
         ..Default::default()
     }
 }
