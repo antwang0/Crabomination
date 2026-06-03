@@ -32,7 +32,12 @@ use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
+use std::sync::Arc;
+
 use ab_glyph::{FontVec, PxScale};
+use bevy::asset::io::{
+    AssetReader, AssetReaderError, ErasedAssetReader, PathStream, Reader, VecReader,
+};
 use image::{Rgba, RgbaImage};
 use imageproc::drawing::{draw_hollow_rect_mut, draw_text_mut, text_size};
 use imageproc::rect::Rect;
@@ -68,16 +73,6 @@ impl CardImage {
             CardImage::Front(n) => (*n).to_string(),
             CardImage::MdfcBack { front, back } => format!("{back} (back of {front})"),
             CardImage::Token { name } => format!("{name} token"),
-        }
-    }
-
-    /// The card's own display name, used as the text on the white
-    /// name-placeholder when there's no Scryfall art.
-    fn display_name(&self) -> &str {
-        match self {
-            CardImage::Front(n)
-            | CardImage::MdfcBack { back: n, .. }
-            | CardImage::Token { name: n } => n,
         }
     }
 
@@ -136,8 +131,6 @@ fn is_fictional(name: &str) -> bool {
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     let cards_dir = assets_dir.join("cards");
     fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
-    // Load the UI font once for placeholder text (None → blank white card).
-    let placeholder_font = load_placeholder_font(assets_dir);
 
     // Tallies for a one-line summary instead of per-card spam. The audit
     // catalog contains ~3500 synthesised STX cards that aren't on Scryfall;
@@ -152,16 +145,10 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
             continue;
         }
         if spec.is_fictional() {
-            // Generate a white name-placeholder so the asset loader has
-            // something to serve when this catalog-invented card enters
-            // play (it has no Scryfall printing).
-            if let Err(e) =
-                write_name_placeholder(&path, spec.display_name(), placeholder_font.as_ref())
-            {
-                eprintln!("  Failed to write placeholder for {}: {e}", spec.label());
-            } else {
-                fictional += 1;
-            }
+            // No file written: catalog-invented cards have no Scryfall art,
+            // and `CardPlaceholderReader` synthesizes a white name-placeholder
+            // on demand at load time (no 10 MB-of-copies on disk).
+            fictional += 1;
             continue;
         }
 
@@ -174,12 +161,11 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
             }
             Err(e) => {
                 // 404s are expected here: the audit catalog holds many
-                // synthesised STX cards with clean, real-looking names
-                // we can't pre-filter, so they only reveal themselves as
-                // "not found" on the first prefetch. Write the white
-                // name placeholder (so the runtime has a file to serve and so
-                // re-runs skip via the `path.exists()` check above) and
-                // count it â€” a per-card error line here is the flood.
+                // synthesised STX cards with clean, real-looking names we
+                // can't pre-filter, so they only reveal themselves as "not
+                // found" on the first prefetch. No file is written — the
+                // runtime `CardPlaceholderReader` serves a placeholder for
+                // the missing path. A per-card error line here is the flood.
                 let is_404 = e
                     .downcast_ref::<LookupError>()
                     .is_some_and(|le| matches!(le, LookupError::NotFound));
@@ -187,14 +173,6 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
                     eprintln!("  Failed to download {}: {e}", spec.label());
                 }
                 unavailable += 1;
-                if let Err(ph_err) =
-                    write_name_placeholder(&path, spec.display_name(), placeholder_font.as_ref())
-                {
-                    eprintln!(
-                        "  Also failed to write placeholder for {}: {ph_err}",
-                        spec.label(),
-                    );
-                }
             }
         }
 
@@ -204,8 +182,8 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     if downloaded + fictional + unavailable > 0 {
         println!(
             "Card image prefetch: {downloaded} downloaded, \
-             {fictional} fictional placeholder(s), \
-             {unavailable} unavailable (name placeholder)."
+             {fictional} fictional, {unavailable} unavailable \
+             (both served runtime placeholders)."
         );
     }
 }
@@ -215,23 +193,19 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
 const PLACEHOLDER_W: u32 = 488;
 const PLACEHOLDER_H: u32 = 680;
 
-/// Load the UI font once for placeholder text. Returns `None` if the font
-/// file isn't where we expect — the placeholder then renders as a blank
-/// white card (still far better than the old 10 MB cardback copy).
-fn load_placeholder_font(assets_dir: &Path) -> Option<FontVec> {
+/// Load the UI font for placeholder text. Returns `None` if the font file
+/// isn't where we expect — the placeholder then renders as a blank white
+/// card. Public so the asset-source registration in `main` can load it
+/// once and share it with [`CardPlaceholderReader`].
+pub fn load_placeholder_font(assets_dir: &Path) -> Option<FontVec> {
     let bytes = fs::read(assets_dir.join(crate::theme::FONT_PATH)).ok()?;
     FontVec::try_from_vec(bytes).ok()
 }
 
-/// Write a white "card" PNG carrying `name` as centered, word-wrapped
-/// text — the placeholder for cards with no Scryfall art (synthesized
-/// cards, MDFC backs, 404s). A few KB each, vs. the 10 MB cardback copy
-/// this replaced.
-fn write_name_placeholder(
-    path: &Path,
-    name: &str,
-    font: Option<&FontVec>,
-) -> image::ImageResult<()> {
+/// Render a white "card" carrying `name` as centered, word-wrapped text —
+/// the placeholder for cards with no Scryfall art (synthesized cards, MDFC
+/// backs, 404s). With `font == None` it's a blank white card.
+fn render_placeholder(name: &str, font: Option<&FontVec>) -> RgbaImage {
     let mut img =
         RgbaImage::from_pixel(PLACEHOLDER_W, PLACEHOLDER_H, Rgba([245, 245, 245, 255]));
 
@@ -285,13 +259,95 @@ fn write_name_placeholder(
         }
     }
 
-    // Write atomically (temp file + rename) so a prefetch interrupted
-    // mid-write never leaves a 0-byte placeholder that the `path.exists()`
-    // skip would treat as done on the next run.
-    let tmp = path.with_extension("png.tmp");
-    img.save_with_format(&tmp, image::ImageFormat::Png)?;
-    fs::rename(&tmp, path)?;
-    Ok(())
+    img
+}
+
+/// PNG-encode a name-placeholder. Used by [`CardPlaceholderReader`] to
+/// serve a generated card image for a path that has no file on disk.
+fn placeholder_png_bytes(name: &str, font: Option<&FontVec>) -> Vec<u8> {
+    let img = render_placeholder(name, font);
+    let mut buf = Vec::new();
+    img.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png)
+        .expect("encode placeholder PNG to memory");
+    buf
+}
+
+/// Recover a readable card name from a `cards/<sanitized>.png` asset path,
+/// for placeholder text. Reversing `sanitize_name` is lossy (we can't
+/// restore exact capitalization or punctuation), so we just title-case the
+/// de-underscored stem — fine for a placeholder. Returns `None` for any
+/// path that isn't a card image, so the reader only ever synthesizes card
+/// art (never fonts / models / the cardback).
+fn card_name_from_asset_path(path: &Path) -> Option<String> {
+    if path.parent().and_then(|p| p.file_name()).and_then(|s| s.to_str()) != Some("cards") {
+        return None;
+    }
+    let stem = path.file_stem()?.to_str()?;
+    let base = stem.strip_suffix("_back").unwrap_or(stem);
+    let name = base
+        .split('_')
+        .filter(|w| !w.is_empty())
+        .map(|w| {
+            let mut chars = w.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    (!name.is_empty()).then_some(name)
+}
+
+/// Wraps the platform's default file [`AssetReader`] and, for any missing
+/// `cards/<name>.png`, synthesizes a white name-placeholder PNG on the fly
+/// instead of failing — so no placeholder files live on disk.
+///
+/// This is sound because [`ensure_card_images`] blocks until every real
+/// download has been written before the app starts: a card image that's
+/// still missing at load time is genuinely art-less (a synthesized card or
+/// a 404), which is exactly what the placeholder is for. Any non-card
+/// missing path falls through to the inner reader's `NotFound`.
+pub struct CardPlaceholderReader {
+    inner: Box<dyn ErasedAssetReader>,
+    font: Arc<Option<FontVec>>,
+}
+
+impl CardPlaceholderReader {
+    pub fn new(inner: Box<dyn ErasedAssetReader>, font: Arc<Option<FontVec>>) -> Self {
+        Self { inner, font }
+    }
+}
+
+impl AssetReader for CardPlaceholderReader {
+    async fn read<'a>(&'a self, path: &'a Path) -> Result<impl Reader + 'a, AssetReaderError> {
+        match self.inner.read(path).await {
+            Ok(reader) => Ok(reader),
+            Err(AssetReaderError::NotFound(_)) => match card_name_from_asset_path(path) {
+                Some(name) => {
+                    let bytes = placeholder_png_bytes(&name, self.font.as_ref().as_ref());
+                    Ok(Box::new(VecReader::new(bytes)) as Box<dyn Reader + 'a>)
+                }
+                None => Err(AssetReaderError::NotFound(path.to_path_buf())),
+            },
+            Err(e) => Err(e),
+        }
+    }
+
+    async fn read_meta<'a>(&'a self, path: &'a Path) -> Result<impl Reader + 'a, AssetReaderError> {
+        self.inner.read_meta(path).await
+    }
+
+    async fn read_directory<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Result<Box<PathStream>, AssetReaderError> {
+        self.inner.read_directory(path).await
+    }
+
+    async fn is_directory<'a>(&'a self, path: &'a Path) -> Result<bool, AssetReaderError> {
+        self.inner.is_directory(path).await
+    }
 }
 
 /// Convert a card name to a filename: lowercase, spaces to underscores, .png extension.
@@ -544,7 +600,7 @@ mod tests {
     }
 
     #[test]
-    fn ensure_card_images_writes_name_placeholder_for_fictional_cards() {
+    fn ensure_card_images_writes_no_file_for_fictional_cards() {
         use std::fs;
         // Use a temp asset dir so we don't pollute the repo.
         let tmp = std::env::temp_dir().join(format!(
@@ -553,27 +609,44 @@ mod tests {
         ));
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(tmp.join("cards")).expect("temp setup");
-        // No fonts dir here, so the placeholder renders as a blank white
-        // card (the font-missing fallback) — still a valid PNG.
 
         let specs = vec![CardImage::Front("Mount Tyrhus")];
         ensure_card_images(&specs, &tmp);
 
+        // The prefetch no longer stamps placeholder files: the runtime
+        // `CardPlaceholderReader` synthesizes them on demand instead.
         let path = tmp.join("cards").join("mount_tyrhus.png");
         assert!(
-            path.exists(),
-            "fictional card must get a name placeholder at {}",
+            !path.exists(),
+            "fictional card must NOT get a placeholder file on disk: {}",
             path.display(),
         );
-        // It's a freshly generated PNG of placeholder dimensions — not a
-        // 10 MB cardback copy.
-        let img = image::open(&path).expect("placeholder must be a valid PNG");
-        assert_eq!(
-            (img.width(), img.height()),
-            (PLACEHOLDER_W, PLACEHOLDER_H),
-            "placeholder should be a card-proportioned canvas",
-        );
         let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn placeholder_png_bytes_is_a_valid_card_proportioned_png() {
+        // The reader serves these bytes for a missing card image. No font
+        // here → blank white card, still a valid decodable PNG.
+        let bytes = placeholder_png_bytes("Awesome Presentation", None);
+        let img = image::load_from_memory(&bytes).expect("placeholder must be a valid PNG");
+        assert_eq!((img.width(), img.height()), (PLACEHOLDER_W, PLACEHOLDER_H));
+    }
+
+    #[test]
+    fn card_name_recovered_from_asset_path() {
+        use std::path::Path;
+        assert_eq!(
+            card_name_from_asset_path(Path::new("cards/awesome_presentation.png")).as_deref(),
+            Some("Awesome Presentation"),
+        );
+        // Back-face suffix is stripped; non-card paths are ignored.
+        assert_eq!(
+            card_name_from_asset_path(Path::new("cards/searstep_pathway_back.png")).as_deref(),
+            Some("Searstep Pathway"),
+        );
+        assert_eq!(card_name_from_asset_path(Path::new("fonts/ui.ttf")), None);
+        assert_eq!(card_name_from_asset_path(Path::new("cardback.png")), None);
     }
 
     #[test]
@@ -583,5 +656,55 @@ mod tests {
             back: "Timbercrown Pathway",
         };
         assert_eq!(spec.label(), "Timbercrown Pathway (back of Cragcrown Pathway)");
+    }
+
+    #[test]
+    fn reader_synthesizes_placeholder_for_missing_card_but_not_other_paths() {
+        use bevy::asset::AsyncReadExt;
+        use bevy::asset::io::{AssetReader, AssetReaderError, ErasedAssetReader, PathStream, Reader};
+        use bevy::tasks::block_on;
+        use std::path::Path;
+
+        // Inner reader that reports every path as missing.
+        struct AlwaysMissing;
+        impl AssetReader for AlwaysMissing {
+            async fn read<'a>(
+                &'a self,
+                path: &'a Path,
+            ) -> Result<impl Reader + 'a, AssetReaderError> {
+                Err::<bevy::asset::io::VecReader, _>(AssetReaderError::NotFound(path.to_path_buf()))
+            }
+            async fn read_meta<'a>(
+                &'a self,
+                path: &'a Path,
+            ) -> Result<impl Reader + 'a, AssetReaderError> {
+                Err::<bevy::asset::io::VecReader, _>(AssetReaderError::NotFound(path.to_path_buf()))
+            }
+            async fn read_directory<'a>(
+                &'a self,
+                path: &'a Path,
+            ) -> Result<Box<PathStream>, AssetReaderError> {
+                Err(AssetReaderError::NotFound(path.to_path_buf()))
+            }
+            async fn is_directory<'a>(&'a self, _path: &'a Path) -> Result<bool, AssetReaderError> {
+                Ok(false)
+            }
+        }
+
+        let reader = CardPlaceholderReader::new(
+            Box::new(AlwaysMissing) as Box<dyn ErasedAssetReader>,
+            std::sync::Arc::new(None),
+        );
+
+        // Missing card image → a synthesized placeholder PNG is served.
+        let mut r = block_on(AssetReader::read(&reader, Path::new("cards/test_card.png")))
+            .expect("missing card image must be served a placeholder");
+        let mut bytes = Vec::new();
+        block_on(AsyncReadExt::read_to_end(&mut r, &mut bytes)).unwrap();
+        let img = image::load_from_memory(&bytes).expect("served bytes must be a valid PNG");
+        assert_eq!((img.width(), img.height()), (PLACEHOLDER_W, PLACEHOLDER_H));
+
+        // A missing non-card path is NOT synthesized — it still 404s.
+        assert!(block_on(AssetReader::read(&reader, Path::new("fonts/ui.ttf"))).is_err());
     }
 }

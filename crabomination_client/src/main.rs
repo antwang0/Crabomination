@@ -1,8 +1,9 @@
 #![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
 use std::f32::consts::PI;
-use std::path::Path;
 
+use bevy::asset::AssetApp;
+use bevy::asset::io::{AssetSource, AssetSourceBuilder, AssetSourceId, ErasedAssetReader};
 use bevy::image::{ImageFilterMode, ImageSamplerDescriptor};
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalAmbientLight};
 use bevy::picking::mesh_picking::MeshPickingPlugin;
@@ -64,9 +65,9 @@ use systems::gizmos::{
     AttackerGizmos, BlockingGizmos, LegalTargetGizmos, PtModifiedGizmos, StackGizmos,
 };
 use systems::quality::{
-    handle_quality_buttons, handle_settings_toggle, handle_speed_slider, reset_esc_consumed,
-    setup_quality_panel, sync_settings_visibility, update_speed_slider_visuals, EscConsumed,
-    SettingsOpen,
+    handle_leave_game_button, handle_quality_buttons, handle_settings_toggle, handle_speed_slider,
+    reset_esc_consumed, setup_quality_panel, sync_settings_visibility, update_speed_slider_visuals,
+    EscConsumed, SettingsOpen,
 };
 use systems::ui::{
     graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards,
@@ -164,10 +165,33 @@ fn main() {
             .map(|(front, back)| CardImage::MdfcBack { front, back }),
     );
     specs.extend(token_names.iter().map(|name| CardImage::Token { name }));
-    scryfall::ensure_card_images(&specs, Path::new(&cfg.paths.asset_dir));
+    // Resolve once: a relative `asset_dir` is anchored to a fixed location
+    // (crate source dir in debug, exe dir in release) so the prefetch cache
+    // and Bevy's asset root agree regardless of the working directory.
+    let asset_dir = cfg.paths.resolved_asset_dir();
+    scryfall::ensure_card_images(&specs, &asset_dir);
 
     let gfx = cfg.graphics;
+
+    // Custom Default asset source: it wraps the normal file reader and
+    // synthesizes a white name-placeholder PNG for any missing card image,
+    // so art-less (synthesized / 404) cards need NO files on disk — the
+    // prefetch above writes only real downloads. Must be registered before
+    // AssetPlugin is added (sources are built at that point).
+    let asset_dir_str = asset_dir.to_string_lossy().into_owned();
+    let placeholder_font = std::sync::Arc::new(scryfall::load_placeholder_font(&asset_dir));
+    let mut default_reader_factory = AssetSource::get_default_reader(asset_dir_str);
+
     App::new()
+        .register_asset_source(
+            AssetSourceId::Default,
+            AssetSourceBuilder::new(move || {
+                Box::new(scryfall::CardPlaceholderReader::new(
+                    default_reader_factory(),
+                    placeholder_font.clone(),
+                )) as Box<dyn ErasedAssetReader>
+            }),
+        )
         // DefaultPlugins must come first — its StatesPlugin is what makes
         // `init_state::<AppState>()` work for MenuPlugin.
         .add_plugins((
@@ -183,7 +207,7 @@ fn main() {
                     },
                 })
                 .set(AssetPlugin {
-                    file_path: cfg.paths.asset_dir,
+                    file_path: asset_dir.to_string_lossy().into_owned(),
                     ..default()
                 })
                 // Open sized to the display rather than at winit's tiny
@@ -538,7 +562,10 @@ fn main() {
         )
         .add_systems(
             OnExit(AppState::InGame),
-            systems::game_over::cleanup_in_game_entities,
+            (
+                systems::game_over::cleanup_in_game_entities,
+                net_plugin::teardown_net_session,
+            ),
         )
         // Run after sync_game_visuals so SwapFrontMaterial markers
         // queued during the hand→battlefield transition land before
@@ -597,6 +624,11 @@ fn main() {
             (handle_quality_buttons, apply_render_quality_change)
                 .chain()
                 .run_if(in_state(AppState::InGame)),
+        )
+        // "Leave Game" button in the settings menu → back to main menu.
+        .add_systems(
+            Update,
+            handle_leave_game_button.run_if(in_state(AppState::InGame)),
         )
         // Animation-speed slider: drag to set, label/fill mirror state.
         .add_systems(
