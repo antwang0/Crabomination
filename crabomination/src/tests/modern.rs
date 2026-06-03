@@ -16289,6 +16289,58 @@ fn esikas_chariot_etb_creates_two_cat_tokens() {
 }
 
 #[test]
+fn magda_sacrifices_five_treasures_to_tutor_a_dragon() {
+    use crate::card::ArtifactSubtype;
+    use crate::effect::{PlayerRef, Value};
+    let mut g = two_player_game();
+    let magda = g.add_card_to_battlefield(0, catalog::magda_brazen_outlaw());
+    g.clear_sickness(magda);
+    // Mint five Treasure tokens for p0.
+    let ctx = crate::game::effects::EffectContext::for_trigger(magda, 0, None, 0);
+    let mint = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(5),
+        definition: crate::game::effects::treasure_token(),
+    };
+    g.resolve_effect(&mint, &ctx).unwrap();
+    let treasures_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Treasure))
+        .count();
+    assert_eq!(treasures_before, 5);
+    let dragon = g.add_card_to_library(0, catalog::balefire_dragon());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(dragon))]));
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: magda, ability_index: 0, target: None, x_value: None,
+    }).expect("Magda's five-Treasure tutor activates");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == dragon),
+        "the tutored Dragon enters the battlefield");
+    let treasures_after = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Treasure))
+        .count();
+    assert_eq!(treasures_after, 0, "all five Treasures are sacrificed as the cost");
+}
+
+#[test]
+fn magda_cannot_tutor_without_five_treasures() {
+    use crate::effect::{PlayerRef, Value};
+    let mut g = two_player_game();
+    let magda = g.add_card_to_battlefield(0, catalog::magda_brazen_outlaw());
+    g.clear_sickness(magda);
+    let ctx = crate::game::effects::EffectContext::for_trigger(magda, 0, None, 0);
+    g.resolve_effect(&Effect::CreateToken {
+        who: PlayerRef::You, count: Value::Const(4),
+        definition: crate::game::effects::treasure_token(),
+    }, &ctx).unwrap();
+    g.add_card_to_library(0, catalog::balefire_dragon());
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: magda, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "four Treasures isn't enough to pay the sacrifice cost");
+}
+
+#[test]
 fn robber_of_the_rich_has_reach_and_haste() {
     let card = catalog::robber_of_the_rich();
     assert_eq!(card.power, 2);

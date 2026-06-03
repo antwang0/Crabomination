@@ -59,7 +59,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Amped Raptor | 🟡 | 2/1 Dinosaur; ETB now grants real energy ({E}{E}) via `Effect::AddEnergy` (energy system shipped in `sets::kld`). The exile-then-pay-energy-to-cast-free clause is still omitted (no energy-gated free-cast-from-exile path). |
-| Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves + "whenever a Dwarf you control becomes tapped, create a Treasure" (via the new `EventKind::Tapped` + CR 508.1f attack-tap event). Only the five-Treasure-sacrifice Dragon/artifact tutor is omitted. |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
 
 ### Green

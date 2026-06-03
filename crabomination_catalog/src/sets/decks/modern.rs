@@ -12031,8 +12031,8 @@ pub fn cam_and_farrik() -> CardDefinition {
 /// becomes tapped, create a Treasure token. (The five-Treasure sacrifice
 /// tutor is omitted.)
 pub fn magda_brazen_outlaw() -> CardDefinition {
-    use crate::card::StaticAbility;
-    use crate::effect::StaticEffect;
+    use crate::card::{ActivatedAbility, ArtifactSubtype, StaticAbility};
+    use crate::effect::{StaticEffect, ZoneDest};
     use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Magda, Brazen Outlaw",
@@ -12068,6 +12068,22 @@ pub fn magda_brazen_outlaw() -> CardDefinition {
                 count: Value::Const(1),
                 definition: treasure_token(),
             },
+        }],
+        // Sacrifice five Treasures: search your library for an artifact or
+        // Dragon card, put it onto the battlefield, then shuffle.
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::Artifact
+                    .and(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Treasure)),
+                5,
+            )),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Artifact
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Dragon)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }
