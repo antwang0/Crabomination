@@ -11031,11 +11031,21 @@ pub fn detectives_phoenix() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
+        // Dies → at the next end step, return to hand *only if* you control a
+        // Detective (the printed conditional gate, CR 603.4 intervening-if at
+        // the delayed trigger's resolution).
         triggered_abilities: vec![on_dies(Effect::DelayUntil {
             kind: DelayedTriggerKind::NextEndStep,
-            body: Box::new(Effect::Move {
-                what: Selector::This,
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+            body: Box::new(Effect::If {
+                cond: crate::effect::Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Detective)
+                        .and(SelectionRequirement::ControlledByYou),
+                )),
+                then: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
+                else_: Box::new(Effect::Noop),
             }),
         })],
         ..Default::default()

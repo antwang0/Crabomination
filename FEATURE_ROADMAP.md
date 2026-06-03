@@ -294,8 +294,11 @@ feature; sweep card-batch by card-batch.
   (Pacifism), `Keyword::AttacksAlone` (CR 508.0 — Master of Cruelties),
   `Keyword::MustBeBlocked` (CR 509.1c — "must be blocked", Academic
   Dispute), `Keyword::AllMustBlock` (CR 509.1c true Lure — every able
-  creature must block; Lure aura), and `Keyword::MustAttack`
-  (CR 508.1d — "attacks each combat if able", Juggernaut) are wired from
+  creature must block; Lure aura), `Keyword::MustAttack`
+  (CR 508.1d — "attacks each combat if able", Juggernaut), and
+  `Keyword::CanAttackOnlyIfDefenderControls(filter)` (per-attacker attack
+  gate on the defending player's board — Dandân's "can't attack unless
+  defending player controls an Island") are wired from
   computed keywords in `declare_attackers`/`declare_blockers`. **Goad**
   (CR 701.38) is wired via `CardInstance.goaded_by` + `Effect::Goad`
   (treated as must-attack, clears at the goader's next untap — Disrupt

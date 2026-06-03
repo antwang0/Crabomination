@@ -411,6 +411,12 @@ pub enum Keyword {
     /// requirements (Goad targeting rules, can't-attack overrides) is
     /// approximated by the per-creature gate. Juggernaut, goaded creatures.
     MustAttack,
+    /// "This creature can't attack unless the defending player controls a
+    /// [filter]." Enforced in `declare_attackers` against the attack's
+    /// defending player (the `SelectionRequirement` is matched among that
+    /// player's controlled permanents). Dandân ("can't attack unless
+    /// defending player controls an Island").
+    CanAttackOnlyIfDefenderControls(Box<SelectionRequirement>),
     /// "When you cast this spell from your hand, exile it as it resolves.
     /// At the beginning of your next upkeep, you may cast this card from
     /// exile without paying its mana cost." Wired in
@@ -440,7 +446,7 @@ pub enum Keyword {
 }
 
 /// Composable filter for valid targets of a spell or ability.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SelectionRequirement {
     Any,
     Player,

@@ -28,7 +28,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Dandân | 🟡 | {2}{U} 4/1 Fish. Wired with the "if you control no Island at your upkeep, sacrifice this" downside (an upkeep `If(Not(SelectorExists(Island ∧ ControlledByYou)), Move(self → Graveyard))` trigger). The "can attack only if defending player controls an Island" half is omitted (no per-attacker target restriction). Tests: `dandan_sacrifices_at_upkeep_when_no_island`, `dandan_stays_in_play_with_an_island`. |
 | Thundertrap Trainer | 🟡 | 2/2 Flash; ETB taps target creature an opponent controls. Body fully wired; the trap/discount text is dropped. |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
@@ -62,7 +61,6 @@ work is listed below.
 | Amped Raptor | 🟡 | 2/1 Dinosaur; ETB now grants real energy ({E}{E}) via `Effect::AddEnergy` (energy system shipped in `sets::kld`). The exile-then-pay-energy-to-cast-free clause is still omitted (no energy-gated free-cast-from-exile path). |
 | Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves + "whenever a Dwarf you control becomes tapped, create a Treasure" (via the new `EventKind::Tapped` + CR 508.1f attack-tap event). Only the five-Treasure-sacrifice Dragon/artifact tutor is omitted. |
 | Robber of the Rich | 🟡 | 2/2 Reach + Haste body. The attack-trigger exile + cast-from-opponent's-library clause is omitted. |
-| Detective's Phoenix | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{R} 2/2 Phoenix with Flying + Haste. Dies trigger schedules a `DelayUntil(NextEndStep)` body that returns Self to its owner's hand. Approximation of the printed "return from gy at end step if you control a Detective" — the conditional gate is collapsed (always returns). Test: `detectives_phoenix_dies_schedules_delayed_return`. |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
 
 ### Green
@@ -135,7 +133,6 @@ work is listed below.
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
 | Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
 | Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |
-| Atraxa, Grand Unifier | 🟡 | Already wired with ETB Draw 4 approximation. Real reveal-and-sort still ⏳. |
 | Leyline of the Guildpact | ⏳ | "Your permanents are all colors." Needs is-all-colors primitive. |
 | Maelstrom Nexus | ⏳ | Cascade-on-first-spell static. Needs first-spell-of-turn tracking + a static that injects a cascade trigger; the `Effect::Cascade` primitive now exists (used by Bloodbraid Elf / Apex Devastator), so this is "wire the static + the per-turn gate". |
 

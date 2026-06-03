@@ -6007,6 +6007,28 @@ fn dandan_stays_in_play_with_an_island() {
 }
 
 #[test]
+fn dandan_cannot_attack_unless_defender_controls_an_island() {
+    let mut g = two_player_game();
+    // p0 controls an Island (so Dandân survives upkeep) but the *defender*
+    // (p1) does not, so Dandân can't be declared as an attacker.
+    g.add_card_to_battlefield(0, catalog::island());
+    let dd = g.add_card_to_battlefield(0, catalog::dandan());
+    g.clear_sickness(dd);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dd, target: AttackTarget::Player(1),
+    }])).is_err(), "Dandân can't attack a defender with no Island");
+
+    // Give the defender an Island — now the attack is legal.
+    g.add_card_to_battlefield(1, catalog::island());
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: dd, target: AttackTarget::Player(1),
+    }])).is_ok(), "Dandân may attack once the defender controls an Island");
+}
+
+#[test]
 fn turnabout_mode_four_taps_all_opponent_lands() {
     let mut g = two_player_game();
     let m1 = g.add_card_to_battlefield(1, catalog::mountain());
@@ -13869,6 +13891,41 @@ fn detectives_phoenix_dies_schedules_delayed_return() {
     // shape — at next end step the body fires).
     assert!(g.delayed_triggers.len() > dt_before,
         "Delayed return trigger scheduled");
+}
+
+#[test]
+fn detectives_phoenix_returns_at_end_step_only_with_a_detective() {
+    // With a Detective in play the end-step body returns the Phoenix to
+    // hand; the conditional gate (CR 603.4) is satisfied.
+    let mut g = two_player_game();
+    let phoenix = g.add_card_to_battlefield(0, catalog::detectives_phoenix());
+    g.clear_sickness(phoenix);
+    g.add_card_to_battlefield(0, catalog::lonis_genetics_expert()); // Otter Detective
+    g.remove_to_graveyard_with_triggers(phoenix);
+    drain_stack(&mut g);
+    for _ in 0..40 {
+        if g.players[0].hand.iter().any(|c| c.id == phoenix) { break; }
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    assert!(g.players[0].hand.iter().any(|c| c.id == phoenix),
+        "Phoenix returns to hand at end step while a Detective is in play");
+}
+
+#[test]
+fn detectives_phoenix_stays_in_graveyard_without_a_detective() {
+    let mut g = two_player_game();
+    let phoenix = g.add_card_to_battlefield(0, catalog::detectives_phoenix());
+    g.clear_sickness(phoenix);
+    g.remove_to_graveyard_with_triggers(phoenix);
+    drain_stack(&mut g);
+    // Walk through a full end step; stop if the game ends.
+    for _ in 0..40 {
+        if g.perform_action(GameAction::PassPriority).is_err() { break; }
+        if g.players[0].hand.iter().any(|c| c.id == phoenix) { break; }
+    }
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == phoenix),
+        "Phoenix stays in the graveyard with no Detective to satisfy the gate");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == phoenix));
 }
 
 #[test]

@@ -2900,12 +2900,6 @@ pub fn bitterbloom_bearer() -> CardDefinition {
 /// Dandân — {2}{U}, 4/1 Fish. "Dandân can attack only if defending
 /// player controls an Island. When you control no Islands, sacrifice
 /// Dandân."
-///
-/// Approximation: vanilla 4/1 body + an "at upkeep, if you control no
-/// Islands, sacrifice it" trigger. The "can only attack if defending
-/// player controls an Island" half is omitted (no per-attacker
-/// targeting restriction yet) — without that the card is a fairly
-/// strong 4/1 for {3}, but the upkeep-sac stays as the drawback half.
 pub fn dandan() -> CardDefinition {
     use crate::card::LandType;
     use crate::effect::Predicate;
@@ -2919,6 +2913,9 @@ pub fn dandan() -> CardDefinition {
         },
         power: 4,
         toughness: 1,
+        keywords: vec![Keyword::CanAttackOnlyIfDefenderControls(Box::new(
+            SelectionRequirement::HasLandType(LandType::Island),
+        ))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),

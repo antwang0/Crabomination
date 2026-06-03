@@ -118,6 +118,24 @@ impl GameState {
 
         for atk in attacks {
             let id = atk.attacker;
+            // "Can't attack unless defending player controls a [filter]"
+            // (Dandân). Resolved before the mutable attacker binding to keep
+            // the borrows disjoint: require ≥1 matching permanent under the
+            // attack's defending player's control.
+            if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
+                Keyword::CanAttackOnlyIfDefenderControls(r) => Some(r.clone()),
+                _ => None,
+            }) {
+                let defender = self.defender_for(atk.target);
+                let satisfied = defender.is_some_and(|d| {
+                    self.battlefield
+                        .iter()
+                        .any(|c| c.controller == d && self.evaluate_requirement_on_card(&req, c, d))
+                });
+                if !satisfied {
+                    return Err(GameError::CannotAttack(id));
+                }
+            }
             // Filter by *controller*, not *owner* — a creature you've
             // stolen (Threaten / Mind Control) attacks for you, even
             // though its `owner` field still points at the original
