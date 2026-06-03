@@ -14328,12 +14328,20 @@ pub fn fallen_shinobi() -> CardDefinition {
         },
         power: 5,
         toughness: 4,
+        // Combat damage to a player exiles the top two cards of *their*
+        // library and grants this card's controller a may-play (free cast)
+        // on each until end of turn. Two ExileTopAndGrantMayPlay calls peel
+        // the defender's top two. (Ninjutsu is still omitted.)
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::Mill {
-                    who: Selector::Player(PlayerRef::DefendingPlayer),
-                    amount: Value::Const(2),
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::DefendingPlayer,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                },
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::DefendingPlayer,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
                 },
             ]),
         }],

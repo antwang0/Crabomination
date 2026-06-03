@@ -15833,6 +15833,30 @@ fn grim_flayer_combat_trigger_surveils() {
         "surveil should process library cards");
 }
 
+#[test]
+fn fallen_shinobi_exiles_two_and_grants_may_play() {
+    let mut g = two_player_game();
+    let shinobi = g.add_card_to_battlefield(0, catalog::fallen_shinobi());
+    g.clear_sickness(shinobi);
+    let a = g.add_card_to_library(1, catalog::lightning_bolt());
+    let b = g.add_card_to_library(1, catalog::shock());
+    // Fire the combat-damage trigger with seat 1 stamped as the damaged
+    // (defending) player.
+    let trig = catalog::fallen_shinobi().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        shinobi, 0, Some(Target::Player(1)), 0,
+    );
+    g.resolve_effect(&trig, &ctx).unwrap();
+    // Both top cards of the *defender's* library are exiled, each with a
+    // may-play permission for the Shinobi's controller (seat 0).
+    for id in [a, b] {
+        let card = g.exile.iter().find(|c| c.id == id)
+            .expect("defender's top card is exiled");
+        let perm = card.may_play_until.as_ref().expect("may-play granted");
+        assert_eq!(perm.player, 0, "the Shinobi's controller may play it");
+    }
+}
+
 /// Young Pyromancer: magecraft trigger creates an Elemental token.
 #[test]
 fn young_pyromancer_creates_elemental_on_instant_cast() {
