@@ -15834,6 +15834,55 @@ fn grim_flayer_combat_trigger_surveils() {
 }
 
 #[test]
+fn fallen_shinobi_ninjutsu_swaps_in_for_an_unblocked_attacker() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    // An unblocked 2/2 is attacking p1; the Shinobi waits in p0's hand.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let shinobi = g.add_card_to_hand(0, catalog::fallen_shinobi());
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::Ninjutsu { ninja: shinobi, returning: bear })
+        .expect("Ninjutsu activates on an unblocked attacker");
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "the unblocked attacker returns to hand");
+    assert!(g.battlefield.iter().any(|c| c.id == shinobi),
+        "the Shinobi enters the battlefield");
+    assert!(g.attacking.iter().any(|a| a.attacker == shinobi),
+        "the Shinobi is now attacking");
+    let sh = g.battlefield.iter().find(|c| c.id == shinobi).unwrap();
+    assert!(sh.tapped, "the Shinobi enters tapped and attacking");
+}
+
+#[test]
+fn fallen_shinobi_ninjutsu_rejected_on_blocked_attacker() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let shinobi = g.add_card_to_hand(0, catalog::fallen_shinobi());
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.block_map.insert(blocker, bear); // bear is blocked
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::Ninjutsu { ninja: shinobi, returning: bear }).is_err(),
+        "Ninjutsu can't return a blocked attacker");
+}
+
+#[test]
 fn fallen_shinobi_exiles_two_and_grants_may_play() {
     let mut g = two_player_game();
     let shinobi = g.add_card_to_battlefield(0, catalog::fallen_shinobi());

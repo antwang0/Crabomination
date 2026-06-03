@@ -14330,9 +14330,8 @@ pub fn flametongue_kavu() -> CardDefinition {
 /// to a player, exile the top two cards of that player's library. Until
 /// end of turn, you may play those cards without paying their mana costs."
 ///
-/// Approximation: body-only 5/4 with combat-damage trigger that exiles
-/// 2 from the defender's library (the play-from-exile half is omitted
-/// pending cast-from-exile pipeline). Ninjutsu is omitted.
+/// Ninjutsu {2}{U}{B}; combat damage to a player exiles their top two cards
+/// and lets you play them this turn for free.
 pub fn fallen_shinobi() -> CardDefinition {
     CardDefinition {
         name: "Fallen Shinobi",
@@ -14344,6 +14343,7 @@ pub fn fallen_shinobi() -> CardDefinition {
         },
         power: 5,
         toughness: 4,
+        keywords: vec![Keyword::Ninjutsu(cost(&[generic(2), u(), b()]))],
         // Combat damage to a player exiles the top two cards of *their*
         // library and grants this card's controller a may-play (free cast)
         // on each until end of turn. Two ExileTopAndGrantMayPlay calls peel

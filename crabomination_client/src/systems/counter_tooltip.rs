@@ -453,6 +453,9 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::CanAttackOnlyIfDefenderControls(_) => {
             "Can attack only if the defending player controls a matching permanent."
         }
+        K::Ninjutsu(_) => {
+            "Return an unblocked attacker you control to hand to put this onto the battlefield tapped and attacking."
+        }
         _ => return None,
     })
 }
@@ -545,6 +548,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),
         K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),
+        K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
         _ => format!("{kw:?}"),
     }
 }

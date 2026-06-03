@@ -111,6 +111,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::MustAttack | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::AttacksAlone | Keyword::DealsNoCombatDamage
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
+        Keyword::Ninjutsu(_) => "Ninjutsu",
     };
     Some(s.to_string())
 }

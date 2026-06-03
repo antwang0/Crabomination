@@ -212,6 +212,11 @@ pub enum GameAction {
     /// creature until end of turn. Crew is an activated ability usable any
     /// time the controller has priority (instant speed, CR 702.122c).
     Crew { vehicle: CardId, crew_creatures: Vec<CardId> },
+    /// CR 702.49 — Ninjutsu. During the declare-blockers step, return an
+    /// unblocked attacker (`returning`) to hand and put `ninja` (a card with
+    /// Ninjutsu in your hand) onto the battlefield tapped and attacking the
+    /// same defender, paying the ninjutsu cost.
+    Ninjutsu { ninja: CardId, returning: CardId },
 }
 
 // ── Delayed triggers ─────────────────────────────────────────────────────────

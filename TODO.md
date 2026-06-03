@@ -451,6 +451,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   force-includes them. Juggernaut. Tests: `juggernaut_must_be_declared_as_
   attacker`, `juggernaut_tapped_is_exempt_from_must_attack`.
 
+- ✅ **CR 702.49 — Ninjutsu** (claude/modern_decks). `Keyword::Ninjutsu(cost)`
+  + `GameAction::Ninjutsu { ninja, returning }` — a declare-blockers special
+  action that pays the cost, returns an unblocked attacker to hand, and puts
+  the ninja onto the battlefield tapped and attacking the same defender
+  (bypassing the declare-attackers timing/sickness gates). Fallen Shinobi.
+  Tests: `fallen_shinobi_ninjutsu_swaps_in_for_an_unblocked_attacker`,
+  `fallen_shinobi_ninjutsu_rejected_on_blocked_attacker`.
+
 - ✅ **CR 508.1a — Defender-board attack restriction** (claude/modern_decks).
   `Keyword::CanAttackOnlyIfDefenderControls(filter)` — `declare_attackers`
   rejects declaring the bearer unless the attack's defending player controls

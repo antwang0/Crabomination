@@ -2332,6 +2332,7 @@ impl GameState {
             GameAction::Cycle { card_id } => self.cycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
             GameAction::Crew { vehicle, crew_creatures } => self.crew(vehicle, &crew_creatures),
+            GameAction::Ninjutsu { ninja, returning } => self.ninjutsu(ninja, returning),
         }?;
         self.dispatch_triggers_for_events(&events);
         Ok(events)
@@ -2711,6 +2712,84 @@ impl GameState {
             ),
         });
         events.push(GameEvent::VehicleCrewed { vehicle });
+        Ok(events)
+    }
+
+    /// CR 702.49 — Ninjutsu. During the declare-blockers step, the active
+    /// player returns an unblocked attacker (`returning`) to hand and puts
+    /// `ninja` from hand onto the battlefield tapped and attacking the same
+    /// defender, paying the ninjutsu cost.
+    fn ninjutsu(
+        &mut self,
+        ninja: crate::card::CardId,
+        returning: crate::card::CardId,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::Keyword;
+        if self.step != crate::TurnStep::DeclareBlockers {
+            return Err(GameError::WrongStep { actual: self.step });
+        }
+        let p = self.player_with_priority();
+        // The returning creature must be one of this player's unblocked
+        // attackers (not a value in `block_map`).
+        let Some(atk) = self.attack_for(returning).copied() else {
+            return Err(GameError::InvalidTarget);
+        };
+        let returning_controller = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == returning)
+            .map(|c| c.controller);
+        if returning_controller != Some(p) {
+            return Err(GameError::NotYourPriority);
+        }
+        if self.block_map.values().any(|&a| a == returning) {
+            return Err(GameError::InvalidTarget); // blocked — illegal
+        }
+        // The ninja must be in `p`'s hand and carry Ninjutsu; clone its cost.
+        let cost = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == ninja)
+            .and_then(|c| {
+                c.definition.keywords.iter().find_map(|kw| match kw {
+                    Keyword::Ninjutsu(mc) => Some(mc.clone()),
+                    _ => None,
+                })
+            })
+            .ok_or(GameError::CardNotInHand(ninja))?;
+        self.players[p].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+
+        let mut events = vec![];
+        // Return the unblocked attacker to its owner's hand (this prunes it
+        // from `attacking` via `remove_from_combat` inside `move_card_to`).
+        let owner = self.find_card_owner(returning).unwrap_or(p);
+        let ctx = crate::game::effects::EffectContext::for_trigger(returning, p, None, 0);
+        self.move_card_to(
+            returning,
+            &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(owner)),
+            &ctx,
+            &mut events,
+        );
+        // Put the ninja onto the battlefield tapped (ETB fires here).
+        let ninja_ctx = crate::game::effects::EffectContext::for_trigger(ninja, p, None, 0);
+        self.move_card_to(
+            ninja,
+            &crate::effect::ZoneDest::Battlefield {
+                controller: crate::effect::PlayerRef::Seat(p),
+                tapped: true,
+            },
+            &ninja_ctx,
+            &mut events,
+        );
+        // It enters attacking the same defender the returned creature was
+        // attacking — bypassing the declare-attackers timing/sickness gates.
+        if self.battlefield.iter().any(|c| c.id == ninja) {
+            self.attacking.push(Attack { attacker: ninja, target: atk.target });
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == ninja) {
+                c.attacked_this_turn = true;
+            }
+            events.push(GameEvent::AttackerDeclared(ninja));
+        }
         Ok(events)
     }
 

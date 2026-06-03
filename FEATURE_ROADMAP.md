@@ -187,7 +187,10 @@ feature; sweep card-batch by card-batch.
   +1/+1-per-nonland via `Selector::DiscardedThisResolution`; Quandrix
   Cryptomancer), ⏳ Backup,
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,
-  ⏳ Offspring, ⏳ Impending, ⏳ Ninjutsu, ⏳ Embalm/Eternalize.
+  ⏳ Offspring, ⏳ Impending, ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
+  `GameAction::Ninjutsu` — declare-blockers special action that returns an
+  unblocked attacker and swaps the ninja in tapped + attacking; Fallen
+  Shinobi), ⏳ Embalm/Eternalize.
 - **Counter / +1+1 matters:** ✅ Proliferate (`Effect::Proliferate` —
   reducer-wired + tested in `tests::classic`), ✅ Bolster
   (`shortcut::bolster` — CR 701.21, +N/+N on the controller's
@@ -309,7 +312,7 @@ feature; sweep card-batch by card-batch.
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ✅ **Goad** (above). ✅ **Lure** (`Keyword::AllMustBlock`).
   ✅ **Provoke** (`shortcut::provoke`, CR 702.39).
-  ⏳ **Ninjutsu attacking-creature swap**.
+  ✅ **Ninjutsu attacking-creature swap** (`GameAction::Ninjutsu`, CR 702.49).
 
 ## Tier 7 — UI / UX core (the Arena "feel" gap)
 
