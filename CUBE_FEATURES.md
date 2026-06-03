@@ -20,7 +20,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Lion Sash | ⏳ | Equipment + grow via exile-from-graveyard. Needs equipment + counters wiring. |
-| Enduring Innocence | 🟡 | 2/1 Lifelink Glimmer; ETB-of-another-nontoken-creature → Draw 1. The "return from exile after death" self-revive clause is omitted. |
 | Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 | Virtue of Loyalty | ⏳ | Adventure + enchantment side. Needs Adventure cost-mode primitive. |
 

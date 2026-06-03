@@ -2154,6 +2154,33 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnSelfAsEnchantment => {
+                use crate::card::CardType;
+                let Some(src) = ctx.source else { return Ok(()); };
+                // Locate the source in some graveyard; only return it if it
+                // was a creature card (the printed-or-current type still
+                // carries Creature on the first death; the enchantment side
+                // we mint below has it stripped, so a second death no-ops).
+                let owner = self.players.iter().position(|p| {
+                    p.graveyard.iter().any(|c| {
+                        c.id == src && c.definition.card_types.contains(&CardType::Creature)
+                    })
+                });
+                let Some(owner) = owner else { return Ok(()); };
+                let dest = ZoneDest::Battlefield {
+                    controller: PlayerRef::Seat(owner),
+                    tapped: false,
+                };
+                let ret_ctx = EffectContext::for_ability(src, owner, None);
+                self.move_card_to(src, &dest, &ret_ctx, events);
+                // Strip the Creature type so it returns as an enchantment.
+                if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == src) {
+                    let def = std::sync::Arc::make_mut(&mut c.definition);
+                    def.card_types.retain(|t| *t != CardType::Creature);
+                }
+                Ok(())
+            }
+
             Effect::BecomeChosenColor { what, duration } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;

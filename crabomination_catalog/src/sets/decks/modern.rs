@@ -12150,21 +12150,26 @@ pub fn enduring_innocence() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::EntersBattlefield,
-                EventScope::AnotherOfYours,
-            )
-            .with_filter(Predicate::EntityMatches {
-                what: Selector::TriggerSource,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::NotToken),
-            }),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::EntersBattlefield,
+                    EventScope::AnotherOfYours,
+                )
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::NotToken),
+                }),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
-        }],
+            // "When this dies, if it was a creature, return it to the
+            // battlefield. It's an enchantment." (Enduring cycle.)
+            crate::effect::shortcut::on_dies(Effect::ReturnSelfAsEnchantment),
+        ],
         ..Default::default()
     }
 }

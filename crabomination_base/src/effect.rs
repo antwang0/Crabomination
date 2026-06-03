@@ -1341,6 +1341,14 @@ pub enum Effect {
     /// cards in your hand have miracle {2}" grant.
     GrantMiracle { what: Selector, cost: crate::mana::ManaCost },
     Exile   { what: Selector },
+    /// The "Enduring" cycle (Bloomburrow): "When this dies, if it was a
+    /// creature, return it to the battlefield. It's an enchantment." Returns
+    /// the source from its owner's graveyard to the battlefield under their
+    /// control, then strips the Creature card type from the returned object
+    /// so it comes back as a noncreature enchantment (and the gate self-
+    /// limits — a noncreature can't satisfy "if it was a creature", so it
+    /// won't loop). No-op if the source isn't a creature card in a graveyard.
+    ReturnSelfAsEnchantment,
     /// "Exile target [permanent], then search its owner's graveyard, hand,
     /// and library for any number of cards with the same name as that
     /// [permanent] and exile them. Then that player shuffles." Crumble to
@@ -2101,6 +2109,7 @@ impl Effect {
         }
         match self {
             Effect::Noop => false,
+            Effect::ReturnSelfAsEnchantment => false,
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {
                 pred_has_target(cond) || then.requires_target() || else_.requires_target()

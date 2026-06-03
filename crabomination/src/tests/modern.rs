@@ -14530,6 +14530,28 @@ fn enduring_innocence_draws_on_nontoken_creature_etb() {
     );
 }
 
+/// Enduring Innocence returns from death as a noncreature enchantment.
+#[test]
+fn enduring_innocence_returns_as_enchantment_when_it_dies() {
+    let mut g = two_player_game();
+    let innocence = g.add_card_to_battlefield(0, catalog::enduring_innocence());
+    // Bolt it (2/1, lethal) so SBA dispatches CreatureDied → revive trigger.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(innocence)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt Enduring Innocence");
+    drain_stack(&mut g);
+
+    let back = g.battlefield_find(innocence).expect("returned to the battlefield");
+    assert_eq!(back.controller, 0, "returns under its owner's control");
+    assert!(!back.definition.card_types.contains(&CardType::Creature),
+        "returns as a noncreature enchantment");
+    assert!(back.definition.card_types.contains(&crate::card::CardType::Enchantment));
+}
+
 #[test]
 fn thundertrap_trainer_etb_taps_opponent_creature() {
     let mut g = two_player_game();
