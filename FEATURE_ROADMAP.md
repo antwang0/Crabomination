@@ -253,7 +253,9 @@ feature; sweep card-batch by card-batch.
   ✅ Boast (`shortcut::boast` — CR 702.142, once-per-turn activated ability
   gated on `Predicate::SourceAttackedThisTurn`; Kaldheim `sets::khm`),
   ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
-  ⏳ Enlist, ⏳ Mobilize, ⏳ Myriad.
+  ⏳ Enlist, 🟡 Mobilize / Myriad (`Effect::CreateTokenAttacking` mints
+  tokens tapped + attacking, CR 508.3a; the eot-sacrifice / copy-of-source
+  halves still need `DelayedKind::EndOfCombat` — see TODO.md).
 - **Value/ETB:** ✅ Investigate (`shortcut::investigate(n)` — CR 701.13,
   mints `clue_token()`s; Thraben Inspector. Sac-Clue payoff rides the
   token's printed `{2}, Sac: Draw`), ✅ Fabricate (`shortcut::fabricate` — CR 702.122, ETB
