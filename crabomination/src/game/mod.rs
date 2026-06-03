@@ -290,6 +290,13 @@ pub struct GameState {
     /// between independent resolutions.
     #[serde(skip)]
     pub(crate) permanents_destroyed_this_resolution: u32,
+    /// Transient: the card name chosen by an `Effect::NameCard` within the
+    /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
+    /// reveal-until-the-named-card chain (Spoils of the Vault) can match even
+    /// when the naming source is a resolving spell held off to the side.
+    /// Reset between independent resolutions.
+    #[serde(skip)]
+    pub(crate) named_card_this_resolution: Option<String>,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -458,6 +465,7 @@ impl Clone for GameState {
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
+            named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
@@ -525,6 +533,7 @@ impl GameState {
             cards_discarded_per_player_this_resolution: HashMap::new(),
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
+            named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,
@@ -4012,10 +4021,14 @@ impl GameState {
                 let DecisionAnswer::NamedCard(name) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                if let Some(card) = self.battlefield_find_mut(target_id)
-                    && !name.is_empty()
-                {
-                    card.named_card = Some(name.clone());
+                if !name.is_empty() {
+                    if let Some(card) = self.find_card_anywhere_mut(target_id) {
+                        card.named_card = Some(name.clone());
+                    }
+                    // Also record on the per-resolution scratchpad so a
+                    // following `NamedBySource` reveal can match even when the
+                    // naming source is a resolving spell held off-zone.
+                    self.named_card_this_resolution = Some(name.clone());
                 }
                 Ok(Vec::new())
             }
@@ -4322,7 +4335,19 @@ impl GameState {
                 return Some(c);
             }
         }
-        self.exile.iter_mut().find(|c| c.id == id)
+        if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+            return Some(c);
+        }
+        // A spell resolving its own effect (Spoils of the Vault's NameCard)
+        // is still on the stack.
+        for si in &mut self.stack {
+            if let crate::game::types::StackItem::Spell { card, .. } = si
+                && card.id == id
+            {
+                return Some(card);
+            }
+        }
+        None
     }
 
     /// Look up which zone a card currently occupies. Returns `None` if

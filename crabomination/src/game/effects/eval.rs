@@ -924,6 +924,9 @@ impl GameState {
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
             R::HasName(name) => card.definition.name == name.as_str(),
+            // Resolved to a concrete `HasName` by callers that have the
+            // source in hand (RevealUntilFind); vacuously false otherwise.
+            R::NamedBySource => false,
             // Count walks the battlefield for the evaluating controller's
             // matching permanents; the candidate's own zone is irrelevant.
             R::ManaValueAtMostControlledCount(inner) => {

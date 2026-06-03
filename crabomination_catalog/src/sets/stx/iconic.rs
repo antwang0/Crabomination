@@ -1543,6 +1543,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
     // composite that exiles the top card and stamps may-play on it).
     let exile_top_may_play_effect = Effect::ExileTopAndGrantMayPlay {
         who: PlayerRef::You,
+        count: Value::Const(1),
         duration: MayPlayDuration::EndOfControllersNextTurn,
     };
     CardDefinition {

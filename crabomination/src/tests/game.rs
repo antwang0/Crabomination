@@ -2485,14 +2485,16 @@ fn wrath_of_the_skies_destroys_permanents_with_mana_value_x() {
 }
 
 #[test]
-fn spoils_of_the_vault_tutors_and_loses_three_life() {
-    // Now wired to `Effect::RevealUntilFind` with `find: Any`: the first
-    // card off the top is taken into hand and 1 life is paid per revealed
-    // card. With `Any`, exactly one card is ever revealed, so the life
-    // total drops by exactly 1.
+fn spoils_of_the_vault_reveals_until_the_named_card() {
+    // Name "Swamp": reveal Bolt (miss → graveyard), then Swamp (hit → hand).
+    // Two cards revealed → 2 life lost.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let wanted = g.add_card_to_library(0, catalog::lightning_bolt());
-    g.add_card_to_library(0, catalog::swamp());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // top
+    let swamp = g.add_card_to_library(0, catalog::swamp());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::NamedCard("Swamp".to_string()),
+    ]));
 
     let spoils = g.add_card_to_hand(0, catalog::spoils_of_the_vault());
     g.players[0].mana_pool.add(Color::Black, 1);
@@ -2507,10 +2509,12 @@ fn spoils_of_the_vault_tutors_and_loses_three_life() {
     .expect("Spoils of the Vault should cast for {B}");
     drain_stack(&mut g);
 
-    assert!(g.players[0].hand.iter().any(|c| c.id == wanted),
-        "First-card-off-the-top should land in hand");
-    assert_eq!(g.players[0].life, life_before - 1,
-        "RevealUntilFind with `Any` reveals exactly one card → 1 life lost");
+    assert!(g.players[0].hand.iter().any(|c| c.id == swamp),
+        "The named card (Swamp) should land in hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "The revealed miss (Bolt) should be milled");
+    assert_eq!(g.players[0].life, life_before - 2,
+        "Two cards revealed → 2 life lost");
 }
 
 #[test]
@@ -3821,27 +3825,6 @@ fn plunge_into_darkness_mode_one_pays_four_life_and_tutors() {
         "Mode 1 deducts 4 life as the X cost");
     assert!(g.players[0].hand.iter().any(|c| c.id == target),
         "tutored card should land in hand");
-}
-
-#[test]
-fn spoils_of_the_vault_reveals_until_find() {
-    // With `find: Any`, the very first card is taken into hand and
-    // exactly 1 life is paid.
-    let mut g = two_player_game();
-    let top = g.add_card_to_library(0, catalog::lightning_bolt());
-    g.add_card_to_library(0, catalog::swamp());
-    let spoils = g.add_card_to_hand(0, catalog::spoils_of_the_vault());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    let life_before = g.players[0].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: spoils, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Spoils castable for {B}");
-    drain_stack(&mut g);
-
-    assert!(g.players[0].hand.iter().any(|c| c.id == top),
-        "first-card-off-the-top lands in hand");
-    assert_eq!(g.players[0].life, life_before - 1,
-        "exactly one card revealed → 1 life paid");
 }
 
 #[test]

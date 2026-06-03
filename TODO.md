@@ -13,9 +13,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   it during the declare-blockers step (pick a ninja in hand + an unblocked
   attacker to return). Add a button/flow like Crew. The bot doesn't use
   Ninjutsu either (it would need a "swap up" heuristic).
-- **Generalize `ExileTopAndGrantMayPlay` count** — it exiles exactly one
-  card; Fallen Shinobi calls it twice for "top two". A `count: Value` field
-  would be cleaner for any "exile top N, you may play them" rider.
 - **Scryfall blocked in this env** — `api.scryfall.com` returns 403 (network
   policy), so new/synthesised cards can't be verified. `scripts/.scryfall_
   cache.json` (332 cards) is the only source; cards outside it can't be
@@ -27,11 +24,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   also fits Master of Etherium, Tempered Steel-style self-counts, and any
   "this gets +1/+1 for each [type] you control" body currently stubbed as a
   fixed P/T. Apply opportunistically when real card data is available.
-- **`SelectionRequirement::NamedBySource`** — to finish Spoils of the Vault
-  (name a card, then reveal-until-that-name), `Effect::RevealUntilFind`
-  needs a `find` filter that matches the source permanent's `named_card`.
-  `SelectionRequirement::HasName(String)` exists but the name is dynamic;
-  add a variant that reads `named_card` off the resolving source.
 - **Client build in CI/web env** — `crabomination_client` (Bevy) fails to
   build here because `wayland-client` system libs aren't installed, so
   client-side changes can't be compiled/tested in this environment. UI

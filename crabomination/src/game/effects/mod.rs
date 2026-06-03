@@ -528,6 +528,7 @@ impl GameState {
         self.cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
+        self.named_card_this_resolution = None;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -3488,6 +3489,25 @@ impl GameState {
                     return Ok(());
                 }
                 let resolved_dest = self.resolve_zonedest_player(to, ctx);
+                // `NamedBySource` reads the dynamic name the source stamped
+                // via `Effect::NameCard` (Spoils of the Vault). Resolve it to
+                // a concrete `HasName` once, up front.
+                let dynamic_find = if matches!(find, SelectionRequirement::NamedBySource) {
+                    match self.named_card_this_resolution.clone()
+                        .or_else(|| ctx.source.and_then(|s| self.find_card_anywhere(s))
+                            .and_then(|c| c.named_card.clone()))
+                    {
+                        Some(name) => Some(SelectionRequirement::HasName(name)),
+                        // No card named → nothing can match; reveal to cap.
+                        None => Some(SelectionRequirement::And(
+                            Box::new(SelectionRequirement::Any),
+                            Box::new(SelectionRequirement::Not(Box::new(SelectionRequirement::Any))),
+                        )),
+                    }
+                } else {
+                    None
+                };
+                let find: &SelectionRequirement = dynamic_find.as_ref().unwrap_or(find);
                 let mut revealed = 0usize;
                 let mut found_idx: Option<usize> = None;
                 for i in 0..cap_n.min(self.players[p].library.len()) {
@@ -3942,12 +3962,15 @@ impl GameState {
                     .resolve_selector(what, ctx)
                     .into_iter()
                     .find_map(|e| match e {
-                        EntityRef::Permanent(c) => Some(c),
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
                         _ => None,
-                    });
+                    })
+                    // A resolving instant/sorcery (Spoils of the Vault) is the
+                    // source itself, not a battlefield permanent.
+                    .or(ctx.source);
                 let Some(target_id) = candidate else { return Ok(()); };
                 let source_name = self
-                    .battlefield_find(target_id)
+                    .find_card_anywhere(target_id)
                     .map(|c| c.definition.name.to_string())
                     .unwrap_or_default();
                 let decision = Decision::NameCard { source: target_id, source_name };
@@ -4043,27 +4066,28 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopAndGrantMayPlay { who, duration } => {
-                // Atomic helper: move the top card of `who`'s library to
-                // exile and stamp `may_play_until` on it in one step.
+            Effect::ExileTopAndGrantMayPlay { who, count, duration } => {
+                // Atomic helper: move the top `count` cards of `who`'s library
+                // to exile and stamp `may_play_until` on each in one step.
                 // The top of the library is index 0 (see `Player::draw_top`
                 // and `Selector::TopOfLibrary`), so this reads `.first()`,
                 // not `.last()` (which is the bottom card).
                 let p = self.resolve_player(who, ctx).unwrap_or(ctx.controller);
-                let top_id = self.players[p].library.first().map(|c| c.id);
-                let Some(top_id) = top_id else { return Ok(()); };
-                let mut local_events = Vec::new();
-                self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
-                events.extend(local_events);
-                // Stamp the may-play permission.
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let granted_turn = self.turn_number;
-                if let Some(card) = self.find_card_anywhere_mut(top_id) {
-                    card.may_play_until = Some(crate::card::MayPlayPermission {
-                        player: ctx.controller,
-                        granted_turn,
-                        duration: *duration,
-                        exile_after: false,
-                    });
+                for _ in 0..n {
+                    let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break; };
+                    let mut local_events = Vec::new();
+                    self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
+                    events.extend(local_events);
+                    if let Some(card) = self.find_card_anywhere_mut(top_id) {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: ctx.controller,
+                            granted_turn,
+                            duration: *duration,
+                            exile_after: false,
+                        });
+                    }
                 }
                 Ok(())
             }

@@ -14346,20 +14346,14 @@ pub fn fallen_shinobi() -> CardDefinition {
         keywords: vec![Keyword::Ninjutsu(cost(&[generic(2), u(), b()]))],
         // Combat damage to a player exiles the top two cards of *their*
         // library and grants this card's controller a may-play (free cast)
-        // on each until end of turn. Two ExileTopAndGrantMayPlay calls peel
-        // the defender's top two. (Ninjutsu is still omitted.)
+        // on each until end of turn.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::DefendingPlayer,
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                },
-                Effect::ExileTopAndGrantMayPlay {
-                    who: PlayerRef::DefendingPlayer,
-                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                },
-            ]),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::DefendingPlayer,
+                count: Value::Const(2),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+            },
         }],
         ..Default::default()
     }
@@ -14514,6 +14508,7 @@ pub fn robber_of_the_rich() -> CardDefinition {
                 ),
                 then: Box::new(Effect::ExileTopAndGrantMayPlay {
                     who: PlayerRef::You,
+                    count: Value::Const(1),
                     duration: MayPlayDuration::EndOfThisTurn,
                 }),
                 else_: Box::new(Effect::Noop),

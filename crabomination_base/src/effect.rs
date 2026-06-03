@@ -1699,8 +1699,11 @@ pub enum Effect {
     /// may play that card" effects. A single-shot composite that
     /// combines `Move(TopOfLibrary → Exile)` + `MayPlayPermission`
     /// stamp atomically so the may-play targets the just-moved card.
+    /// `count` exiles that many cards off the top (Fallen Shinobi peels
+    /// two), stamping each with the may-play permission.
     ExileTopAndGrantMayPlay {
         who: PlayerRef,
+        count: Value,
         duration: crate::card::MayPlayDuration,
     },
 

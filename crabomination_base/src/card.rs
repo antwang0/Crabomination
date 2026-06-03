@@ -600,6 +600,13 @@ pub enum SelectionRequirement {
     /// `static_str_serde` adapter — the catalog passes a one-time
     /// `.to_string()` at definition time, negligible overhead.
     HasName(String),
+    /// True when the candidate's name matches the name the resolving
+    /// source stamped via `Effect::NameCard` (its `named_card` field).
+    /// Used by reveal-until-the-named-card effects (Spoils of the Vault):
+    /// pair `NameCard { This }` with a `RevealUntilFind { find:
+    /// NamedBySource, .. }`. Falls back to "no match" when the source has
+    /// not named a card.
+    NamedBySource,
     /// True when the candidate's mana value is ≤ the number of permanents
     /// the evaluating player controls that match the inner filter. Powers
     /// "with mana value less than or equal to the number of [X] you

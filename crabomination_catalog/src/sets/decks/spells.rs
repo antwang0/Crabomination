@@ -149,32 +149,26 @@ pub fn serum_powder() -> CardDefinition {
 /// of your library until you reveal the named card or 10 different cards.
 /// Put the named card into your hand. You lose 1 life for each card revealed.
 ///
-/// Wired to `Effect::RevealUntilFind` with `find: Any` (no name primitive
-/// yet — the first card off the top wins), `cap: 10`, and `life_per_revealed:
-/// 1`. The engine mills every miss into the graveyard and deducts 1 life
-/// per card revealed (matching the Oracle's variable life cost). With
-/// `find: Any` only one card is ever revealed in practice, so the life
-/// cost approximates 1 life — much cheaper than a "named tutor". A future
-/// naming primitive can swap `Any` for `HasName(...)` to restore the full
-/// reveal-until-named-card semantics.
+/// `NameCard { This }` stamps the named card on the resolving spell, then
+/// `RevealUntilFind { find: NamedBySource }` walks the top until it hits that
+/// name (or 10 cards), puts it into hand, mills the misses, and deducts 1
+/// life per card revealed. (AutoDecider names nothing → reveals to the cap.)
 pub fn spoils_of_the_vault() -> CardDefinition {
     CardDefinition {
         name: "Spoils of the Vault",
         cost: cost(&[b()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::RevealUntilFind {
-            who: PlayerRef::You,
-            find: SelectionRequirement::Any,
-            to: ZoneDest::Hand(PlayerRef::You),
-            cap: Value::Const(10),
-            life_per_revealed: 1,
-            miss_dest: crate::effect::RevealMissDest::Graveyard,
-        },
-        triggered_abilities: vec![],
+        effect: Effect::Seq(vec![
+            Effect::NameCard { what: Selector::This },
+            Effect::RevealUntilFind {
+                who: PlayerRef::You,
+                find: SelectionRequirement::NamedBySource,
+                to: ZoneDest::Hand(PlayerRef::You),
+                cap: Value::Const(10),
+                life_per_revealed: 1,
+                miss_dest: crate::effect::RevealMissDest::Graveyard,
+            },
+        ]),
         ..Default::default()
     }
 }
