@@ -2056,6 +2056,44 @@ impl GameState {
         out
     }
 
+    /// CardIds in the caster's hand they could cast right now paying the
+    /// optional Buyback cost (CR 702.27). Mirrors `kickable_hand_cards`.
+    pub fn buyback_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.has_buyback().is_some())
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, needs_target, effect) in &hand {
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if self.would_accept(GameAction::CastSpellBuyback {
+                card_id: *id,
+                target,
+                additional_targets,
+                mode: None,
+                x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// Hand cards the player can activate a `from_hand` ability of right now
     /// (Spirit-Guide-style "Exile this from your hand: Add mana"). Lets the
     /// client surface a pitch affordance distinct from the castable-for-value
@@ -2255,6 +2293,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_kicked(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSpellBuyback {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_buyback(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
@@ -2262,7 +2307,7 @@ impl GameState {
                 mode,
                 x_value,
                 convoke_creatures,
-            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], false),
+            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], false, false),
             GameAction::CastSpellDelve {
                 card_id,
                 target,
@@ -4168,6 +4213,13 @@ impl GameState {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
             self.exile.push(card);
+            return Ok(events);
+        }
+        // Buyback (CR 702.27e): a spell cast paying its buyback cost returns
+        // to its owner's hand instead of the graveyard as it resolves.
+        if card.bought_back {
+            let owner = card.owner;
+            self.players[owner].hand.push(card);
             return Ok(events);
         }
         self.players[caster].send_to_graveyard(card);

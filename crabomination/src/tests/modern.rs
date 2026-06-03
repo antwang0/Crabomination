@@ -22446,3 +22446,47 @@ fn maze_of_ith_prevents_combat_damage_to_and_from_attacker() {
     assert_eq!(g.players[1].life, life_before,
         "Maze prevents all of the Juggernaut's combat damage");
 }
+
+// ── Buyback (CR 702.27) — Corpse Dance ───────────────────────────────────────
+
+#[test]
+fn corpse_dance_buyback_returns_to_hand_and_reanimates() {
+    // A creature in the graveyard + Corpse Dance cast paying its {2} buyback
+    // should reanimate the creature AND return Corpse Dance to hand (not gy).
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dance = g.add_card_to_hand(0, catalog::corpse_dance());
+    // {1}{B}{B} base + {2} buyback = {3}{B}{B}.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpellBuyback {
+        card_id: dance, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Corpse Dance castable with buyback");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the top creature is reanimated");
+    assert!(g.players[0].hand.iter().any(|c| c.id == dance),
+        "buyback returns Corpse Dance to its owner's hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == dance),
+        "bought-back spell does not go to the graveyard");
+}
+
+#[test]
+fn corpse_dance_without_buyback_goes_to_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let dance = g.add_card_to_hand(0, catalog::corpse_dance());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: dance, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Corpse Dance castable for its base cost");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == dance),
+        "without buyback Corpse Dance resolves to the graveyard");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == dance));
+}

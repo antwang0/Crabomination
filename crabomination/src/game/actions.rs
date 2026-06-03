@@ -847,7 +847,7 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false)
     }
 
     /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
@@ -861,7 +861,21 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], true)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], true, false)
+    }
+
+    /// CR 702.27 — cast a spell paying its optional Buyback cost. The
+    /// resolving spell returns to its owner's hand instead of the
+    /// graveyard (`continue_spell_resolution` consults `card.bought_back`).
+    pub(crate) fn cast_spell_buyback(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, true)
     }
 
     /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
@@ -879,7 +893,7 @@ impl GameState {
         x_value: Option<u32>,
         delve_cards: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, false, false)
     }
 
     /// Internal cast-spell helper with optional convoke creatures and delve
@@ -899,6 +913,7 @@ impl GameState {
         convoke_creatures: &[CardId],
         delve_cards: &[CardId],
         kicked: bool,
+        buyback: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
@@ -912,6 +927,10 @@ impl GameState {
         // spell's mana cost below.
         let kicked = kicked && card.definition.has_kicker().is_some();
         card.kicked = kicked;
+        // CR 702.27 — opt-in Buyback; folded into the cost below and read
+        // at resolution to return the spell to hand instead of the gy.
+        let buyback = buyback && card.definition.has_buyback().is_some();
+        card.bought_back = buyback;
 
         // Ranger-Captain of Eos lock — this player can't cast noncreature
         // spells for the rest of the turn.
@@ -1067,6 +1086,10 @@ impl GameState {
         // CR 702.32b — fold the optional kicker cost into the total cost.
         if kicked && let Some(kick) = card.definition.has_kicker() {
             cost.symbols.extend(kick.symbols.iter().cloned());
+        }
+        // CR 702.27b — fold the optional buyback cost into the total cost.
+        if buyback && let Some(bb) = card.definition.has_buyback() {
+            cost.symbols.extend(bb.symbols.iter().cloned());
         }
         let tax = extra_cost_for_spell(self, p, &card);
         if tax > 0 {

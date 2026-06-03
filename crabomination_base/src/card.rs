@@ -338,6 +338,11 @@ pub enum Keyword {
     /// one Flashback variant or the other).
     FlashbackTap(u32),
     Kicker(crate::mana::ManaCost),
+    /// CR 702.27 — Buyback. An optional additional cost paid when casting
+    /// the spell from hand; if paid, the spell returns to its owner's hand
+    /// instead of the graveyard as it resolves. Cast via
+    /// `GameAction::CastSpellBuyback`.
+    Buyback(crate::mana::ManaCost),
     Convoke,
     Delve,
     Cascade,
@@ -1108,6 +1113,12 @@ impl CardDefinition {
             if let Keyword::Escape(cost, n) = kw { Some((cost, *n)) } else { None }
         })
     }
+    /// CR 702.27 — the Buyback mana cost, if this card has Buyback.
+    pub fn has_buyback(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Buyback(cost) = kw { Some(cost) } else { None }
+        })
+    }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Kicker(cost) = kw { Some(cost) } else { None }
@@ -1182,6 +1193,10 @@ pub struct CardInstance {
     pub counters: HashMap<CounterType, u32>,
     pub attached_to: Option<CardId>,
     pub kicked: bool,
+    /// CR 702.27 — true if this spell was cast paying its optional Buyback
+    /// cost. On resolution the resolver returns the card to its owner's
+    /// hand instead of the graveyard.
+    pub bought_back: bool,
     pub face_down: bool,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
@@ -1326,6 +1341,7 @@ impl CardInstance {
             counters,
             attached_to: None,
             kicked: false,
+            bought_back: false,
             face_down: false,
             is_token: false,
             used_loyalty_ability_this_turn: false,
@@ -1481,6 +1497,10 @@ struct CardInstanceWire {
     counters: Vec<(CounterType, u32)>,
     attached_to: Option<CardId>,
     kicked: bool,
+    /// CR 702.27 buyback flag. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    bought_back: bool,
     face_down: bool,
     is_token: bool,
     used_loyalty_ability_this_turn: bool,
@@ -1549,6 +1569,7 @@ impl serde::Serialize for CardInstance {
             counters: self.counters.iter().map(|(k, v)| (*k, *v)).collect(),
             attached_to: self.attached_to,
             kicked: self.kicked,
+            bought_back: self.bought_back,
             face_down: self.face_down,
             is_token: self.is_token,
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
@@ -1591,6 +1612,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.counters = wire.counters.into_iter().collect();
         c.attached_to = wire.attached_to;
         c.kicked = wire.kicked;
+        c.bought_back = wire.bought_back;
         c.face_down = wire.face_down;
         c.is_token = wire.is_token;
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;

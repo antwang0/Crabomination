@@ -12217,24 +12217,18 @@ pub fn thundertrap_trainer() -> CardDefinition {
     }
 }
 
-/// Corpse Dance — {1}{B}{B} Instant. Buyback {2}.
-/// "Put the top creature card of target player's graveyard onto the
-/// battlefield under your control. Sacrifice it at the beginning of
-/// the next end step."
-///
-/// 🟡 Body-only: Buyback omitted. Reanimates the top creature from
-/// your graveyard to the battlefield, then registers a delayed trigger
-/// to sacrifice it at end step.
-/// Corpse Dance — {1}{B}{B} Instant. Buyback {2}.
-/// "Put the top creature card of target player's graveyard onto the
-/// battlefield under your control. Sacrifice it at the beginning of
-/// the next end step."
+/// Corpse Dance — {1}{B}{B} Instant. Buyback {2} (CR 702.27).
+/// "Put the top creature card of your graveyard onto the battlefield
+/// under your control. Sacrifice it at the beginning of the next end
+/// step." Buyback returns the spell to hand instead of the graveyard.
 pub fn corpse_dance() -> CardDefinition {
+    use crate::card::Keyword;
     use crate::effect::DelayedTriggerKind;
     CardDefinition {
         name: "Corpse Dance",
         cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Buyback(cost(&[generic(2)]))],
         effect: Effect::Seq(vec![
             Effect::Move {
                 what: Selector::take(
