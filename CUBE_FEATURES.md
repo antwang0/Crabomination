@@ -118,7 +118,7 @@ work is listed below.
 | Sab-Sunen, Luxa Embodied | ⏳ | TBD. |
 | Kestia, the Cultivator | ⏳ | Aura/enchantment matters. |
 | Messenger Falcons | 🟡 | 2/2 Flying Bird. ETB draw a card. GW cross-pool. |
-| Dakkon, Shadow Slayer | 🟡 | WUB Legendary Planeswalker. +1: Surveil 2. -3: Exile target creature. Emblem ult omitted. |
+| Dakkon, Shadow Slayer | 🟡 | WUB Legendary Planeswalker. +1: Surveil 2. -3: Exile target creature. -6: emblem (`Effect::CreateEmblem`, approximated as "draw a card at your upkeep"). Body fully wired; only the emblem's exact text is an approximation. |
 | Urza, Chief Artificer | ⏳ | Planeswalker / commander. |
 | Geyadrone Dihada | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 3-loyalty Planeswalker. **+1**: Each opp loses 1 + you draw 1 (the "if you have less life than an opp, reset loyalty" rider drops — no loyalty-set primitive). **-3**: Threaten — `GainControl(EOT) + Untap + GrantKeyword(Haste, EOT)`. **-7**: Each opp loses 10 (half-life approximation). Tests: `geyadrone_dihada_plus_one_drains_each_opponent_for_one`, `geyadrone_dihada_minus_three_steals_creature`. |
 | Lord Xander, the Collector | 🟡 | Push (claude/modern_decks batch 102): {3}{U}{B}{R} 6/6 Flying Legendary Vampire Demon Noble. ETB makes target opp discard 3 (`DiscardChosen`). Attack trigger mills each opp 8 (the "half their library" scaling collapses to a fixed midgame value). Die trigger makes each opp sacrifice 3 nonland permanents (the "half their permanents" scaling collapses). Test: `lord_xander_the_collector_etb_makes_opponent_discard_three`. |
