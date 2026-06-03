@@ -55,6 +55,17 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.103 — cast an enchantment-creature card for its Bestow cost
+    /// as an Aura spell targeting a creature. It enters attached and is not
+    /// a creature while bestowed. `target` must be a creature permanent.
+    CastBestow {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.27 — cast a spell paying its optional Buyback cost in
     /// addition to the mana cost. The resolving spell returns to its
     /// owner's hand instead of the graveyard.

@@ -126,6 +126,11 @@ pub struct ClientView {
     /// off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub buyback_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with Bestow they could cast as an Aura
+    /// on a creature right now (CR 702.103). `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub bestowable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast via their Dash
     /// alternative cost right now (CR 702.110). Lets the client offer a
     /// "dash?" affordance distinct from the plain castable highlight.

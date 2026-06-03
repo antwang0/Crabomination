@@ -66,6 +66,7 @@ pub fn pestilent_inkmage() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -106,6 +107,7 @@ pub fn inkling_reaver() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -148,6 +150,7 @@ pub fn quintessential_inkling() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -192,6 +195,7 @@ pub fn quill_witch() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -245,6 +249,7 @@ pub fn lesson_in_honor() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -292,6 +297,7 @@ pub fn inkling_squad() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -349,6 +355,7 @@ pub fn inkling_drillmaster() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -394,6 +401,7 @@ pub fn sealing_verse() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -442,6 +450,7 @@ pub fn strict_tutelage() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -484,6 +493,7 @@ pub fn inkrise_vampire() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -528,6 +538,7 @@ pub fn silverquill_sting() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -602,6 +613,7 @@ pub fn carving_cherub() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -642,6 +654,7 @@ pub fn inkrider_witch() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -691,6 +704,7 @@ pub fn roving_scholar() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -739,6 +753,7 @@ pub fn forceful_mirror() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -787,6 +802,7 @@ pub fn fractalic_discovery() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -840,6 +856,7 @@ pub fn lorehold_lookback() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -881,6 +898,7 @@ pub fn witherbloom_reaper_spirit() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -932,6 +950,7 @@ pub fn witherbloom_lifedrinker() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -973,6 +992,7 @@ pub fn lorehold_battlemaster() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1025,6 +1045,7 @@ pub fn prismari_spellfire() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1081,6 +1102,7 @@ pub fn quandrix_recalibrator() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1125,6 +1147,7 @@ pub fn crackleburr_initiate() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1173,6 +1196,7 @@ pub fn spellseekers_insight() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1223,6 +1247,7 @@ pub fn burrog_snapper() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1283,6 +1308,7 @@ pub fn galvanic_ribbons() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1335,6 +1361,7 @@ pub fn plant_mascot() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1388,6 +1415,7 @@ pub fn quandrix_wavebender() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1444,6 +1472,7 @@ pub fn tezzerets_inkling_forge() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1491,6 +1520,7 @@ pub fn quandrix_snake_charmer() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1538,6 +1568,7 @@ pub fn witherbloom_necrotouch() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1580,6 +1611,7 @@ pub fn pestilent_lecturer() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1620,6 +1652,7 @@ pub fn shadow_mage_hopeful() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1663,6 +1696,7 @@ pub fn quill_page() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1722,6 +1756,7 @@ pub fn inkbond_cleric() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1763,6 +1798,7 @@ pub fn quill_inscriber() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1802,6 +1838,7 @@ pub fn pestilent_squire() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1843,6 +1880,7 @@ pub fn silverquill_mediator() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1887,6 +1925,7 @@ pub fn dissident_lecturer() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1940,6 +1979,7 @@ pub fn silverquill_persuader() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1979,6 +2019,7 @@ pub fn pestilent_imp() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2023,6 +2064,7 @@ pub fn witherbloom_tincture_maker() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2063,6 +2105,7 @@ pub fn lorehold_crusader() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2104,6 +2147,7 @@ pub fn quandrix_initiate() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2162,6 +2206,7 @@ pub fn lorehold_wand() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2219,6 +2264,7 @@ pub fn witherbloom_bramble() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2264,6 +2310,7 @@ pub fn prismari_spark() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2312,6 +2359,7 @@ pub fn quandrix_trickster() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2351,6 +2399,7 @@ pub fn lorehold_memorialist() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2403,6 +2452,7 @@ pub fn witherbloom_researcher() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2458,6 +2508,7 @@ pub fn quandrix_catalyst() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2497,6 +2548,7 @@ pub fn lorehold_vanguard() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2537,6 +2589,7 @@ pub fn inkling_sentinel() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2603,6 +2656,7 @@ pub fn witherbloom_ritualist() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2651,6 +2705,7 @@ pub fn quandrix_theorem() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2701,6 +2756,7 @@ pub fn prismari_surge() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2747,6 +2803,7 @@ pub fn lorehold_conservator() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2791,6 +2848,7 @@ pub fn silverquill_initiate() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -2871,5 +2929,6 @@ pub fn witherbloom_channeler() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }

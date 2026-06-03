@@ -845,6 +845,14 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
+    /// CR 702.103 — Bestow alternative cost. When `Some(cost)`, the card may
+    /// be cast as an Aura spell targeting a creature for this cost (via
+    /// `GameAction::CastBestow`); it enters attached, grants its
+    /// `equipped_bonus`, and is *not* a creature while bestowed. If the host
+    /// leaves, the bestowed permanent stays as a creature. Defaults to
+    /// `None` for snapshot back-compat.
+    #[serde(default)]
+    pub bestow: Option<crate::mana::ManaCost>,
 }
 
 /// CR 707 — "enters as a copy of [filter] permanent" spec, stored on
@@ -1113,6 +1121,10 @@ impl CardDefinition {
             if let Keyword::Escape(cost, n) = kw { Some((cost, *n)) } else { None }
         })
     }
+    /// CR 702.103 — the Bestow mana cost, if this card has Bestow.
+    pub fn has_bestow(&self) -> Option<&ManaCost> {
+        self.bestow.as_ref()
+    }
     /// CR 702.27 — the Buyback mana cost, if this card has Buyback.
     pub fn has_buyback(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
@@ -1197,6 +1209,11 @@ pub struct CardInstance {
     /// cost. On resolution the resolver returns the card to its owner's
     /// hand instead of the graveyard.
     pub bought_back: bool,
+    /// CR 702.103 — true while this permanent is on the battlefield as a
+    /// bestowed Aura. It's an Aura (not a creature) for as long as this is
+    /// set; cleared by the SBA when the enchanted creature leaves, at which
+    /// point it reverts to a creature.
+    pub bestowed: bool,
     pub face_down: bool,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
@@ -1342,6 +1359,7 @@ impl CardInstance {
             attached_to: None,
             kicked: false,
             bought_back: false,
+            bestowed: false,
             face_down: false,
             is_token: false,
             used_loyalty_ability_this_turn: false,
@@ -1501,6 +1519,10 @@ struct CardInstanceWire {
     /// as `false`.
     #[serde(default)]
     bought_back: bool,
+    /// CR 702.103 bestowed flag. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    bestowed: bool,
     face_down: bool,
     is_token: bool,
     used_loyalty_ability_this_turn: bool,
@@ -1570,6 +1592,7 @@ impl serde::Serialize for CardInstance {
             attached_to: self.attached_to,
             kicked: self.kicked,
             bought_back: self.bought_back,
+            bestowed: self.bestowed,
             face_down: self.face_down,
             is_token: self.is_token,
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
@@ -1613,6 +1636,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.attached_to = wire.attached_to;
         c.kicked = wire.kicked;
         c.bought_back = wire.bought_back;
+        c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;
         c.is_token = wire.is_token;
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;

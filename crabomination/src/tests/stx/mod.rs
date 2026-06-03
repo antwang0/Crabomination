@@ -59,6 +59,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -106,6 +107,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -150,6 +152,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -195,6 +198,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 

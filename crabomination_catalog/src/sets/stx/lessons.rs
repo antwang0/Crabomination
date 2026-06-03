@@ -85,6 +85,7 @@ pub fn square_up() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -136,6 +137,7 @@ pub fn brilliant_plan() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -184,6 +186,7 @@ pub fn fortifying_draught() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -235,6 +238,7 @@ pub fn guiding_voice() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -283,6 +287,7 @@ pub fn expanded_anatomy() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -345,6 +350,7 @@ pub fn mercurial_transformation() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -397,6 +403,7 @@ pub fn pest_inheritance() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -449,6 +456,7 @@ pub fn mascot_interpretation() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -500,6 +508,7 @@ pub fn reduce_rubble() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -551,6 +560,7 @@ pub fn containment_studies() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -611,6 +621,7 @@ pub fn reflective_anatomy() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -658,6 +669,7 @@ pub fn pest_studies() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -710,6 +722,7 @@ pub fn lecture_in_strategy() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -755,6 +768,7 @@ pub fn necrotic_studies() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -800,6 +814,7 @@ pub fn pyromathematics() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -843,6 +858,7 @@ pub fn inkling_lesson() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -914,6 +930,7 @@ pub fn fractal_studies() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -958,6 +975,7 @@ pub fn spirit_lesson() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1010,6 +1028,7 @@ pub fn advanced_cartography() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1068,6 +1087,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1115,6 +1135,7 @@ pub fn confront_the_doubt() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }
 
@@ -1227,5 +1248,6 @@ pub fn plant_adept_lesson() -> CardDefinition {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     }
 }

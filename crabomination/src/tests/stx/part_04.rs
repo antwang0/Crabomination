@@ -1491,6 +1491,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
 
     let mut g = two_player_game();
@@ -1540,6 +1541,7 @@ fn set_life_total_higher_emits_life_gained() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
 
     let mut g = two_player_game();
@@ -1600,6 +1602,7 @@ fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
 
     let mut g = two_player_game();

@@ -2094,6 +2094,50 @@ impl GameState {
         out
     }
 
+    /// CardIds in the caster's hand that have Bestow and could be cast as an
+    /// Aura on some creature right now (CR 702.103). The auto-target picks a
+    /// creature; an empty result means no legal host or the cost is unpayable.
+    pub fn bestowable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        let candidates: Vec<CardId> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.has_bestow().is_some())
+            .map(|c| c.id)
+            .collect();
+        let mut out = Vec::new();
+        for id in candidates {
+            // Bestow needs a creature host; pick any legal creature target.
+            let host = self
+                .battlefield
+                .iter()
+                .find(|c| {
+                    c.definition.is_creature()
+                        && self
+                            .check_target_legality_with_source(
+                                &Target::Permanent(c.id),
+                                caster,
+                                Some(id),
+                            )
+                            .is_ok()
+                })
+                .map(|c| c.id);
+            let Some(host) = host else { continue };
+            if self.would_accept(GameAction::CastBestow {
+                card_id: id,
+                target: Some(Target::Permanent(host)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            }) {
+                out.push(id);
+            }
+        }
+        out
+    }
+
     /// Hand cards the player can activate a `from_hand` ability of right now
     /// (Spirit-Guide-style "Exile this from your hand: Add mana"). Lets the
     /// client surface a pitch affordance distinct from the castable-for-value
@@ -2300,6 +2344,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_buyback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastBestow {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_bestow(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
@@ -2307,7 +2358,7 @@ impl GameState {
                 mode,
                 x_value,
                 convoke_creatures,
-            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], false, false),
+            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[], false, false, false),
             GameAction::CastSpellDelve {
                 card_id,
                 target,

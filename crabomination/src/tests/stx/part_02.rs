@@ -2398,6 +2398,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
 
     let mut g = two_player_game();

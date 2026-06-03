@@ -518,10 +518,13 @@ impl GameState {
                     // via layer 6) flow onto the enchanted creature, and the
                     // stale-link SBA in this file moves the Aura to the
                     // graveyard if its host ever leaves.
+                    // Also attaches a bestowed enchantment-creature (CR
+                    // 702.103) cast as an Aura, even though its printed type
+                    // line isn't an Aura.
                     if self
                         .battlefield
                         .iter()
-                        .any(|c| c.id == card_id && c.definition.is_aura())
+                        .any(|c| c.id == card_id && (c.definition.is_aura() || c.bestowed))
                         && let Some(crate::game::types::Target::Permanent(tid)) = target
                         && self.battlefield.iter().any(|c| c.id == tid)
                         && let Some(aura) =
@@ -1441,6 +1444,27 @@ impl GameState {
         for id in pw_dead {
             events.push(GameEvent::PlaneswalkerDied { card_id: id });
             self.remove_from_battlefield_to_graveyard(id);
+        }
+
+        // CR 702.103e — a bestowed permanent whose enchanted creature has
+        // left the battlefield is no longer an Aura; it stays in play and
+        // reverts to a creature (clear `bestowed` + the attachment link).
+        // Run before the orphan-Aura sweep so it isn't sent to the gy.
+        let unbestowed: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.bestowed)
+            .filter(|c| match c.attached_to {
+                None => true,
+                Some(host) => !self.battlefield.iter().any(|b| b.id == host),
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in unbestowed {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                c.bestowed = false;
+                c.attached_to = None;
+            }
         }
 
         // Auras with no valid attachment target go to their owner's graveyard (CR 704.5n/5q).

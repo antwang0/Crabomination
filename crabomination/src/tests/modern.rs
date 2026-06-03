@@ -22490,3 +22490,56 @@ fn corpse_dance_without_buyback_goes_to_graveyard() {
         "without buyback Corpse Dance resolves to the graveyard");
     assert!(!g.players[0].hand.iter().any(|c| c.id == dance));
 }
+
+// ── Bestow (CR 702.103) — Baleful Eidolon ────────────────────────────────────
+
+#[test]
+fn baleful_eidolon_bestowed_buffs_host_and_is_not_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eid = g.add_card_to_hand(0, catalog::baleful_eidolon());
+    // Bestow cost {4}{B}.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastBestow {
+        card_id: eid, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Baleful Eidolon castable via bestow at a creature");
+    drain_stack(&mut g);
+
+    // The bestowed Eidolon is an Aura enchantment, not a creature.
+    let ecp = g.computed_permanent(eid).expect("Eidolon on battlefield");
+    assert!(!ecp.card_types.contains(&CardType::Creature),
+        "a bestowed permanent is not a creature");
+    assert!(ecp.card_types.contains(&CardType::Enchantment));
+    // The host gains +1/+1 and deathtouch.
+    let bcp = g.computed_permanent(bear).unwrap();
+    assert_eq!((bcp.power, bcp.toughness), (3, 3), "host gets +1/+1 from bestow");
+    assert!(bcp.keywords.contains(&crate::card::Keyword::Deathtouch),
+        "host gains deathtouch from bestow");
+}
+
+#[test]
+fn baleful_eidolon_reverts_to_creature_when_host_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eid = g.add_card_to_hand(0, catalog::baleful_eidolon());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastBestow {
+        card_id: eid, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bestow cast");
+    drain_stack(&mut g);
+
+    // Destroy the host; the bestowed Eidolon stays and becomes a creature.
+    g.players[0].graveyard.push(g.battlefield.remove(
+        g.battlefield.iter().position(|c| c.id == bear).unwrap()));
+    g.check_state_based_actions();
+
+    let ecp = g.computed_permanent(eid).expect("Eidolon stays on battlefield");
+    assert!(ecp.card_types.contains(&CardType::Creature),
+        "Eidolon reverts to a creature when its host leaves");
+    assert_eq!((ecp.power, ecp.toughness), (1, 1), "it's a 1/1 creature again");
+}

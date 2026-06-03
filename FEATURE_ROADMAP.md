@@ -282,7 +282,13 @@ feature; sweep card-batch by card-batch.
   CR 702.27, optional additional cost; bought-back spell returns to its
   owner's hand instead of the graveyard on resolution; surfaced in
   `PlayerView.buyback_hand`; Corpse Dance), ⏳ Miracle,
-  ⏳ Bloodrush, ⏳ Unleash, ⏳ Scavenge, ⏳ Bestow, ⏳ Tribute.
+  ⏳ Bloodrush, ⏳ Unleash, ⏳ Scavenge,
+  ✅ Bestow (`CardDefinition.bestow` + `GameAction::CastBestow` +
+  `CardInstance.bestowed` — CR 702.103; cast an enchantment-creature as an
+  Aura for its bestow cost, granting its `equipped_bonus`; not a creature
+  while bestowed (`compute_permanent` strips the type); reverts to a
+  creature when its host leaves (SBA); surfaced in `PlayerView.
+  bestowable_hand`; Baleful Eidolon), ⏳ Tribute.
 
 ## Tier 5 — Mana & cost system
 

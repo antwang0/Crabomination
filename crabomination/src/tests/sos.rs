@@ -153,6 +153,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1970,6 +1971,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2460,6 +2462,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 

@@ -249,6 +249,24 @@ fn compute_permanent(
     let mut card_types = card.definition.card_types.clone();
     let supertypes = card.definition.supertypes.clone();
     let mut subtypes = card.definition.subtypes.clone();
+    // CR 702.103d — while bestowed, the permanent is an Aura enchantment,
+    // not a creature. Strip the Creature type and add the Aura subtype so
+    // it isn't a valid blocker/attacker/removal target and the orphan-Aura
+    // checks treat it correctly.
+    if card.bestowed {
+        card_types.retain(|t| !matches!(t, CardType::Creature));
+        if !card_types.contains(&CardType::Enchantment) {
+            card_types.push(CardType::Enchantment);
+        }
+        if !subtypes
+            .enchantment_subtypes
+            .contains(&crate::card::EnchantmentSubtype::Aura)
+        {
+            subtypes
+                .enchantment_subtypes
+                .push(crate::card::EnchantmentSubtype::Aura);
+        }
+    }
     let mut colors = colors_from_card(card);
     let mut keywords = card.definition.keywords.clone();
     // Merge in EOT-granted keywords so a computed view sees them just like

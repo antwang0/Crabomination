@@ -443,8 +443,9 @@ pub fn returned_centaur() -> CardDefinition {
 }
 
 /// Baleful Eidolon — {2}{B} Enchantment Creature — Zombie 1/1. Deathtouch.
-/// (Bestow is omitted — ships as the enchantment-creature body.)
+/// Bestow {4}{B} (CR 702.103): cast as an Aura granting +1/+1 and deathtouch.
 pub fn baleful_eidolon() -> CardDefinition {
+    use crate::card::EquipBonus;
     CardDefinition {
         name: "Baleful Eidolon",
         cost: cost(&[generic(2), b()]),
@@ -453,6 +454,12 @@ pub fn baleful_eidolon() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Deathtouch],
+        bestow: Some(cost(&[generic(4), b()])),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Deathtouch],
+        }),
         ..Default::default()
     }
 }

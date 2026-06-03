@@ -153,6 +153,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             affinity_filter: None,
             equipped_bonus: None,
             additional_cast_cost: vec![],
+            bestow: None,
         }
     }
 
@@ -5083,6 +5084,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         affinity_filter: None,
         equipped_bonus: None,
         additional_cast_cost: vec![],
+        bestow: None,
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {

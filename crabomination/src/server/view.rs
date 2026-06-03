@@ -76,6 +76,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         pitchable_hand: state.pitchable_hand_cards(seat),
         kickable_hand: state.kickable_hand_cards(seat),
         buyback_hand: state.buyback_hand_cards(seat),
+        bestowable_hand: state.bestowable_hand_cards(seat),
         dashable_hand: state.dashable_hand_cards(seat),
         activatable_permanents: state.activatable_permanents(seat),
         legal_attackers: state.legal_attackers(seat),

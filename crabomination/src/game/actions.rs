@@ -847,7 +847,7 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false, false)
     }
 
     /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
@@ -861,7 +861,7 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], true, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], true, false, false)
     }
 
     /// CR 702.27 — cast a spell paying its optional Buyback cost. The
@@ -875,7 +875,21 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, true)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, true, false)
+    }
+
+    /// CR 702.103 — cast an enchantment-creature for its Bestow cost as an
+    /// Aura targeting a creature (`target`). The resolving permanent enters
+    /// attached and is an Aura (not a creature) while bestowed.
+    pub(crate) fn cast_bestow(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], false, false, true)
     }
 
     /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
@@ -893,7 +907,7 @@ impl GameState {
         x_value: Option<u32>,
         delve_cards: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, false, false)
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards, false, false, false)
     }
 
     /// Internal cast-spell helper with optional convoke creatures and delve
@@ -914,6 +928,7 @@ impl GameState {
         delve_cards: &[CardId],
         kicked: bool,
         buyback: bool,
+        bestow: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
@@ -931,6 +946,24 @@ impl GameState {
         // at resolution to return the spell to hand instead of the gy.
         let buyback = buyback && card.definition.has_buyback().is_some();
         card.bought_back = buyback;
+        // CR 702.103 — Bestow: cast as an Aura targeting a creature. The
+        // bestow cost replaces the regular cost (below); `bestowed` flags
+        // the resolving permanent as an Aura that attaches to its target.
+        let bestow = bestow && card.definition.has_bestow().is_some();
+        if bestow {
+            // Bestow requires a creature target up front (the spell's own
+            // effect doesn't carry one), so an unbestowable cast reverts.
+            let creature_target = matches!(
+                target,
+                Some(Target::Permanent(tid))
+                    if self.battlefield.iter().any(|c| c.id == tid && c.definition.is_creature())
+            );
+            if !creature_target {
+                self.players[p].hand.push(card);
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            card.bestowed = true;
+        }
 
         // Ranger-Captain of Eos lock — this player can't cast noncreature
         // spells for the rest of the turn.
@@ -1077,7 +1110,12 @@ impl GameState {
         // Pay the cost (substitute X if present, then add any
         // static-ability tax such as Damping Sphere's "{1} more after the
         // first spell each turn").
-        let base_cost = card.definition.cost.clone();
+        // CR 702.103c — Bestow replaces the regular mana cost with the
+        // bestow cost; otherwise the printed cost is used.
+        let base_cost = match (bestow, card.definition.has_bestow()) {
+            (true, Some(bc)) => bc.clone(),
+            _ => card.definition.cost.clone(),
+        };
         let mut cost = if base_cost.has_x() {
             base_cost.with_x_value(x_value.unwrap_or(0))
         } else {
