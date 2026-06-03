@@ -1351,6 +1351,14 @@ mod tests {
     }
 
     #[test]
+    fn amass_and_myriad_effects_have_labels() {
+        use crate::effect::{PlayerRef, Value};
+        let amass = Effect::Amass { who: PlayerRef::You, count: Value::Const(2), extra_type: None };
+        assert_eq!(ability_effect_label(&amass), "Amass");
+        assert_eq!(ability_effect_label(&Effect::Myriad), "Myriad");
+    }
+
+    #[test]
     fn devious_cover_up_exile_rider_has_graveyard_label() {
         use crate::card::SelectionRequirement;
         let eff = Effect::ExileAnyNumberFromGraveyards {

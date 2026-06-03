@@ -45,6 +45,10 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Energy => (Color::srgba(0.10, 0.30, 0.32, 1.0), theme::TEXT_PRIMARY),
         // Draw cap (CR 121.2b) — a muted warning amber: drawing is locked.
         StatChipKind::DrawCap => (Color::srgba(0.36, 0.24, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Storm/magecraft count (spells cast this turn) — an Izzet ember
+        // orange so prowess / Storm / magecraft players can read the count
+        // building before they cast the payoff.
+        StatChipKind::Storm => (Color::srgba(0.36, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -60,6 +64,15 @@ pub(super) enum StatChipKind {
     Devotion,
     Energy,
     DrawCap,
+    Storm,
+}
+
+/// Whether to surface the "spells cast this turn" chip. Shown once a
+/// second spell has been cast this turn (the point where Storm / magecraft
+/// / prowess payoffs start to matter), so single-spell turns stay
+/// uncluttered.
+pub(super) fn storm_chip_visible(spells_cast_this_turn: u32) -> bool {
+    spells_cast_this_turn >= 2
 }
 
 /// Library size at or below which the Deck chip switches to its amber
@@ -376,6 +389,16 @@ pub fn update_player_stats_chips(
         // CR 122 energy — only surface once the player has banked any {E}.
         if p.energy > 0 {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Energy, format!("⚡ {}", p.energy));
+        }
+        // Storm / magecraft count — surface once a second spell lands this
+        // turn so Storm / prowess / magecraft payoffs can be read at a glance.
+        if storm_chip_visible(p.spells_cast_this_turn) {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Storm,
+                format!("✷ {}", p.spells_cast_this_turn),
+            );
         }
         // CR 121.2b draw cap — only surface when a draw lock is active.
         if let Some(cap) = p.draw_cap {
@@ -760,5 +783,24 @@ pub fn animate_life_flash(
                 tc.0 = Color::srgba(c.red, c.green, c.blue, alpha);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{deck_chip_kind, storm_chip_visible, StatChipKind};
+
+    #[test]
+    fn storm_chip_hidden_until_second_spell() {
+        assert!(!storm_chip_visible(0));
+        assert!(!storm_chip_visible(1));
+        assert!(storm_chip_visible(2));
+        assert!(storm_chip_visible(7));
+    }
+
+    #[test]
+    fn deck_chip_warns_only_when_low() {
+        assert!(matches!(deck_chip_kind(3), StatChipKind::DeckLow));
+        assert!(matches!(deck_chip_kind(4), StatChipKind::Deck));
     }
 }
