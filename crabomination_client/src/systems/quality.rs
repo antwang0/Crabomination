@@ -53,6 +53,12 @@ pub struct SettingsMenuRoot;
 #[derive(Component)]
 pub struct SettingsCloseButton;
 
+/// "Leave Game" button in the settings menu — disconnects from the
+/// server / ends the local match and returns to the main menu. See
+/// [`handle_leave_game_button`].
+#[derive(Component)]
+pub struct LeaveGameButton;
+
 pub fn setup_quality_panel(
     mut commands: Commands,
     ui_fonts: Res<UiFonts>,
@@ -164,16 +170,37 @@ pub fn setup_quality_panel(
                 }
             });
 
-            // Close button at the bottom of the modal. Esc also closes;
-            // the explicit button is useful when the user is browsing
-            // settings with the mouse only.
+            // Bottom row: "Leave Game" on the left (disconnect + return
+            // to the main menu) and "Close" on the right. Esc also
+            // closes; the explicit button is useful when browsing with
+            // the mouse only.
             p.spawn(Node {
                 flex_direction: FlexDirection::Row,
-                justify_content: JustifyContent::FlexEnd,
+                justify_content: JustifyContent::SpaceBetween,
+                column_gap: Val::Px(12.0),
                 margin: UiRect::top(Val::Px(6.0)),
                 ..default()
             })
             .with_children(|row| {
+                row.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(18.0), Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_DANGER_BG),
+                    HoverTint::new(theme::BUTTON_DANGER_BG),
+                    LeaveGameButton,
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new("Leave Game"),
+                        tf(13.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        Pickable::IGNORE,
+                    ));
+                });
                 row.spawn((
                     Button,
                     Node {
@@ -354,6 +381,26 @@ pub fn update_speed_slider_visuals(
     for mut text in &mut label_q {
         text.0 = format_speed(speed.0);
     }
+}
+
+/// "Leave Game" button — close the settings menu and return to the
+/// main menu. The live network session (TCP socket / channel
+/// resources) is torn down by
+/// [`crate::net_plugin::teardown_net_session`] on `OnExit(InGame)`.
+/// Clearing [`PendingNetMode`] mirrors the game-over "New Game" path so
+/// the next menu visit starts without a stale queued mode.
+pub fn handle_leave_game_button(
+    leave_q: Query<&Interaction, (Changed<Interaction>, With<LeaveGameButton>)>,
+    mut settings: ResMut<SettingsOpen>,
+    mut pending: ResMut<crate::menu::PendingNetMode>,
+    mut next_state: ResMut<NextState<crate::menu::AppState>>,
+) {
+    if !leave_q.iter().any(|i| *i == Interaction::Pressed) {
+        return;
+    }
+    settings.0 = false;
+    pending.0 = None;
+    next_state.set(crate::menu::AppState::Menu);
 }
 
 pub fn handle_quality_buttons(

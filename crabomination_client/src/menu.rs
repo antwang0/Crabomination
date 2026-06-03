@@ -1007,10 +1007,14 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
 
 fn spawn_join_lan(world: &mut World, addr: &str) -> std::io::Result<()> {
     let stream = std::net::TcpStream::connect(addr)?;
+    // Keep a clone of the socket so "Leave Game" can shut it down
+    // promptly; without it the server only notices via keepalive (~2 min).
+    let conn_handle = stream.try_clone().ok();
     let ClientChannel { tx, rx } = tcp_client(stream)?;
     let _ = tx.send(ClientMsg::JoinMatch { name: "client".into() });
     world.insert_resource(NetOutbox::new(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
+    world.insert_resource(crate::net_plugin::NetConnection(conn_handle));
     Ok(())
 }
 

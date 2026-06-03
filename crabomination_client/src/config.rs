@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bevy::prelude::Resource;
 use serde::{Deserialize, Serialize};
@@ -49,7 +49,10 @@ pub struct Config {
 #[serde(default)]
 pub struct PathsConfig {
     /// Directory used as Bevy's asset root and card image cache.
-    /// Defaults to the "assets" folder next to the executable.
+    ///
+    /// An absolute path is used verbatim. A relative path (the default
+    /// `"assets"`) is resolved by [`PathsConfig::resolved_asset_dir`] to a
+    /// fixed location that does not depend on the current working directory.
     pub asset_dir: String,
 }
 
@@ -57,6 +60,42 @@ impl Default for PathsConfig {
     fn default() -> Self {
         Self { asset_dir: "assets".to_string() }
     }
+}
+
+impl PathsConfig {
+    /// Resolve [`asset_dir`](Self::asset_dir) to an absolute path.
+    ///
+    /// An absolute configured path is returned as-is. A relative path is
+    /// anchored so the binary finds its assets regardless of where it is
+    /// launched from:
+    /// - **debug builds** anchor to the crate source dir
+    ///   (`CARGO_MANIFEST_DIR`), so `cargo run` / `cargo dev` locate
+    ///   `crabomination_client/assets` from any working directory;
+    /// - **release builds** anchor to the executable's own directory, so a
+    ///   shipped build just needs an `assets/` folder next to the binary.
+    pub fn resolved_asset_dir(&self) -> PathBuf {
+        let configured = Path::new(&self.asset_dir);
+        if configured.is_absolute() {
+            return configured.to_path_buf();
+        }
+        asset_base_dir().join(configured)
+    }
+}
+
+/// Base directory that a relative `asset_dir` is resolved against.
+#[cfg(debug_assertions)]
+fn asset_base_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+}
+
+#[cfg(not(debug_assertions))]
+fn asset_base_dir() -> PathBuf {
+    // Fall back to "." (current dir) only if the exe path is somehow
+    // unavailable — practically never on supported platforms.
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(Path::to_path_buf))
+        .unwrap_or_else(|| PathBuf::from("."))
 }
 
 #[derive(Debug, Resource, Serialize, Deserialize)]

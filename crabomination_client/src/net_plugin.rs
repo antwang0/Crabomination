@@ -125,6 +125,14 @@ pub struct LatestServerEvents(pub Vec<GameEventWire>);
 #[derive(Resource, Default)]
 pub struct MatchEnded(pub Option<Option<usize>>);
 
+/// Live TCP socket handle for a networked match, kept so leaving a game
+/// can `shutdown` it immediately rather than waiting for the ~2-minute
+/// keepalive timeout to reap a half-open connection. `None` for
+/// in-process matches (vs-bot, host, spectate), where dropping
+/// [`NetOutbox`] already tears the channel down.
+#[derive(Resource, Default)]
+pub struct NetConnection(pub Option<std::net::TcpStream>);
+
 /// Registers network resources and the polling + startup systems.
 pub struct SinglePlayerPlugin;
 
@@ -134,6 +142,7 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<OurSeat>()
             .init_resource::<LatestServerEvents>()
             .init_resource::<MatchEnded>()
+            .init_resource::<NetConnection>()
             .init_resource::<PendingManaCast>()
             .add_systems(PreUpdate, poll_net)
             .add_systems(Update, (drive_pending_mana_cast, update_pending_cast_banner));
@@ -185,6 +194,32 @@ pub fn poll_net(
             ServerMsg::MatchOver { winner } => ended.0 = Some(winner),
         }
     }
+}
+
+/// `OnExit(AppState::InGame)` — tear down the live network session so
+/// leaving a match (via the settings menu, the game-over screen, or a
+/// rematch into a different mode) actually disconnects: shut the TCP
+/// socket down if one is open, drop the channel + snapshot resources,
+/// and clear the cached view so the next match starts from a clean
+/// slate. In-process matches have no socket — dropping [`NetOutbox`]
+/// disconnects the seat channel, which lets the server-side match
+/// thread observe the drop and exit.
+pub fn teardown_net_session(
+    mut commands: Commands,
+    mut conn: ResMut<NetConnection>,
+    mut view: ResMut<CurrentView>,
+    mut ended: ResMut<MatchEnded>,
+    mut pending_cast: ResMut<PendingManaCast>,
+) {
+    if let Some(stream) = conn.0.take() {
+        let _ = stream.shutdown(std::net::Shutdown::Both);
+    }
+    commands.remove_resource::<NetOutbox>();
+    commands.remove_resource::<NetInbox>();
+    commands.remove_resource::<crate::menu::LatestSnapshot>();
+    view.0 = None;
+    ended.0 = None;
+    pending_cast.0 = None;
 }
 
 /// Drive a `PendingCast`: re-submit the held cast each time the player's
