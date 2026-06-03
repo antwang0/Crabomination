@@ -103,6 +103,12 @@ pub struct CardSnapshot {
     pub counters: Vec<(CounterType, u32)>,
     pub attached_to: Option<CardId>,
     pub kicked: bool,
+    /// CR 702.27 buyback / CR 702.103 bestow flags. `#[serde(default)]` so
+    /// snapshots predating the fields load as `false`.
+    #[serde(default)]
+    pub bought_back: bool,
+    #[serde(default)]
+    pub bestowed: bool,
     pub face_down: bool,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
@@ -254,6 +260,8 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
         counters: c.counters.iter().map(|(k, v)| (*k, *v)).collect(),
         attached_to: c.attached_to,
         kicked: c.kicked,
+        bought_back: c.bought_back,
+        bestowed: c.bestowed,
         face_down: c.face_down,
         is_token: c.is_token,
         used_loyalty_ability_this_turn: c.used_loyalty_ability_this_turn,
@@ -422,6 +430,8 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.counters = cs.counters.into_iter().collect();
     c.attached_to = cs.attached_to;
     c.kicked = cs.kicked;
+    c.bought_back = cs.bought_back;
+    c.bestowed = cs.bestowed;
     c.face_down = cs.face_down;
     c.is_token = cs.is_token;
     c.used_loyalty_ability_this_turn = cs.used_loyalty_ability_this_turn;
@@ -547,6 +557,26 @@ mod tests {
         );
         assert!(back.has_keyword(&Keyword::Indestructible));
         assert!(back.has_keyword(&Keyword::Trample));
+    }
+
+    #[test]
+    fn snapshot_round_trips_bestowed_flag() {
+        // A bestowed permanent (CR 702.103) is an Aura, not a creature; the
+        // `bestowed` flag must survive snapshot/restore or a reconnecting
+        // client would see it flip back to a creature.
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let eid = g.add_card_to_battlefield(0, catalog::baleful_eidolon());
+        {
+            let c = g.battlefield_find_mut(eid).unwrap();
+            c.bestowed = true;
+            c.attached_to = Some(bear);
+        }
+        let restored = GameSnapshot::capture(&g).restore().expect("restore");
+        let back = restored.battlefield.iter().find(|c| c.id == eid)
+            .expect("Eidolon round-trips");
+        assert!(back.bestowed, "bestowed flag must persist through snapshot/restore");
+        assert_eq!(back.attached_to, Some(bear));
     }
 
     #[test]
@@ -735,6 +765,8 @@ mod tests {
             counters: vec![],
             attached_to: None,
             kicked: false,
+            bought_back: false,
+            bestowed: false,
             face_down: false,
             is_token: false,
             used_loyalty_ability_this_turn: false,
