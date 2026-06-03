@@ -2154,56 +2154,44 @@ fn quantum_riddler_on_cast_draws_a_card() {
 }
 
 #[test]
-fn psychic_frog_discard_pumps_until_end_of_turn() {
+fn psychic_frog_discard_adds_plus_one_counter() {
     let mut g = two_player_game();
     let frog = g.add_card_to_battlefield(0, catalog::psychic_frog());
     g.clear_sickness(frog);
     let to_pitch = g.add_card_to_hand(0, catalog::lightning_bolt());
 
-    let p_before = g.battlefield_find(frog).unwrap().power();
-    let t_before = g.battlefield_find(frog).unwrap().toughness();
-
-    // Activate the discard-pump ability.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: frog,
-        ability_index: 0,
-        target: None, x_value: None })
-    .expect("Psychic Frog discard pump should activate");
+        card_id: frog, ability_index: 0, target: None, x_value: None })
+        .expect("Psychic Frog discard ability should activate");
     drain_stack(&mut g);
 
-    // The first card in hand was discarded.
     assert!(g.players[0].graveyard.iter().any(|c| c.id == to_pitch),
         "discarded card should be in graveyard");
-    // Frog gained +1/+1.
     let card = g.battlefield_find(frog).unwrap();
-    assert_eq!(card.power(), p_before + 1);
-    assert_eq!(card.toughness(), t_before + 1);
+    assert_eq!(card.counter_count(crate::card::CounterType::PlusOnePlusOne), 1,
+        "discard places a +1/+1 counter");
+    assert_eq!((card.power(), card.toughness()), (2, 3), "1/2 base + counter = 2/3");
 }
 
 #[test]
-fn psychic_frog_sacrifice_mills_each_opponent_four() {
+fn psychic_frog_exiles_three_graveyard_cards_for_flying() {
     let mut g = two_player_game();
     let frog = g.add_card_to_battlefield(0, catalog::psychic_frog());
     g.clear_sickness(frog);
-    // Stock P1's library so we can mill 4 from it.
-    for _ in 0..6 {
-        g.add_card_to_library(1, catalog::island());
+    for _ in 0..4 {
+        g.add_card_to_graveyard(0, catalog::island());
     }
-    let p1_lib_before = g.players[1].library.len();
-    let p1_grave_before = g.players[1].graveyard.len();
+    assert!(!g.computed_permanent(frog).unwrap().keywords.contains(&crate::card::Keyword::Flying));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: frog,
-        ability_index: 1,
-        target: None, x_value: None })
-    .expect("Psychic Frog sacrifice-mill should activate");
+        card_id: frog, ability_index: 1, target: None, x_value: None })
+        .expect("Psychic Frog flying ability should activate");
     drain_stack(&mut g);
 
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == frog),
-        "Psychic Frog should sacrifice itself");
-    assert!(!g.battlefield.iter().any(|c| c.id == frog));
-    assert_eq!(g.players[1].library.len(), p1_lib_before - 4);
-    assert_eq!(g.players[1].graveyard.len(), p1_grave_before + 4);
+    assert_eq!(g.exile.len(), 3, "three graveyard cards are exiled as the cost");
+    assert_eq!(g.players[0].graveyard.len(), 1, "one card remains in the graveyard");
+    assert!(g.computed_permanent(frog).unwrap().keywords.contains(&crate::card::Keyword::Flying),
+        "Psychic Frog gains flying until end of turn");
 }
 
 #[test]

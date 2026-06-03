@@ -210,13 +210,13 @@ pub fn griselbrand() -> CardDefinition {
     }
 }
 
-/// Psychic Frog — {U}{B}, 1/3 Frog. Flying. "Discard a card: Psychic Frog
-/// gets +1/+1 until end of turn." "Sacrifice Psychic Frog: Each opponent
-/// mills 4 cards." Both costs are modeled as the first step of the resolved
-/// effect (rather than at activation time), which is gameplay-equivalent
-/// here — the bot/UI never tries to interrupt between cost payment and
-/// resolution.
+/// Psychic Frog — {U}{B} 1/2 Frog (MH3). Combat damage to a player/PW →
+/// draw. "Discard a card: +1/+1 counter." "Exile three cards from your
+/// graveyard: gains flying EOT." The discard / graveyard-exile costs are
+/// modeled as the first step of the resolved effect (gameplay-equivalent —
+/// nothing can respond between cost and resolution).
 pub fn psychic_frog() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Psychic Frog",
         cost: cost(&[u(), b()]),
@@ -227,62 +227,51 @@ pub fn psychic_frog() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
         activated_abilities: vec![
-            // "Discard a card: Psychic Frog gets +1/+1 until end of turn."
+            // "Discard a card: Put a +1/+1 counter on Psychic Frog."
             ActivatedAbility {
-                tap_cost: false,
-                mana_cost: ManaCost::default(),
                 effect: Effect::Seq(vec![
                     Effect::Discard {
                         who: Selector::You,
                         amount: Value::Const(1),
                         random: false,
                     },
-                    Effect::PumpPT {
+                    Effect::AddCounter {
                         what: Selector::This,
-                        power: Value::Const(1),
-                        toughness: Value::Const(1),
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                ]),
+                ..Default::default()
+            },
+            // "Exile three cards from your graveyard: gains flying EOT."
+            ActivatedAbility {
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::take(
+                            Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: crate::card::Zone::Graveyard,
+                                filter: SelectionRequirement::Any,
+                            },
+                            Value::Const(3),
+                        ),
+                        to: ZoneDest::Exile,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::This,
+                        keyword: Keyword::Flying,
                         duration: Duration::EndOfTurn,
                     },
                 ]),
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            },
-            // "Sacrifice Psychic Frog: Each opponent mills 4 cards."
-            ActivatedAbility {
-                tap_cost: false,
-                mana_cost: ManaCost::default(),
-                effect: Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::This,
-                        to: ZoneDest::Graveyard,
-                    },
-                    Effect::Mill {
-                        who: Selector::Player(PlayerRef::EachOpponent),
-                        amount: Value::Const(4),
-                    },
-                ]),
-                once_per_turn: false,
-                sorcery_speed: false,
-                sac_cost: false,
-                condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

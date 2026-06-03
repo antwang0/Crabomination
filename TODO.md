@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Buyback / Bestow client + bot.** `GameAction::CastSpellBuyback` (CR
+  702.27) and `GameAction::CastBestow` (CR 702.103) are wired + tested and
+  surfaced in `PlayerView.buyback_hand` / `bestowable_hand`, but the Bevy
+  client has no "pay buyback?" / "bestow on a creature?" affordance and the
+  bot never chooses either path (it casts the base spell). Add UI toggles
+  and a bot heuristic (buyback when mana-flush and the spell repeats value;
+  bestow on a creature that's likely to stick).
+- **Discard / exile-from-gy as real activation costs.** Psychic Frog (and
+  similar) model "Discard a card:" / "Exile three cards from your graveyard:"
+  as the first step of the resolved effect rather than a paid activation
+  cost. Gameplay-equivalent today (nothing responds between cost and
+  resolution), but a real cost (new `ActivatedAbility` fields) would gate
+  activation on having the cards and let the cost be paid before the ability
+  goes on the stack.
 - **Ninjutsu client UI** — `GameAction::Ninjutsu` is wired + tested in the
   engine (Fallen Shinobi), but the Bevy client has no affordance to invoke
   it during the declare-blockers step (pick a ninja in hand + an unblocked
@@ -66,13 +80,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   colorless-pip approximations (Devourer of Destiny `{7}` for `{5}{C}{C}`);
   CDA P/T (Cosmogoyf, Lumra, Cruel Somnophage); and the custom card
   Crabomination. Re-run the audit after big card batches to catch new typos.
-
-- **Psychic Frog ships a synthesised body** (1/3 flyer with discard-pump +
-  sac-mill) that doesn't match the real MH3 card (1/2 no-fly: combat-damage
-  → draw, discard → +1/+1 *counter*, "exile three from gy: gains flying
-  EOT"). All three faithful clauses are expressible with existing
-  primitives (combat-damage trigger, AddCounter, exile-N-from-gy activation
-  cost + GrantKeyword EOT) — worth a faithful rewrite when picking up Dimir.
 
 - **Multi-slot "up to two target" works** for explicit casts (proved by
   Read the Tides' modal bounce). Cards still collapsing it to one (Aether
