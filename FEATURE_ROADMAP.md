@@ -54,7 +54,11 @@ read of the code and should be re-verified before picking up an item.
   Loch); self-buff scaled by controlled permanents
   (`StaticEffect::PumpSelfByControlledPermanents` + `TokenDefinition.
   static_abilities` — Karn, Scion of Urza's Construct token gets +1/+1 per
-  artifact you control).
+  artifact you control); player-chosen counts (`Decision::ChooseAmount` +
+  `Effect::SacrificeAnyNumber` / `Effect::PayLifeLookTake` — Plunge into
+  Darkness, with entwine modeled as `Keyword::Kicker` + `SpellWasKicked`);
+  reveal-until-the-named-card (`SelectionRequirement::NamedBySource` +
+  `named_card_this_resolution` — Spoils of the Vault).
 
 ---
 
@@ -78,8 +82,11 @@ not how Magic works" moments.
    (`prevention_shields` + `Effect::PreventNextDamage` /
    `PreventAllDamageThisTurn` / `DamageCantBePreventedThisTurn`, CR
    615.1/615.7/615.12) for the non-combat damage path, plus the existing
-   `prevent_combat_damage_this_turn` flag for combat fogs; remaining:
-   per-source combat shields, redirection, and damage *halving*.
+   `prevent_combat_damage_this_turn` flag for combat fogs. **Per-source
+   combat shields** now ship via `Effect::PreventAllCombatDamageInvolving`
+   + `GameState.combat_damage_prevented_creatures` (Maze of Ith — prevent
+   all combat damage to and by a creature this turn, CR 614.9). Remaining:
+   true damage *redirection* and damage *halving*.
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes` is
    wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). "Pick from
    revealed cards" is also wired: `Effect::LookPickToHand` (Impulse /

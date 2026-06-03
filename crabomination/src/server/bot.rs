@@ -505,6 +505,8 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::LoseLife { who, .. } | Effect::Discard { who, .. } => hits_self(who),
         Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => hits_self(who),
         Effect::SacrificeAndRemember { .. } => true,
+        Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
+        Effect::PayLifeLookTake { who } => matches!(who, PlayerRef::You),
         Effect::Seq(v) => v.iter().any(effect_imposes_self_cost),
         Effect::If { then, else_, .. } => {
             effect_imposes_self_cost(then) || effect_imposes_self_cost(else_)
