@@ -22561,3 +22561,25 @@ fn baleful_eidolon_reverts_to_creature_when_host_leaves() {
         "Eidolon reverts to a creature when its host leaves");
     assert_eq!((ecp.power, ecp.toughness), (1, 1), "it's a 1/1 creature again");
 }
+
+#[test]
+fn hopeful_eidolon_bestow_grants_lifelink_to_host() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eid = g.add_card_to_hand(0, catalog::hopeful_eidolon());
+    // Bestow {3}{W}.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastBestow {
+        card_id: eid, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hopeful Eidolon castable via bestow");
+    drain_stack(&mut g);
+
+    let bcp = g.computed_permanent(bear).unwrap();
+    assert_eq!((bcp.power, bcp.toughness), (3, 3), "host gets +1/+1");
+    assert!(bcp.keywords.contains(&crate::card::Keyword::Lifelink),
+        "host gains lifelink from bestow");
+    assert!(!g.computed_permanent(eid).unwrap().card_types.contains(&CardType::Creature),
+        "bestowed Hopeful Eidolon is not a creature");
+}

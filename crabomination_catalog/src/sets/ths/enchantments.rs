@@ -7,8 +7,10 @@ use crate::game::types::TurnStep;
 use crate::effect::{Duration, PlayerRef, PlayerStaticTarget, shortcut::etb, shortcut::target_filtered};
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
-/// Hopeful Eidolon — {W} Enchantment Creature — Spirit 1/1 Lifelink
+/// Hopeful Eidolon — {W} Enchantment Creature — Spirit 1/1 Lifelink.
+/// Bestow {3}{W} (CR 702.103): as an Aura it grants +1/+1 and lifelink.
 pub fn hopeful_eidolon() -> CardDefinition {
+    use crate::card::EquipBonus;
     CardDefinition {
         name: "Hopeful Eidolon",
         cost: cost(&[w()]),
@@ -20,8 +22,12 @@ pub fn hopeful_eidolon() -> CardDefinition {
         power: 1,
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
+        bestow: Some(cost(&[generic(3), w()])),
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Lifelink],
+        }),
         ..Default::default()
     }
 }
