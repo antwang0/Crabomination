@@ -292,6 +292,24 @@ fn each_opponent_in_2_player_unchanged() {
 }
 
 #[test]
+fn each_player_fans_out_in_apnap_order() {
+    // CR 101.4 / 121.2c — "each player" resolves active-player-first, then
+    // in turn order. With seat 1 active in a 3-player game the order is
+    // [1, 2, 0], not raw seat index [0, 1, 2].
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 1;
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert_eq!(g.resolve_players(&PlayerRef::EachPlayer, &ctx), vec![1, 2, 0]);
+}
+
+#[test]
+fn each_player_apnap_order_unchanged_when_seat_zero_active() {
+    let g = multi_player_game(3); // seat 0 active by default
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert_eq!(g.resolve_players(&PlayerRef::EachPlayer, &ctx), vec![0, 1, 2]);
+}
+
+#[test]
 fn each_opponent_skips_eliminated_seats() {
     let mut g = multi_player_game(4);
     g.assign_teams(vec![vec![0, 2], vec![1, 3]]).unwrap();

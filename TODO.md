@@ -451,6 +451,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   force-includes them. Juggernaut. Tests: `juggernaut_must_be_declared_as_
   attacker`, `juggernaut_tapped_is_exempt_from_must_attack`.
 
+- ✅ **CR 508.1a — Defender-board attack restriction** (claude/modern_decks).
+  `Keyword::CanAttackOnlyIfDefenderControls(filter)` — `declare_attackers`
+  rejects declaring the bearer unless the attack's defending player controls
+  a permanent matching `filter` (evaluated per-attacker before the mutable
+  attacker binding). Dandân ("can't attack unless defending player controls
+  an Island"). Tests: `dandan_cannot_attack_unless_defender_controls_an_island`.
+
 - ✅ **CR 701.38 — Goad** (claude/modern_decks). `CardInstance.goaded_by` +
   `Effect::Goad`; goaded creatures are treated as must-attack in
   `declare_attackers` (engine + bot force-include), and each goader's grant
@@ -851,11 +858,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `max - cards_drawn_this_turn`. Spirit of the Labyrinth / Notion Thief-
   class locks express via `PlayerStaticTarget`. Test:
   `cr_121_2b_draw_cap_truncates_draws`).
-  (e) **121.2c** — 🟡
-  (multi-player draws fan out via `Selector::Player(EachPlayer)`'s
-  iteration order which is seat-index; the active player is seat 0
-  in 1v1, so the order is APNAP-correct. In multiplayer the
-  fan-out walks `0..N` rather than starting from `active_player`).
+  (e) **121.2c** — ✅ (claude/modern_decks: `resolve_players` now runs
+  `EachPlayer` / `EachOpponent` fan-outs through `GameState::apnap_sort`
+  (CR 101.4 — active player first, then turn order), so multiplayer draws/
+  mills/sacrifices resolve in APNAP order rather than raw seat index.
+  Tests: `each_player_fans_out_in_apnap_order`,
+  `each_player_apnap_order_unchanged_when_seat_zero_active`).
   (f) **121.3** — ⏳ (engine doesn't model
   "choose to draw" via decision; `Effect::Draw` always draws
   unconditionally, so the choice path collapses to "always-draw"

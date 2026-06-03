@@ -4705,14 +4705,20 @@ impl GameState {
     /// seat (or empty if the reference can't be resolved).
     pub(crate) fn resolve_players(&self, pref: &PlayerRef, ctx: &EffectContext) -> Vec<usize> {
         match pref {
-            PlayerRef::EachOpponent => self
-                .opponents_of(ctx.controller)
-                .into_iter()
-                .filter(|i| self.players[*i].is_alive())
-                .collect(),
-            PlayerRef::EachPlayer => (0..self.players.len())
-                .filter(|i| self.players[*i].is_alive())
-                .collect(),
+            // CR 101.4 / 121.2c — "each player"/"each opponent" fan-outs
+            // resolve in APNAP order (active player first, then turn order),
+            // not raw seat index.
+            PlayerRef::EachOpponent => self.apnap_sort(
+                self.opponents_of(ctx.controller)
+                    .into_iter()
+                    .filter(|i| self.players[*i].is_alive())
+                    .collect(),
+            ),
+            PlayerRef::EachPlayer => self.apnap_sort(
+                (0..self.players.len())
+                    .filter(|i| self.players[*i].is_alive())
+                    .collect(),
+            ),
             _ => self.resolve_player(pref, ctx).into_iter().collect(),
         }
     }

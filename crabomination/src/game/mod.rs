@@ -624,6 +624,33 @@ impl GameState {
         from
     }
 
+    /// Sort `seats` into APNAP order — active player first, then each other
+    /// seat in turn order (CR 101.4). Used when a single effect affects
+    /// "each player" so simultaneous-ish fan-outs (draws, mills, sacrifices)
+    /// resolve in the canonical order rather than raw seat index.
+    pub(crate) fn apnap_sort(&self, mut seats: Vec<usize>) -> Vec<usize> {
+        let n = self.players.len().max(1);
+        let active = self.active_player_idx;
+        let rank = |seat: usize| -> usize {
+            if seat == active {
+                return 0;
+            }
+            let mut s = active;
+            for r in 1..=n {
+                s = self.next_alive_seat(s);
+                if s == seat {
+                    return r;
+                }
+                if s == active {
+                    break;
+                }
+            }
+            n + seat // eliminated / unreachable: stable tail
+        };
+        seats.sort_by_key(|&s| rank(s));
+        seats
+    }
+
     // ── Team partitioning ─────────────────────────────────────────────────────
 
     /// Team that contains `seat`. Falls back to a virtual singleton
