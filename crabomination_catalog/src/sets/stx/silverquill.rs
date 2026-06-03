@@ -3279,7 +3279,7 @@ pub fn silverquill_drafter_b30() -> CardDefinition {
 ///
 /// Synthesised Oracle: "When this creature enters, look at the top three
 /// cards of your library; put one into your hand and the rest on the bottom
-/// of your library in any order." Approximated as Scry 2 + Draw 1.
+/// of your library in any order." Ships via `Effect::LookPickToHand`.
 pub fn silverquill_scrivener_b30() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Scrivener B30",
@@ -3295,16 +3295,12 @@ pub fn silverquill_scrivener_b30() -> CardDefinition {
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Scry {
-                    who: PlayerRef::You,
-                    amount: Value::Const(2),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: None,
+            },
         }],
         ..Default::default()
     }

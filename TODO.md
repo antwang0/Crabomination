@@ -4898,18 +4898,15 @@ resolution time" in the Suggested next-up tasks section.
   the `Effect::Search { filter: IsBasicLand, to: ZoneDest::Battlefield {
   controller, tapped }}` template. Low priority — only 2 call sites today.
 
-- ⏳ **Effect::LookAndDistribute primitive (Stress Dream / Adventurous
-  Impulse / Curate)** — push (modern_decks batch 22) leaves Stress Dream
-  approximated as `Scry 1 + Draw 1`. The printed "look at top N, put K
-  in hand, rest to bottom of library in any order" is a recurring
-  shape. Adding an `Effect::LookAndDistribute { who, look: Value, to_hand:
-  Value, rest_to_bottom: bool }` primitive — with a new
-  `Decision::LookAndDistribute { player, cards }` decision shape that
-  returns `LookAndDistribute { to_hand: Vec<CardId>, to_bottom: Vec<CardId> }`
-  — would let SOS Stress Dream, Curate, Adventurous Impulse, and ~6
-  other cards land at exact-printed semantics. Auto-decider picks the
-  first `to_hand` cards by hand-size + "good cards" heuristic; UI seats
-  surface the picker. Promotes ~5 SOS 🟡 → ✅.
+- 🟡 **Effect::LookAndDistribute primitive (multi-pick, K>1).** The common
+  K=1 shape ("look at top N, put **one** in hand, rest to bottom / graveyard")
+  now ships faithfully via `Effect::LookPickToHand` (with an optional
+  `pick_filter`) — Curate, Anticipate, Adventurous Impulse (creature/land),
+  Quandrix Quickener, Silverquill Scrivener, Strategic Planning. Still ⏳:
+  the **K>1** variant ("put **two** in hand, rest to bottom") — Stress Dream
+  and similar still approximate. Would need an `Effect::LookAndDistribute
+  { who, look, to_hand, rest_to_bottom }` + a `Decision::LookAndDistribute`
+  that returns `{ to_hand: Vec<CardId>, to_bottom: Vec<CardId> }`.
 
 - ⏳ **Effect::CreateCopyToken primitive (Applied Geometry / Colorstorm
   Stallion / Echocasting Symposium)** — push (modern_decks batch 22)
