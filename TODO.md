@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Ninjutsu client UI** — `GameAction::Ninjutsu` is wired + tested in the
+  engine (Fallen Shinobi), but the Bevy client has no affordance to invoke
+  it during the declare-blockers step (pick a ninja in hand + an unblocked
+  attacker to return). Add a button/flow like Crew. The bot doesn't use
+  Ninjutsu either (it would need a "swap up" heuristic).
+- **Generalize `ExileTopAndGrantMayPlay` count** — it exiles exactly one
+  card; Fallen Shinobi calls it twice for "top two". A `count: Value` field
+  would be cleaner for any "exile top N, you may play them" rider.
+- **Scryfall blocked in this env** — `api.scryfall.com` returns 403 (network
+  policy), so new/synthesised cards can't be verified. `scripts/.scryfall_
+  cache.json` (332 cards) is the only source; cards outside it can't be
+  faithfully added or completed. Remaining 🟡 cube cards (Torsten, Messenger
+  Falcons P/T, Doomsday Excruciator, Keen-Eyed Curator, the synthesised
+  bodies) are blocked on this until the cache is extended or the policy opens.
 - **Reuse `StaticEffect::PumpSelfByControlledPermanents`** — the new
   self-buff-scaled-by-controlled-permanents static (Karn's Construct token)
   also fits Master of Etherium, Tempered Steel-style self-counts, and any
