@@ -456,6 +456,8 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::Ninjutsu(_) => {
             "Return an unblocked attacker you control to hand to put this onto the battlefield tapped and attacking."
         }
+        K::Fading(_) => "Enters with that many fade counters; remove one each upkeep, and sacrifice it when you can't.",
+        K::Vanishing(_) => "Enters with that many time counters; remove one each upkeep, and sacrifice it when the last is gone.",
         _ => return None,
     })
 }
@@ -544,6 +546,8 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Kicker(cost) => format!("Kicker {}", cost.summary()),
         K::Echo(cost) => format!("Echo {}", cost.summary()),
         K::CumulativeUpkeep(cost) => format!("Cumulative upkeep {}", cost.summary()),
+        K::Fading(n) => format!("Fading {n}"),
+        K::Vanishing(n) => format!("Vanishing {n}"),
         K::Equip(cost) => format!("Equip {}", cost.summary()),
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),

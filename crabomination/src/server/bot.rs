@@ -818,6 +818,35 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Bestow (CR 702.103): for any hand card with a bestow cost, offer a
+    // `CastBestow` candidate that enchants the bot's sturdiest creature (the
+    // host most likely to stick, so the Aura keeps its value). `would_accept`
+    // validates the full bestow cost, so this is only added when affordable.
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.bestow.is_some())
+    {
+        // Prefer the controller's highest-toughness creature as the host.
+        let host = state
+            .battlefield
+            .iter()
+            .filter(|b| b.controller == seat && b.definition.is_creature())
+            .max_by_key(|b| state.computed_permanent(b.id).map(|cp| cp.toughness).unwrap_or(0))
+            .map(|b| b.id);
+        let Some(host) = host else { continue };
+        let action = GameAction::CastBestow {
+            card_id: c.id,
+            target: Some(crate::game::Target::Permanent(host)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
     // played-this-turn, etc.). Use the game-level helper so an
@@ -2339,5 +2368,24 @@ mod tests {
         let ans = decide_library_search(&g, 0, &candidates);
         assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == bolt),
             "bot fetches the only candidate");
+    }
+
+    /// The bot offers a Bestow cast (enchanting its own creature) when it's
+    /// mana-flush, instead of only ever casting the base creature.
+    #[test]
+    fn bot_considers_bestow_when_mana_flush() {
+        let mut g = two_player_game();
+        let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_hand(0, catalog::hopeful_eidolon());
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+
+        let action = main_phase_action(&g, 0);
+        // With lands exhausted the only line is the bestow cast onto the bear.
+        assert!(matches!(action,
+            GameAction::CastBestow { target: Some(crate::game::Target::Permanent(t)), .. } if t == host),
+            "bot bestows Hopeful Eidolon onto its creature, got {action:?}");
     }
 }
