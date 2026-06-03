@@ -66,7 +66,13 @@ read of the code and should be re-verified before picking up an item.
   (`Keyword::Fading(N)` / `Vanishing(N)` + `process_fading_vanishing`); the
   World rule SBA (CR 704.5k); linked-exile return-tapped
   (`ExileReturnZone::BattlefieldTapped` — Parallax Tide); the Enduring
-  self-revive (`Effect::ReturnSelfAsEnchantment` — Enduring Innocence).
+  self-revive (`Effect::ReturnSelfAsEnchantment` — Enduring Innocence);
+  end-of-combat token cleanup (`AttackingTokenCleanup` +
+  `attacking_token_cleanup` — Mobilize sacrifice / Myriad exile, CR 511.3);
+  the Army token + amass (`Effect::Amass`, CR 701.43); the Map explore-token
+  (`map_token` — CR 111.10s); conditional `Value::IfAtLeast` (Mossborn Hydra's
+  X≥4 doubling); one-shot "next instant/sorcery costs {N} less"
+  (`Effect::GrantNextInstantOrSorceryDiscountThisTurn` + `pending_is_discounts`).
 
 ---
 
