@@ -765,6 +765,66 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Escalate { default_picks: _, modes, cost } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                // The cast-time `mode` is the base (always-chosen) mode; the
+                // decider may escalate to additional distinct modes. AutoDecider
+                // keeps just the base — no escalate cost, mirroring a plain
+                // modal cast (so existing single-mode casts are unaffected).
+                let base = (ctx.mode as u8).min(modes.len().saturating_sub(1) as u8);
+                let answer = self.decider.decide(&Decision::ChooseModes {
+                    source,
+                    num_modes: modes.len(),
+                    count: modes.len(),
+                    default: vec![base],
+                });
+                let chosen: Vec<u8> = match answer {
+                    DecisionAnswer::Modes(v) => v,
+                    _ => vec![base],
+                };
+                // Sanitize: distinct, in range; the base mode always runs.
+                let mut run: Vec<u8> = vec![base];
+                for &i in &chosen {
+                    if (i as usize) < modes.len() && !run.contains(&i) {
+                        run.push(i);
+                    }
+                }
+                // Cap chosen modes by how many escalate costs the controller can
+                // actually pay (a "discard a card" cost is bounded by hand size;
+                // other costs are uncapped) — escalate stays honest.
+                let affordable_extra = match &**cost {
+                    Effect::Discard { who: Selector::You, amount, random: false } => {
+                        let per = self.evaluate_value(amount, ctx).max(0) as usize;
+                        if per == 0 { usize::MAX } else { self.players[ctx.controller].hand.len() / per }
+                    }
+                    _ => usize::MAX,
+                };
+                run.truncate(1 + affordable_extra);
+                // Pay the escalate cost once per mode beyond the first.
+                for _ in 1..run.len() {
+                    self.run_effect(cost, ctx, events)?;
+                }
+                // Per-mode target slots assigned in run order: the first
+                // target-bearing chosen mode reads ctx.targets[0], the next
+                // ctx.targets[1] (additional_targets), and so on.
+                let mut next_slot = 0usize;
+                for &i in &run {
+                    if let Some(m) = modes.get(i as usize) {
+                        if m.requires_target() {
+                            let mut sub_ctx = ctx.clone();
+                            sub_ctx.targets =
+                                ctx.targets.get(next_slot).cloned().into_iter().collect();
+                            next_slot += 1;
+                            self.run_effect(m, &sub_ctx, events)?;
+                        } else {
+                            self.run_effect(m, ctx, events)?;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::MayDo { description, body } => {
                 // Yes/no decision via `Decision::OptionalTrigger`. The
                 // installed `Decider` answers — `AutoDecider` defaults to

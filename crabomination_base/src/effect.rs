@@ -1057,6 +1057,19 @@ pub enum Effect {
     /// different subset still supplies targets in the default-picks slot
     /// order. Full cast-time mode selection is tracked in TODO.md.
     ChooseN { picks: Vec<u8>, modes: Vec<Effect> },
+    /// CR 702.119 — Escalate. "Choose one or more. You pay the escalate cost
+    /// for each mode chosen beyond the first." The controller picks a subset
+    /// of `modes` (≥1) via `Decision::ChooseModes`; the `cost` effect runs
+    /// once per mode beyond the first (Collective Brutality's "discard a
+    /// card"). Each chosen target-bearing mode owns a cast-time target slot
+    /// (same assignment as `ChooseN`). AutoDecider keeps `default_picks`
+    /// (mode 0 only → no escalate cost). Modeled at resolution since the
+    /// escalate cards are sorceries with no cost/effect response window.
+    Escalate {
+        default_picks: Vec<u8>,
+        modes: Vec<Effect>,
+        cost: Box<Effect>,
+    },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
     /// `description` string is shown to the player (and serialized into
@@ -2134,6 +2147,7 @@ impl Effect {
             }
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
+            Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
             Effect::IfRevealFromHand { then, else_, .. } => {
@@ -2433,6 +2447,9 @@ impl Effect {
                 .iter()
                 .find_map(|e| e.primary_target_filter()),
             Effect::ChooseN { modes, .. } => modes
+                .iter()
+                .find_map(|e| e.primary_target_filter()),
+            Effect::Escalate { modes, .. } => modes
                 .iter()
                 .find_map(|e| e.primary_target_filter()),
             // MayDo wraps an inner effect — surface its filter so the
@@ -2889,6 +2906,14 @@ impl Effect {
                     }
                     None
                 }
+                // Escalate: cast-time slot 0 validates against the base mode
+                // (the cast-time `mode`), mirroring ChooseMode. Additional
+                // escalate modes are chosen at resolution, so their later
+                // slots aren't cast-validated (same approximation as ChooseN).
+                Effect::Escalate { modes, .. } => match mode {
+                    Some(m) if m < modes.len() => eff_find(&modes[m], slot, None, kicked),
+                    _ => modes.iter().find_map(|m| eff_find(m, slot, None, kicked)),
+                },
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode, kicked)
                 }

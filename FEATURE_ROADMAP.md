@@ -271,8 +271,11 @@ feature; sweep card-batch by card-batch.
   ✅ Extort (`shortcut::extort` — CR 702.99, SpellCast
   `MayPay({W/B}, drain 1)`; Basilica Screecher, Syndic of Tithes, Tithe
   Drinker, Kingpin's Pet), ⏳ Cohort, ⏳ Support.
-- **Spell-matters:** ⏳ Splice, ⏳ Replicate, ⏳ Overload, ⏳ Cipher,
-  ⏳ Surge, ⏳ Spectacle, ⏳ Addendum, ⏳ Conspire, ⏳ Demonstrate.
+- **Spell-matters:** ✅ Escalate (`Effect::Escalate { default_picks, modes,
+  cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
+  per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,
+  ⏳ Replicate, ⏳ Overload, ⏳ Cipher, ⏳ Surge, ⏳ Spectacle, ⏳ Addendum,
+  ⏳ Conspire, ⏳ Demonstrate.
 - **Resource systems:** ✅ Energy ({E}) — `Player.energy` pool +
   `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`
   + HUD chip; bot spends surplus via `pick_energy_payoff`. Wired the

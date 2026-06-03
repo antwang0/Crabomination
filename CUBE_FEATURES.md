@@ -47,7 +47,6 @@ work is listed below.
 | Necrotic Ooze | ⏳ | Gains all activated abilities of creatures in graveyards. Big ability-borrow primitive. |
 | Doomsday Excruciator | 🟡 | 6/6 Flying Demon; ETB each player mills 20. The Doomsday deck-stacking text is approximated by the symmetric mill. |
 | Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
-| Collective Brutality | 🟡 | {1}{B} Sorcery. 3-mode ChooseMode (discard IS from opp / -2/-2 creature / drain 2). Escalate omitted. Tests: `collective_brutality_mode_two_drains`. |
 | Parallax Dementia | ⏳ | Fading + reanimate-on-leave; Fading ✅, the steal-on-leave rider still needs a primitive. |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
 

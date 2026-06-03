@@ -14125,6 +14125,31 @@ fn helix_pinnacle_wins_at_upkeep_with_one_hundred_counters() {
 // ── New cube cards (push claude/modern_decks) ──────────────────────────
 
 #[test]
+fn collective_brutality_escalate_runs_two_modes_paying_discard() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // P0 needs a spare card to pay the escalate "discard a card" cost.
+    let fodder = g.add_card_to_hand(0, catalog::island());
+    // P1 holds a card to be discarded by mode 1.
+    g.add_card_to_hand(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::collective_brutality());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Escalate to modes 1 (opp discards) + 2 (drain). Base mode = 1.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1, 2])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Collective Brutality castable");
+    drain_stack(&mut g);
+    // Escalate cost discarded P0's spare card.
+    assert!(!g.players[0].hand.iter().any(|c| c.id == fodder), "escalate cost discarded a card");
+    // Mode 1 made the opponent discard their card; mode 2 drained 2.
+    assert!(g.players[1].hand.is_empty(), "opponent discarded to mode 1");
+    assert_eq!(g.players[1].life, 18, "mode 2 drains opponent for 2");
+    assert_eq!(g.players[0].life, 22, "mode 2 gains controller 2");
+}
+
+#[test]
 fn collective_brutality_mode_two_drains() {
     let mut g = two_player_game();
     let opp_life = g.players[1].life;

@@ -473,6 +473,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ETB `SacrificeAnyNumber` over other creatures, each dropping n +1/+1
   counters on `Selector::This`. Demo: Witherbloom Devourer b209. Test
   `cr_702_83_devour_enters_with_counters_per_sacrifice`.
+- ✅ **CR 702.119 — Escalate** (claude/modern_decks). `Effect::Escalate
+  { default_picks, modes, cost }` — the cast-time `mode` is the base pick; a
+  `Decision::ChooseModes` answer escalates to more distinct modes, paying
+  `cost` (Collective Brutality's discard-a-card, capped by hand size) per
+  extra. Per-mode target slots assigned in run order. Collective Brutality
+  is now faithful; test `collective_brutality_escalate_runs_two_modes_paying_discard`.
 
 - ✅ **CR 702.99 — Extort** (claude/modern_decks). `shortcut::extort()` —
   `SpellCast / YourControl` trigger over `MayPay({W/B}, drain 1)`. Basilica

@@ -10032,7 +10032,8 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
     }
 }
 
-/// Collective Brutality — {1}{B} Sorcery. Choose one (escalate collapsed):
+/// Collective Brutality — {1}{B} Sorcery. Escalate — Discard a card
+/// (CR 702.119). Choose one or more:
 /// - Target creature gets -2/-2 until end of turn.
 /// - Target player discards a card.
 /// - Target opponent loses 2 life and you gain 2 life.
@@ -10041,24 +10042,32 @@ pub fn collective_brutality() -> CardDefinition {
         name: "Collective Brutality",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-2),
-                toughness: Value::Const(-2),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Discard {
-                who: Selector::Player(PlayerRef::EachOpponent),
+        effect: Effect::Escalate {
+            default_picks: vec![0],
+            cost: Box::new(Effect::Discard {
+                who: Selector::You,
                 amount: Value::Const(1),
                 random: false,
-            },
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
+            }),
+            modes: vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                    random: false,
+                },
+                Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
+            ],
+        },
         ..Default::default()
     }
 }
