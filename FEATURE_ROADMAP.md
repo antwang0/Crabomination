@@ -231,7 +231,10 @@ feature; sweep card-batch by card-batch.
   Scab-Clan Mauler, Gorehorn Minotaurs, Bloodfray Giant),
   ✅ Monstrosity (`shortcut::monstrosity` + `Effect::Monstrosity` +
   `CardInstance.monstrous` + `EventKind::BecameMonstrous`; Nessian Wilds
-  Ravager, Ember Swallower), ⏳ Devour, ⏳ Amass.
+  Ravager, Ember Swallower),
+  ✅ Devour (`shortcut::devour(n)` — CR 702.83, ETB `SacrificeAnyNumber`
+  over other creatures, each sacrifice dropping N +1/+1 counters on the
+  devourer via `Selector::This`), ⏳ Amass.
 - **Cast-from-elsewhere:** ⏳ cast-from-top (Mind's Desire / Amped Raptor /
   Robber of the Rich), ⏳ Suspend (+ time counters), ⏳ Forecast,
   ⏳ Hideaway, ⏳ Aftermath.
@@ -263,7 +266,9 @@ feature; sweep card-batch by card-batch.
   ✅ Explore (`Effect::Explore` + `EventKind::Explored`, CR 701.40 — Merfolk
   Branchwalker, Jadelight Ranger, Wildgrowth Walker, Seekers' Squire,
   Emperor's Vanguard, Path of Discovery), ⏳ Squad, ⏳ Forage,
-  ⏳ Exploit, ✅ Extort (`shortcut::extort` — CR 702.99, SpellCast
+  ✅ Exploit (`shortcut::exploit(payoff)` — CR 702.105, ETB `MayDo`
+  sacrifice-a-creature → run payoff; declining skips it),
+  ✅ Extort (`shortcut::extort` — CR 702.99, SpellCast
   `MayPay({W/B}, drain 1)`; Basilica Screecher, Syndic of Tithes, Tithe
   Drinker, Kingpin's Pet), ⏳ Cohort, ⏳ Support.
 - **Spell-matters:** ⏳ Splice, ⏳ Replicate, ⏳ Overload, ⏳ Cipher,

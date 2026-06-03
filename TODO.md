@@ -465,6 +465,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   — `CreatureDied / SelfSource` trigger minting n 1/1 white-and-black Spirit
   tokens with flying.
 
+- ✅ **CR 702.105 — Exploit** (claude/modern_decks). `shortcut::exploit(payoff)`
+  — ETB `MayDo([Sacrifice 1 creature, payoff])`; declining the sac skips the
+  payoff (702.105d). Demo: Silverquill Tithe-Taker b209. Tests
+  `cr_702_105_exploit_*` in `tests::stx::part_18`.
+- ✅ **CR 702.83 — Devour** (claude/modern_decks). `shortcut::devour(n)` —
+  ETB `SacrificeAnyNumber` over other creatures, each dropping n +1/+1
+  counters on `Selector::This`. Demo: Witherbloom Devourer b209. Test
+  `cr_702_83_devour_enters_with_counters_per_sacrifice`.
+
 - ✅ **CR 702.99 — Extort** (claude/modern_decks). `shortcut::extort()` —
   `SpellCast / YourControl` trigger over `MayPay({W/B}, drain 1)`. Basilica
   Screecher. Tests: `cr_702_99_extort_*`.

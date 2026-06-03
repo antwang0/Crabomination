@@ -5013,6 +5013,44 @@ pub mod shortcut {
         }
     }
 
+    /// Exploit (CR 702.105): "When this creature enters, you may sacrifice
+    /// a creature. When you exploit a creature, `payoff`." Modeled as an ETB
+    /// `MayDo([Sacrifice 1 creature (this can be itself), payoff])`. Declining
+    /// the sacrifice skips the payoff (CR 702.105d — the exploit trigger only
+    /// does something if a creature is actually sacrificed). AutoDecider
+    /// declines; a value-aware bot / scripted decider accepts.
+    pub fn exploit(payoff: Effect) -> TriggeredAbility {
+        etb(Effect::MayDo {
+            description: "Exploit — sacrifice a creature?".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+                payoff,
+            ])),
+        })
+    }
+
+    /// Devour N (CR 702.83): "As this creature enters, you may sacrifice any
+    /// number of creatures. It enters with N +1/+1 counters on it for each
+    /// creature sacrificed this way." Modeled as an ETB `SacrificeAnyNumber`
+    /// over other creatures, each sacrifice dropping N +1/+1 counters on the
+    /// devourer (`Selector::This`). AutoDecider sacrifices none.
+    pub fn devour(n: i32) -> TriggeredAbility {
+        use crate::card::CounterType;
+        etb(Effect::SacrificeAnyNumber {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+            per_each: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(n),
+            }),
+        })
+    }
+
     /// Riot (CR 702.137): "This creature enters the battlefield with
     /// your choice of a +1/+1 counter or haste." Modeled as an ETB
     /// `ChooseMode([grant Haste permanently, add a +1/+1 counter])`.

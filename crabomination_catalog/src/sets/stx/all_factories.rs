@@ -461,6 +461,8 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_wingblade_b146,
         super::silverquill::silverquill_lifeward_b146,
         super::silverquill::silverquill_reproach_b209,
+        super::silverquill::silverquill_tithe_taker_b209,
+        super::silverquill::witherbloom_devourer_b209,
         super::silverquill::silverquill_penmaster_b147,
         super::silverquill::silverquill_cantorscribe_b147,
         super::silverquill::silverquill_inkdrip_b147,

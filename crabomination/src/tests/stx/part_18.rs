@@ -2069,6 +2069,60 @@ fn cr_614_life_gain_becomes_loss_for_opponent() {
 }
 
 #[test]
+fn cr_702_105_exploit_sacrifices_and_drains() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Accept the exploit "you may sacrifice" prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let taker = g.add_card_to_hand(0, catalog::silverquill_tithe_taker_b209());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: taker, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tithe-Taker castable for {1}{B}");
+    drain_stack(&mut g);
+    // Only creature on board → it exploits itself; payoff drains 2.
+    assert_eq!(g.players[1].life, 18, "exploit payoff drains opponent for 2");
+    assert_eq!(g.players[0].life, 22, "exploit payoff gains controller 2");
+    assert!(!g.battlefield.iter().any(|c| c.id == taker), "exploited itself");
+}
+
+#[test]
+fn cr_702_105_exploit_declined_does_nothing() {
+    // AutoDecider declines the may-sacrifice → no sacrifice, no payoff.
+    let mut g = two_player_game();
+    let taker = g.add_card_to_hand(0, catalog::silverquill_tithe_taker_b209());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: taker, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "declined exploit drains nothing");
+    assert!(g.battlefield.iter().any(|c| c.id == taker), "taker survives");
+}
+
+#[test]
+fn cr_702_83_devour_enters_with_counters_per_sacrifice() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Sacrifice 1 creature to Devour 1 → one +1/+1 counter.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    let dev = g.add_card_to_hand(0, catalog::witherbloom_devourer_b209());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Devourer castable for {3}{G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder devoured");
+    let d = g.battlefield.iter().find(|c| c.id == dev).expect("devourer in play");
+    assert_eq!(d.power(), 4, "3/3 base + one +1/+1 counter from devour");
+    assert_eq!(d.toughness(), 4);
+}
+
+#[test]
 fn cr_117_3a_no_player_gets_priority_during_untap_step() {
     // CR 117.3a — "No player receives priority during the untap step."
     // The do_untap turn-based action runs without yielding priority.

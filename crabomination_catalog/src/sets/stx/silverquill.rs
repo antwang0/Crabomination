@@ -29,7 +29,7 @@ use crate::effect::shortcut::{
     on_attack_drain, on_attack_gain_life, on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{cost, generic, u, w, b, x, ManaCost};
+use crate::mana::{cost, generic, g, u, w, b, x, ManaCost};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
 
@@ -11934,6 +11934,46 @@ pub fn silverquill_reproach_b209() -> CardDefinition {
                 target: PlayerStaticTarget::EachOpponent,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Silverquill Tithe-Taker (b209) — {1}{B} 2/2 Inkling. Exploit (CR
+/// 702.105). "When you exploit a creature, each opponent loses 2 life and
+/// you gain 2 life." Wires `shortcut::exploit` end-to-end.
+pub fn silverquill_tithe_taker_b209() -> CardDefinition {
+    use crate::effect::shortcut::{drain, exploit};
+    CardDefinition {
+        name: "Silverquill Tithe-Taker (b209)",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![exploit(drain(2))],
+        ..Default::default()
+    }
+}
+
+/// Witherbloom Devourer (b209) — {3}{G} 3/3 Beast. Devour 1 (CR 702.83):
+/// "As this enters, you may sacrifice any number of creatures. It enters
+/// with a +1/+1 counter for each." Wires `shortcut::devour`.
+pub fn witherbloom_devourer_b209() -> CardDefinition {
+    use crate::effect::shortcut::devour;
+    CardDefinition {
+        name: "Witherbloom Devourer (b209)",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![devour(1)],
         ..Default::default()
     }
 }
