@@ -17,7 +17,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   resolved permanent. (2) The free cast auto-targets via the AutoDecider's
   first-legal pick; a `wants_ui` human should be prompted for the targets
   (and X) of the cast spell. Also: no client affordance exists to suspend a
-  card from hand.
+  card from hand. (3) Deep-Sea Kraken's "remove a time counter whenever
+  another spell is suspended" accelerant is dropped — needs a cross-suspend
+  trigger; `process_suspend` only ticks at upkeep.
 - **One-shot spell-cost discount — ✅ DONE (primitive).**
   `Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount }` pushes a
   `(amount, granted_at)` entry onto `Player.pending_is_discounts`;
