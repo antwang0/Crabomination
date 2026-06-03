@@ -13963,7 +13963,7 @@ fn lonis_genetics_expert_creates_clue_when_other_creature_enters() {
 }
 
 #[test]
-fn loot_the_pathfinder_etb_creates_map_approximation() {
+fn loot_the_pathfinder_etb_creates_map_token() {
     use crate::card::ArtifactSubtype;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::loot_the_pathfinder());
@@ -13971,10 +13971,34 @@ fn loot_the_pathfinder_etb_creates_map_approximation() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     cast(&mut g, id);
-    let clues: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue))
+    let maps: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Map))
         .collect();
-    assert_eq!(clues.len(), 1, "Loot mints a Clue (Map approximation) on ETB");
+    assert_eq!(maps.len(), 1, "Loot mints a Map token on ETB");
+    // The Map sacrifices for {1},{T} to explore a creature you control.
+    assert!(maps[0].definition.activated_abilities.iter().any(|a| a.sac_cost && a.sorcery_speed),
+        "Map has a sorcery-speed sacrifice-to-explore ability");
+}
+
+#[test]
+fn map_token_sacrifices_to_explore_a_creature() {
+    use crabomination_base::tokens::map_token;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // nonland top → +1/+1 counter
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let map = g.add_token_to_battlefield(0, &map_token());
+    g.clear_sickness(map);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain; // sorcery speed
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: map, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Map's sac-to-explore activates");
+    drain_stack(&mut g);
+    // The Map is gone (sacrificed) and the bear explored a nonland → +1/+1.
+    assert!(!g.battlefield.iter().any(|c| c.id == map), "Map sacrificed");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "explored creature gets a +1/+1 counter off a nonland reveal");
 }
 
 #[test]

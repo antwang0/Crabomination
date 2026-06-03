@@ -111,6 +111,8 @@ pub enum LandType {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum ArtifactSubtype {
     Equipment, Vehicle, Food, Treasure, Clue, Blood, Fortification, Contraption,
+    // Lost Caverns of Ixalan explore token (CR 111.10s).
+    Map,
 }
 
 /// Enchantment subtypes.

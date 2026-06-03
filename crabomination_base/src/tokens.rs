@@ -4,7 +4,8 @@
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    EventScope, EventSpec, Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::{ManaPayload, PlayerRef};
 use crate::mana::{Color, ManaCost, ManaSymbol};
@@ -342,6 +343,34 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+    }
+}
+
+/// A Map token (CR 111.10s): "{1}, {T}, Sacrifice this artifact: Target
+/// creature you control explores. Activate only as a sorcery."
+pub fn map_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Map".into(),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Map],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost { symbols: vec![ManaSymbol::Generic(1)] },
+            effect: Effect::Explore {
+                who: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            sac_cost: true,
+            sorcery_speed: true,
+            ..ActivatedAbility::default()
+        }],
+        ..Default::default()
     }
 }
 

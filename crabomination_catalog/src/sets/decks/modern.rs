@@ -11607,16 +11607,10 @@ pub fn lure() -> CardDefinition {
 
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
 /// 2/3 with Vigilance. "When this creature enters, create a Map token."
-///
-/// Synthesised body for the ⏳ cube row. The Map token primitive isn't
-/// wired (CR 111.10s explore-token), so we ship a faux Clue token
-/// equivalent (also exiles for {2} + sac → draw, gameplay-relevant
-/// approximation of "use a Map to explore"). Vigilance keyword is
-/// honored.
 pub fn loot_the_pathfinder() -> CardDefinition {
     use crate::card::Supertype;
     use crate::effect::shortcut::etb;
-    use crate::game::effects::clue_token;
+    use crate::game::effects::map_token;
     CardDefinition {
         name: "Loot, the Pathfinder",
         cost: cost(&[generic(1), g(), w()]),
@@ -11632,7 +11626,7 @@ pub fn loot_the_pathfinder() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: clue_token(),
+            definition: map_token(),
         })],
         ..Default::default()
     }
