@@ -535,3 +535,55 @@ fn cr_122_1d_stun_counter_replaces_untap() {
     assert!(c.tapped, "CR 122.1d: stun counter replaced the untap — still tapped");
     assert_eq!(c.counter_count(CounterType::Stun), 0, "one stun counter removed instead");
 }
+
+// ── Amass (CR 701.43) ────────────────────────────────────────────────────
+
+/// Helper: a vanilla creature whose ETB amasses N.
+fn amasser(n: i32) -> crate::card::CardDefinition {
+    use crate::card::{CardType, CardDefinition};
+    use crate::effect::shortcut;
+    CardDefinition {
+        name: "Amasser",
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes {
+            creature_types: vec![crate::card::CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1, toughness: 1,
+        triggered_abilities: vec![shortcut::etb(shortcut::amass(n))],
+        ..Default::default()
+    }
+}
+
+#[test]
+fn cr_701_43_amass_creates_army_token_then_grows_it() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, amasser(2));
+    g.fire_self_etb_triggers(c, 0);
+    drain_stack(&mut g);
+    let army: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Army))
+        .collect();
+    assert_eq!(army.len(), 1, "one Army token minted");
+    assert_eq!(army[0].counter_count(CounterType::PlusOnePlusOne), 2, "Army has 2 counters");
+    assert_eq!(army[0].power(), 2, "0/0 base + two +1/+1 = 2/2");
+}
+
+#[test]
+fn cr_701_43_amass_grows_existing_army_instead_of_making_a_second() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    // First amass mints an Army (1 counter), second grows it (no new token).
+    let a = g.add_card_to_battlefield(0, amasser(1));
+    g.fire_self_etb_triggers(a, 0);
+    drain_stack(&mut g);
+    let b = g.add_card_to_battlefield(0, amasser(3));
+    g.fire_self_etb_triggers(b, 0);
+    drain_stack(&mut g);
+    let armies: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Army))
+        .collect();
+    assert_eq!(armies.len(), 1, "still one Army (grown, not duplicated)");
+    assert_eq!(armies[0].counter_count(CounterType::PlusOnePlusOne), 4, "1 + 3 amassed counters");
+}

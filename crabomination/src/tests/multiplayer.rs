@@ -1667,3 +1667,49 @@ fn abyssal_specter_only_defending_player_discards_in_ffa() {
     assert_eq!(g.players[1].hand.len(), h1, "non-defending opponent keeps cards");
     assert_eq!(g.players[2].hand.len(), h2 - 1, "only the defending player discards");
 }
+
+// ── Myriad (CR 702.115) ────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_115_myriad_copies_attack_each_other_opponent_then_exile() {
+    use crate::card::{CardDefinition, CardType, CreatureType};
+    use crate::effect::shortcut;
+    let mut g = multi_player_game(3);
+    let mythic = CardDefinition {
+        name: "Myriad Marauder",
+        card_types: vec![CardType::Creature],
+        subtypes: crate::card::Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3, toughness: 3,
+        triggered_abilities: vec![shortcut::myriad()],
+        ..Default::default()
+    };
+    let m = g.add_card_to_battlefield(0, mythic);
+    g.clear_sickness(m);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: m, target: AttackTarget::Player(1),
+    }])).expect("attack seat 1");
+    drain_stack(&mut g);
+    // One copy minted, tapped + attacking seat 2 (the other opponent).
+    let copies: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Myriad Marauder").collect();
+    assert_eq!(copies.len(), 1, "one copy per non-defending opponent");
+    let copy = copies[0];
+    assert!(copy.tapped, "copy is tapped");
+    assert!(g.attacking().iter().any(|a| a.attacker == copy.id
+        && a.target == AttackTarget::Player(2)), "copy attacks the other opponent");
+    let copy_id = copy.id;
+    // Step through to postcombat main; leaving EndCombat exiles the copy.
+    let mut iters = 0;
+    while g.step != TurnStep::PostCombatMain && iters < 50 {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+    }
+    // The copy is exiled at end of combat; a token in exile then ceases to
+    // exist as a state-based action (CR 111.7), so it's gone entirely.
+    assert!(!g.battlefield.iter().any(|c| c.id == copy_id), "copy left the battlefield");
+    assert!(!g.exile.iter().any(|c| c.id == copy_id), "exiled token ceased to exist");
+}

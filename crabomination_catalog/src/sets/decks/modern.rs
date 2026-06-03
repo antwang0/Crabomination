@@ -11967,19 +11967,19 @@ fn treasure_token() -> TokenDefinition {
 
 // ── Push claude/modern_decks additions ──────────────────────────────────
 
-/// Fiery Confluence — {2}{R}{R} Sorcery. Choose three. You may choose the
-/// same mode more than once.
+/// Fiery Confluence — {2}{R}{R} Sorcery. Choose three; modes may repeat
+/// (CR 700.2d). `Effect::ChooseN` defaults to the burn-each-opponent mode
+/// thrice (6 to each opp); the sweep + artifact-destruction modes stay
+/// available to the mode-pick UI.
 /// - Deal 1 damage to each creature.
 /// - Deal 2 damage to each opponent.
 /// - Destroy target artifact.
-///
-/// Approximation: ChooseMode over the three options (single pick, not 3x).
 pub fn fiery_confluence() -> CardDefinition {
     CardDefinition {
         name: "Fiery Confluence",
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
+        effect: Effect::ChooseN { picks: vec![1, 1, 1], modes: vec![
             Effect::ForEach {
                 selector: Selector::EachPermanent(SelectionRequirement::Creature),
                 body: Box::new(Effect::DealDamage {
@@ -11989,12 +11989,12 @@ pub fn fiery_confluence() -> CardDefinition {
             },
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(6),
+                amount: Value::Const(2),
             },
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Artifact),
             },
-        ]),
+        ] },
         ..Default::default()
     }
 }
@@ -13457,13 +13457,15 @@ pub fn collective_defiance() -> CardDefinition {
     }
 }
 
-/// Kozilek's Command — {X} Instant. 3-mode ChooseMode.
+/// Kozilek's Command — {X} Instant. "Choose two" (CR 700.2d) via
+/// `Effect::ChooseN`; the auto-decider takes the two non-targeting modes
+/// (Scions + Draw X), leaving the -X/-X mode for the mode-pick UI.
 pub fn kozileks_command() -> CardDefinition {
     CardDefinition {
         name: "Kozilek's Command",
         cost: cost(&[ManaSymbol::X]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
+        effect: Effect::ChooseN { picks: vec![0, 2], modes: vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::XFromCost,
@@ -13492,7 +13494,7 @@ pub fn kozileks_command() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::Draw { who: Selector::You, amount: Value::XFromCost },
-        ]),
+        ] },
         ..Default::default()
     }
 }
@@ -13517,13 +13519,16 @@ pub fn char() -> CardDefinition {
     }
 }
 
-/// Eldrazi Confluence — {4} Instant. 3-mode ChooseMode.
+/// Eldrazi Confluence — {4} Instant. "Choose three. You may choose the
+/// same mode more than once." (CR 700.2d) — `Effect::ChooseN` defaults to
+/// the non-targeting Scion mode thrice; the -3/-3 and bounce modes stay
+/// available to the mode-pick UI.
 pub fn eldrazi_confluence() -> CardDefinition {
     CardDefinition {
         name: "Eldrazi Confluence",
         cost: cost(&[generic(4)]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
+        effect: Effect::ChooseN { picks: vec![1, 1, 1], modes: vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(-3),
@@ -13557,7 +13562,7 @@ pub fn eldrazi_confluence() -> CardDefinition {
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-        ]),
+        ] },
         ..Default::default()
     }
 }

@@ -96,6 +96,8 @@ pub enum CreatureType {
     Mutant,
     // Mirrodin Slith creature subtype (Arcbound Slith).
     Slith,
+    // War of the Spark Amass Army token subtype (CR 701.43).
+    Army,
 }
 
 /// Land subtypes (basic land types + others).

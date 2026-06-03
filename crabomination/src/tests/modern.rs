@@ -15792,7 +15792,7 @@ fn murderous_cut_destroys_creature() {
 }
 
 #[test]
-fn fiery_confluence_mode_one_burns_opponents() {
+fn fiery_confluence_burns_opponent_for_six_via_repeated_mode() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::fiery_confluence());
     g.players[0].mana_pool.add(Color::Red, 2);
@@ -15800,11 +15800,12 @@ fn fiery_confluence_mode_one_burns_opponents() {
     let opp_life = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Fiery Confluence castable");
     drain_stack(&mut g);
 
-    assert!(g.players[1].life < opp_life, "opponent took damage");
+    // Default picks repeat the 2-damage-each-opponent mode three times.
+    assert_eq!(g.players[1].life, opp_life - 6, "choose-three burns for 2×3 = 6");
 }
 
 #[test]
@@ -18265,32 +18266,38 @@ fn the_mightstone_and_weakstone_etb_draws_two() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew 2 on ETB mode 0");
 }
 
-/// Kozilek's Command mode 0 makes X 1/1 Eldrazi Scion tokens.
+/// Kozilek's Command "choose two": the default picks run both the Scion
+/// mode (X tokens) and the Draw-X mode in one cast.
 #[test]
-fn kozileks_command_mode0_makes_x_scions() {
+fn kozileks_command_chooses_two_modes() {
     let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::kozileks_command());
     g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: Some(2),
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
     }).expect("Kozilek's Command castable for X=2");
     drain_stack(&mut g);
     let scions = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count();
-    assert_eq!(scions, 2, "X=2 makes two Eldrazi Scions");
+    assert_eq!(scions, 2, "Scion mode makes X=2 Eldrazi Scions");
+    // Cast (-1) + Draw X=2 (+2) = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "Draw-X mode also fired");
 }
 
-/// Eldrazi Confluence mode 1 makes an Eldrazi Scion token.
+/// Eldrazi Confluence "choose three, modes may repeat": the Scion mode is
+/// taken thrice by default, minting three tokens.
 #[test]
-fn eldrazi_confluence_mode1_makes_a_scion() {
+fn eldrazi_confluence_chooses_scion_mode_three_times() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::eldrazi_confluence());
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Eldrazi Confluence castable for {4}");
     drain_stack(&mut g);
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Eldrazi Scion"),
-        "mode 1 mints an Eldrazi Scion");
+    let scions = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count();
+    assert_eq!(scions, 3, "choose-three repeats the Scion mode for three tokens");
 }
 
 // ── Cascade (CR 702.85) ─────────────────────────────────────────────────────

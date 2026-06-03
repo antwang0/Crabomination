@@ -26,7 +26,7 @@ use crate::card::{
     Keyword, SelectionRequirement, Zone,
 };
 use crate::effect::{
-    Effect, ManaPayload, PlayerRef,
+    AttackingTokenCleanup, Effect, ManaPayload, PlayerRef,
     Selector, ZoneDest, ZoneRef,
 };
 use crate::game::layers::EffectDuration;
@@ -714,17 +714,28 @@ impl GameState {
                     count: picks.len(),
                     default: picks.clone(),
                 });
-                let chosen: Vec<u8> = match answer {
-                    DecisionAnswer::Modes(v) => v,
-                    _ => picks.clone(),
+                let in_range = |v: &[u8]| -> Vec<u8> {
+                    v.iter().copied().filter(|&i| (i as usize) < modes.len()).collect()
                 };
-                let mut seen = Vec::new();
-                for &i in &chosen {
-                    if (i as usize) < modes.len() && !seen.contains(&i) {
-                        seen.push(i);
+                let run: Vec<u8> = match answer {
+                    // The unmodified card default is honored verbatim, so
+                    // "you may choose the same mode more than once" cards
+                    // (Eldrazi / Mystic Confluence, picks=[1,1,1]) run the
+                    // repeats their author intended.
+                    DecisionAnswer::Modes(ref v) if v == picks => in_range(picks),
+                    // A real override is sanitised per CR 700.2d: drop
+                    // out-of-range + duplicate indices.
+                    DecisionAnswer::Modes(v) => {
+                        let mut seen = Vec::new();
+                        for &i in &v {
+                            if (i as usize) < modes.len() && !seen.contains(&i) {
+                                seen.push(i);
+                            }
+                        }
+                        if seen.is_empty() { in_range(picks) } else { seen }
                     }
-                }
-                let run = if seen.is_empty() { picks.clone() } else { seen };
+                    _ => in_range(picks),
+                };
                 // Each target-bearing mode owns one cast-time target slot,
                 // assigned by its position among the target-bearing modes in
                 // the card's *default* `picks` (not the run order). Keying off
@@ -2604,7 +2615,66 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CreateTokenAttacking { who, count, definition } => {
+            Effect::Amass { who, count, extra_type } => {
+                use crate::card::{CardType, CreatureType, CounterType};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                // CR 701.43a — grow an existing Army you control, else mint a
+                // 0/0 black Army token first.
+                let army = self.battlefield.iter().find(|c| {
+                    c.controller == p
+                        && c.definition.is_creature()
+                        && c.definition.subtypes.creature_types.contains(&CreatureType::Army)
+                }).map(|c| c.id);
+                let army = match army {
+                    Some(id) => id,
+                    None => {
+                        let id = self.next_id();
+                        let mut types = vec![CreatureType::Army];
+                        if let Some(t) = extra_type { types.push(*t); }
+                        let def = token_to_card_definition(&crate::card::TokenDefinition {
+                            name: "Army".into(),
+                            power: 0,
+                            toughness: 0,
+                            card_types: vec![CardType::Creature],
+                            colors: vec![Color::Black],
+                            subtypes: crate::card::Subtypes {
+                                creature_types: types,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        });
+                        let mut inst = CardInstance::new_token(id, def, p);
+                        inst.controller = p;
+                        self.battlefield.push(inst);
+                        events.push(GameEvent::TokenCreated { card_id: id });
+                        events.push(GameEvent::PermanentEntered { card_id: id });
+                        self.last_created_token = Some(id);
+                        self.last_created_tokens.push(id);
+                        self.fire_self_etb_triggers(id, p);
+                        id
+                    }
+                };
+                // CR 614.16 — counter doubling applies to the amassed counters.
+                if n > 0 && self.battlefield.iter().any(|c| c.id == army) {
+                    let mut scaled = n;
+                    for _ in 0..self.counter_doublers_for(p) {
+                        scaled = scaled.saturating_mul(2);
+                    }
+                    if let Some(c) = self.battlefield_find_mut(army) {
+                        c.add_counters(CounterType::PlusOnePlusOne, scaled);
+                    }
+                    events.push(GameEvent::CounterAdded {
+                        card_id: army, counter_type: CounterType::PlusOnePlusOne, count: scaled,
+                    });
+                    self.permanents_gained_counter_this_turn.insert(army);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::CreateTokenAttacking { who, count, definition, cleanup } => {
                 use crate::game::types::{Attack, AttackTarget};
                 // Only meaningful while a combat is in progress.
                 if self.attacking.is_empty() {
@@ -2644,6 +2714,57 @@ impl GameState {
                             c.attacked_this_turn = true;
                         }
                         events.push(GameEvent::AttackerDeclared(id));
+                        // Mobilize/Myriad temporary tokens leave at end of combat.
+                        if !matches!(cleanup, AttackingTokenCleanup::None) {
+                            self.attacking_token_cleanup.push((id, *cleanup));
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Myriad => {
+                use crate::game::types::{Attack, AttackTarget};
+                // Source must currently be attacking a player.
+                let Some(src) = ctx.source else { return Ok(()); };
+                let Some(src_attack) = self.attacking.iter().find(|a| a.attacker == src) else {
+                    return Ok(());
+                };
+                let defending = match src_attack.target {
+                    AttackTarget::Player(p) => p,
+                    AttackTarget::Planeswalker(pw) => {
+                        self.battlefield_find(pw).map(|c| c.controller).unwrap_or(usize::MAX)
+                    }
+                };
+                let Some(ctrl) = self.battlefield_find(src).map(|c| c.controller) else {
+                    return Ok(());
+                };
+                let def = self.battlefield_find(src).map(|c| (*c.definition).clone());
+                let Some(def) = def else { return Ok(()); };
+                // CR 702.115b — one copy per opponent other than the defender.
+                let opps: Vec<usize> = (0..self.players.len())
+                    .filter(|&q| !self.same_team(q, ctrl) && q != defending)
+                    .collect();
+                for opp in opps {
+                    let id = self.next_id();
+                    let mut inst = CardInstance::new(id, def.clone(), ctrl);
+                    inst.controller = ctrl;
+                    inst.is_token = true;
+                    inst.tapped = true;
+                    self.battlefield.push(inst);
+                    events.push(GameEvent::TokenCreated { card_id: id });
+                    events.push(GameEvent::PermanentEntered { card_id: id });
+                    self.last_created_token = Some(id);
+                    self.last_created_tokens.push(id);
+                    self.fire_self_etb_triggers(id, ctrl);
+                    if self.battlefield.iter().any(|c| c.id == id) {
+                        self.attacking.push(Attack { attacker: id, target: AttackTarget::Player(opp) });
+                        if let Some(c) = self.battlefield_find_mut(id) {
+                            c.attacked_this_turn = true;
+                        }
+                        events.push(GameEvent::AttackerDeclared(id));
+                        self.attacking_token_cleanup
+                            .push((id, AttackingTokenCleanup::ExileAtEndOfCombat));
                     }
                 }
                 Ok(())

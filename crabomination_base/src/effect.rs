@@ -952,6 +952,19 @@ impl EventSpec {
 // TODO.md ("Box `TokenDefinition` in `Effect::CreateToken`") as a future
 // cleanup; the stack footprint of `Effect` is fine in practice (most
 // effects are deep behind `Box<Effect>` already via `Seq` / `ForEach`).
+/// What happens to tokens minted by [`Effect::CreateTokenAttacking`] when
+/// the combat phase ends (CR 511.3 / the Mobilize end-of-combat sacrifice).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum AttackingTokenCleanup {
+    /// Tokens persist (a plain "tapped and attacking" mint).
+    #[default]
+    None,
+    /// Sacrifice the tokens at end of combat (Mobilize).
+    SacrificeAtEndOfCombat,
+    /// Exile the tokens at end of combat (Myriad-style temporary copies).
+    ExileAtEndOfCombat,
+}
+
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
@@ -1500,14 +1513,31 @@ pub enum Effect {
     },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// Amass N (CR 701.43): put `count` +1/+1 counters on an Army `who`
+    /// controls, creating a 0/0 black Army creature token first if they
+    /// control none. `extra_type` is added to the Army (Amass Zombies /
+    /// Amass Orcs mint a token that's also that subtype).
+    Amass { who: PlayerRef, count: Value, extra_type: Option<crate::card::CreatureType> },
     /// Create `count` tokens already tapped and attacking (CR 508.3a). The
     /// new tokens join the current combat attacking the same defender the
     /// effect's source is attacking (falling back to the controller's first
     /// opponent when the source isn't itself an attacker). Powers "create N
-    /// tokens tapped and attacking" riders and Myriad-style token mints.
-    /// No-op outside the combat phase. (The "sacrifice at end of combat"
-    /// rider that Mobilize adds is tracked separately in TODO.md.)
-    CreateTokenAttacking { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// tokens tapped and attacking" riders and Mobilize (CR 702.169).
+    /// `cleanup` registers the tokens to leave at end of combat. No-op
+    /// outside the combat phase.
+    CreateTokenAttacking {
+        who: PlayerRef,
+        count: Value,
+        definition: TokenDefinition,
+        #[serde(default)]
+        cleanup: AttackingTokenCleanup,
+    },
+    /// Myriad (CR 702.115): for each opponent of the source's controller
+    /// other than the player the source is attacking, create a token that's
+    /// a copy of the source, tapped and attacking that opponent. The copies
+    /// are exiled at end of combat. No-op outside combat / when the source
+    /// isn't attacking a player.
+    Myriad,
     /// Create `count` token copies of the permanent resolved by `source`,
     /// controlled by `who`. The copy inherits the source's printed
     /// CardDefinition (name, P/T, types, keywords, activated/triggered
@@ -2136,6 +2166,7 @@ impl Effect {
         }
         match self {
             Effect::Noop => false,
+            Effect::Myriad => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
             Effect::If { cond, then, else_ } => {
@@ -2260,7 +2291,8 @@ impl Effect {
             Effect::Proliferate => false,
             Effect::GainControl { what, .. } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
-            | Effect::CreateTokenAttacking { who, count, .. } => {
+            | Effect::CreateTokenAttacking { who, count, .. }
+            | Effect::Amass { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::BecomeBasicLand { what, .. }
@@ -5002,6 +5034,55 @@ pub mod shortcut {
                 amount: Value::Const(n),
             },
         }
+    }
+
+    /// Amass N (CR 701.43): grow (or create) an Army by N +1/+1 counters.
+    /// A bare `Effect`, so callers wrap it in whatever trigger/ETB/spell
+    /// shell the card uses.
+    pub fn amass(n: i32) -> Effect {
+        Effect::Amass { who: PlayerRef::You, count: Value::Const(n), extra_type: None }
+    }
+
+    /// Amass Zombies N — like [`amass`] but the minted Army is also a Zombie.
+    pub fn amass_zombies(n: i32) -> Effect {
+        Effect::Amass {
+            who: PlayerRef::You,
+            count: Value::Const(n),
+            extra_type: Some(crate::card::CreatureType::Zombie),
+        }
+    }
+
+    /// Myriad (CR 702.115): an `Attacks / SelfSource` trigger minting a
+    /// tapped+attacking copy of the source for each other opponent, exiled
+    /// at end of combat.
+    pub fn myriad() -> TriggeredAbility {
+        on_attack(Effect::Myriad)
+    }
+
+    /// Mobilize N (CR 702.169): "Whenever this creature attacks, create N
+    /// 1/1 red Warrior creature tokens that are tapped and attacking.
+    /// Sacrifice them at the beginning of the next end step." (Modeled as
+    /// end-of-combat sacrifice — the tokens vanish before postcombat main
+    /// either way.) An `Attacks / SelfSource` trigger over
+    /// [`Effect::CreateTokenAttacking`].
+    pub fn mobilize(n: i32) -> TriggeredAbility {
+        on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(n),
+            definition: crate::card::TokenDefinition {
+                name: "Warrior".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![crate::card::CardType::Creature],
+                colors: vec![crate::mana::Color::Red],
+                subtypes: crate::card::Subtypes {
+                    creature_types: vec![crate::card::CreatureType::Warrior],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            cleanup: AttackingTokenCleanup::SacrificeAtEndOfCombat,
+        })
     }
 
     /// Afterlife N (CR 702.135): "When this creature dies, create N 1/1

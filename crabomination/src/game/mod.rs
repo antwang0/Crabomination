@@ -206,6 +206,11 @@ pub struct GameState {
     /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
     /// dispatcher when the matching event occurs.
     pub delayed_triggers: Vec<DelayedTrigger>,
+    /// Tokens minted by `Effect::CreateTokenAttacking` with a non-`None`
+    /// cleanup (Mobilize sacrifice / Myriad exile). Drained when the combat
+    /// phase ends (CR 511.3).
+    #[serde(default)]
+    pub(crate) attacking_token_cleanup: Vec<(CardId, crate::effect::AttackingTokenCleanup)>,
     /// Transient: power of the most recently sacrificed creature within the
     /// current effect resolution. Set by `Effect::SacrificeAndRemember` and
     /// read by `Value::SacrificedPower` (e.g. Thud). Reset between
@@ -462,6 +467,7 @@ impl Clone for GameState {
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
             delayed_triggers: self.delayed_triggers.clone(),
+            attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
             sacrificed_toughness: self.sacrificed_toughness,
             last_created_token: self.last_created_token,
@@ -531,6 +537,7 @@ impl GameState {
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
             delayed_triggers: Vec::new(),
+            attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
             sacrificed_toughness: None,
             last_created_token: None,
@@ -1819,6 +1826,33 @@ impl GameState {
     pub(crate) fn expire_end_of_combat_effects(&mut self) {
         self.continuous_effects
             .retain(|e| e.duration != EffectDuration::UntilEndOfCombat);
+    }
+
+    /// Sacrifice/exile Mobilize/Myriad tokens registered by
+    /// `Effect::CreateTokenAttacking` as the combat phase ends (CR 511.3).
+    pub(crate) fn process_attacking_token_cleanup(&mut self) -> Vec<GameEvent> {
+        use crate::effect::AttackingTokenCleanup;
+        let mut events = Vec::new();
+        for (id, kind) in std::mem::take(&mut self.attacking_token_cleanup) {
+            if !self.battlefield.iter().any(|c| c.id == id) {
+                continue; // already gone (died in combat, bounced, etc.)
+            }
+            let who = self.battlefield_find(id).map(|c| c.controller).unwrap_or(0);
+            match kind {
+                AttackingTokenCleanup::SacrificeAtEndOfCombat => {
+                    events.push(GameEvent::CreatureSacrificed { card_id: id, who });
+                    events.push(GameEvent::CreatureDied { card_id: id });
+                    events.push(GameEvent::PermanentSacrificed { card_id: id, who });
+                    events.append(&mut self.remove_to_graveyard_with_triggers(id));
+                }
+                AttackingTokenCleanup::ExileAtEndOfCombat => {
+                    self.remove_from_battlefield_to_exile(id);
+                }
+                AttackingTokenCleanup::None => {}
+            }
+        }
+        events.append(&mut self.check_state_based_actions());
+        events
     }
 
     /// True if the stack is empty and it is `player`'s main phase — sorcery timing.

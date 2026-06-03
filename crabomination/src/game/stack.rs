@@ -110,6 +110,8 @@ impl GameState {
         // main phase.
         if self.step == TurnStep::EndCombat && !next.is_combat_phase() {
             self.expire_end_of_combat_effects();
+            let mut cleanup = self.process_attacking_token_cleanup();
+            events.append(&mut cleanup);
         }
 
         self.step = next;

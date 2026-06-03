@@ -537,6 +537,7 @@ fn create_token_attacking_joins_combat_tapped() {
         who: PlayerRef::You,
         count: Value::Const(2),
         definition: soldier,
+        cleanup: crate::effect::AttackingTokenCleanup::None,
     });
     let mut g = two_player_game();
     let atk = g.add_card_to_battlefield(0, body("Warcaller", 2, 2, vec![trig]));
@@ -557,4 +558,30 @@ fn create_token_attacking_joins_combat_tapped() {
         assert!(g.attacking.iter().any(|a| a.attacker == id
             && a.target == AttackTarget::Player(1)), "token attacking P1");
     }
+}
+
+// ── CR 702.169 Mobilize ──────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_169_mobilize_tokens_attack_then_sacrifice_at_end_of_combat() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Mobilizer", 2, 2, vec![shortcut::mobilize(2)]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    fn warriors(g: &GameState) -> usize {
+        g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Warrior").count()
+    }
+    // Two 1/1 red Warriors tapped and attacking.
+    assert_eq!(warriors(&g), 2, "two warrior tokens minted");
+    assert!(g.battlefield.iter().filter(|c| c.definition.name == "Warrior")
+        .all(|c| c.tapped), "warriors enter tapped");
+    // They deal their combat damage (P1 takes 2 attacker + 2 warriors = 4).
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.players[1].life, 16, "attacker + two 1/1 warriors hit for 4");
+    // Sacrificed as combat ends — gone before postcombat main.
+    assert_eq!(warriors(&g), 0, "warriors sacrificed at end of combat");
 }
