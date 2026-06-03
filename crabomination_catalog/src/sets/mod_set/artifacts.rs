@@ -365,17 +365,10 @@ pub fn soul_conduit() -> CardDefinition {
     }
 }
 
-/// Chromatic Star — {1} Artifact. {1}, {T}, Sacrifice this: Add one mana
-/// of any color. When this is put into a graveyard from anywhere, draw a
-/// card.
-///
-/// The activation uses `sac_cost: true` so paying it sacrifices the Star.
-/// The cantrip-on-leaves trigger is a self-source
-/// `PermanentLeavesBattlefield` event scoped via `EventScope::SelfSource`,
-/// matching the firing path Solitude's evoke-sac uses. The simplification
-/// here is that real Chromatic Star fires from "anywhere" (e.g. milled
-/// and graveyarded directly); we only fire on leaves-the-battlefield,
-/// which covers the dominant sac-for-mana play pattern.
+/// Chromatic Star — {1} Artifact. {1}, {T}, Sacrifice this: Add one mana of
+/// any color. When it's put into a graveyard from the battlefield, draw a
+/// card. The cantrip is a self-source `PermanentLeavesBattlefield` trigger
+/// (fires on the sac-for-mana path; over-fires only on the rare exile).
 pub fn chromatic_star() -> CardDefinition {
     CardDefinition {
         name: "Chromatic Star",
