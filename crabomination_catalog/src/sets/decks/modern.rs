@@ -15736,6 +15736,71 @@ pub fn realm_cloaked_giant() -> CardDefinition {
     }
 }
 
+/// Stitcher's Supplier — {B} Creature — Zombie 1/1. When it enters and when
+/// it dies, mill three cards.
+pub fn stitchers_supplier() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Stitcher's Supplier",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            etb(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+            on_dies(Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Monastery Mentor — {2}{W} Creature — Human Monk 2/2, Prowess. Whenever you
+/// cast a noncreature spell, create a 1/1 white Monk creature token with
+/// prowess.
+pub fn monastery_mentor() -> CardDefinition {
+    use crate::effect::shortcut::{cast_is_noncreature, prowess_trigger};
+    CardDefinition {
+        name: "Monastery Mentor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            prowess_trigger(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(cast_is_noncreature()),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Monk".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Monk],
+                            ..Default::default()
+                        },
+                        triggered_abilities: vec![prowess_trigger()],
+                        ..Default::default()
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Pillar of Flame — {1}{R} Sorcery. Deal 2 damage to any target; if a
 /// creature dealt damage this way would die this turn, exile it instead.
 pub fn pillar_of_flame() -> CardDefinition {

@@ -24251,3 +24251,37 @@ fn goblin_guide_is_hasty_two_two() {
     assert_eq!((c.power(), c.toughness()), (2, 2));
     assert!(c.definition.keywords.contains(&Keyword::Haste));
 }
+
+/// Stitcher's Supplier mills three on ETB and three more on death.
+#[test]
+fn stitchers_supplier_mills_on_etb_and_death() {
+    let mut g = two_player_game();
+    for _ in 0..10 { g.add_card_to_library(0, catalog::mountain()); }
+    let before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::stitchers_supplier());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), before - 3, "milled 3 on ETB");
+    // Kill it.
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), before - 6, "milled 3 more on death");
+}
+
+/// Monastery Mentor makes a 1/1 Monk (with prowess) when you cast a
+/// noncreature spell.
+#[test]
+fn monastery_mentor_spawns_monks() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::monastery_mentor());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    let monks: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Monk").collect();
+    assert_eq!(monks.len(), 1, "made one Monk token");
+    assert!(!monks[0].definition.triggered_abilities.is_empty(), "Monk has prowess");
+}
