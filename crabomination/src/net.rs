@@ -168,6 +168,17 @@ pub struct ClientView {
     /// speed is legal. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub foretellable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand they could Plot right now (CR 702.170):
+    /// the card has a `plot_cost` and paying it at sorcery speed is legal.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub plottable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with an Adventure half they could cast
+    /// right now (CR 715). Lets the client offer the "cast the Adventure"
+    /// affordance distinct from the plain creature cast. Empty off-priority.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub adventurable_hand: Vec<CardId>,
     /// CardIds of permanents the viewer controls with an activated ability
     /// they could use right now (timing/mana/tap/target all checked). Lets
     /// the client highlight "this permanent can do something." Empty

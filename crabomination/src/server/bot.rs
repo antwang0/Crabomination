@@ -878,6 +878,63 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Adventure (CR 715): for any hand card with an adventure half that
+    // *targets* something (removal / bounce / pump — Stomp, Petty Theft,
+    // Swift End, Boulder Rush), offer a `CastAdventure` candidate. Token /
+    // card-draw adventures are skipped here so the bot still prefers playing
+    // those cards as creatures; the interactive halves are pure tempo wins.
+    for c in state.players[seat].hand.iter() {
+        let Some(adv) = c.definition.has_adventure() else { continue };
+        if !adv.effect.requires_target() {
+            continue;
+        }
+        let (target, additional_targets) =
+            state.auto_targets_for_effect_all_slots(&adv.effect, seat, None);
+        if target.is_none() {
+            continue;
+        }
+        let action = GameAction::CastAdventure {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
+    // Adventure creature (CR 715) and plotted cards (CR 702.170d): cast the
+    // creature half / a plotted card from exile. `would_accept` enforces the
+    // later-turn + sorcery-speed timing, so this is only offered when legal.
+    for c in state.exile.iter().filter(|c| c.owner == seat) {
+        let action = if c.on_adventure {
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None)
+            } else {
+                (None, vec![])
+            };
+            GameAction::CastAdventureCreature {
+                card_id: c.id, target, additional_targets, mode: None, x_value: None,
+            }
+        } else if state.plotted_cards.contains(&c.id) {
+            let (target, additional_targets) = if c.definition.effect.requires_target() {
+                state.auto_targets_for_effect_all_slots(&c.definition.effect, seat, None)
+            } else {
+                (None, vec![])
+            };
+            GameAction::CastPlotted {
+                card_id: c.id, target, additional_targets, mode: None, x_value: None,
+            }
+        } else {
+            continue;
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Mana-only alternative costs (Dash CR 702.110, Blitz 702.152,
     // Spectacle 702.111): for any hand card whose `alternative_cost` is paid
     // purely with mana (no pitch/sacrifice/graveyard/life rider), offer a
@@ -1908,6 +1965,29 @@ mod tests {
             let _ = g.perform_action(action);
         }
         panic!("bot never produced a CastSpell action");
+    }
+
+    /// The bot casts an Adventure half (Stomp) as removal when it can afford
+    /// the adventure but not the creature (CR 715).
+    #[test]
+    fn bot_casts_adventure_half_as_removal() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let id = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+        // {1}{R}: enough for Stomp, not the {2}{R} creature.
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let mut bot = RandomBot::new();
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastAdventure { card_id, .. } = action {
+                assert_eq!(card_id, id, "bot Stomps with the adventure half");
+                let _ = bear;
+                return;
+            }
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never cast the adventure half");
     }
 
     /// When forced to chump (life threatened, no clean kill), the bot

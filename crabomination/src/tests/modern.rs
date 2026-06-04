@@ -24049,3 +24049,23 @@ fn adventure_merchant_of_the_vale_haggle_loots() {
     // -1 (Merchant leaves) +1 (draw) -1 (discard) = hand_before - 1.
     assert_eq!(g.players[0].hand.len(), hand_before - 1, "drew then discarded");
 }
+
+// ── Affordance hints for new mechanics ───────────────────────────────────────
+
+/// The hand-affordance sweep surfaces plottable and adventurable cards.
+#[test]
+fn affordances_surface_plot_and_adventure() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // a target for Stomp
+    let plot = g.add_card_to_hand(0, catalog::spinewoods_paladin());
+    let adv = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    // Enough mana for both the plot cost ({2}{G}) and Stomp ({1}{R}).
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let a = g.compute_hand_affordances(0);
+    assert!(a.plottable.contains(&plot), "Spinewoods Paladin is plottable");
+    assert!(a.adventurable.contains(&adv), "Bonecrusher Giant's Stomp is castable");
+}

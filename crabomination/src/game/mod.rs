@@ -176,6 +176,8 @@ pub struct HandAffordances {
     pub blitzable: Vec<CardId>,
     pub suspendable: Vec<CardId>,
     pub foretellable: Vec<CardId>,
+    pub plottable: Vec<CardId>,
+    pub adventurable: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
 }
 
@@ -2713,6 +2715,46 @@ impl GameState {
             .collect()
     }
 
+    /// Cards in `caster`'s hand they could Plot right now (CR 702.170): the
+    /// card has a `plot_cost` and paying it at sorcery speed is legal.
+    fn plottable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.plot_cost.is_some())
+            .map(|c| c.id)
+            .filter(|&id| Self::would_accept_on(template, GameAction::Plot { card_id: id }))
+            .collect()
+    }
+
+    /// Cards in `caster`'s hand with an Adventure half they could cast right
+    /// now (CR 715). The probe auto-targets the adventure effect.
+    fn adventurable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter_map(|c| {
+                let adv = c.definition.has_adventure()?;
+                let (target, additional_targets) = if adv.effect.requires_target() {
+                    let (t, extras) =
+                        template.auto_targets_for_effect_all_slots(&adv.effect, caster, None);
+                    t.as_ref()?;
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                let id = c.id;
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastAdventure {
+                        card_id: id, target, additional_targets, mode: None, x_value: None,
+                    },
+                )
+                .then_some(id)
+            })
+            .collect()
+    }
+
     /// Compute every from-hand affordance hint for `seat` in one pass.
     ///
     /// The individual `*_hand_cards` / `activatable_permanents` methods each
@@ -2745,6 +2787,8 @@ impl GameState {
             blitzable: self.blitzable_hand_cards_on(&template, seat),
             suspendable: self.suspendable_hand_cards_on(&template, seat),
             foretellable: self.foretellable_hand_cards_on(&template, seat),
+            plottable: self.plottable_hand_cards_on(&template, seat),
+            adventurable: self.adventurable_hand_cards_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
         }
     }

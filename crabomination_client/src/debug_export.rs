@@ -209,6 +209,8 @@ mod tests {
             blitzable_hand: vec![],
             suspendable_hand: vec![],
             foretellable_hand: vec![],
+            plottable_hand: vec![],
+            adventurable_hand: vec![],
             activatable_permanents: vec![],
             legal_attackers: vec![],
             legal_blockers: vec![],

@@ -87,6 +87,8 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         blitzable_hand: affordances.blitzable,
         suspendable_hand: affordances.suspendable,
         foretellable_hand: affordances.foretellable,
+        plottable_hand: affordances.plottable,
+        adventurable_hand: affordances.adventurable,
         activatable_permanents: affordances.activatable_permanents,
         legal_attackers: state.legal_attackers(seat),
         legal_blockers: state.legal_blockers(seat),
