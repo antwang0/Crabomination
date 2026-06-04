@@ -524,6 +524,10 @@ pub enum Keyword {
     /// less"). A blocker matching the filter may not be assigned to this
     /// attacker. Enforced in `can_block_attacker_computed`.
     CantBeBlockedBy(Box<SelectionRequirement>),
+    /// CR 509.1g — "This creature can't be blocked by more than one creature"
+    /// (Charging Rhino, Spectral Force). At most one blocker may be assigned
+    /// to it. Enforced in `declare_blockers` (the inverse of Menace).
+    CantBeBlockedByMoreThanOne,
 }
 
 /// Composable filter for valid targets of a spell or ability.

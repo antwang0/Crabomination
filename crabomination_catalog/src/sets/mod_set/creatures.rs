@@ -1487,6 +1487,89 @@ pub fn priest_of_titania() -> CardDefinition {
     }
 }
 
+/// Sylvan Ranger — {1}{G}, 1/1 Elf Scout. "When this enters, search your
+/// library for a basic land card, reveal it, put it into your hand, then
+/// shuffle." (various)
+pub fn sylvan_ranger() -> CardDefinition {
+    CardDefinition {
+        name: "Sylvan Ranger",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Scout], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Civic Wayfinder — {2}{G}, 2/2 Elf Warrior. "When this enters, search your
+/// library for a basic land card, reveal it, put it into your hand, then
+/// shuffle." (RAV)
+pub fn civic_wayfinder() -> CardDefinition {
+    CardDefinition {
+        name: "Civic Wayfinder",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Warrior], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Elvish Warrior — {G}{G}, 2/3 Elf Warrior. Vanilla Elf body (Archdruid /
+/// Priest of Titania payoff). (ONS)
+pub fn elvish_warrior() -> CardDefinition {
+    CardDefinition {
+        name: "Elvish Warrior",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Warrior], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Welkin Tern — {1}{U}, 2/1 Flying. "Welkin Tern can't block." (ISD)
+pub fn welkin_tern() -> CardDefinition {
+    CardDefinition {
+        name: "Welkin Tern",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        ..Default::default()
+    }
+}
+
+/// Charging Rhino — {3}{G}{G}, 4/4 Rhino. "Charging Rhino can't be blocked
+/// by more than one creature." (various)
+pub fn charging_rhino() -> CardDefinition {
+    CardDefinition {
+        name: "Charging Rhino",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rhino], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::CantBeBlockedByMoreThanOne],
+        ..Default::default()
+    }
+}
+
 /// Llanowar Visionary — {2}{G}, 2/2 Elf Druid. ETB: draw a card. "{T}: Add
 /// {G}."
 pub fn llanowar_visionary() -> CardDefinition {

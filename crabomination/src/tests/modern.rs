@@ -15475,6 +15475,53 @@ fn elvish_archdruid_lord_and_mana() {
     assert_eq!(g.players[0].mana_pool.total(), 2, "two green from two Elves");
 }
 
+/// Welkin Tern can't block.
+#[test]
+fn welkin_tern_cant_block() {
+    let mut g = two_player_game();
+    let tern = g.add_card_to_battlefield(0, catalog::welkin_tern());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(!g.blocker_can_block_attacker(tern, bear), "Welkin Tern can't block");
+}
+
+/// Sylvan Ranger fetches a basic land to hand on ETB.
+#[test]
+fn sylvan_ranger_fetches_basic_land() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::sylvan_ranger());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest),
+        "Sylvan Ranger fetched the Forest to hand");
+}
+
+/// Charging Rhino can't be blocked by more than one creature (CR 509.1g).
+#[test]
+fn charging_rhino_blocked_by_at_most_one() {
+    use crate::game::{Attack, AttackTarget};
+    let declare = |two: bool| {
+        let mut g = two_player_game();
+        let rhino = g.add_card_to_battlefield(0, catalog::charging_rhino());
+        g.clear_sickness(rhino);
+        let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: rhino, target: AttackTarget::Player(1),
+        }])).unwrap();
+        g.step = TurnStep::DeclareBlockers;
+        let blocks = if two { vec![(b1, rhino), (b2, rhino)] } else { vec![(b1, rhino)] };
+        (g.perform_action(GameAction::DeclareBlockers(blocks)), rhino)
+    };
+    assert!(declare(false).0.is_ok(), "one blocker is legal");
+    let (res, rhino) = declare(true);
+    assert_eq!(res.unwrap_err(), GameError::CannotBeBlockedByMoreThanOne(rhino));
+}
+
 /// Dark Banishing can't target a black creature.
 #[test]
 fn dark_banishing_rejects_black_creature() {

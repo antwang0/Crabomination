@@ -590,6 +590,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   enters with N time counters; same upkeep routine sacrifices when the last is
   removed. Test: `vanishing_sacrifices_when_last_time_counter_removed`.
 
+- ✅ **CR 509.1b — Block restrictions by characteristic** (claude/modern_decks).
+  `Keyword::CantBeBlockedExceptBy(filter)` / `CantBeBlockedBy(filter)`, read in
+  `can_block_attacker_computed` via `blocker_matches_block_filter` (type/color/
+  keyword/power/toughness on the blocker's *computed* characteristics). The bot
+  honors them through a `blocker_can_block_attacker` legality gate. Silhana
+  Ledgewalker, Steel Leaf Champion. Tests: `silhana_ledgewalker_*`,
+  `steel_leaf_champion_*`, `bot_skips_illegal_block_against_steel_leaf_champion`.
+- ✅ **CR 509.1g — Can't be blocked by more than one** (claude/modern_decks).
+  `Keyword::CantBeBlockedByMoreThanOne` (inverse of Menace), enforced in
+  `declare_blockers`. Charging Rhino. Test: `charging_rhino_blocked_by_at_most_one`.
+- ✅ **CR 701.16 / 701.x — Per-player "half their own X"** (claude/modern_decks).
+  `Effect::{MillHalf, DiscardHalf, SacrificeHalf}` scale to each affected
+  player's own library/hand/permanent count (mirror `LoseHalfLife`). Lord
+  Xander, the Collector is now faithful. Tests: `lord_xander_*`.
+
 - ✅ **CR 603.3b — Same-controller trigger ordering** (claude/modern_decks).
   `order_same_controller_triggers` lets a `wants_ui` controller order their
   own simultaneous triggers via `Decision::OrderTriggers`; AutoDecider keeps

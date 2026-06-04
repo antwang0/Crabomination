@@ -449,6 +449,21 @@ impl GameState {
             }
         }
 
+        // CR 509.1g — "can't be blocked by more than one creature" (Charging
+        // Rhino). At most one blocker may be assigned (the inverse of Menace).
+        for atk in &self.attacking {
+            if kws_of(atk.attacker).contains(&Keyword::CantBeBlockedByMoreThanOne) {
+                let blocker_count = assignments
+                    .iter()
+                    .filter(|(_, aid)| *aid == atk.attacker)
+                    .count()
+                    + self.block_map.values().filter(|&&aid| aid == atk.attacker).count();
+                if blocker_count > 1 {
+                    return Err(GameError::CannotBeBlockedByMoreThanOne(atk.attacker));
+                }
+            }
+        }
+
         // CR 509.1c — "must be blocked if able" (Lure / Academic Dispute).
         // If such an attacker is left unblocked while the defender controls
         // an idle creature that could legally block it, reject the
