@@ -2839,6 +2839,24 @@ fn goldmeadow_harrier_taps_target_creature() {
 }
 
 #[test]
+fn mana_dorks_tap_for_mana() {
+    for (factory, expected) in [
+        (catalog::fyndhorn_elves as fn() -> _, 1),
+        (catalog::druid_of_the_cowl as fn() -> _, 1),
+        (catalog::manakin as fn() -> _, 1),
+        (catalog::palladium_myr as fn() -> _, 2),
+    ] {
+        let mut g = two_player_game();
+        let dork = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(dork);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: dork, ability_index: 0, target: None, x_value: None,
+        }).expect("tap for mana");
+        assert_eq!(g.players[0].mana_pool.total(), expected, "produced {expected} mana");
+    }
+}
+
+#[test]
 fn gideons_lawkeeper_taps_target_creature() {
     let mut g = two_player_game();
     let lk = g.add_card_to_battlefield(0, catalog::gideons_lawkeeper());

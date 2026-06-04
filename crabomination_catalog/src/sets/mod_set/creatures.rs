@@ -6364,3 +6364,77 @@ pub fn usher_of_the_fallen() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Mana dorks & rocks ───────────────────────────────────────────────────────
+
+/// Fyndhorn Elves — {G} Creature — Elf Druid 1/1. "{T}: Add {G}." (ICE)
+pub fn fyndhorn_elves() -> CardDefinition {
+    CardDefinition {
+        name: "Fyndhorn Elves",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![crate::sets::tap_add(crate::mana::Color::Green)],
+        ..Default::default()
+    }
+}
+
+/// Druid of the Cowl — {1}{G} Creature — Elf Druid 1/3. "{T}: Add {G}." (M14)
+pub fn druid_of_the_cowl() -> CardDefinition {
+    CardDefinition {
+        name: "Druid of the Cowl",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![crate::sets::tap_add(crate::mana::Color::Green)],
+        ..Default::default()
+    }
+}
+
+/// Manakin — {2} Artifact Creature — Construct 1/1. "{T}: Add {C}." (MIR)
+pub fn manakin() -> CardDefinition {
+    CardDefinition {
+        name: "Manakin",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![crate::sets::tap_add_colorless()],
+        ..Default::default()
+    }
+}
+
+/// Palladium Myr — {3} Artifact Creature — Myr 2/2. "{T}: Add {C}{C}." (SOM)
+pub fn palladium_myr() -> CardDefinition {
+    CardDefinition {
+        name: "Palladium Myr",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
