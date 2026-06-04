@@ -1555,6 +1555,209 @@ pub fn welkin_tern() -> CardDefinition {
     }
 }
 
+/// Aerial Responder — {1}{W}{W}, 2/3 Dwarf Soldier. Flying, Vigilance,
+/// Lifelink. (KLD)
+pub fn aerial_responder() -> CardDefinition {
+    CardDefinition {
+        name: "Aerial Responder",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Knight of Meadowgrain — {1}{W}, 2/2 Kithkin Knight. First strike,
+/// Lifelink. (LRW)
+pub fn knight_of_meadowgrain() -> CardDefinition {
+    CardDefinition {
+        name: "Knight of Meadowgrain",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kithkin, CreatureType::Knight], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Skyhunter Patrol — {2}{W}, 2/2 Cat Knight. Flying, First strike. (MRD)
+pub fn skyhunter_patrol() -> CardDefinition {
+    CardDefinition {
+        name: "Skyhunter Patrol",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Knight], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        ..Default::default()
+    }
+}
+
+/// Veteran Armorer — {1}{W}, 2/3 Human Soldier. "Other creatures you control
+/// get +0/+1." (M10)
+pub fn veteran_armorer() -> CardDefinition {
+    CardDefinition {
+        name: "Veteran Armorer",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +0/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 0,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Attended Knight — {2}{W}, 2/2 Human Knight. First strike. "When this
+/// enters, create a 1/1 white Soldier creature token." (M13)
+pub fn attended_knight() -> CardDefinition {
+    CardDefinition {
+        name: "Attended Knight",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Knight], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::card::TokenDefinition {
+                    name: "Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::White],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kor Hookmaster — {2}{W}, 2/2 Kor Soldier. "When this enters, tap target
+/// creature an opponent controls. That creature doesn't untap during its
+/// controller's next untap step." (ZEN)
+pub fn kor_hookmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Kor Hookmaster",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kor, CreatureType::Soldier], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dusk Legion Zealot — {B}{B}, 1/1 Vampire Soldier. "When this enters, you
+/// draw a card and you lose 1 life." (RIX)
+pub fn dusk_legion_zealot() -> CardDefinition {
+    CardDefinition {
+        name: "Dusk Legion Zealot",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire, CreatureType::Soldier], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Gargantua — {4}{B}{B}, 4/4 Horror. "When this enters, you draw
+/// two cards and you lose two life." (various)
+pub fn phyrexian_gargantua() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Gargantua",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Frost Lynx — {2}{U}, 2/2 Cat. "When this enters, tap target creature an
+/// opponent controls. That creature doesn't untap during its controller's
+/// next untap step." (M15)
+pub fn frost_lynx() -> CardDefinition {
+    CardDefinition {
+        name: "Frost Lynx",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Indrik Stomphowler — {4}{G}, 4/4 Beast. "When this enters, destroy target
 /// artifact or enchantment." (M10)
 pub fn indrik_stomphowler() -> CardDefinition {

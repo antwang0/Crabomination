@@ -15475,6 +15475,102 @@ fn elvish_archdruid_lord_and_mana() {
     assert_eq!(g.players[0].mana_pool.total(), 2, "two green from two Elves");
 }
 
+/// Dusk Legion Zealot draws a card and loses 1 life on ETB.
+#[test]
+fn dusk_legion_zealot_etb_draws_and_loses_life() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::dusk_legion_zealot());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+}
+
+/// Phyrexian Gargantua draws two and loses two on ETB.
+#[test]
+fn phyrexian_gargantua_etb_draws_two_loses_two() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::phyrexian_gargantua());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew 2");
+    assert_eq!(g.players[0].life, life - 2, "lost 2");
+}
+
+/// Frost Lynx taps and stuns an opponent's creature on ETB.
+#[test]
+fn frost_lynx_taps_and_stuns() {
+    use crate::card::CounterType;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::frost_lynx());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped && b.counter_count(CounterType::Stun) == 1, "tapped + stunned");
+}
+
+/// Veteran Armorer gives other creatures you control +0/+1 (continuous).
+#[test]
+fn veteran_armorer_toughness_anthem() {
+    let mut g = two_player_game();
+    let armorer = g.add_card_to_battlefield(0, catalog::veteran_armorer());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (2, 3), "other creature gets +0/+1");
+    // Armorer doesn't buff itself.
+    let a = cp.iter().find(|c| c.id == armorer).unwrap();
+    assert_eq!(a.toughness, 3, "armorer keeps base 2/3");
+}
+
+/// Attended Knight makes a 1/1 Soldier on ETB.
+#[test]
+fn attended_knight_etb_makes_soldier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::attended_knight());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Soldier").count(), 1, "made a Soldier token");
+}
+
+/// Kor Hookmaster taps an opponent's creature and stuns it on ETB.
+#[test]
+fn kor_hookmaster_taps_and_stuns() {
+    use crate::card::CounterType;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::kor_hookmaster());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped, "opp creature tapped");
+    assert_eq!(b.counter_count(CounterType::Stun), 1, "got a stun counter");
+}
+
 /// Indrik Stomphowler destroys a target artifact or enchantment on ETB.
 #[test]
 fn indrik_stomphowler_etb_destroys_artifact() {
