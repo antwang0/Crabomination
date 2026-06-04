@@ -168,6 +168,52 @@ fn blitz_ardent_elementalist_etb_returns_instant() {
     );
 }
 
+// ── Tempo & utility spells ───────────────────────────────────────────────────
+
+/// Gut Shot deals 1 damage, payable with Phyrexian (life) mana.
+#[test]
+fn gut_shot_deals_one() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::gut_shot());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1, "1 damage marked");
+}
+
+/// Wrangle steals a creature for the turn with haste, reverting at end of turn.
+#[test]
+fn wrangle_steals_until_end_of_turn() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wrangle());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 0, "stolen for the turn");
+    // End-of-turn cleanup reverts control (CR 800.4).
+    g.step = TurnStep::Cleanup;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "control reverts at EOT");
+}
+
+/// Ravenform destroys a creature and gives its controller a Bird.
+#[test]
+fn ravenform_destroys_and_gifts_bird() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ravenform());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    let birds = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.name == "Bird Illusion").count();
+    assert_eq!(birds, 1, "its controller got a Bird");
+}
+
 // ── Utility creatures ────────────────────────────────────────────────────────
 
 /// Paradise Druid taps for one mana of any color and has hexproof.

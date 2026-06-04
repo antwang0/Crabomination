@@ -1011,6 +1011,79 @@ pub fn vampire_lacerator() -> CardDefinition {
     }
 }
 
+// ── Tempo & utility spells ───────────────────────────────────────────────────
+
+/// Gut Shot — {R/P} Instant. Deal 1 damage to any target.
+pub fn gut_shot() -> CardDefinition {
+    CardDefinition {
+        name: "Gut Shot",
+        cost: ManaCost { symbols: vec![ManaSymbol::Phyrexian(Color::Red)] },
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Wrangle — {2}{R} Sorcery. Gain control of target creature until end of turn,
+/// untap it, and it gains haste.
+pub fn wrangle() -> CardDefinition {
+    CardDefinition {
+        name: "Wrangle",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ravenform — {1}{U} Sorcery. Destroy target artifact or creature; its
+/// controller creates a 1/1 blue Bird Illusion with flying. Foretell {U}.
+pub fn ravenform() -> CardDefinition {
+    CardDefinition {
+        name: "Ravenform",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                ),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Bird Illusion".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue],
+                    keywords: vec![Keyword::Flying],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Bird, CreatureType::Illusion],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        ]),
+        foretell_cost: Some(cost(&[u()])),
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 
