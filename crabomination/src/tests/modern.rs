@@ -24285,3 +24285,69 @@ fn monastery_mentor_spawns_monks() {
     assert_eq!(monks.len(), 1, "made one Monk token");
     assert!(!monks[0].definition.triggered_abilities.is_empty(), "Monk has prowess");
 }
+
+/// Spark Elemental is a 3/1 trample/haste that sacrifices itself at end step.
+#[test]
+fn spark_elemental_sacrifices_at_end_step() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spark_elemental());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 1));
+    assert!(c.definition.keywords.contains(&Keyword::Trample) &&
+        c.definition.keywords.contains(&Keyword::Haste));
+    // Walk to the end step on the controller's turn.
+    g.active_player_idx = 0;
+    g.step = TurnStep::End;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "sacrificed at end step");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
+}
+
+/// Keldon Marauders pings the opponent on entry and again when it leaves
+/// (Vanishing 2 ticks it off).
+#[test]
+fn keldon_marauders_pings_on_etb_and_death() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::keldon_marauders());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "ETB ping");
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "leaves-play ping");
+}
+
+/// Ball Lightning is a 6/1 trample/haste that also self-sacrifices at end step.
+#[test]
+fn ball_lightning_is_six_one_and_self_sacrifices() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ball_lightning());
+    assert_eq!((g.battlefield_find(id).unwrap().power(),
+        g.battlefield_find(id).unwrap().toughness()), (6, 1));
+    g.active_player_idx = 0;
+    g.step = TurnStep::End;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "sacrificed at end step");
+}
+
+/// Hellspark Elemental can be recast from the graveyard via Flashback.
+#[test]
+fn hellspark_elemental_has_flashback() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::hellspark_elemental());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashback cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "Hellspark on the battlefield via flashback");
+}

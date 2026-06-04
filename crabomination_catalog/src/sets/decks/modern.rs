@@ -15736,6 +15736,98 @@ pub fn realm_cloaked_giant() -> CardDefinition {
     }
 }
 
+/// End-step self-sacrifice trigger ("At the beginning of the end step,
+/// sacrifice this") shared by the Ball Lightning family.
+fn sacrifice_at_end_step() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(
+            EventKind::StepBegins(crate::game::TurnStep::End),
+            EventScope::YourControl,
+        ),
+        effect: Effect::SacrificeSource,
+    }
+}
+
+/// Spark Elemental — {R} Creature — Elemental 3/1, Trample, Haste.
+/// At the beginning of the end step, sacrifice it.
+pub fn spark_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Spark Elemental",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![sacrifice_at_end_step()],
+        ..Default::default()
+    }
+}
+
+/// Ball Lightning — {R}{R}{R} Creature — Elemental 6/1, Trample, Haste.
+/// At the beginning of the end step, sacrifice it.
+pub fn ball_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Ball Lightning",
+        cost: cost(&[r(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![sacrifice_at_end_step()],
+        ..Default::default()
+    }
+}
+
+/// Hellspark Elemental — {R} Creature — Elemental 3/1, Trample, Haste.
+/// At the beginning of the end step, sacrifice it. Flashback {1}{R}.
+pub fn hellspark_elemental() -> CardDefinition {
+    CardDefinition {
+        name: "Hellspark Elemental",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Haste, Keyword::Flashback(cost(&[generic(1), r()]))],
+        triggered_abilities: vec![sacrifice_at_end_step()],
+        ..Default::default()
+    }
+}
+
+/// Keldon Marauders — {1}{R} Creature — Human Warrior 3/1, Vanishing 2.
+/// When it enters and when it leaves, deal 1 damage to each opponent.
+pub fn keldon_marauders() -> CardDefinition {
+    use crate::effect::shortcut::{each_opponent, on_dies};
+    CardDefinition {
+        name: "Keldon Marauders",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Vanishing(2)],
+        triggered_abilities: vec![
+            etb(Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) }),
+            on_dies(Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) }),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Stitcher's Supplier — {B} Creature — Zombie 1/1. When it enters and when
 /// it dies, mill three cards.
 pub fn stitchers_supplier() -> CardDefinition {
