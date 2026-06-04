@@ -2567,6 +2567,33 @@ fn sylvan_caryatid_taps_for_one_mana_of_chosen_color() {
 }
 
 #[test]
+fn might_of_old_krosa_scales_with_whose_turn() {
+    // Your turn → +4/+4.
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mok = g.add_card_to_hand(0, catalog::might_of_old_krosa());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mok, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("cast on your turn");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + 4, "+4/+4 on your turn");
+
+    // Opponent's turn → +2/+2.
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mok = g.add_card_to_hand(0, catalog::might_of_old_krosa());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mok, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("cast on opp turn");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + 2, "+2/+2 on opponent's turn");
+}
+
+#[test]
 fn ledger_shredder_connives_on_second_spell_only() {
     let mut g = two_player_game();
     let shredder = g.add_card_to_battlefield(0, catalog::ledger_shredder());
@@ -23796,6 +23823,30 @@ fn world_rule_keeps_only_the_newest_world_permanent() {
 // ── Adventure (CR 715) ───────────────────────────────────────────────────────
 
 /// Stomp (Bonecrusher Giant's adventure) deals 2 damage and exiles the card,
+/// Queen of Ice's Rage of Winter taps a creature and stuns it (Stun counter),
+/// so it stays tapped through its controller's next untap step.
+#[test]
+fn adventure_queen_of_ice_rage_taps_and_stuns() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let qoi = g.add_card_to_hand(0, catalog::queen_of_ice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: qoi, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rage of Winter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "bear tapped");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 1, "stunned");
+    // Controller's untap step removes the Stun counter instead of untapping.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "still tapped (stun consumed)");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::Stun), 0, "stun gone");
+}
+
 /// which can then be cast as the creature half from exile.
 #[test]
 fn adventure_bonecrusher_stomp_then_cast_creature() {

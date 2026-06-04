@@ -925,13 +925,23 @@ pub fn ulcerate() -> CardDefinition {
 }
 
 /// Might of Old Krosa — {G} Instant. Target creature gets +4/+4 until end of
-/// turn. (The opponents'-turn +2/+2 split collapses to the on-turn value.)
+/// turn if it's your turn, otherwise +2/+2.
 pub fn might_of_old_krosa() -> CardDefinition {
+    let pump = |n| Effect::PumpPT {
+        what: Selector::Target(0),
+        power: Value::Const(n),
+        toughness: Value::Const(n),
+        duration: Duration::EndOfTurn,
+    };
     CardDefinition {
         name: "Might of Old Krosa",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        effect: crate::effect::shortcut::pump_target(4, 4),
+        effect: Effect::If {
+            cond: crate::card::Predicate::IsTurnOf(PlayerRef::You),
+            then: Box::new(pump(4)),
+            else_: Box::new(pump(2)),
+        },
         ..Default::default()
     }
 }
@@ -16305,8 +16315,8 @@ pub fn curious_pair() -> CardDefinition {
 }
 
 /// Queen of Ice — {2}{U} Creature — Human Noble 2/3.
-/// Adventure: Rage of Winter {1}{U} Sorcery — tap target creature (the
-/// "doesn't untap next turn" rider is dropped).
+/// Adventure: Rage of Winter {1}{U} Sorcery — tap target creature; it doesn't
+/// untap during its controller's next untap step (a Stun counter, CR 122.1f).
 pub fn queen_of_ice() -> CardDefinition {
     CardDefinition {
         name: "Queen of Ice",
@@ -16322,9 +16332,14 @@ pub fn queen_of_ice() -> CardDefinition {
             name: "Rage of Winter",
             cost: cost(&[generic(1), u()]),
             card_types: vec![CardType::Sorcery],
-            effect: Effect::Tap {
-                what: target_filtered(SelectionRequirement::Creature),
-            },
+            effect: Effect::Seq(vec![
+                Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+                Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::Stun,
+                    amount: Value::Const(1),
+                },
+            ]),
         })),
         ..Default::default()
     }

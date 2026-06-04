@@ -15,11 +15,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   client cast-mode picker off the new affordance sets (mirror the kicker /
   bestow toggle). `CastAdventureCreature` / `CastPlotted` from exile also have
   no client surface yet.
-- **Adventure/Mount rider riders dropped on a few cards**: Queen of Ice's
-  "doesn't untap next turn" stun (needs a `skip_next_untap`-style grant on a
-  *target*). Lovestruck Beast ✅ (`Keyword::CanAttackOnlyIfYouControl`) and
-  Stingerback Terror ✅ (`Effect::LoseHalfLife`) are now faithful; Rimrock
-  Knight's body was already faithful.
+- **Adventure/Mount rider riders dropped on a few cards** — ✅ all faithful
+  now: Lovestruck Beast (`Keyword::CanAttackOnlyIfYouControl`), Stingerback
+  Terror (`Effect::LoseHalfLife`), Queen of Ice (Tap + `CounterType::Stun`),
+  Might of Old Krosa (`Effect::If { IsTurnOf(You) }`); Rimrock Knight was
+  already faithful.
 - **"Nth spell each turn" trigger — ✅ DONE.**
   `Predicate::SpellsCastThisTurnEquals { who, count }` + `PlayerRef::Triggerer`
   now resolving a card/spell trigger-source to its *caster* fire exactly on a
@@ -35,9 +35,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (`check_target_legality`) or combat-damage prevention reads — extend those
   to read computed protection if a card needs it (Giver of Runes "protection
   from colorless" also needs a colorless option).
-- **Turn-conditional pump** (Might of Old Krosa's +4/+4-on-your-turn /
-  +2/+2-otherwise). Currently collapsed to +4/+4. Needs an
-  `If(IsTurnOf(You))` wrapper around the pump value.
+- **Turn-conditional pump — ✅ DONE.** Might of Old Krosa wraps two
+  `PumpPT` branches in `Effect::If { cond: IsTurnOf(You), … }` (+4/+4 on your
+  turn, +2/+2 otherwise). No new primitive needed.
 
 - **Suspend (CR 702.62) — ✅ DONE (primitive + haste + accelerant).**
   `Keyword::Suspend(n, cost)` + `GameAction::Suspend` + `process_suspend`
