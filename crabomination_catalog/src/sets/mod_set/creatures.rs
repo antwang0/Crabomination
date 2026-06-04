@@ -5076,3 +5076,31 @@ pub fn citadel_castellan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ledger Shredder — {1}{U} Creature — Bird Advisor 1/3, Flying. "Whenever a
+/// player casts their second spell each turn, Ledger Shredder connives." (SNC)
+pub fn ledger_shredder() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Ledger Shredder",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(
+                Predicate::SpellsCastThisTurnEquals {
+                    who: PlayerRef::Triggerer,
+                    count: Value::Const(2),
+                },
+            ),
+            effect: crate::effect::shortcut::connive(1),
+        }],
+        ..Default::default()
+    }
+}

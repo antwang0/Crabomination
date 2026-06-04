@@ -2567,6 +2567,33 @@ fn sylvan_caryatid_taps_for_one_mana_of_chosen_color() {
 }
 
 #[test]
+fn ledger_shredder_connives_on_second_spell_only() {
+    let mut g = two_player_game();
+    let shredder = g.add_card_to_battlefield(0, catalog::ledger_shredder());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let bolt1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+
+    // First spell — no connive (library untouched).
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("bolt1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before, "no connive on first spell");
+
+    // Second spell — connive fires, drawing one card.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("bolt2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "connive drew a card on second spell");
+    let _ = shredder;
+}
+
+#[test]
 fn mother_of_runes_grants_protection_from_chosen_color() {
     let mut g = two_player_game();
     let mom = g.add_card_to_battlefield(0, catalog::mother_of_runes());

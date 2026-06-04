@@ -20,12 +20,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   *target*). Lovestruck Beast ✅ (`Keyword::CanAttackOnlyIfYouControl`) and
   Stingerback Terror ✅ (`Effect::LoseHalfLife`) are now faithful; Rimrock
   Knight's body was already faithful.
-- **"Nth spell each turn" trigger** (Ledger Shredder, Storm-Kiln Artist's
-  payoffs). Needs a predicate reading the *caster's* `spells_cast_this_turn`
-  ordinal at trigger time (the count is already incremented before
-  `fire_spell_cast_triggers`, so a `Predicate::CastSpellIsControllersNth { n }`
-  comparing `players[caster].spells_cast_this_turn == n` would work — wire it
-  with `EventScope::AnyPlayer` so it fires on each player's own count).
+- **"Nth spell each turn" trigger — ✅ DONE.**
+  `Predicate::SpellsCastThisTurnEquals { who, count }` + `PlayerRef::Triggerer`
+  now resolving a card/spell trigger-source to its *caster* fire exactly on a
+  player's Nth spell each turn (Ledger Shredder wired with
+  `EventScope::AnyPlayer`). Storm-Kiln Artist-style "each instant/sorcery"
+  payoffs can reuse the Triggerer→caster resolution.
 - **Protection-from-chosen-color grant — ✅ DONE.**
   `Effect::GrantProtectionFromChosenColor { what, duration }` surfaces
   `Decision::ChooseColor` then grants `Keyword::Protection(color)` for the

@@ -494,6 +494,13 @@ pub enum Predicate {
     /// ("if you've cast another instant or sorcery spell this turn, …")
     /// and similar pumps that key off spell-count.
     SpellsCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// `who` has cast *exactly* `count` spells so far this turn. Backed by
+    /// `Player.spells_cast_this_turn` (already incremented for the current
+    /// cast at trigger time). Used by "whenever a player casts their second
+    /// spell each turn" triggers (Ledger Shredder) — pair with
+    /// `PlayerRef::Triggerer` + `EventScope::AnyPlayer` so it reads the
+    /// caster's own count and fires exactly on the Nth spell.
+    SpellsCastThisTurnEquals { who: PlayerRef, count: Value },
     /// At least `at_least` creatures controlled by `who` died this turn.
     /// Backed by `Player.creatures_died_this_turn` (bumped from the SBA
     /// dies handler and `remove_to_graveyard_with_triggers`). Used by

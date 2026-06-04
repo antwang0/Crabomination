@@ -5345,7 +5345,18 @@ impl GameState {
             PlayerRef::ActivePlayer => Some(self.active_player_idx),
             PlayerRef::Triggerer => ctx.trigger_source.and_then(|e| match e {
                 EntityRef::Player(p) => Some(p),
-                _ => None,
+                // A card trigger-source (e.g. a SpellCast trigger) resolves to
+                // the caster of the spell on the stack, falling back to the
+                // permanent's controller. Lets "whenever a player casts their
+                // Nth spell" read the *caster's* tally (Ledger Shredder).
+                EntityRef::Card(cid) | EntityRef::Permanent(cid) => self
+                    .stack
+                    .iter()
+                    .find_map(|s| match s {
+                        StackItem::Spell { card, caster, .. } if card.id == cid => Some(*caster),
+                        _ => None,
+                    })
+                    .or_else(|| self.battlefield_find(cid).map(|c| c.controller)),
             }),
             PlayerRef::Target(idx) => ctx.targets.get(*idx as usize).and_then(|t| match t {
                 Target::Player(p) => Some(*p),
