@@ -30,13 +30,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Blind Obedience, Kismet. Remaining: Thalia, Heretic Cathar's *nonbasic*-land
   clause needs an `IsNonbasicLand` selector requirement (only `IsBasicLand`
   exists today).
-- **Anthem `affected_from_requirement` coverage.** Color (`HasColor`) is now
-  decomposed into `AffectedPermanents::All.color`; the opponent path
-  (`ControlledByOpponent`) now composes with type filters regardless of
-  And-tree order. Remaining: `IsToken`/`NotToken` and power/toughness
-  thresholds still fall through to `None` (anthem silently doesn't apply).
-  Extend for token anthems (Intangible Virtue, Always Watching) and P/T-gated
-  lords.
+- **Anthem `affected_from_requirement` coverage.** Color (`HasColor`),
+  `IsToken`/`NotToken` (→ `AffectedPermanents::All.token`, ships Intangible
+  Virtue / Always Watching) are decomposed, and the opponent path
+  (`ControlledByOpponent`) composes with type filters regardless of And-tree
+  order. Remaining: power/toughness thresholds still fall through to `None`
+  (anthem silently doesn't apply) — needed for P/T-gated lords.
 - **Plague Engineer / named-creature-type -1/-1.** Needs a
   `StaticEffect` that diminishes only a chosen creature type among opponents
   (the existing `DiminishCreaturesExceptChosenType` is the inverse). Dropped

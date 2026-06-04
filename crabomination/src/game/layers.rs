@@ -150,6 +150,12 @@ pub enum AffectedPermanents {
         /// colors. `#[serde(default)]` keeps old snapshots valid.
         #[serde(default)]
         color: Option<crate::mana::Color>,
+        /// Optional token filter (Intangible Virtue's "creature tokens you
+        /// control", Always Watching's "nontoken creatures"). `None` = either;
+        /// `Some(true)` = tokens only; `Some(false)` = nontokens only.
+        /// `#[serde(default)]` keeps old snapshots valid.
+        #[serde(default)]
+        token: Option<bool>,
     },
     /// All permanents controlled by any player on a team other than the
     /// source's. In 1v1 / free-for-all this is "everyone but the source's
@@ -438,7 +444,7 @@ pub(crate) fn affected_includes(
     match affected {
         AffectedPermanents::Source => source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
-        AffectedPermanents::All { controller, card_types, exclude_source, color } => {
+        AffectedPermanents::All { controller, card_types, exclude_source, color, token } => {
             if *exclude_source && source == card.id {
                 return false;
             }
@@ -450,7 +456,8 @@ pub(crate) fn affected_includes(
                     matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
                 })
             });
-            ctrl_ok && type_ok && color_ok
+            let token_ok = token.is_none_or(|want| card.is_token == want);
+            ctrl_ok && type_ok && color_ok && token_ok
         }
         AffectedPermanents::AllOpponents { source_controller, card_types, friendly_seats } => {
             // Empty `friendly_seats` → legacy 1v1 check (snapshots from

@@ -5970,6 +5970,56 @@ pub fn blind_obedience() -> CardDefinition {
     }
 }
 
+/// Helper: PumpPT + GrantKeyword(Vigilance) over a token/nontoken creature
+/// anthem selector (Intangible Virtue / Always Watching share the shape).
+fn vigilance_anthem(token: bool, pump_desc: &'static str) -> Vec<StaticAbility> {
+    let sel = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(if token {
+                    SelectionRequirement::IsToken
+                } else {
+                    SelectionRequirement::NotToken
+                }),
+        )
+    };
+    vec![
+        StaticAbility {
+            description: pump_desc,
+            effect: StaticEffect::PumpPT { applies_to: sel(), power: 1, toughness: 1 },
+        },
+        StaticAbility {
+            description: "…and have vigilance.",
+            effect: StaticEffect::GrantKeyword { applies_to: sel(), keyword: Keyword::Vigilance },
+        },
+    ]
+}
+
+/// Intangible Virtue — {1}{W} Enchantment. "Creature tokens you control get
+/// +1/+1 and have vigilance." (ISD)
+pub fn intangible_virtue() -> CardDefinition {
+    CardDefinition {
+        name: "Intangible Virtue",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vigilance_anthem(true, "Creature tokens you control get +1/+1."),
+        ..Default::default()
+    }
+}
+
+/// Always Watching — {2}{W} Enchantment. "Nontoken creatures you control get
+/// +1/+1 and have vigilance." (SOI)
+pub fn always_watching() -> CardDefinition {
+    CardDefinition {
+        name: "Always Watching",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vigilance_anthem(false, "Nontoken creatures you control get +1/+1."),
+        ..Default::default()
+    }
+}
+
 /// Kismet — {3}{W} Enchantment. "Artifacts, creatures, and lands your
 /// opponents control enter the battlefield tapped." (LEG)
 pub fn kismet() -> CardDefinition {

@@ -2686,6 +2686,34 @@ fn kismet_taps_opponent_land() {
 }
 
 #[test]
+fn intangible_virtue_buffs_only_tokens() {
+    use crate::card::Keyword;
+    use crabomination_base::tokens::spirit_token;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::intangible_virtue());
+    let tok = g.add_token_to_battlefield(0, &spirit_token()); // 2/2 token
+    let nontok = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 nontoken
+    let ctok = g.computed_permanent(tok).unwrap();
+    assert_eq!((ctok.power, ctok.toughness), (3, 3), "token gets +1/+1");
+    assert!(ctok.keywords.contains(&Keyword::Vigilance), "token has vigilance");
+    assert_eq!(g.computed_permanent(nontok).unwrap().power, 2, "nontoken unaffected");
+}
+
+#[test]
+fn always_watching_buffs_only_nontokens() {
+    use crate::card::Keyword;
+    use crabomination_base::tokens::spirit_token;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::always_watching());
+    let nontok = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tok = g.add_token_to_battlefield(0, &spirit_token());
+    let cnt = g.computed_permanent(nontok).unwrap();
+    assert_eq!((cnt.power, cnt.toughness), (3, 3), "nontoken gets +1/+1");
+    assert!(cnt.keywords.contains(&Keyword::Vigilance), "nontoken has vigilance");
+    assert_eq!(g.computed_permanent(tok).unwrap().power, 2, "token unaffected");
+}
+
+#[test]
 fn honor_of_the_pure_buffs_only_white_creatures() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::honor_of_the_pure());
