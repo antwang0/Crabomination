@@ -15736,6 +15736,116 @@ pub fn realm_cloaked_giant() -> CardDefinition {
     }
 }
 
+/// Outcaster Trailblazer — {3}{G} Creature — Elf Druid Scout 4/3, Reach.
+/// Whenever you cast a spell with mana value 5 or greater, draw a card and
+/// create a Treasure token. Plot {2}{G} (CR 702.170).
+pub fn outcaster_trailblazer() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Outcaster Trailblazer",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::CastSpellManaSpentAtLeast(5),
+                then: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: treasure_token(),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        plot_cost: Some(cost(&[generic(2), g()])),
+        ..Default::default()
+    }
+}
+
+/// Lovestruck Beast — {1}{G} Creature — Beast Noble 5/5 (the printed
+/// "can't attack unless you control a 1/1" rider is dropped — no engine
+/// gate for it yet).
+/// Adventure: Heart's Desire {G} Sorcery — create a 1/1 white Human token.
+pub fn lovestruck_beast() -> CardDefinition {
+    CardDefinition {
+        name: "Lovestruck Beast",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        adventure: Some(Box::new(Adventure {
+            name: "Heart's Desire",
+            cost: cost(&[g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Human".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Human],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Slickshot Show-Off — {1}{R} Creature — Bird Wizard 1/1, Flying, Haste.
+/// Whenever you cast a noncreature spell, it gets +2/+0 until end of turn and
+/// you draw a card. Plot {R} (CR 702.170).
+pub fn slickshot_show_off() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_noncreature;
+    CardDefinition {
+        name: "Slickshot Show-Off",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_noncreature()),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        plot_cost: Some(cost(&[r()])),
+        ..Default::default()
+    }
+}
+
 /// Tuinvale Treefolk — {5}{G} Creature — Treefolk 4/5.
 /// Adventure: Oaken Boon {3}{G} Sorcery — put two +1/+1 counters on target
 /// creature.

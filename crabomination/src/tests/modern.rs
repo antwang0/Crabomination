@@ -24142,3 +24142,57 @@ fn adventure_hypnotic_sprite_mesmeric_glare_counters() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered to graveyard");
     assert_eq!(g.players[0].life, 20, "Bolt countered, no damage");
 }
+
+/// Heart's Desire (Lovestruck Beast) makes a 1/1 white Human token.
+#[test]
+fn adventure_lovestruck_beast_hearts_desire() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lovestruck_beast());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Heart's Desire");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Human").count(), 1, "made a Human token");
+}
+
+/// Slickshot Show-Off pumps +2/+0 and draws when you cast a noncreature spell;
+/// it can also be plotted for {R}.
+#[test]
+fn slickshot_show_off_pumps_and_draws_on_noncreature() {
+    let mut g = two_player_game();
+    let slick = g.add_card_to_battlefield(0, catalog::slickshot_show_off());
+    g.add_card_to_library(0, catalog::mountain());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    cast_at(&mut g, bolt, Target::Player(1));
+    let s = g.battlefield_find(slick).expect("slickshot");
+    assert_eq!(s.power(), 3, "+2/+0 from the noncreature cast");
+    // -1 (Bolt leaves) +1 (draw) = same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "drew a card");
+}
+
+/// Outcaster Trailblazer draws + makes a Treasure when you cast a 5+ MV spell,
+/// and can be plotted for {2}{G}.
+#[test]
+fn outcaster_trailblazer_pays_off_big_spells() {
+    let mut g = two_player_game();
+    let trail = g.add_card_to_battlefield(0, catalog::outcaster_trailblazer());
+    let _ = trail;
+    g.add_card_to_library(0, catalog::mountain());
+    // A 5-MV spell: Carnage Tyrant is {4}{G}{G} (MV 6).
+    let big = g.add_card_to_hand(0, catalog::charging_monstrosaur()); // {3}{R}{R} MV5
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a 5-drop");
+    drain_stack(&mut g);
+    // -1 (the 5-drop leaves hand) +1 (draw) = net same.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "drew off the big spell");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Treasure").count(), 1, "made a Treasure");
+}
