@@ -178,6 +178,12 @@ pub struct Player {
     /// as a turn-based action in `do_rad_counters`). Default 0.
     #[serde(default)]
     pub rad_counters: u32,
+    /// CR 700.6 / 702.131 — true once this player has the city's blessing.
+    /// Granted by an Ascend ability/permanent while they control ten or more
+    /// permanents; once obtained it lasts for the rest of the game. Default
+    /// false for snapshot back-compat.
+    #[serde(default)]
+    pub city_blessing: bool,
     /// True if this player has no maximum hand size for the rest of the
     /// game. Set by `Effect::SetNoMaxHandSize` (Wisdom of Ages, Reliquary
     /// Tower-style effects). When true, the cleanup-step CR 514.1 enforcement
@@ -311,6 +317,7 @@ impl Player {
             poison_counters: 0,
             energy: 0,
             rad_counters: 0,
+            city_blessing: false,
             no_maximum_hand_size: false,
             eliminated: false,
             skip_turns: 0,

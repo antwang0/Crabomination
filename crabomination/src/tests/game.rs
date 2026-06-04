@@ -6454,3 +6454,48 @@ fn cr_701_10b_double_power_is_plus_x_zero() {
     let c = g.battlefield_find(bear).unwrap();
     assert_eq!((c.power(), c.toughness()), (12, 3), "doubling stacks as continuous +X/+0");
 }
+
+// ── CR 702.131 Ascend / CR 700.6 city's blessing ─────────────────────────────
+
+#[test]
+fn ascend_grants_city_blessing_at_ten_permanents() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::Ascend { who: PlayerRef::You }, &ctx).unwrap();
+    assert!(g.players[0].city_blessing, "ten permanents → city's blessing");
+}
+
+#[test]
+fn ascend_is_a_noop_below_ten_permanents() {
+    let mut g = two_player_game();
+    for _ in 0..9 {
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    }
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::Ascend { who: PlayerRef::You }, &ctx).unwrap();
+    assert!(!g.players[0].city_blessing, "nine permanents → no blessing");
+}
+
+#[test]
+fn city_blessing_predicate_gates_an_effect() {
+    use crate::card::Predicate;
+    let mut g = two_player_game();
+    // Without the blessing, the gated draw doesn't happen.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let gated = Effect::If {
+        cond: Predicate::HasCityBlessing { who: PlayerRef::You },
+        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        else_: Box::new(Effect::Noop),
+    };
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let before = g.players[0].hand.len();
+    g.resolve_effect(&gated, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), before, "no blessing → no draw");
+    // Grant it and re-run.
+    g.players[0].city_blessing = true;
+    g.resolve_effect(&gated, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), before + 1, "with blessing → draw");
+}

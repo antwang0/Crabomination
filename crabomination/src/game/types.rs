@@ -683,6 +683,8 @@ pub enum GameEvent {
     PoisonAdded { player: usize, amount: u32 },
     /// CR 724 — `player` became the monarch.
     MonarchChanged { player: usize },
+    /// CR 700.6 — `player` got the city's blessing (Ascend).
+    CityBlessingGained { player: usize },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },

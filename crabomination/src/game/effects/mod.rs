@@ -3629,6 +3629,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Ascend { who } => {
+                // CR 702.131 — get the city's blessing if `who` controls ten
+                // or more permanents (once obtained it's permanent).
+                if let Some(p) = self.resolve_player(who, ctx)
+                    && !self.players[p].city_blessing
+                    && self.battlefield.iter().filter(|c| c.controller == p).count() >= 10 {
+                        self.players[p].city_blessing = true;
+                        events.push(GameEvent::CityBlessingGained { player: p });
+                    }
+                Ok(())
+            }
+
             Effect::ReturnFromExileWithCounter { counter } => {
                 let p = ctx.controller;
                 // Highest-value qualifying card (owned by p, has the counter).

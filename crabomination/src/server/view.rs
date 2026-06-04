@@ -282,6 +282,7 @@ fn project_player(
         has_prevention_shield,
         devotion,
         is_monarch,
+        has_city_blessing: player.city_blessing,
     }
 }
 

@@ -346,6 +346,10 @@ pub struct PlayerView {
     /// snapshot back-compat.
     #[serde(default)]
     pub is_monarch: bool,
+    /// CR 700.6 — true when this player has the city's blessing (Ascend).
+    /// Surfaced so UIs can show a "blessed" badge. `#[serde(default)]`.
+    #[serde(default)]
+    pub has_city_blessing: bool,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to
@@ -1137,6 +1141,7 @@ pub enum GameEventWire {
     VehicleCrewed { vehicle: CardId },
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
+    CityBlessingGained { player: usize },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },
@@ -1308,6 +1313,7 @@ impl From<&GameEvent> for GameEventWire {
                 amount: *amount,
             },
             GameEvent::MonarchChanged { player } => GameEventWire::MonarchChanged { player: *player },
+            GameEvent::CityBlessingGained { player } => GameEventWire::CityBlessingGained { player: *player },
             GameEvent::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
                 GameEventWire::LoyaltyAbilityActivated {
                     planeswalker: *planeswalker,
@@ -1454,6 +1460,7 @@ impl GameEventWire {
             E::VehicleCrewed { vehicle } => format!("{} crewed", name(*vehicle)),
             E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
             E::MonarchChanged { player } => format!("P{player} becomes the monarch"),
+            E::CityBlessingGained { player } => format!("P{player} gets the city's blessing"),
             E::LoyaltyAbilityActivated {
                 planeswalker,
                 loyalty_change,

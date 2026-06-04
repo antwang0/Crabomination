@@ -317,6 +317,10 @@ impl GameState {
                     .map(|p| self.players[p].life_gained_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::HasCityBlessing { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].city_blessing),
             Predicate::PlayerDamagedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

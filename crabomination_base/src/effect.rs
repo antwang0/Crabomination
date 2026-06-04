@@ -456,6 +456,9 @@ pub enum Predicate {
     /// Backed by `Player.life_gained_this_turn`. Used by Strixhaven's
     /// **Infusion** rider — "If you gained life this turn, …".
     LifeGainedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// CR 700.6 — `who` has the city's blessing. "As long as you have the
+    /// city's blessing, …" (Ascend payoffs).
+    HasCityBlessing { who: PlayerRef },
     /// True if any player matched by `who` has been dealt damage this turn.
     /// Backed by `Player.was_dealt_damage_this_turn`. Powers Bloodthirst
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
@@ -2038,6 +2041,11 @@ pub enum Effect {
     SkipTurns { who: PlayerRef, count: Value },
     /// CR 724 — `who` becomes the monarch. "You become the monarch."
     BecomeMonarch { who: PlayerRef },
+    /// CR 702.131 — Ascend. If `who` controls ten or more permanents, they
+    /// get the city's blessing (a permanent player designation). A no-op
+    /// otherwise. "Ascend" on a sorcery/instant resolves once; the
+    /// permanent-static variant re-checks each time it's seen.
+    Ascend { who: PlayerRef },
     /// CR 500.7 — "[Player] takes [count] extra turn(s) after this one."
     /// Banks `count` onto each resolved player's `extra_turns`; consumed
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
@@ -2414,7 +2422,7 @@ impl Effect {
             }
             Effect::RevealTopOpponentChoosesToHand { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
-            Effect::BecomeMonarch { who } => player_has_target(who),
+            Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

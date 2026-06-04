@@ -366,7 +366,10 @@ feature; sweep card-batch by card-batch.
   ✅ Devotion (CR 700.5 — `Value::DevotionTo`,
   `StaticEffect::NotCreatureWhileDevotionBelow` god gate,
   `ManaPayload::DevotionOfChosenColor`; surfaced in `PlayerView.devotion`
-  + HUD chip), ⏳ Ascend / city's blessing,
+  + HUD chip), ✅ **Ascend / city's blessing** (CR 702.131 / 700.6 —
+  `Effect::Ascend` grants `Player.city_blessing` at ten+ permanents,
+  `Predicate::HasCityBlessing` gates payoffs; surfaced in
+  `PlayerView.has_city_blessing` + `CityBlessingGained` log event),
   🟡 Initiative / **monarch ✅** (CR 724 — `GameState.monarch` +
   `Effect::BecomeMonarch`; the monarch draws at their end step, combat damage
   to the monarch steals the crown, leaves-game transfer per 724.3; surfaced in
