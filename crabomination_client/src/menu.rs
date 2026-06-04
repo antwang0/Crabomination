@@ -26,9 +26,8 @@ use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
 use crabomination::server::{
     ClientChannel, RandomBot, SeatOccupant, run_match, run_match_full, seat_pair,
-    tcp_client, tcp_seat, SnapshotSink, SnapshotSinkState,
+    tcp_seat, SnapshotSink, SnapshotSinkState,
 };
-use crabomination::net::ClientMsg;
 
 use crate::net_plugin::{NetInbox, NetOutbox};
 
@@ -49,8 +48,19 @@ pub enum AppState {
     /// `DraftedDecks` resource is consumed by `start_net_session` so
     /// the post-draft match plays out via the normal InGame path.
     Drafting,
+    /// Connected to a lobby server: browse, create (choosing a gamemode), or
+    /// join a lobby. Owned by `crate::systems::lobby_ui`. Transitions to
+    /// `InGame` once the server sends `MatchStarted` (the net session is
+    /// already installed, so `start_net_session_from_menu` is a no-op then).
+    Lobby,
     InGame,
 }
+
+/// Address of the lobby server the user chose to connect to. Set by the menu's
+/// "Join LAN" action and consumed by `lobby_ui::connect_to_lobby_server` on
+/// entry to [`AppState::Lobby`].
+#[derive(Resource, Default)]
+pub struct PendingLobbyServer(pub Option<String>);
 
 /// Set by the menu when the player picks "Draft"; read by the draft
 /// plugin to choose which card pool the booster packs sample from.
@@ -100,8 +110,6 @@ pub enum NetMode {
     /// Bind a TCP listener on `port`; pair the local in-process seat against
     /// the next remote client to connect.
     HostLan { port: u16 },
-    /// Connect a TCP client to `addr` (host:port).
-    JoinLan { addr: String },
     /// Load a `<repo>/debug/state-*.json` snapshot and run the client in
     /// inspection mode (no live server; the HUD is read-only). Used for
     /// reproducing reported bugs from a saved state.
@@ -144,12 +152,33 @@ impl MatchFormat {
         }
     }
 
-    fn label(self) -> &'static str {
+    pub fn label(self) -> &'static str {
         match self {
             MatchFormat::Modern => "Modern",
             MatchFormat::Cube => "Cube",
             MatchFormat::Sos => "SoS",
             MatchFormat::Commander => "Commander",
+        }
+    }
+
+    /// Cycle to the next gamemode, for the lobby's format picker.
+    pub fn next(self) -> MatchFormat {
+        match self {
+            MatchFormat::Modern => MatchFormat::Cube,
+            MatchFormat::Cube => MatchFormat::Sos,
+            MatchFormat::Sos => MatchFormat::Commander,
+            MatchFormat::Commander => MatchFormat::Modern,
+        }
+    }
+
+    /// Map to the wire gamemode for a `CreateLobby` request.
+    pub fn to_lobby_format(self) -> crabomination::net::LobbyFormat {
+        use crabomination::net::LobbyFormat as LF;
+        match self {
+            MatchFormat::Modern => LF::Modern,
+            MatchFormat::Cube => LF::Cube,
+            MatchFormat::Sos => LF::Sos,
+            MatchFormat::Commander => LF::Commander,
         }
     }
 }
@@ -230,6 +259,7 @@ impl Plugin for MenuPlugin {
         app.init_state::<AppState>()
             .init_resource::<PendingNetMode>()
             .init_resource::<PendingDraftFormat>()
+            .init_resource::<PendingLobbyServer>()
             .init_resource::<MenuFields>()
             .init_resource::<CliBootHint>()
             .add_systems(OnEnter(AppState::Menu), spawn_menu)
@@ -652,6 +682,7 @@ fn handle_action_buttons(
     mut next_state: ResMut<NextState<AppState>>,
     mut pending: ResMut<PendingNetMode>,
     mut pending_draft: ResMut<PendingDraftFormat>,
+    mut lobby_server: ResMut<PendingLobbyServer>,
     fields: Res<MenuFields>,
     play_q: Query<&Interaction, (Changed<Interaction>, With<PlayBotButton>)>,
     spectate_q: Query<&Interaction, (Changed<Interaction>, With<SpectateBotsButton>)>,
@@ -709,8 +740,11 @@ fn handle_action_buttons(
     if join_q.iter().any(|i| *i == Interaction::Pressed) {
         let addr = fields.join_addr.trim().to_string();
         if !addr.is_empty() {
-            pending.0 = Some((NetMode::JoinLan { addr }, format));
-            next_state.set(AppState::InGame);
+            // Connect, then browse lobbies on the server (which picks the
+            // gamemode per lobby). The actual connect happens on entry to
+            // `AppState::Lobby`.
+            lobby_server.0 = Some(addr);
+            next_state.set(AppState::Lobby);
         }
     }
 }
@@ -721,6 +755,14 @@ fn handle_action_buttons(
 /// back to a local Modern bot match if no choice was queued (e.g. tests
 /// bypass the menu).
 pub fn start_net_session_from_menu(world: &mut World) {
+    // Lobby flow: the net session was already installed when we connected to
+    // the lobby server, and the match is already running server-side — just
+    // consume it. Re-running setup here would clobber the live connection with
+    // a fresh local-bot match.
+    if world.contains_resource::<NetOutbox>() {
+        return;
+    }
+
     // Clear the play-by-play log so a new session (including an audit run)
     // doesn't show scrollback from the previous game.
     if let Some(mut log) = world.get_resource_mut::<crate::game::GameLog>() {
@@ -761,13 +803,6 @@ pub fn start_net_session_from_menu(world: &mut World) {
             ),
             Err(e) => {
                 eprintln!("net: host failed ({e}); falling back to local bot");
-                spawn_inprocess_bot(world, format);
-            }
-        },
-        NetMode::JoinLan { addr } => match spawn_join_lan(world, &addr) {
-            Ok(()) => eprintln!("net: connected to {addr}"),
-            Err(e) => {
-                eprintln!("net: join {addr} failed ({e}); falling back to local bot");
                 spawn_inprocess_bot(world, format);
             }
         },
@@ -1003,18 +1038,5 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
         }
         Ok(())
     }
-}
-
-fn spawn_join_lan(world: &mut World, addr: &str) -> std::io::Result<()> {
-    let stream = std::net::TcpStream::connect(addr)?;
-    // Keep a clone of the socket so "Leave Game" can shut it down
-    // promptly; without it the server only notices via keepalive (~2 min).
-    let conn_handle = stream.try_clone().ok();
-    let ClientChannel { tx, rx } = tcp_client(stream)?;
-    let _ = tx.send(ClientMsg::JoinMatch { name: "client".into() });
-    world.insert_resource(NetOutbox::new(tx));
-    world.insert_resource(NetInbox(Mutex::new(rx)));
-    world.insert_resource(crate::net_plugin::NetConnection(conn_handle));
-    Ok(())
 }
 

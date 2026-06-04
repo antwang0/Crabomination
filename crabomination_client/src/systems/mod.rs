@@ -11,6 +11,7 @@ pub mod game_ui;
 pub mod gizmos;
 pub mod kb_cursor;
 pub mod legal_target_filter;
+pub mod lobby_ui;
 pub mod pt_label;
 pub mod quality;
 pub mod ui;

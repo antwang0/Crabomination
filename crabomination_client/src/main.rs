@@ -246,6 +246,7 @@ fn main() {
             MenuPlugin,
             theme::UiFontsPlugin,
             systems::draft::DraftPlugin,
+            systems::lobby_ui::LobbyUiPlugin,
         ))
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()

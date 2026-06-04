@@ -71,6 +71,12 @@ impl NetOutbox {
     pub fn submit_debug(&self, action: DebugAction) {
         let _ = self.0.send(ClientMsg::Debug(action));
     }
+
+    /// Send a raw `ClientMsg` — used for lobby commands (list / create / join
+    /// / leave), which aren't game actions.
+    pub fn submit_msg(&self, msg: ClientMsg) {
+        let _ = self.0.send(msg);
+    }
 }
 
 /// A cast the engine rejected with `ManualTapRequired`: the player has a
