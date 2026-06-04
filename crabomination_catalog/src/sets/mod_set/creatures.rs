@@ -5519,3 +5519,45 @@ pub fn burnished_hart() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Doom Whisperer — {3}{B}{B} Creature — Nightmare Demon 6/6, Flying, Trample.
+/// "Pay 2 life: Surveil 2." (GRN)
+pub fn doom_whisperer() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Doom Whisperer",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Nightmare, CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 2,
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gifted Aetherborn — {B}{B} Creature — Aetherborn Vampire 2/3, Deathtouch,
+/// Lifelink. (AER)
+pub fn gifted_aetherborn() -> CardDefinition {
+    CardDefinition {
+        name: "Gifted Aetherborn",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Aetherborn, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        ..Default::default()
+    }
+}

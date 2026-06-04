@@ -1301,3 +1301,23 @@ pub fn apostles_blessing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Victims of Night — {1}{B}{B} Instant. "Destroy target creature that's not a
+/// Vampire, Werewolf, or Zombie." (DKA)
+pub fn victims_of_night() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Victims of Night",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Vampire).negate())
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Werewolf).negate())
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Zombie).negate()),
+            ),
+        },
+        ..Default::default()
+    }
+}

@@ -2594,6 +2594,48 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn gifted_aetherborn_has_deathtouch_lifelink() {
+    use crate::card::Keyword;
+    let d = catalog::gifted_aetherborn();
+    assert!(d.keywords.contains(&Keyword::Deathtouch) && d.keywords.contains(&Keyword::Lifelink));
+    assert_eq!((d.power, d.toughness), (2, 3));
+}
+
+#[test]
+fn doom_whisperer_pays_life_to_surveil() {
+    let mut g = two_player_game();
+    let dw = g.add_card_to_battlefield(0, catalog::doom_whisperer());
+    g.add_card_to_library(0, catalog::island());
+    g.clear_sickness(dw);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dw, ability_index: 0, target: None, x_value: None }).expect("Pay 2 life: Surveil 2");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life");
+}
+
+#[test]
+fn victims_of_night_cant_kill_a_zombie() {
+    let mut g = two_player_game();
+    let zombie = g.add_card_to_battlefield(1, catalog::rotting_regisaur()); // Zombie Dinosaur
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let von = g.add_card_to_hand(0, catalog::victims_of_night());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    // Targeting the Zombie is illegal (fails the selection requirement).
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: von, target: Some(Target::Permanent(zombie)),
+        additional_targets: vec![], mode: None, x_value: None }).is_err(),
+        "can't target a Zombie");
+    // The bear is a legal target.
+    g.perform_action(GameAction::CastSpell {
+        card_id: von, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("kills the bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+}
+
+#[test]
 fn meteor_golem_etb_destroys_opponent_permanent() {
     let mut g = two_player_game();
     let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
