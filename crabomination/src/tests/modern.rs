@@ -2594,6 +2594,38 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn beast_whisperer_draws_on_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::beast_whisperer());
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature");
+    drain_stack(&mut g);
+    // -1 bear cast from hand, +1 drawn by Beast Whisperer → net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before, "Beast Whisperer drew on the creature cast");
+}
+
+#[test]
+fn lotus_cobra_makes_treasure_on_landfall() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lotus_cobra());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Treasure").count(),
+        1, "landfall minted a Treasure");
+}
+
+#[test]
 fn gifted_aetherborn_has_deathtouch_lifelink() {
     use crate::card::Keyword;
     let d = catalog::gifted_aetherborn();

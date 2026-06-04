@@ -5561,3 +5561,52 @@ pub fn gifted_aetherborn() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Beast Whisperer — {2}{G}{G} Creature — Elf Druid 2/3. "Whenever you cast a
+/// creature spell, draw a card." (M19)
+pub fn beast_whisperer() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Beast Whisperer",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lotus Cobra — {1}{G} Creature — Snake 2/1. "Landfall — Whenever a land
+/// enters the battlefield under your control, create a Treasure token." (ZEN)
+pub fn lotus_cobra() -> CardDefinition {
+    CardDefinition {
+        name: "Lotus Cobra",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
