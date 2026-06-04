@@ -23,14 +23,16 @@ use std::collections::HashMap;
 use std::env;
 use std::io;
 use std::net::{IpAddr, TcpListener, TcpStream};
-use std::sync::{Arc, Mutex};
+use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use crabomination::cube::build_cube_state;
 use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
-use crabomination::server::{run_match, tcp_seat, RandomBot, SeatOccupant};
+use crabomination::server::{
+    run_match, serve_lobbies, tcp_seat, ConnId, RandomBot, SeatOccupant,
+};
 
 /// Format-builder enum that captures the environment configuration once at
 /// boot, so each match thread doesn't re-read env vars.
@@ -779,6 +781,11 @@ impl Drop for SlotGuard {
 fn main() {
     let bind = env::var("CRAB_BIND").unwrap_or_else(|_| "0.0.0.0:7777".to_string());
     let bot_mode = env::var("CRAB_BOT").ok().as_deref() == Some("1");
+    // Lobby mode is the default for the non-bot path: each client browses,
+    // then creates or joins a lobby and picks the gamemode there. Set
+    // `CRAB_LOBBY=0` for the legacy auto-pairing behavior (two clients paired
+    // into the server-fixed `CRAB_FORMAT`).
+    let lobby_mode = !bot_mode && env::var("CRAB_LOBBY").ok().as_deref() != Some("0");
     // Format is `Copy`, so each match thread captures a fresh copy via the
     // `move` closure — no Arc needed.
     let format = Format::from_env();
@@ -799,15 +806,17 @@ fn main() {
         }
     };
     eprintln!(
-        "crabomination_server listening on {bind} (bot_mode={bot_mode}, format={}, \
-         pairing_timeout={}s, max_conns={}, max_conns_per_ip={})",
+        "crabomination_server listening on {bind} (bot_mode={bot_mode}, lobby_mode={lobby_mode}, \
+         format={}, pairing_timeout={}s, max_conns={}, max_conns_per_ip={})",
         format.label(),
         pairing_timeout.as_secs(),
         slots.global_cap,
         slots.per_ip_cap,
     );
 
-    if bot_mode {
+    if lobby_mode {
+        run_lobby_server(&listener, &slots);
+    } else if bot_mode {
         loop {
             let (stream, peer) = match accept_with_backoff(&listener) {
                 Some(p) => p,
@@ -988,6 +997,46 @@ fn accept_with_deadline(
     // the outer accept loop behaves as expected.
     let _ = listener.set_nonblocking(false);
     result
+}
+
+/// Lobby-mode accept loop. Each accepted connection acquires a slot, is
+/// wrapped into a `SeatChannel`, and is handed (with its slot guard) to the
+/// [`serve_lobbies`] driver, which runs the browse/create/join protocol and
+/// starts a match when a lobby fills. The slot guard rides along with the
+/// connection, so the connection cap stays held for the lobby + match.
+fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
+    let (conn_tx, conn_rx) = mpsc::channel::<(ConnId, _, SlotGuard)>();
+    thread::spawn(move || serve_lobbies(conn_rx));
+
+    let mut next_id: u64 = 0;
+    loop {
+        let (stream, peer) = match accept_with_backoff(listener) {
+            Some(p) => p,
+            None => continue,
+        };
+        let guard = match slots.try_acquire(peer.ip()) {
+            Ok(g) => g,
+            Err(reason) => {
+                eprintln!("refusing {peer}: {reason:?}");
+                let _ = stream.shutdown(std::net::Shutdown::Both);
+                continue;
+            }
+        };
+        let seat = match tcp_seat(stream) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("tcp_seat failed for {peer}: {e}");
+                continue; // dropping `guard` frees the slot
+            }
+        };
+        let id = ConnId(next_id);
+        next_id += 1;
+        eprintln!("client {peer} → lobby (conn {})", id.0);
+        if conn_tx.send((id, seat, guard)).is_err() {
+            eprintln!("lobby driver exited; stopping accept loop");
+            std::process::exit(1);
+        }
+    }
 }
 
 fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) {

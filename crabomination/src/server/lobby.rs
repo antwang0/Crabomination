@@ -283,21 +283,27 @@ impl LobbyManager {
 /// inbound lobby commands to a [`LobbyManager`], delivers the outgoing
 /// messages, and spawns a match thread when a lobby fills.
 ///
+/// Each connection carries an opaque guard `G` (e.g. a connection-slot RAII
+/// token from the server binary). The guard lives exactly as long as the
+/// connection: it is dropped when the connection disconnects, and it travels
+/// *with* the channel into the match thread when a lobby fills, so a cap held
+/// at accept time stays held for the match's duration. Tests pass `()`.
+///
 /// `new_conns` is the stream of freshly-accepted connections (the accept loop
 /// assigns each a [`ConnId`]). The loop polls non-blockingly and sleeps briefly
 /// between passes; it returns when `new_conns` closes and no connections remain.
-pub fn serve_lobbies(new_conns: mpsc::Receiver<(ConnId, SeatChannel)>) {
+pub fn serve_lobbies<G: Send + 'static>(new_conns: mpsc::Receiver<(ConnId, SeatChannel, G)>) {
     let mut mgr = LobbyManager::new();
-    let mut channels: HashMap<ConnId, SeatChannel> = HashMap::new();
+    let mut channels: HashMap<ConnId, (SeatChannel, G)> = HashMap::new();
     let mut accepting = true;
 
     loop {
         // Intake newly-accepted connections.
         loop {
             match new_conns.try_recv() {
-                Ok((id, ch)) => {
+                Ok((id, ch, guard)) => {
                     let outcome = mgr.register(id);
-                    channels.insert(id, ch);
+                    channels.insert(id, (ch, guard));
                     apply(&mut channels, outcome);
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
@@ -312,7 +318,7 @@ pub fn serve_lobbies(new_conns: mpsc::Receiver<(ConnId, SeatChannel)>) {
         let ids: Vec<ConnId> = channels.keys().copied().collect();
         for id in ids {
             loop {
-                let recv = channels.get(&id).map(|c| c.rx.try_recv());
+                let recv = channels.get(&id).map(|(c, _)| c.rx.try_recv());
                 match recv {
                     Some(Ok(msg)) => {
                         let outcome = mgr.handle(id, msg);
@@ -324,7 +330,7 @@ pub fn serve_lobbies(new_conns: mpsc::Receiver<(ConnId, SeatChannel)>) {
                     }
                     Some(Err(mpsc::TryRecvError::Empty)) => break,
                     Some(Err(mpsc::TryRecvError::Disconnected)) | None => {
-                        channels.remove(&id);
+                        channels.remove(&id); // drops the guard → frees the slot
                         let outcome = mgr.disconnect(id);
                         apply(&mut channels, outcome);
                         break;
@@ -341,18 +347,23 @@ pub fn serve_lobbies(new_conns: mpsc::Receiver<(ConnId, SeatChannel)>) {
 }
 
 /// Deliver an outcome's messages and, if a lobby filled, move its members'
-/// channels out of the pool and spawn the match.
-fn apply(channels: &mut HashMap<ConnId, SeatChannel>, outcome: LobbyOutcome) {
+/// channels (and their guards) out of the pool and spawn the match.
+fn apply<G: Send + 'static>(
+    channels: &mut HashMap<ConnId, (SeatChannel, G)>,
+    outcome: LobbyOutcome,
+) {
     for (id, msg) in outcome.sends {
-        if let Some(ch) = channels.get(&id) {
+        if let Some((ch, _)) = channels.get(&id) {
             let _ = ch.tx.send(msg);
         }
     }
     if let Some(start) = outcome.start {
         let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(start.members.len());
+        let mut guards: Vec<G> = Vec::with_capacity(start.members.len());
         for id in &start.members {
-            if let Some(ch) = channels.remove(id) {
+            if let Some((ch, guard)) = channels.remove(id) {
                 occupants.push(SeatOccupant::Human(ch));
+                guards.push(guard);
             }
         }
         // Only start if every member's channel was still present; a member
@@ -360,6 +371,9 @@ fn apply(channels: &mut HashMap<ConnId, SeatChannel>, outcome: LobbyOutcome) {
         // would just disconnect immediately otherwise).
         if occupants.len() == start.members.len() {
             thread::spawn(move || {
+                // Hold the per-connection guards for the match's lifetime so a
+                // connection cap acquired at accept time isn't released early.
+                let _guards = guards;
                 run_match(start.state, occupants);
             });
         }
@@ -493,8 +507,8 @@ mod tests {
         // Two connections, each a (server SeatChannel, client ClientChannel).
         let (s1, c1) = seat_pair();
         let (s2, c2) = seat_pair();
-        new_tx.send((ConnId(1), s1)).unwrap();
-        new_tx.send((ConnId(2), s2)).unwrap();
+        new_tx.send((ConnId(1), s1, ())).unwrap();
+        new_tx.send((ConnId(2), s2, ())).unwrap();
 
         // Each gets an initial LobbyList from `register`.
         let id = await_lobby_then_create(&c1);
