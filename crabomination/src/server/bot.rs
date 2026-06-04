@@ -878,6 +878,49 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Mana-only alternative costs (Dash CR 702.110, Blitz 702.152,
+    // Spectacle 702.111): for any hand card whose `alternative_cost` is paid
+    // purely with mana (no pitch/sacrifice/graveyard/life rider), offer a
+    // `CastSpellAlternative` candidate. `would_accept` validates the alt cost
+    // and its `condition` gate (e.g. Spectacle's opponent-lost-life), so a
+    // Skewer the Critics is only offered for {R} once an opponent has bled.
+    for c in state.players[seat].hand.iter().filter(|c| {
+        c.definition.alternative_cost.as_ref().is_some_and(|a| {
+            a.exile_filter.is_none()
+                && a.sacrifice_permanents.is_none()
+                && a.exile_from_graveyard_count == 0
+                && a.life_cost == 0
+                && !a.evoke_sacrifice
+        })
+    }) {
+        let effect = c
+            .definition
+            .alternative_cost
+            .as_ref()
+            .and_then(|a| a.effect_override.as_ref())
+            .unwrap_or(&c.definition.effect);
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellAlternative {
+            card_id: c.id,
+            pitch_card: None,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
     // played-this-turn, etc.). Use the game-level helper so an
@@ -2259,6 +2302,21 @@ mod tests {
         // a direct call to the helper is the most reliable assertion.
         assert_eq!(max_affordable_x(&g, 0, &card), 3,
             "{{R}} + {{3}} in pool, fixed cost {{R}} => X = 3");
+    }
+
+    #[test]
+    fn bot_casts_spectacle_when_opponent_bled() {
+        // Skewer the Critics ({2}{R}, Spectacle {R}) with only {R} in the pool:
+        // unaffordable at its printed cost, but castable for Spectacle once an
+        // opponent has lost life this turn.
+        let mut g = two_player_game();
+        let id = g.add_card_to_hand(0, catalog::skewer_the_critics());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.adjust_life(1, -1); // opponent bleeds → Spectacle online
+        match main_phase_action(&g, 0) {
+            GameAction::CastSpellAlternative { card_id, .. } => assert_eq!(card_id, id),
+            other => panic!("expected a Spectacle alternative cast, got {other:?}"),
+        }
     }
 
     #[test]
