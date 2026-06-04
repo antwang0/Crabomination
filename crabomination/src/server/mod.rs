@@ -92,6 +92,51 @@ const BOT_DEADLOCK_TIMEOUT: Duration = Duration::from_secs(15);
 /// matching the `<repo>/debug/` convention used by the in-game export.
 const DEADLOCK_DUMP_DIR: &str = "debug";
 
+/// How long a reconnectable match stays alive with *every* human seat
+/// disconnected, waiting for at least one to reattach, before giving up and
+/// ending the match. Only applies when reconnection is enabled (the standalone
+/// server passes a reattach channel); in-process and non-reconnectable matches
+/// end the instant their last human drops, exactly as before.
+const RECONNECT_GRACE: Duration = Duration::from_secs(60);
+
+/// Messages the match actor multiplexes onto its single inbound channel.
+/// Seat forwarders, the spectator drain, and (for reconnectable matches) the
+/// reattach drain all feed this enum so the actor can `recv` one stream.
+enum Inbox {
+    /// A client message from `seat` (or `usize::MAX` for a spectator, whose
+    /// messages the actor ignores).
+    FromSeat(usize, ClientMsg),
+    /// `seat`'s forwarder observed its client disconnect. `epoch` identifies
+    /// which connection generation reported it, so a stale disconnect from a
+    /// socket that was already replaced by a reconnect is ignored.
+    Disconnected(usize, u64),
+    /// A (re)connecting client has taken over `seat` with a fresh channel.
+    /// Only produced for reconnectable matches.
+    Attach(usize, SeatChannel),
+}
+
+/// Spawn the per-seat forwarder: pump the seat's inbound `ClientMsg`s onto the
+/// actor's merged channel tagged with `seat`, then — when the client's socket
+/// closes — emit a single [`Inbox::Disconnected`] stamped with `epoch` so the
+/// actor can distinguish a live disconnect from a stale one after a reconnect.
+fn spawn_seat_forwarder(
+    seat: usize,
+    epoch: u64,
+    rx: mpsc::Receiver<ClientMsg>,
+    merged_tx: mpsc::Sender<Inbox>,
+) {
+    thread::spawn(move || {
+        while let Ok(msg) = rx.recv() {
+            if merged_tx.send(Inbox::FromSeat(seat, msg)).is_err() {
+                return;
+            }
+        }
+        // Client gone — best-effort notify the actor (it may already have
+        // returned, in which case the send simply fails and we exit).
+        let _ = merged_tx.send(Inbox::Disconnected(seat, epoch));
+    });
+}
+
 /// The server-side end of a seat connection. The `tx` is where the server
 /// sends [`ServerMsg`]s to this seat's client; `rx` is where the server
 /// receives [`ClientMsg`]s from it.
@@ -246,10 +291,46 @@ pub fn run_match_spectated(
 /// state in the sink, so in-process clients can read it (under
 /// `Mutex::lock`) for debug-export purposes.
 pub fn run_match_full(
+    state: GameState,
+    occupants: Vec<SeatOccupant>,
+    spectators: Vec<SeatChannel>,
+    snapshot_sink: Option<SnapshotSink>,
+) -> MatchOutcome {
+    run_match_reconnectable(state, occupants, spectators, snapshot_sink, None)
+}
+
+/// Variant of [`run_match_full`] that supports mid-match reconnection.
+///
+/// When a human seat's client disconnects, the match is *not* torn down
+/// immediately: the actor drains `reattach_rx` for an [`Inbox::Attach`]
+/// carrying a fresh `SeatChannel` for that seat, replaying
+/// `YourSeat`/`MatchStarted`/`View` to the new connection. Only once *every*
+/// human seat has been gone for longer than [`RECONNECT_GRACE`] with no
+/// reattach does the match end.
+///
+/// Passing `reattach_rx == None` (as [`run_match_full`] does) disables this
+/// entirely — the match ends the instant its last human drops, identical to
+/// the pre-reconnect behavior — so non-reconnectable callers are unaffected.
+pub fn run_match_reconnectable(
+    state: GameState,
+    occupants: Vec<SeatOccupant>,
+    spectators: Vec<SeatChannel>,
+    snapshot_sink: Option<SnapshotSink>,
+    reattach_rx: Option<mpsc::Receiver<(usize, SeatChannel)>>,
+) -> MatchOutcome {
+    run_match_inner(state, occupants, spectators, snapshot_sink, reattach_rx, RECONNECT_GRACE)
+}
+
+/// Core match actor. Separated from [`run_match_reconnectable`] only so the
+/// reconnect grace window is injectable — tests drive it with a short grace
+/// instead of the production [`RECONNECT_GRACE`].
+fn run_match_inner(
     mut state: GameState,
     occupants: Vec<SeatOccupant>,
     spectators: Vec<SeatChannel>,
     snapshot_sink: Option<SnapshotSink>,
+    reattach_rx: Option<mpsc::Receiver<(usize, SeatChannel)>>,
+    reconnect_grace: Duration,
 ) -> MatchOutcome {
     let n = occupants.len();
     assert_eq!(n, state.players.len(), "occupant count must match player count");
@@ -262,10 +343,16 @@ pub fn run_match_full(
         state.start_mulligan_phase();
     }
 
-    let (merged_tx, merged_rx) = mpsc::channel::<(usize, ClientMsg)>();
+    let reconnect_enabled = reattach_rx.is_some();
+    let (merged_tx, merged_rx) = mpsc::channel::<Inbox>();
     let mut seat_tx: Vec<Option<mpsc::Sender<ServerMsg>>> = Vec::with_capacity(n);
     let mut bots: Vec<Option<Box<dyn Bot>>> = Vec::with_capacity(n);
-    let mut human_seat_count = 0;
+    // Per-seat connection epoch (bumped on each reattach) and current
+    // connected flag. Bot seats stay at epoch 0 / `connected=false` and are
+    // never tracked for liveness.
+    let mut seat_epoch: Vec<u64> = vec![0; n];
+    let mut connected: Vec<bool> = vec![false; n];
+    let mut human_seats = 0usize;
 
     // Spectator channels: passive observers that get the same broadcast
     // stream as a Human seat (seat 0's view) but whose incoming messages
@@ -286,7 +373,7 @@ pub fn run_match_full(
         let rx = spec.rx;
         thread::spawn(move || {
             while let Ok(msg) = rx.recv() {
-                if forward_tx.send((usize::MAX, msg)).is_err() {
+                if forward_tx.send(Inbox::FromSeat(usize::MAX, msg)).is_err() {
                     break;
                 }
             }
@@ -300,18 +387,11 @@ pub fn run_match_full(
                 let _ = seat.tx.send(ServerMsg::YourSeat(i));
                 let _ = seat.tx.send(ServerMsg::MatchStarted);
                 let _ = seat.tx.send(ServerMsg::View(Box::new(view::project(&state, i))));
-                let forward_tx = merged_tx.clone();
-                let rx = seat.rx;
-                thread::spawn(move || {
-                    while let Ok(msg) = rx.recv() {
-                        if forward_tx.send((i, msg)).is_err() {
-                            break;
-                        }
-                    }
-                });
+                spawn_seat_forwarder(i, seat_epoch[i], seat.rx, merged_tx.clone());
                 seat_tx.push(Some(seat.tx));
                 bots.push(None);
-                human_seat_count += 1;
+                connected[i] = true;
+                human_seats += 1;
             }
             SeatOccupant::Bot(b) => {
                 seat_tx.push(None);
@@ -319,6 +399,28 @@ pub fn run_match_full(
             }
         }
     }
+    let mut connected_humans = human_seats;
+
+    // Reattach drain: forwards reconnecting `SeatChannel`s into the actor as
+    // `Inbox::Attach`. Holding a `merged_tx` clone keeps the merged channel
+    // alive across full human disconnects (so the actor can wait out the
+    // grace window). Only spawned for reconnectable matches.
+    if let Some(reattach_rx) = reattach_rx {
+        let forward_tx = merged_tx.clone();
+        thread::spawn(move || {
+            while let Ok((seat, ch)) = reattach_rx.recv() {
+                if forward_tx.send(Inbox::Attach(seat, ch)).is_err() {
+                    break;
+                }
+            }
+        });
+    }
+    // A spare sender used to spawn forwarders for reattaching seats. Kept
+    // only when reconnection is enabled; doubles as a keep-alive for the
+    // merged channel. Non-reconnectable matches drop every `merged_tx` here
+    // so the channel disconnects (and the actor returns) once all forwarders
+    // exit, exactly as before.
+    let attach_forward_tx = reconnect_enabled.then(|| merged_tx.clone());
     drop(merged_tx);
 
     // Initial snapshot so clients can read the authoritative state
@@ -331,6 +433,11 @@ pub fn run_match_full(
     // silently on `merged_rx.recv()`. Pure-human matches don't trip
     // this — humans can take their time deciding.
     let mut last_progress_at = Instant::now();
+    // For reconnectable matches: once *every* human has dropped, the instant
+    // after which we stop waiting for a reattach and end the match. `None`
+    // while at least one human is connected (or always, when reconnection is
+    // disabled — those matches end immediately on full disconnect instead).
+    let mut disconnect_deadline: Option<Instant> = None;
 
     loop {
         if drive_bots(
@@ -345,15 +452,16 @@ pub fn run_match_full(
             return capture_outcome(&state);
         }
 
-        if human_seat_count == 0 && spectator_count == 0 {
+        if human_seats == 0 && spectator_count == 0 {
             return capture_outcome(&state);
         }
 
-        // In a humanless (spectator-only) match, poll with a timeout
-        // so the deadlock watchdog can fire. Otherwise wait
-        // indefinitely — humans deciding shouldn't trigger the
-        // watchdog.
-        let next = if human_seat_count == 0 {
+        // Pick how long to block waiting for the next message:
+        // - spectator-only (no human seats): poll on the deadlock watchdog.
+        // - all humans gone within the reconnect grace window: poll until
+        //   the deadline, then end the match if no one reattached.
+        // - otherwise: wait indefinitely (humans deciding mustn't time out).
+        let next: Option<Inbox> = if human_seats == 0 {
             match merged_rx.recv_timeout(BOT_DEADLOCK_TIMEOUT) {
                 Ok(msg) => Some(msg),
                 Err(mpsc::RecvTimeoutError::Timeout) => {
@@ -364,13 +472,63 @@ pub fn run_match_full(
                 }
                 Err(mpsc::RecvTimeoutError::Disconnected) => return capture_outcome(&state),
             }
+        } else if let Some(deadline) = disconnect_deadline {
+            let now = Instant::now();
+            if now >= deadline {
+                // Grace expired with no reattach — give up on the match.
+                return capture_outcome(&state);
+            }
+            match merged_rx.recv_timeout(deadline - now) {
+                Ok(msg) => Some(msg),
+                Err(mpsc::RecvTimeoutError::Timeout) => None, // loop re-checks the deadline
+                Err(mpsc::RecvTimeoutError::Disconnected) => return capture_outcome(&state),
+            }
         } else {
             match merged_rx.recv() {
                 Ok(msg) => Some(msg),
                 Err(_) => return capture_outcome(&state),
             }
         };
-        let Some((seat, msg)) = next else { continue };
+        let Some(inbox) = next else { continue };
+
+        let (seat, msg) = match inbox {
+            Inbox::FromSeat(seat, msg) => (seat, msg),
+            Inbox::Disconnected(seat, epoch) => {
+                // Ignore a stale disconnect from a connection that was
+                // already superseded by a reattach (epoch mismatch).
+                if seat < n && connected[seat] && epoch == seat_epoch[seat] {
+                    connected[seat] = false;
+                    connected_humans = connected_humans.saturating_sub(1);
+                    if connected_humans == 0 && spectator_count == 0 {
+                        if reconnect_enabled {
+                            disconnect_deadline = Some(Instant::now() + reconnect_grace);
+                        } else {
+                            return capture_outcome(&state);
+                        }
+                    }
+                }
+                continue;
+            }
+            Inbox::Attach(seat, ch) => {
+                if seat < n {
+                    seat_epoch[seat] += 1;
+                    let _ = ch.tx.send(ServerMsg::YourSeat(seat));
+                    let _ = ch.tx.send(ServerMsg::MatchStarted);
+                    let _ = ch.tx.send(ServerMsg::View(Box::new(view::project(&state, seat))));
+                    if let Some(fwd) = attach_forward_tx.as_ref() {
+                        spawn_seat_forwarder(seat, seat_epoch[seat], ch.rx, fwd.clone());
+                    }
+                    seat_tx[seat] = Some(ch.tx);
+                    if !connected[seat] {
+                        connected[seat] = true;
+                        connected_humans += 1;
+                    }
+                    // Someone's back — cancel any pending grace expiry.
+                    disconnect_deadline = None;
+                }
+                continue;
+            }
+        };
 
         // Spectator-tagged messages (seat == usize::MAX) are silently
         // ignored — spectators don't act, they only watch.
@@ -1105,6 +1263,158 @@ mod tests {
             .recv_timeout(Duration::from_secs(5))
             .expect("run_match should terminate after all humans disconnect");
         watcher.join().unwrap();
+    }
+
+    // ── Reconnection (run_match_reconnectable) ───────────────────────────────
+
+    /// With reconnection enabled, one seat dropping doesn't end the match
+    /// (the other human plays on), and reattaching that seat with a fresh
+    /// channel replays YourSeat/MatchStarted/View reflecting the *current*
+    /// mid-match state, after which the seat is live again.
+    #[test]
+    fn reconnect_reattach_replays_state_and_resumes() {
+        let mut state = two_player_game();
+        let card0 = state.add_card_to_hand(0, catalog::plains());
+
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (reattach_tx, reattach_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                Some(reattach_rx),
+                // Short grace: seat 0 stays connected through the body, so the
+                // window only matters at teardown (keeps the test fast).
+                Duration::from_millis(200),
+            )
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        // Seat 1 disconnects; seat 0 is still connected so the match lives.
+        drop(c1);
+        thread::sleep(Duration::from_millis(30));
+
+        // Seat 0 plays its land — proves the match is still running.
+        c0.tx
+            .send(ClientMsg::SubmitAction(GameAction::PlayLand(card0)))
+            .unwrap();
+        assert!(
+            matches!(c0.rx.recv().unwrap(), ServerMsg::Update { .. }),
+            "match still live for seat 0 after seat 1 dropped",
+        );
+
+        // Reconnect seat 1 with a brand-new channel.
+        let (s1b, c1b) = seat_pair();
+        reattach_tx.send((1, s1b)).unwrap();
+
+        // The reconnected client gets the standard handshake plus a view that
+        // reflects seat 0's already-played land.
+        assert!(matches!(c1b.rx.recv().unwrap(), ServerMsg::YourSeat(1)));
+        assert!(matches!(c1b.rx.recv().unwrap(), ServerMsg::MatchStarted));
+        match c1b.rx.recv().unwrap() {
+            ServerMsg::View(v) => assert!(
+                v.battlefield.iter().any(|p| p.id == card0),
+                "reattach view must reflect the mid-match state",
+            ),
+            other => panic!("expected replayed View, got {other:?}"),
+        }
+
+        drop(c0);
+        drop(c1b);
+        drop(reattach_tx);
+        let _ = handle.join();
+    }
+
+    /// With reconnection enabled, all humans dropping starts a grace window;
+    /// if no one reattaches before it elapses, the match ends.
+    #[test]
+    fn reconnect_grace_expiry_ends_match() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (reattach_tx, reattach_rx) = mpsc::channel();
+        let (done_tx, done_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            let outcome = run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                Some(reattach_rx),
+                Duration::from_millis(200),
+            );
+            let _ = done_tx.send(());
+            outcome
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        // Both gone, nobody reattaches → match ends ~200ms later.
+        drop(c0);
+        drop(c1);
+        done_rx
+            .recv_timeout(Duration::from_secs(3))
+            .expect("match must end after the reconnect grace expires");
+        drop(reattach_tx);
+        let _ = handle.join();
+    }
+
+    /// A reattach inside the grace window cancels the pending expiry and keeps
+    /// the match alive.
+    #[test]
+    fn reconnect_within_grace_keeps_match_alive() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (reattach_tx, reattach_rx) = mpsc::channel();
+        let (done_tx, done_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            let outcome = run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                Some(reattach_rx),
+                Duration::from_millis(400),
+            );
+            let _ = done_tx.send(());
+            outcome
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        // Both drop, then seat 0 reconnects well within the 400ms grace.
+        drop(c0);
+        drop(c1);
+        thread::sleep(Duration::from_millis(50));
+        let (s0b, c0b) = seat_pair();
+        reattach_tx.send((0, s0b)).unwrap();
+        assert!(matches!(c0b.rx.recv().unwrap(), ServerMsg::YourSeat(0)));
+        assert!(matches!(c0b.rx.recv().unwrap(), ServerMsg::MatchStarted));
+        assert!(matches!(c0b.rx.recv().unwrap(), ServerMsg::View(_)));
+
+        // With seat 0 reconnected the deadline is cleared, so the match must
+        // NOT end even after the original grace would have elapsed.
+        assert!(
+            done_rx.recv_timeout(Duration::from_millis(600)).is_err(),
+            "a within-grace reattach must keep the match running",
+        );
+
+        // Tear down: drop the reconnected seat; with all humans gone again and
+        // no further reattach, the match ends after the grace window.
+        drop(c0b);
+        drop(reattach_tx);
+        done_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("match ends after the final grace window");
+        let _ = handle.join();
     }
 
     /// A bot-only match has no merged_rx blocking step: the actor pumps
