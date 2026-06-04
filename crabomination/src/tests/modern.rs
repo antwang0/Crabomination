@@ -12294,69 +12294,91 @@ fn karn_construct_token_scales_with_artifact_count() {
 }
 
 #[test]
-fn karn_plus_one_draws_a_card_and_mills_one() {
+fn karn_plus_one_takes_low_value_card_exiles_other_with_silver_counter() {
     let mut g = two_player_game();
     let karn = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
+    // Library top two: a cmc-0 land (opponent gives this to you) and a
+    // cmc-2 creature (exiled with a silver counter).
     g.add_card_to_library(0, catalog::island());
-    g.add_card_to_library(0, catalog::island());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
     let hand_before = g.players[0].hand.len();
-    let yard_before = g.players[0].graveyard.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: karn, ability_index: 0, target: None,
     }).expect("Karn +1");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Drew 1 card");
-    assert_eq!(g.players[0].graveyard.len(), yard_before + 1, "Milled 1 card");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one card to hand");
+    let exiled = g.exile.iter().find(|c| c.id == bears).expect("higher-cost card exiled");
+    assert_eq!(exiled.counter_count(CounterType::Silver), 1, "silver counter on exiled card");
 }
 
 #[test]
-fn tezzeret_minus_two_drains_each_opponent_for_two() {
+fn karn_minus_one_returns_silver_counter_card_from_exile() {
+    let mut g = two_player_game();
+    let karn = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
+    // Seed exile with a card P0 owns bearing a silver counter.
+    let cid = g.next_id();
+    let mut card = crate::card::CardInstance::new(cid, catalog::grizzly_bears(), 0);
+    card.add_counters(CounterType::Silver, 1);
+    g.exile.push(card);
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: karn, ability_index: 1, target: None,
+    }).expect("Karn -1");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == cid), "card returned to hand");
+    assert!(!g.exile.iter().any(|c| c.id == cid), "card left exile");
+}
+
+#[test]
+fn tezzeret_gains_loyalty_when_an_artifact_enters() {
     let mut g = two_player_game();
     let tez = g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
-    let p0_life = g.players[0].life;
-    let p1_life = g.players[1].life;
+    assert_eq!(g.battlefield_find(tez).unwrap().counter_count(CounterType::Loyalty), 4);
+    // Cast Mind Stone — an artifact you control entering triggers +1 loyalty.
+    let stone = g.add_card_to_hand(0, catalog::mind_stone());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: stone, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mind Stone castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(tez).unwrap().counter_count(CounterType::Loyalty), 5,
+        "artifact ETB added a loyalty counter");
+}
+
+#[test]
+fn tezzeret_zero_untaps_artifact_creature_and_adds_counter() {
+    let mut g = two_player_game();
+    let tez = g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.battlefield_find_mut(thopter).unwrap().tapped = true;
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: tez, ability_index: 0, target: Some(Target::Permanent(thopter)),
+    }).expect("Tezzeret 0");
+    drain_stack(&mut g);
+
+    let t = g.battlefield_find(thopter).unwrap();
+    assert!(!t.tapped, "artifact creature untapped");
+    assert_eq!(t.counter_count(CounterType::PlusOnePlusOne), 1, "+1/+1 counter on artifact creature");
+}
+
+#[test]
+fn tezzeret_minus_three_tutors_a_cheap_artifact() {
+    let mut g = two_player_game();
+    let tez = g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
+    g.battlefield_find_mut(tez).unwrap().add_counters(CounterType::Loyalty, 3); // 4+3 = 7 ≥ 3
+    let stone = g.add_card_to_library(0, catalog::mind_stone());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(stone))]));
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: tez, ability_index: 1, target: None,
-    }).expect("Tezzeret -2 drain");
+    }).expect("Tezzeret -3");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].life, p1_life - 2, "Opp loses 2 life");
-    assert_eq!(g.players[0].life, p0_life + 2, "You gain 2 life");
-}
-
-#[test]
-fn tezzeret_plus_one_shrinks_target_creature() {
-    let mut g = two_player_game();
-    let tez = g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-
-    g.perform_action(GameAction::ActivateLoyaltyAbility {
-        card_id: tez, ability_index: 0,
-        target: Some(Target::Permanent(bear)),
-    }).expect("Tezzeret +1 -2/-2");
-    drain_stack(&mut g);
-
-    // 2/2 bear with -2/-2 dies via SBA.
-    assert!(g.battlefield_find(bear).is_none(),
-        "Bear died from -2/-2");
-}
-
-#[test]
-fn tezzeret_static_buffs_your_artifact_creatures() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
-    // Ornithopter is a 0/2 artifact creature → 1/3 under Tezzeret.
-    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
-    // A non-artifact creature is unaffected.
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let c = g.compute_battlefield();
-    let t = c.iter().find(|c| c.id == thopter).unwrap();
-    assert_eq!((t.power, t.toughness), (1, 3), "0/2 Ornithopter → 1/3");
-    let b = c.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!((b.power, b.toughness), (2, 2), "non-artifact bear unbuffed");
+    assert!(g.players[0].hand.iter().any(|c| c.id == stone), "cheap artifact tutored to hand");
 }
 
 #[test]

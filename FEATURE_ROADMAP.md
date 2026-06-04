@@ -90,7 +90,14 @@ read of the code and should be re-verified before picking up an item.
   Brave the Elements), `Predicate::SpellsCastThisTurnEquals` +
   `PlayerRef::Triggerer`→caster/owner (Ledger Shredder, Sheoldred);
   **color-filtered anthems** (`AffectedPermanents::All.color` decoded from a
-  `HasColor` requirement — Honor of the Pure, Crusade, Bad Moon).
+  `HasColor` requirement — Honor of the Pure, Crusade, Bad Moon);
+  **reveal-top-opponent-chooses + exile-with-counter return**
+  (`Effect::RevealTopOpponentChoosesToHand` / `ReturnFromExileWithCounter`
+  + `CounterType::Silver` — Karn, Scion of Urza's real +1/−1; the opponent's
+  pick is a heuristic like `Punisher`). Karn and Tezzeret, Cruel Captain now
+  match their printed oracle text (Tezzeret: artifact-ETB loyalty trigger +
+  0 untap-and-buff + −3 artifact tutor + −7 combat-counters emblem with a
+  `BecomeCreature` Robot rider).
 
 ---
 

@@ -3591,6 +3591,53 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopOpponentChoosesToHand { count, counter } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() { return Ok(()); }
+                // The opponent chooses which card goes to the controller's
+                // hand. Heuristic (no interactive prompt, like `Punisher`):
+                // give the controller the lowest-mana-value card and exile
+                // the rest.
+                let to_hand = revealed
+                    .iter()
+                    .copied()
+                    .min_by_key(|id| {
+                        self.players[p].library.iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| c.definition.cost.cmc())
+                            .unwrap_or(0)
+                    })
+                    .unwrap();
+                self.move_card_to(to_hand, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                for id in revealed.into_iter().filter(|id| *id != to_hand) {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    if let Some(kind) = counter
+                        && let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+                            c.add_counters(*kind, 1);
+                        }
+                }
+                Ok(())
+            }
+
+            Effect::ReturnFromExileWithCounter { counter } => {
+                let p = ctx.controller;
+                // Highest-value qualifying card (owned by p, has the counter).
+                let pick = self.exile.iter()
+                    .filter(|c| c.owner == p && c.counter_count(*counter) > 0)
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| c.id);
+                if let Some(id) = pick {
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+                        c.remove_counters(*counter, u32::MAX);
+                    }
+                    self.move_card_to(id, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::Attach { what, to } => {
                 let anchor = self.resolve_selector(to, ctx)
                     .into_iter()

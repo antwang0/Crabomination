@@ -25,10 +25,10 @@ engine primitives — no engine changes required. Each entry has at least
 one functionality test in `crabomination/src/tests/modern.rs` (registered
 via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 
-| Card | Cost | Status | Notes |
-|---|---|---|---|
-| Karn, Scion of Urza | {4} | 🟡 | 5-loyalty Karn. **+1**: Draw 1 + mill 1 (the opp-pile-split is information-only at this engine fidelity). **-1**: ForEach Construct creature you control + AddCounter(+1/+1). **-2**: Create a 0/0 Construct token that gets +1/+1 for each artifact you control (via `StaticEffect::PumpSelfByControlledPermanents`). Tests: `karn_scion_of_urza_minus_two_creates_a_construct_token`, `karn_plus_one_draws_a_card_and_mills_one`. |
-| Tezzeret, Cruel Captain | {3}{B} | 🟡 | 4-loyalty walker. **+1**: target creature gets -2/-2 EOT. **-2**: drain 2 life from each opponent. Static "your artifact creatures get +1/+1" wired; the ult remains collapsed. Tests: `tezzeret_minus_two_drains_each_opponent_for_two`, `tezzeret_plus_one_shrinks_target_creature`. |
+All Modern-supplement cards are ✅ and elided. Karn, Scion of Urza and
+Tezzeret, Cruel Captain are now wired to their real oracle text (reveal-two /
+opponent-chooses + silver counters; artifact-ETB loyalty trigger + 0/−3/−7).
+Full per-card history is in git.
 
 ## Engine features
 

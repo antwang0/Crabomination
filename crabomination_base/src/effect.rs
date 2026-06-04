@@ -1890,6 +1890,19 @@ pub enum Effect {
     /// it stays on top. Chaos Warp.
     RevealTopPutPermanentOntoBattlefield { who: PlayerRef },
 
+    /// Reveal the top `count` cards of the controller's library; an opponent
+    /// chooses one of them, which goes to the controller's hand. Each
+    /// remaining revealed card is exiled, gaining `counter` if `Some`.
+    /// Karn, Scion of Urza's +1 (reveal two, opponent chooses, exile the
+    /// other with a silver counter). The opponent's pick is a heuristic
+    /// (give the controller the lowest-value card), mirroring `Punisher`.
+    RevealTopOpponentChoosesToHand { count: Value, counter: Option<crate::card::CounterType> },
+
+    /// Return one card the controller owns with a `counter` counter on it
+    /// from exile to their hand (removing the counter). Karn's −1. When more
+    /// than one qualifies the controller takes the highest-value one.
+    ReturnFromExileWithCounter { counter: crate::card::CounterType },
+
     /// Controller chooses `count` cards from their hand and puts them on top of
     /// their library in a chosen order (first chosen = topmost).
     PutOnLibraryFromHand { who: PlayerRef, count: Value },
@@ -2397,6 +2410,8 @@ impl Effect {
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }
+            Effect::RevealTopOpponentChoosesToHand { .. }
+            | Effect::ReturnFromExileWithCounter { .. } => false,
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

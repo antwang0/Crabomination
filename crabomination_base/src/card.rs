@@ -54,7 +54,7 @@ pub enum CreatureType {
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Archon, Aetherborn,
-    Construct, Golem, Myr,
+    Construct, Golem, Myr, Robot,
     Ooze, Plant,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,
@@ -206,6 +206,11 @@ pub enum CounterType {
     /// "destroy" effects don't kill it), exactly like the Indestructible
     /// keyword. Used by Zopandrel, Hunger Dominus's activated ability.
     Indestructible,
+    /// Silver counter — a pure bookkeeping marker placed on cards in exile
+    /// (Karn, Scion of Urza). His +1 exiles a card with a silver counter;
+    /// his −1 returns a card you own with a silver counter from exile to
+    /// hand.
+    Silver,
 }
 
 /// Every zone a card can occupy.

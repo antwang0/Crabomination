@@ -6997,21 +6997,17 @@ pub fn biorhythm() -> CardDefinition {
 }
 
 /// Karn, Scion of Urza — {4} Legendary Planeswalker — Karn. 5 loyalty.
-/// **+1**: Reveal the top two cards of your library. An opponent separates
-/// those cards into two piles. Put one pile into your hand and the other
-/// into your graveyard.
-/// **-1**: Put a +1/+1 counter on each Construct creature you control.
+/// **+1**: Reveal the top two cards of your library. An opponent chooses one
+/// of them. Put that card into your hand and exile the other with a silver
+/// counter on it.
+/// **-1**: Put a card you own with a silver counter on it from exile into
+/// your hand.
 /// **-2**: Create a 0/0 colorless Construct artifact creature token with
 /// "This creature gets +1/+1 for each artifact you control".
 ///
-/// Approximation:
-/// * +1 collapses to "draw 1, mill 1" — the opp-pile-split is information-
-///   only at this engine fidelity.
-/// * -1 grants +1/+1 counter to each Construct (via `ForEach` + `AddCounter`).
-/// * -2 creates a 0/0 colorless Construct token whose
-///   `StaticEffect::PumpSelfByControlledPermanents` grants +1/+1 for each
-///   artifact its controller controls (the token itself is an artifact, so
-///   it's at least 1/1).
+/// The opponent's +1 pick is a heuristic (gives you the lowest-value card);
+/// the rest rides `Effect::RevealTopOpponentChoosesToHand` /
+/// `ReturnFromExileWithCounter` + `CounterType::Silver`.
 pub fn karn_scion_of_urza() -> CardDefinition {
     use crate::card::{
         LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, StaticEffect, Supertype as Sup,
@@ -7030,32 +7026,15 @@ pub fn karn_scion_of_urza() -> CardDefinition {
         loyalty_abilities: vec![
             LoyaltyAbility {
                 loyalty_cost: 1,
-                effect: Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                    Effect::Mill {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                ]),
+                effect: Effect::RevealTopOpponentChoosesToHand {
+                    count: Value::Const(2),
+                    counter: Some(CounterType::Silver),
+                },
             },
             LoyaltyAbility {
                 loyalty_cost: -1,
-                effect: Effect::ForEach {
-                    selector: Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou)
-                            .and(SelectionRequirement::HasCreatureType(
-                                CreatureType::Construct,
-                            )),
-                    ),
-                    body: Box::new(Effect::AddCounter {
-                        what: Selector::TriggerSource,
-                        kind: crate::card::CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
-                    }),
+                effect: Effect::ReturnFromExileWithCounter {
+                    counter: CounterType::Silver,
                 },
             },
             LoyaltyAbility {
@@ -7090,20 +7069,20 @@ pub fn karn_scion_of_urza() -> CardDefinition {
     }
 }
 
-/// Tezzeret, Cruel Captain — {3}{B} Legendary Planeswalker — Tezzeret. 4 loyalty.
-/// Static: artifact creatures you control get +1/+1.
-/// **+1**: Up to one target creature gets -2/-2 until end of turn.
-/// **-2**: Each opponent loses 2 life and you gain 2 life.
-///
-/// Cube-style card. The static anthem rides `StaticEffect::PumpPT` (planes-
-/// walkers feed `static_ability_to_effects` like any permanent). The "ult"
-/// (typically -7) is collapsed to the two cube-relevant loyalty lines.
+/// Tezzeret, Cruel Captain — {3} Legendary Planeswalker — Tezzeret. 4 loyalty.
+/// Whenever an artifact you control enters, put a loyalty counter on Tezzeret.
+/// **0**: Untap target artifact or creature. If it's an artifact creature,
+/// put a +1/+1 counter on it.
+/// **-3**: Search your library for an artifact card with mana value 1 or
+/// less, reveal it, put it into your hand, then shuffle.
+/// **-7**: You get an emblem with "At the beginning of combat on your turn,
+/// put three +1/+1 counters on target artifact you control. If it's not a
+/// creature, it becomes a 0/0 Robot artifact creature."
 pub fn tezzeret_cruel_captain() -> CardDefinition {
-    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, Supertype as Sup};
-    use crate::effect::{Duration, StaticEffect};
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     CardDefinition {
         name: "Tezzeret, Cruel Captain",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(3)]),
         supertypes: vec![Sup::Legendary],
         card_types: vec![CardType::Planeswalker],
         subtypes: Subtypes {
@@ -7111,34 +7090,88 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
             ..Default::default()
         },
         base_loyalty: 4,
-        static_abilities: vec![StaticAbility {
-            description: "Artifact creatures you control get +1/+1.",
-            effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Artifact
-                        .and(SelectionRequirement::Creature)
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                power: 1,
-                toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Loyalty,
+                amount: Value::Const(1),
             },
         }],
         loyalty_abilities: vec![
             LoyaltyAbility {
-                loyalty_cost: 1,
-                effect: Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Const(-2),
-                    toughness: Value::Const(-2),
-                    duration: Duration::EndOfTurn,
+                loyalty_cost: 0,
+                effect: Effect::Seq(vec![
+                    Effect::Untap {
+                        what: target_filtered(
+                            SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                        ),
+                        up_to: None,
+                    },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::Target(0),
+                            filter: SelectionRequirement::Artifact
+                                .and(SelectionRequirement::Creature),
+                        },
+                        then: Box::new(Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::PlusOnePlusOne,
+                            amount: Value::Const(1),
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ManaValueAtMost(1)),
+                    to: ZoneDest::Hand(PlayerRef::You),
                 },
             },
             LoyaltyAbility {
-                loyalty_cost: -2,
-                effect: Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    to: Selector::You,
-                    amount: Value::Const(2),
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Tezzeret, Cruel Captain".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::Seq(vec![
+                            Effect::AddCounter {
+                                what: target_filtered(
+                                    SelectionRequirement::Artifact
+                                        .and(SelectionRequirement::ControlledByYou),
+                                ),
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::Const(3),
+                            },
+                            Effect::If {
+                                cond: Predicate::Not(Box::new(Predicate::EntityMatches {
+                                    what: Selector::Target(0),
+                                    filter: SelectionRequirement::Creature,
+                                })),
+                                then: Box::new(Effect::BecomeCreature {
+                                    what: Selector::Target(0),
+                                    power: Value::Const(0),
+                                    toughness: Value::Const(0),
+                                    creature_types: vec![CreatureType::Robot],
+                                    keywords: vec![],
+                                    duration: Duration::Permanent,
+                                }),
+                                else_: Box::new(Effect::Noop),
+                            },
+                        ]),
+                    }],
                 },
             },
         ],

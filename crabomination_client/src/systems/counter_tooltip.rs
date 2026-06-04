@@ -594,6 +594,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Prepared => "Prepared",
         CounterType::Finality => "Finality",
         CounterType::Indestructible => "Indestructible",
+        CounterType::Silver => "Silver",
     }
 }
 

@@ -1883,12 +1883,12 @@ mod tests {
     #[test]
     fn bot_activates_planeswalker_loyalty_ability() {
         let mut g = two_player_game();
-        // Karn has a +1 (draw 1, mill 1) at index 0, a -1 at index 1, and a
-        // -2 (Construct token) at index 2. Sorted by descending loyalty
-        // cost, the bot should pick the +1 first.
+        // Karn has a +1 (reveal two, opponent picks one for your hand) at
+        // index 0, a -1 at index 1, and a -2 (Construct token) at index 2.
+        // Sorted by descending loyalty cost, the bot should pick the +1.
         let karn = g.add_card_to_battlefield(0, catalog::karn_scion_of_urza());
         g.clear_sickness(karn);
-        // Stock the library so the +1's draw + mill have inputs.
+        // Stock the library so the +1 has cards to reveal.
         g.add_card_to_library(0, catalog::island());
         g.add_card_to_library(0, catalog::island());
 
