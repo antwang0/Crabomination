@@ -403,7 +403,8 @@ feature; sweep card-batch by card-batch.
   Decorum). Still open: *granted* must-attack with a future-turn-scoped
   duration ("attacks next turn if able" — Big Play mode 0); the
   goaded "attack a player other than the goader" clause in multiplayer;
-  must-block requirements on the blocker side; cost-to-block (509.1d-f).
+  cost-to-block (509.1d-f). **Blocker-side `Keyword::MustBlock`** (CR 509.1c
+  — "blocks each combat if able") is now wired in `declare_blockers`.
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ✅ **Goad** (above). ✅ **Lure** (`Keyword::AllMustBlock`).
   ✅ **Provoke** (`shortcut::provoke`, CR 702.39).

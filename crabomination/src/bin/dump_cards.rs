@@ -113,7 +113,8 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
         | Keyword::CantAttack | Keyword::MustBeBlocked | Keyword::AllMustBlock
-        | Keyword::MustAttack | Keyword::CanAttackOnlyIfDefenderControls(_)
+        | Keyword::MustAttack | Keyword::MustBlock
+        | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::CanAttackOnlyIfYouControl(_)
         | Keyword::AttacksAlone | Keyword::DealsNoCombatDamage
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,

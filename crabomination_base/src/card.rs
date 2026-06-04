@@ -434,6 +434,11 @@ pub enum Keyword {
     /// defender creature that *can* legally block this attacker must be
     /// assigned to it. Enforced in `declare_blockers`.
     AllMustBlock,
+    /// CR 509.1c — "This creature blocks each combat if able." A creature
+    /// carrying this keyword that can legally block at least one declared
+    /// attacker must be assigned to block one of them. Enforced in
+    /// `declare_blockers` (blocker side; mirror of `MustAttack`).
+    MustBlock,
     /// CR 508.1d — "This creature attacks each combat if able." Enforced in
     /// `declare_attackers`: an untapped, non-sick creature carrying this
     /// keyword whose controller declares attackers must be among them when

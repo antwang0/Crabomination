@@ -6200,6 +6200,37 @@ fn cr_702_6_equip_attaches_at_sorcery_speed_to_your_creature() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
 }
 
+/// CR 702.16f — a creature can't be equipped by an Equipment whose color it
+/// has protection from. Synthetic red Equipment + a protection-from-red bear.
+#[test]
+fn cr_702_16f_protection_blocks_equip() {
+    use crate::card::{ArtifactSubtype, CardDefinition, CardType, EquipBonus, Keyword, Subtypes};
+    use crate::mana::{cost, generic, r, Color};
+    let mut g = two_player_game();
+    let mut bear_def = catalog::grizzly_bears();
+    bear_def.keywords = vec![Keyword::Protection(Color::Red)];
+    let bear = g.add_card_to_battlefield(0, bear_def);
+    let red_equip = CardDefinition {
+        name: "Red Blade",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, keywords: vec![] }),
+        ..Default::default()
+    };
+    let blade = g.add_card_to_battlefield(0, red_equip);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = crate::game::TurnStep::PreCombatMain;
+    assert!(matches!(
+        g.perform_action(crate::game::GameAction::Equip { equipment: blade, target: bear }),
+        Err(crate::game::GameError::TargetHasProtection(_))
+    ), "red Equipment can't be attached to a protection-from-red creature");
+}
+
 /// CR 702.122 — Crew taps creatures whose total power is at least the crew
 /// number; below the threshold the activation is rejected.
 #[test]

@@ -1961,6 +1961,14 @@ impl GameState {
         ))
     }
 
+    /// CR 702.16 — true if `target` has protection from any of `source`'s
+    /// (computed) colors. Reads both sides through the layer system so granted
+    /// protection / color-setting effects count. Backs damage prevention
+    /// (702.16e) and equip/attach legality (702.16f).
+    pub(crate) fn is_protected_from(&self, source: CardId, target: CardId) -> bool {
+        self.damage_prevented_by_protection(source, target)
+    }
+
     /// CR 702.16e — damage from a source is prevented if the target permanent
     /// has protection from any of that source's (computed) colors. Reads both
     /// sides through the layer system so granted protection / color-setting
@@ -3404,6 +3412,11 @@ impl GameState {
             });
         if !target_ok {
             return Err(GameError::InvalidTarget);
+        }
+        // CR 702.16f — a creature can't be equipped by an Equipment whose
+        // color it has protection from.
+        if self.is_protected_from(equipment, target) {
+            return Err(GameError::TargetHasProtection(target));
         }
         // Pay the equip cost from the floated mana pool.
         self.players[p]

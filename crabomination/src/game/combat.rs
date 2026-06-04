@@ -550,6 +550,39 @@ impl GameState {
             }
         }
 
+        // CR 509.1c — "blocks each combat if able" (`MustBlock`). A creature
+        // carrying the keyword that can legally block at least one declared
+        // attacker must be assigned to block one of them.
+        for b in &self.battlefield {
+            if !kws_of(b.id).contains(&Keyword::MustBlock)
+                || !b.definition.is_creature()
+                || !b.can_block()
+                || kws_of(b.id).contains(&Keyword::CantBlock)
+            {
+                continue;
+            }
+            let already = self.block_map.contains_key(&b.id)
+                || assignments.iter().any(|(bid, _)| *bid == b.id);
+            if already { continue; }
+            // Could it have blocked any declared attacker?
+            let could_block = self.attacking.iter().any(|atk| {
+                self.same_team(b.controller, self.defender_for(atk.target).unwrap_or(usize::MAX))
+                    .then(|| ())
+                    .and_then(|_| self.battlefield_find(atk.attacker))
+                    .zip(cp_of(b.id))
+                    .is_some_and(|(attacker, bcp)| {
+                        let atk_colors =
+                            cp_of(atk.attacker).map(|c| c.colors.clone()).unwrap_or_default();
+                        super::can_block_attacker_computed(
+                            b, attacker, bcp, kws_of(atk.attacker), &atk_colors,
+                        )
+                    })
+            });
+            if could_block {
+                return Err(GameError::MustBeBlockedIfAble(b.id));
+            }
+        }
+
         // Combat-keyword P/T adjustments applied on block declaration:
         // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23).
         // Snapshot the +/-N deltas (same value on power and toughness)

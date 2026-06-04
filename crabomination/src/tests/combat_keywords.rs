@@ -618,6 +618,30 @@ fn cr_702_169_mobilize_tokens_attack_then_sacrifice_at_end_of_combat() {
     assert_eq!(warriors(&g), 0, "warriors sacrificed at end of combat");
 }
 
+// ── CR 509.1c MustBlock ("blocks each combat if able") ───────────────────────
+
+#[test]
+fn cr_509_1c_must_block_creature_is_forced_to_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Attacker", 2, 2, vec![]));
+    let mut guard = body("Compelled Guard", 1, 4, vec![]);
+    guard.keywords = vec![Keyword::MustBlock];
+    let guard = g.add_card_to_battlefield(1, guard);
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    // Declaring no blocks is illegal — the guard must block.
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![])).unwrap_err();
+    assert!(matches!(err, GameError::MustBeBlockedIfAble(id) if id == guard));
+    // Assigning the guard is accepted.
+    g.perform_action(GameAction::DeclareBlockers(vec![(guard, atk)])).expect("guard blocks");
+}
+
 // ── CR 702.16e Protection from color prevents combat damage ──────────────────
 
 /// A red 2/2 attacker blocked by a 2/2 with protection from red: the blocker
