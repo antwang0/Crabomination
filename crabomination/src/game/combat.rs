@@ -962,6 +962,11 @@ impl GameState {
                     if self.combat_damage_prevented_creatures.contains(&blocker_id) {
                         continue;
                     }
+                    // CR 702.16e — protection from the attacker's color prevents
+                    // its combat damage to the blocker.
+                    if self.damage_prevented_by_protection(atk.id, blocker_id) {
+                        continue;
+                    }
                     // CR 615 — route attacker→blocker combat damage through
                     // the blocker's prevention shields. Lifelink and the
                     // wither/infect -1/-1 counters scale off the actual
@@ -1037,6 +1042,9 @@ impl GameState {
                         .is_some_and(|bc| blocker_filter(&bc.keywords)))
                     // CR 614.9 — a Maze-of-Ith'd blocker deals no combat damage.
                     .filter(|bid| !self.combat_damage_prevented_creatures.contains(bid))
+                    // CR 702.16e — a blocker whose color the attacker has
+                    // protection from deals no combat damage to it.
+                    .filter(|&bid| !self.damage_prevented_by_protection(bid, atk.id))
                     .collect();
 
                 let blocker_damage_to_attacker: i32 = if prevent_combat_damage

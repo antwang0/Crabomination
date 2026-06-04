@@ -1961,6 +1961,25 @@ impl GameState {
         ))
     }
 
+    /// CR 702.16e — damage from a source is prevented if the target permanent
+    /// has protection from any of that source's (computed) colors. Reads both
+    /// sides through the layer system so granted protection / color-setting
+    /// effects count.
+    pub(crate) fn damage_prevented_by_protection(&self, source: CardId, target: CardId) -> bool {
+        let Some(tgt) = self.computed_permanent(target) else { return false };
+        let src_colors = self
+            .computed_permanent(source)
+            .map(|c| c.colors)
+            .unwrap_or_else(|| {
+                self.battlefield_find(source)
+                    .map(|c| c.definition.cost.colors())
+                    .unwrap_or_default()
+            });
+        tgt.keywords.iter().any(|kw| {
+            matches!(kw, Keyword::Protection(color) if src_colors.contains(color))
+        })
+    }
+
     /// Add a transient continuous effect (from a spell/ability resolution).
     pub fn add_continuous_effect(&mut self, effect: ContinuousEffect) {
         self.continuous_effects.push(effect);

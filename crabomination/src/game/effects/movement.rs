@@ -89,6 +89,13 @@ impl GameState {
         if amount == 0 {
             return;
         }
+        // CR 702.16e — protection from the source's color prevents the whole
+        // damage event to a permanent (noncombat damage path).
+        if let (EntityRef::Permanent(tgt), Some(src)) = (ent, source)
+            && self.damage_prevented_by_protection(src, tgt)
+        {
+            return;
+        }
         // CR 614.2 — global damage-doubling replacement (Furnace of Rath /
         // Gratuitous Violence). Each `DoubleDamageDealt` permanent doubles
         // the amount; applied before prevention so a shield soaks the

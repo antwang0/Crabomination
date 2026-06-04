@@ -617,3 +617,33 @@ fn cr_702_169_mobilize_tokens_attack_then_sacrifice_at_end_of_combat() {
     // Sacrificed as combat ends — gone before postcombat main.
     assert_eq!(warriors(&g), 0, "warriors sacrificed at end of combat");
 }
+
+// ── CR 702.16e Protection from color prevents combat damage ──────────────────
+
+/// A red 2/2 attacker blocked by a 2/2 with protection from red: the blocker
+/// takes no combat damage, but still deals its 2 back to the attacker.
+#[test]
+fn cr_702_16e_protection_prevents_combat_damage() {
+    use crate::card::Keyword;
+    use crate::mana::{cost, r};
+    let mut g = two_player_game();
+    let mut red_atk = body("Red Attacker", 2, 3, vec![]); // 2/3 survives the 2 back
+    red_atk.cost = cost(&[r()]); // makes it red
+    let atk = g.add_card_to_battlefield(0, red_atk);
+    let mut prot = body("Warded", 2, 2, vec![]);
+    prot.keywords = vec![Keyword::Protection(Color::Red)];
+    let blk = g.add_card_to_battlefield(1, prot);
+    g.clear_sickness(atk);
+
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert_eq!(g.battlefield_find(blk).unwrap().damage, 0, "protected blocker takes no red damage");
+    assert_eq!(g.battlefield_find(atk).unwrap().damage, 2, "attacker still takes the blocker's 2");
+}
