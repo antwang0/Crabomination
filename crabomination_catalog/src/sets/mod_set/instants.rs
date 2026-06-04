@@ -1321,3 +1321,43 @@ pub fn victims_of_night() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Vraska's Contempt — {2}{B}{B} Instant. "Exile target creature or
+/// planeswalker. You gain 2 life." (XLN)
+pub fn vraskas_contempt() -> CardDefinition {
+    CardDefinition {
+        name: "Vraska's Contempt",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Victim of Night — {B}{B} Instant. "Destroy target creature that isn't a
+/// Vampire, Werewolf, or Zombie." (ISD)
+pub fn victim_of_night() -> CardDefinition {
+    CardDefinition {
+        name: "Victim of Night",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(
+                    SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf))
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Zombie))
+                        .negate(),
+                ),
+            ),
+        },
+        ..Default::default()
+    }
+}

@@ -2839,6 +2839,45 @@ fn goldmeadow_harrier_taps_target_creature() {
 }
 
 #[test]
+fn vraskas_contempt_exiles_and_gains_life() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vraskas_contempt());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "target is exiled");
+    assert_eq!(g.players[0].life, life + 2, "you gain 2 life");
+}
+
+#[test]
+fn victim_of_night_cannot_target_a_zombie() {
+    let mut g = two_player_game();
+    // Carrion Feeder is a Zombie — Victim of Night can't target it.
+    let zombie = g.add_card_to_battlefield(1, catalog::carrion_feeder());
+    let id = g.add_card_to_hand(0, catalog::victim_of_night());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(zombie)), additional_targets: vec![],
+        mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "a Zombie isn't a legal target");
+    // A plain creature is fine.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("a non-tribal creature is a legal target");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "the bear is destroyed");
+}
+
+#[test]
 fn mana_dorks_tap_for_mana() {
     for (factory, expected) in [
         (catalog::fyndhorn_elves as fn() -> _, 1),
