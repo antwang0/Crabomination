@@ -1269,6 +1269,14 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             if *a_flying && !b_flying && !b_reach {
                 continue;
             }
+            // Authoritative legality gate (CR 509.1b): also honors
+            // "can't be blocked except by …" / "… by …" restrictions,
+            // protection, shadow, etc. Skip attackers this blocker can't
+            // legally be assigned to, so the bot never submits a block batch
+            // the engine will reject.
+            if !state.blocker_can_block_attacker(b_id, *a_id) {
+                continue;
+            }
             // Skip attackers that already have at least their toughness
             // worth of damage queued unless we have deathtouch.
             let queued = attacker_damage_taken.get(a_id).copied().unwrap_or(0);
@@ -2112,6 +2120,22 @@ mod tests {
         g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(blk, atk)], "protected 3/3 kills the red 3/3 and takes no damage");
+    }
+
+    /// CR 509.1b — the bot must not assign a power-2 blocker to a Steel Leaf
+    /// Champion ("can't be blocked by creatures with power 2 or less"), even
+    /// when life-threatened; the legality gate keeps the block batch legal.
+    #[test]
+    fn bot_skips_illegal_block_against_steel_leaf_champion() {
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let champ = g.add_card_to_battlefield(0, catalog::steel_leaf_champion());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — illegal
+        g.players[1].life = 1; // life-threatened, so it would chump if it could
+        g.attacking = vec![Attack { attacker: champ, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(!blocks.iter().any(|(b, _)| *b == bear),
+            "power-2 blocker can't be assigned to Steel Leaf Champion");
     }
 
     /// Color-choice mana abilities (Ornithopter of Paradise's `{T}: Add one
