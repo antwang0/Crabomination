@@ -423,11 +423,23 @@ fn colors_from_card(card: &crate::card::CardInstance) -> Vec<Color> {
 
 /// Returns true if `effect` affects `card`.
 fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool {
-    match &effect.affected {
-        AffectedPermanents::Source => effect.source == card.id,
+    affected_includes(&effect.affected, effect.source, card)
+}
+
+/// Whether `card` is one of the permanents described by `affected`, given the
+/// describing effect's `source` permanent. Split out of [`affects`] so the
+/// enters-tapped ETB replacement (CR 614.13) can reuse the same selector
+/// matching without constructing a throwaway `ContinuousEffect`.
+pub(crate) fn affected_includes(
+    affected: &AffectedPermanents,
+    source: CardId,
+    card: &crate::card::CardInstance,
+) -> bool {
+    match affected {
+        AffectedPermanents::Source => source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
         AffectedPermanents::All { controller, card_types, exclude_source, color } => {
-            if *exclude_source && effect.source == card.id {
+            if *exclude_source && source == card.id {
                 return false;
             }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
@@ -453,7 +465,7 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
             ctrl_ok && type_ok
         }
         AffectedPermanents::AllWithCreatureType { controller, creature_type, exclude_source } => {
-            if *exclude_source && effect.source == card.id {
+            if *exclude_source && source == card.id {
                 return false;
             }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);

@@ -5705,6 +5705,7 @@ fn affected_from_requirement(
     // check skips the source permanent itself — matching printed "**other**
     // [type] you control" wording.
     let mut other_than_source = false;
+    let mut opponent = false;
     let mut walk = vec![req];
     while let Some(r) = walk.pop() {
         match r {
@@ -5713,15 +5714,10 @@ fn affected_from_requirement(
                 walk.push(b);
             }
             R::ControlledByYou => ctrl = Some(Some(source_controller)),
-            R::ControlledByOpponent => {
-                return Some(AffectedPermanents::AllOpponents {
-                    source_controller,
-                    card_types: if types.is_empty() { vec![] } else { types.clone() },
-                    // Populated by `compute_battlefield` once the source's
-                    // team is known (this helper has no GameState handle).
-                    friendly_seats: Vec::new(),
-                });
-            }
+            // Accumulate a flag rather than returning early, so the opponent
+            // filter composes with type filters regardless of And-tree order
+            // (`ControlledByOpponent.and(Creature)` and the reverse both work).
+            R::ControlledByOpponent => opponent = true,
             R::Creature => types.push(CardType::Creature),
             R::Artifact => types.push(CardType::Artifact),
             R::Enchantment => types.push(CardType::Enchantment),
@@ -5735,6 +5731,17 @@ fn affected_from_requirement(
             R::Any | R::Permanent => {}
             _ => return None,
         }
+    }
+    if opponent {
+        // `friendly_seats` is populated by `compute_battlefield` /
+        // `apply_enters_tapped_replacement` once the source's team is known
+        // (this helper has no GameState handle). Counter/creature-type filters
+        // on the opponent path aren't decomposed yet (tracked in TODO.md).
+        return Some(AffectedPermanents::AllOpponents {
+            source_controller,
+            card_types: types,
+            friendly_seats: Vec::new(),
+        });
     }
     if let Some(counter) = counter_filter {
         return Some(AffectedPermanents::AllWithCounter {

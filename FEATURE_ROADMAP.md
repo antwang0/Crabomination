@@ -102,8 +102,11 @@ not how Magic works" moments.
 1. 🟡 **Replacement-effect framework.** A `replacement.rs` framework exists
    but only models zone-change replacements (Commander "→ command zone
    instead", CR 903.9b); the rest is stubbed per-card. Still to generalize:
-   ETB replacement (enters tapped / with counters / as a copy / under your
-   control; "exile non-cast nontoken creatures instead" ships via
+   ETB replacement (enters with counters / as a copy / under your
+   control; **enters tapped** now ships via `StaticEffect::EntersTapped` +
+   `apply_enters_tapped_replacement` (CR 614.13 — Imposing Sovereign,
+   Authority of the Consuls, Blind Obedience, Kismet); "exile non-cast
+   nontoken creatures instead" ships via
    `StaticEffect::ExileNontokenCreaturesNotCast` — Containment Priest),
    damage *redirection* (Maze of Ith), draw/skip replacement, and
    "if it would die, exile instead." Counter-doubling (Doubling Season,

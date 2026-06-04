@@ -2630,6 +2630,61 @@ fn dictate_of_heliod_buffs_your_creatures() {
     assert_eq!(g.computed_permanent(theirs).unwrap().power, 2, "opponent's unaffected");
 }
 
+// ── Enters-tapped replacements (CR 614.13) ───────────────────────────────────
+
+#[test]
+fn imposing_sovereign_taps_entering_opponent_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::imposing_sovereign());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(bears, 1); // the universal "entered" hook
+    assert!(g.battlefield_find(bears).unwrap().tapped, "opponent's creature enters tapped");
+}
+
+#[test]
+fn imposing_sovereign_does_not_tap_your_own_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::imposing_sovereign());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(mine, 0);
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "your own creature enters untapped");
+}
+
+#[test]
+fn authority_of_the_consuls_taps_and_gains_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::authority_of_the_consuls());
+    let life = g.players[0].life;
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(bears, 1);
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bears }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).unwrap().tapped, "opponent creature tapped");
+    assert_eq!(g.players[0].life, life + 1, "you gain 1 life when an opponent's creature enters");
+}
+
+#[test]
+fn blind_obedience_taps_opponent_artifact() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blind_obedience());
+    let orn = g.add_card_to_battlefield(1, catalog::ornithopter()); // artifact creature
+    g.fire_self_etb_triggers(orn, 1);
+    assert!(g.battlefield_find(orn).unwrap().tapped, "opponent's artifact enters tapped");
+}
+
+#[test]
+fn kismet_taps_opponent_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kismet());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    g.fire_self_etb_triggers(forest, 1);
+    assert!(g.battlefield_find(forest).unwrap().tapped, "opponent's land enters tapped");
+    // Your own land is unaffected.
+    let mine = g.add_card_to_battlefield(0, catalog::forest());
+    g.fire_self_etb_triggers(mine, 0);
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "your own land enters untapped");
+}
+
 #[test]
 fn honor_of_the_pure_buffs_only_white_creatures() {
     let mut g = two_player_game();

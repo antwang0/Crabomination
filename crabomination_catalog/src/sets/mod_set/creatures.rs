@@ -5890,3 +5890,107 @@ pub fn gaeas_anthem() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Helper: "[type]s your opponents control enter the battlefield tapped."
+fn opp_enters_tapped(req: SelectionRequirement, desc: &'static str) -> StaticAbility {
+    StaticAbility {
+        description: desc,
+        effect: StaticEffect::EntersTapped {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::ControlledByOpponent.and(req),
+            ),
+        },
+    }
+}
+
+/// Imposing Sovereign — {1}{W} Creature — Human Noble 2/1. "Creatures your
+/// opponents control enter the battlefield tapped." (M14)
+pub fn imposing_sovereign() -> CardDefinition {
+    CardDefinition {
+        name: "Imposing Sovereign",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![opp_enters_tapped(
+            SelectionRequirement::Creature,
+            "Creatures your opponents control enter the battlefield tapped.",
+        )],
+        ..Default::default()
+    }
+}
+
+/// Authority of the Consuls — {W} Enchantment. "Creatures your opponents
+/// control enter the battlefield tapped. Whenever a creature an opponent
+/// controls enters, you gain 1 life." (KLD)
+pub fn authority_of_the_consuls() -> CardDefinition {
+    CardDefinition {
+        name: "Authority of the Consuls",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![opp_enters_tapped(
+            SelectionRequirement::Creature,
+            "Creatures your opponents control enter the battlefield tapped.",
+        )],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::OpponentControl)
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blind Obedience — {1}{W} Enchantment with Extort. "Artifacts and creatures
+/// your opponents control enter the battlefield tapped." (GTC)
+pub fn blind_obedience() -> CardDefinition {
+    CardDefinition {
+        name: "Blind Obedience",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            opp_enters_tapped(
+                SelectionRequirement::Artifact,
+                "Artifacts your opponents control enter the battlefield tapped.",
+            ),
+            opp_enters_tapped(
+                SelectionRequirement::Creature,
+                "Creatures your opponents control enter the battlefield tapped.",
+            ),
+        ],
+        triggered_abilities: vec![crate::effect::shortcut::extort()],
+        ..Default::default()
+    }
+}
+
+/// Kismet — {3}{W} Enchantment. "Artifacts, creatures, and lands your
+/// opponents control enter the battlefield tapped." (LEG)
+pub fn kismet() -> CardDefinition {
+    CardDefinition {
+        name: "Kismet",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            opp_enters_tapped(
+                SelectionRequirement::Artifact,
+                "Artifacts your opponents control enter the battlefield tapped.",
+            ),
+            opp_enters_tapped(
+                SelectionRequirement::Creature,
+                "Creatures your opponents control enter the battlefield tapped.",
+            ),
+            opp_enters_tapped(
+                SelectionRequirement::Land,
+                "Lands your opponents control enter the battlefield tapped.",
+            ),
+        ],
+        ..Default::default()
+    }
+}

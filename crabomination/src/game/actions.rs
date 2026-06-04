@@ -742,7 +742,59 @@ impl GameState {
     /// has just entered the battlefield. Used by `play_land` and by Move →
     /// Battlefield zone changes so triggered abilities fire consistently
     /// regardless of how the permanent arrived.
+    /// CR 614.13 — apply "[permanents] enter the battlefield tapped"
+    /// replacement effects from *other* permanents to a permanent that has
+    /// just entered. Powers Authority of the Consuls / Imposing Sovereign /
+    /// Thalia, Heretic Cathar (opponents' creatures) and the symmetric
+    /// land-tappers (Root Maze, Kismet). Taps the entrant if any active
+    /// `StaticEffect::EntersTapped` whose `applies_to` selector matches it is
+    /// in play. Called from [`fire_self_etb_triggers`], the universal "a
+    /// permanent entered" hook, so every enter path (cast, token, reanimate,
+    /// land drop) is covered.
+    pub(crate) fn apply_enters_tapped_replacement(&mut self, card_id: CardId) {
+        use crate::effect::StaticEffect;
+        use crate::game::layers::{AffectedPermanents, affected_includes};
+        let Some(idx) = self.battlefield.iter().position(|c| c.id == card_id) else {
+            return;
+        };
+        let mut should_tap = false;
+        for src in &self.battlefield {
+            if src.id == card_id {
+                continue;
+            }
+            for sa in &src.definition.static_abilities {
+                let StaticEffect::EntersTapped { applies_to } = &sa.effect else {
+                    continue;
+                };
+                let Some(mut affected) = super::selector_to_affected(applies_to, src) else {
+                    continue;
+                };
+                // Team-aware: fill `friendly_seats` like gather_continuous_effects.
+                if let AffectedPermanents::AllOpponents { source_controller, friendly_seats, .. } =
+                    &mut affected
+                    && friendly_seats.is_empty()
+                {
+                    let mut seats = self.teammates(*source_controller);
+                    seats.push(*source_controller);
+                    *friendly_seats = seats;
+                }
+                if affected_includes(&affected, src.id, &self.battlefield[idx]) {
+                    should_tap = true;
+                    break;
+                }
+            }
+            if should_tap {
+                break;
+            }
+        }
+        if should_tap {
+            self.battlefield[idx].tapped = true;
+        }
+    }
+
     pub(crate) fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
+        // CR 614.13 — apply enters-tapped replacements before ETB triggers fire.
+        self.apply_enters_tapped_replacement(card_id);
         use crate::effect::{EventKind, EventScope};
         let etb_triggers: Vec<Effect> = self
             .battlefield
