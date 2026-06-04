@@ -8,6 +8,21 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **"Nth spell each turn" trigger** (Ledger Shredder, Storm-Kiln Artist's
+  payoffs). Needs a predicate reading the *caster's* `spells_cast_this_turn`
+  ordinal at trigger time (the count is already incremented before
+  `fire_spell_cast_triggers`, so a `Predicate::CastSpellIsControllersNth { n }`
+  comparing `players[caster].spells_cast_this_turn == n` would work — wire it
+  with `EventScope::AnyPlayer` so it fires on each player's own count).
+- **Protection-from-chosen-color grant** (Mother of Runes, Giver of Runes,
+  Gods Willing, Apostle's Blessing). Needs `Decision::ChooseColor` feeding an
+  `Effect::GrantKeyword(Protection(color))`-style one-shot until-EOT grant on a
+  target. The choose-color machinery exists (`ManaPayload::AnyOneColor`,
+  `BecomeChosenColor`); only the protection-grant variant is missing.
+- **Turn-conditional pump** (Might of Old Krosa's +4/+4-on-your-turn /
+  +2/+2-otherwise). Currently collapsed to +4/+4. Needs an
+  `If(IsTurnOf(You))` wrapper around the pump value.
+
 - **Suspend (CR 702.62) — ✅ DONE (primitive + haste + accelerant).**
   `Keyword::Suspend(n, cost)` + `GameAction::Suspend` + `process_suspend`
   ship the exile-with-time-counters → tick-at-upkeep → free-cast loop
