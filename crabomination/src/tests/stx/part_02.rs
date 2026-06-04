@@ -2401,6 +2401,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     };
 
     let mut g = two_player_game();

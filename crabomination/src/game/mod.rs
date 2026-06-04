@@ -470,6 +470,15 @@ pub struct GameState {
     /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub(crate) foretold_this_turn: std::collections::HashSet<CardId>,
+    /// CR 702.170 — cards currently plotted (exiled face-up, castable from
+    /// exile without paying their mana cost on a later turn).
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) plotted_cards: std::collections::HashSet<CardId>,
+    /// CR 702.170d — cards plotted *this* turn can't be cast until a later
+    /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub(crate) plotted_this_turn: std::collections::HashSet<CardId>,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -537,6 +546,8 @@ impl Clone for GameState {
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             temporary_control: self.temporary_control.clone(),
             foretold_this_turn: self.foretold_this_turn.clone(),
+            plotted_cards: self.plotted_cards.clone(),
+            plotted_this_turn: self.plotted_this_turn.clone(),
         }
     }
 }
@@ -609,6 +620,8 @@ impl GameState {
             dies_to_exile_eot: std::collections::HashSet::new(),
             temporary_control: Vec::new(),
             foretold_this_turn: std::collections::HashSet::new(),
+            plotted_cards: std::collections::HashSet::new(),
+            plotted_this_turn: std::collections::HashSet::new(),
         }
     }
 
@@ -2925,6 +2938,22 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_adventure_creature(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSpellCasualty {
+                card_id,
+                sacrifice,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_casualty(card_id, sacrifice, target, additional_targets, mode, x_value),
+            GameAction::Plot { card_id } => self.plot_card(card_id),
+            GameAction::CastPlotted {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_plotted(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
@@ -3020,6 +3049,7 @@ impl GameState {
             GameAction::Cycle { card_id } => self.cycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
             GameAction::Crew { vehicle, crew_creatures } => self.crew(vehicle, &crew_creatures),
+            GameAction::Saddle { mount, creatures } => self.saddle(mount, &creatures),
             GameAction::Ninjutsu { ninja, returning } => self.ninjutsu(ninja, returning),
         }?;
         self.dispatch_triggers_for_events(&events);
@@ -3400,6 +3430,70 @@ impl GameState {
             ),
         });
         events.push(GameEvent::VehicleCrewed { vehicle });
+        Ok(events)
+    }
+
+    /// CR 702.171 — Saddle a Mount. Taps the listed other untapped creatures
+    /// the activator controls (total power ≥ the Mount's saddle number) and
+    /// marks the Mount saddled until end of turn. Sorcery speed (CR 702.171a).
+    fn saddle(
+        &mut self,
+        mount: crate::card::CardId,
+        creatures: &[crate::card::CardId],
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let mount_pos = self
+            .battlefield
+            .iter()
+            .position(|c| c.id == mount)
+            .ok_or(GameError::CardNotOnBattlefield(mount))?;
+        if self.battlefield[mount_pos].controller != p {
+            return Err(GameError::NotYourPriority);
+        }
+        let saddle_n = self.battlefield[mount_pos]
+            .definition
+            .saddle_cost()
+            .ok_or(GameError::InvalidTarget)?;
+        let computed = self.compute_battlefield();
+        let mut seen = std::collections::HashSet::new();
+        let mut total_power: i32 = 0;
+        for &cid in creatures {
+            if cid == mount || !seen.insert(cid) {
+                return Err(GameError::InvalidTarget);
+            }
+            let Some(cp) = computed.iter().find(|c| c.id == cid) else {
+                return Err(GameError::CardNotOnBattlefield(cid));
+            };
+            if cp.controller != p || !cp.card_types.contains(&crate::card::CardType::Creature) {
+                return Err(GameError::InvalidTarget);
+            }
+            let tapped = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == cid)
+                .map(|c| c.tapped)
+                .unwrap_or(true);
+            if tapped {
+                return Err(GameError::CardIsTapped(cid));
+            }
+            total_power += cp.power.max(0);
+        }
+        if (total_power as u32) < saddle_n {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+        let mut events = vec![];
+        for &cid in creatures {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                c.tapped = true;
+                events.push(GameEvent::PermanentTapped { card_id: cid });
+            }
+        }
+        if let Some(m) = self.battlefield.iter_mut().find(|c| c.id == mount) {
+            m.saddled = true;
+        }
         Ok(events)
     }
 

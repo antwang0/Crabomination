@@ -156,6 +156,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1976,6 +1977,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2469,6 +2471,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 

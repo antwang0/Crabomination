@@ -74,6 +74,7 @@ pub fn silverquill_lecturer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -141,6 +142,7 @@ pub fn quandrix_conjurer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -199,6 +201,7 @@ pub fn witherbloom_concoction() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -260,6 +263,7 @@ pub fn prismari_sparkmage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -314,6 +318,7 @@ pub fn silverquill_ambassador() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -404,6 +409,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -496,6 +502,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -564,6 +571,7 @@ pub fn silverquill_skywriter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -627,6 +635,7 @@ pub fn quandrix_curriculum() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -683,6 +692,7 @@ pub fn lorehold_researcher() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -741,6 +751,7 @@ pub fn prismari_magicraft() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -820,6 +831,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -890,6 +902,7 @@ pub fn silverquill_drafter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -963,6 +976,7 @@ pub fn quandrix_schematist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1029,6 +1043,7 @@ pub fn lorehold_resurrectionist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1082,6 +1097,7 @@ pub fn prismari_tinkerer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1139,6 +1155,7 @@ pub fn quandrix_forecaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1194,6 +1211,7 @@ pub fn silverquill_bookbinder() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1236,6 +1254,7 @@ pub fn lorehold_crusader_knight() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1297,6 +1316,7 @@ pub fn witherbloom_conjurer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1357,6 +1377,7 @@ pub fn prismari_conjurer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1421,6 +1442,7 @@ pub fn quandrix_calligrapher() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1472,6 +1494,7 @@ pub fn silverquill_penmaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1550,6 +1573,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1600,6 +1624,7 @@ pub fn witherbloom_tutor() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1646,6 +1671,7 @@ pub fn prismari_cartographer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1717,6 +1743,7 @@ pub fn quandrix_geologist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1781,6 +1808,7 @@ pub fn silverquill_chastiser() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1851,6 +1879,7 @@ pub fn witherbloom_pestmaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1924,6 +1953,7 @@ pub fn lorehold_chronicler() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1974,6 +2004,7 @@ pub fn prismari_pyromentor() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2032,6 +2063,7 @@ pub fn quandrix_equation() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2088,6 +2120,7 @@ pub fn silverquill_inquisitors_mark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2139,6 +2172,7 @@ pub fn witherbloom_mire() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2219,6 +2253,7 @@ pub fn lorehold_memorial() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2275,6 +2310,7 @@ pub fn prismari_ember_trickster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2343,6 +2379,7 @@ pub fn quandrix_aetherist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2400,6 +2437,7 @@ pub fn silverquill_sentinel() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2468,6 +2506,7 @@ pub fn witherbloom_necrogale() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2536,6 +2575,7 @@ pub fn lorehold_echo() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2598,6 +2638,7 @@ pub fn prismari_spellforger() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2655,6 +2696,7 @@ pub fn quandrix_multiplier() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2711,6 +2753,7 @@ pub fn silverquill_scribefall() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2780,6 +2823,7 @@ pub fn witherbloom_wickering() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2850,6 +2894,7 @@ pub fn lorehold_historian() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2914,6 +2959,7 @@ pub fn prismari_spectacle() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2982,6 +3028,7 @@ pub fn quandrix_wavebreaker() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3052,6 +3099,7 @@ pub fn silverquill_anthemwright() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3105,6 +3153,7 @@ pub fn witherbloom_decay() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3167,6 +3216,7 @@ pub fn lorehold_reverberation() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3242,6 +3292,7 @@ pub fn prismari_eccentric() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3297,6 +3348,7 @@ pub fn quandrix_theorem_crafter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3360,6 +3412,7 @@ pub fn witherbloom_pestseed() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3406,6 +3459,7 @@ pub fn silverquill_editorialist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3457,6 +3511,7 @@ pub fn inkblot_recluse() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3510,6 +3565,7 @@ pub fn quill_lecturer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3563,6 +3619,7 @@ pub fn inkstrike_bolt() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3610,6 +3667,7 @@ pub fn withering_spores() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3674,6 +3732,7 @@ pub fn witherbloom_brewer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3726,5 +3785,6 @@ pub fn pestilent_brambletwig() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }

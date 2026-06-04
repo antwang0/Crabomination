@@ -82,6 +82,8 @@ pub enum CreatureType {
     Glimmer,
     // Ninjutsu creature subtype (Fallen Shinobi, etc.).
     Ninja,
+    // Outlaws of Thunder Junction Mount subtype (Saddle, CR 702.171).
+    Mount,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
     // Artifact-creature token subtypes (Hangarback Walker's Thopters,
@@ -463,6 +465,16 @@ pub enum Keyword {
     /// artifact creature until end of turn." Activated via
     /// `GameAction::Crew`; the value is the required total power.
     Crew(u32),
+    /// CR 702.171 — Saddle N. "Tap any number of other untapped creatures you
+    /// control with total power N or greater: This permanent becomes saddled
+    /// until end of turn. Activate only as a sorcery." Activated via
+    /// `GameAction::Saddle`; the value is the required total power.
+    Saddle(u32),
+    /// CR 702.153 — Casualty N. "As an additional cost to cast this spell, you
+    /// may sacrifice a creature with power N or greater. When you cast this
+    /// spell, if a casualty cost was paid, copy it." Opt-in via
+    /// `GameAction::CastSpellCasualty`; the value is the minimum power.
+    Casualty(u32),
     /// CR 702.35 — Madness `cost`. Two linked abilities: (1) a static
     /// ability in the hand — "If a player would discard this card, they
     /// discard it, but exile it instead of putting it into their
@@ -895,6 +907,13 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventure: Option<Box<Adventure>>,
+    /// CR 702.170 — Plot. `Some(cost)` marks the card as plottable: during
+    /// your main phase with an empty stack, pay this cost to exile it
+    /// face-up (`GameAction::Plot`); on a later turn cast it from exile
+    /// without paying its mana cost (`GameAction::CastPlotted`). Defaults to
+    /// `None` via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub plot_cost: Option<crate::mana::ManaCost>,
 }
 
 /// CR 715 — the instant/sorcery "adventure" half of an Adventurer card. The
@@ -1159,6 +1178,20 @@ impl CardDefinition {
     pub fn crew_cost(&self) -> Option<u32> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Crew(n) = kw { Some(*n) } else { None }
+        })
+    }
+    /// Returns the Saddle cost (required total power) if this card has
+    /// `Keyword::Saddle(N)` (CR 702.171).
+    pub fn saddle_cost(&self) -> Option<u32> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Saddle(n) = kw { Some(*n) } else { None }
+        })
+    }
+    /// Returns the Casualty number (minimum power of the creature to
+    /// sacrifice) if this card has `Keyword::Casualty(N)` (CR 702.153).
+    pub fn casualty_cost(&self) -> Option<u32> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Casualty(n) = kw { Some(*n) } else { None }
         })
     }
     pub fn is_aura(&self) -> bool {
@@ -1426,6 +1459,11 @@ pub struct CardInstance {
     /// (`GameAction::CastAdventureCreature`). Cleared once the creature is
     /// cast (or the card otherwise changes zones).
     pub on_adventure: bool,
+    /// CR 702.171 — true while this permanent is saddled (a marker set by a
+    /// Saddle activation, until end of turn). Read by `Predicate::SourceSaddled`
+    /// to gate "whenever this attacks while saddled" triggers. Cleared by
+    /// `clear_end_of_turn_effects`.
+    pub saddled: bool,
 }
 
 impl CardInstance {
@@ -1480,6 +1518,7 @@ impl CardInstance {
             monstrous: false,
             adventuring: false,
             on_adventure: false,
+            saddled: false,
         }
     }
 
@@ -1576,6 +1615,8 @@ impl CardInstance {
         self.dealt_deathtouch_damage = false;
         // CR 701.15g — unused regeneration shields expire at end of turn.
         self.regeneration_shields = 0;
+        // CR 702.171 — "saddled until end of turn" ends here.
+        self.saddled = false;
     }
 
     /// The flashback cost this card can currently be cast with from a
@@ -1681,6 +1722,10 @@ struct CardInstanceWire {
     adventuring: bool,
     #[serde(default)]
     on_adventure: bool,
+    /// CR 702.171 saddled marker. `#[serde(default)]` so older snapshots
+    /// load as `false`.
+    #[serde(default)]
+    saddled: bool,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1725,6 +1770,7 @@ impl serde::Serialize for CardInstance {
             monstrous: self.monstrous,
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
+            saddled: self.saddled,
         };
         wire.serialize(ser)
     }
@@ -1769,6 +1815,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.monstrous = wire.monstrous;
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;
+        c.saddled = wire.saddled;
         Ok(c)
     }
 }

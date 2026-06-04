@@ -69,6 +69,7 @@ pub fn brackish_trudge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -128,6 +129,7 @@ pub fn lurking_deadeye() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -184,6 +186,7 @@ pub fn aether_helix() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -232,6 +235,7 @@ pub fn reflective_golem() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -289,6 +293,7 @@ pub fn tempest_caller() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -353,6 +358,7 @@ pub fn pillardrop_warden() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -419,6 +425,7 @@ pub fn devourer_of_memory() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -471,6 +478,7 @@ pub fn mavindas_verdict() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -525,6 +533,7 @@ pub fn witherbloom_skillchaser() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -583,6 +592,7 @@ pub fn quandrix_pop_quiz() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -628,6 +638,7 @@ pub fn inkwood_scrivener() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -677,6 +688,7 @@ pub fn furnace_hellkite() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -720,6 +732,7 @@ pub fn pinion_lecturer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -769,6 +782,7 @@ pub fn sparkling_insight() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -820,6 +834,7 @@ pub fn pop_quiz_coach() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -865,6 +880,7 @@ pub fn soothing_hush() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -909,6 +925,7 @@ pub fn vortex_runner() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -968,6 +985,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1028,6 +1046,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1081,6 +1100,7 @@ pub fn inkfathom_divers() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1138,6 +1158,7 @@ pub fn quandrix_quickener() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1199,6 +1220,7 @@ pub fn search_for_glory() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1255,6 +1277,7 @@ pub fn fervent_strike() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1345,6 +1368,7 @@ pub fn waker_of_waves() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1400,6 +1424,7 @@ pub fn discover_the_formula() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1458,6 +1483,7 @@ pub fn mortician_beetle() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1509,6 +1535,7 @@ pub fn vespine_strix() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1571,6 +1598,7 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1621,6 +1649,7 @@ pub fn wandering_mind() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1683,6 +1712,7 @@ pub fn lecturing_loxodon() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1740,6 +1770,7 @@ pub fn sequence_engine() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1804,6 +1835,7 @@ pub fn curriculum_crab() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1851,6 +1883,7 @@ pub fn pyrotechnics() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1900,6 +1933,7 @@ pub fn stormwild_capridor() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1958,6 +1992,7 @@ pub fn final_payment() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2042,6 +2077,7 @@ pub fn witchs_cauldron() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2098,6 +2134,7 @@ pub fn steady_stance() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2158,6 +2195,7 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2213,6 +2251,7 @@ pub fn revitalize() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2265,6 +2304,7 @@ pub fn grim_bounty() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2335,6 +2375,7 @@ pub fn growth_spiral() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2383,6 +2424,7 @@ pub fn idyllic_tutor() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2443,6 +2485,7 @@ pub fn gift_of_estates() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2492,6 +2535,7 @@ pub fn pillage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2544,6 +2588,7 @@ pub fn slip_through_space() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2570,6 +2615,7 @@ pub fn doomskar() -> CardDefinition {
         },
         foretell_cost: Some(cost(&[generic(1), w(), w()])),
         adventure: None,
+        plot_cost: None,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2669,6 +2715,7 @@ pub fn mind_drain() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2722,6 +2769,7 @@ pub fn hindering_light() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2777,6 +2825,7 @@ pub fn soul_shatter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2848,6 +2897,7 @@ pub fn lurking_predators() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2893,6 +2943,7 @@ pub fn prowling_caracal() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2943,6 +2994,7 @@ pub fn elvish_visionary() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3003,6 +3055,7 @@ pub fn sungrass_egg() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3069,6 +3122,7 @@ pub fn mascot_summoning() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3119,6 +3173,7 @@ pub fn scry_inversion() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3170,6 +3225,7 @@ pub fn cunning_rhetoric() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3226,6 +3282,7 @@ pub fn library_larcenist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3278,6 +3335,7 @@ pub fn deans_list() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3326,5 +3384,6 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }

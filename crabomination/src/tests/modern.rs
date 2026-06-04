@@ -23795,3 +23795,156 @@ fn adventure_order_of_midnight_alter_fate_reanimates() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature back in hand");
 }
+
+// ── Plot (CR 702.170) ────────────────────────────────────────────────────────
+
+/// A plotted card is exiled face-up, can't be cast the turn it was plotted,
+/// and casts for free (no mana) on a later turn.
+#[test]
+fn plot_spinewoods_paladin_casts_free_later() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spinewoods_paladin());
+    // Plot for {2}{G}.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Plot { card_id: id }).expect("plot");
+    assert!(g.exile.iter().any(|c| c.id == id), "plotted card in exile");
+    assert!(g.plotted_cards.contains(&id), "tracked as plotted");
+    // Can't cast it the same turn (CR 702.170d).
+    assert!(g.perform_action(GameAction::CastPlotted {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "can't cast the turn it was plotted");
+    // On a later turn, cast for free (no mana in pool).
+    g.plotted_this_turn.clear();
+    assert!(g.players[0].mana_pool.total() == 0, "no mana available");
+    g.perform_action(GameAction::CastPlotted {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast plotted for free");
+    drain_stack(&mut g);
+    let p = g.battlefield_find(id).expect("Paladin on battlefield");
+    assert_eq!((p.power(), p.toughness()), (4, 3));
+    assert!(!g.plotted_cards.contains(&id), "plot state cleared once cast");
+}
+
+/// Vault Plunderer's ETB still fires when it's cast from a plot.
+#[test]
+fn plot_vault_plunderer_etb_draw_on_free_cast() {
+    let mut g = two_player_game();
+    let lib_id = g.next_id();
+    g.players[0].library.push(CardInstance::new(lib_id, catalog::grizzly_bears(), 0));
+    let id = g.add_card_to_hand(0, catalog::vault_plunderer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Plot { card_id: id }).expect("plot");
+    g.plotted_this_turn.clear();
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastPlotted {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast plotted");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "Plunderer entered");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB drew a card");
+}
+
+// ── Saddle (CR 702.171) ──────────────────────────────────────────────────────
+
+/// Saddling taps the saddlers and marks the Mount saddled; the attack trigger
+/// only fires once the Mount is saddled.
+#[test]
+fn saddle_stingerback_attack_trigger_gated_on_saddled() {
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
+    g.clear_sickness(terror);
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 -> total 4 >= 3
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    // Saddle 3: tap two 2-power bears.
+    g.perform_action(GameAction::Saddle {
+        mount: terror, creatures: vec![b1, b2],
+    }).expect("saddle");
+    assert!(g.battlefield_find(terror).unwrap().saddled, "Mount is saddled");
+    assert!(g.battlefield_find(b1).unwrap().tapped && g.battlefield_find(b2).unwrap().tapped,
+        "saddlers tapped");
+    // Attack while saddled — each opponent loses 3.
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: terror, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "saddled attack drains the opponent");
+}
+
+/// Without saddling, the attack trigger does not fire.
+#[test]
+fn saddle_unsaddled_attack_no_trigger() {
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
+    g.clear_sickness(terror);
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let life = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: terror, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life, "no saddle, no drain trigger");
+}
+
+/// Saddle is rejected when the tapped creatures' total power is below N.
+#[test]
+fn saddle_insufficient_power_rejected() {
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
+    let weenie = g.add_card_to_battlefield(0, catalog::elvish_mystic()); // power 1 < 3
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    assert!(g.perform_action(GameAction::Saddle {
+        mount: terror, creatures: vec![weenie],
+    }).is_err(), "1 power can't pay Saddle 3");
+    assert!(!g.battlefield_find(terror).unwrap().saddled, "not saddled");
+}
+
+// ── Casualty (CR 702.153) ────────────────────────────────────────────────────
+
+/// Casualty: paying the cost (sacrificing a creature) copies the spell, so
+/// Cut of the Profits resolves twice — double draw and double life loss.
+#[test]
+fn casualty_cut_of_the_profits_copies_spell() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2 >= 1
+    for _ in 0..6 { g.add_card_to_library(0, catalog::mountain()); }
+    let id = g.add_card_to_hand(0, catalog::cut_of_the_profits());
+    // {X=2}{B}{B}.
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellCasualty {
+        card_id: id, sacrifice: fodder, target: None,
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast with casualty");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "casualty creature sacrificed");
+    // Original + copy each draw 2 / lose 2.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 4, "drew 2 + 2 from the copy");
+    assert_eq!(g.players[0].life, life - 4, "lost 2 + 2 from the copy");
+}
+
+/// Casualty is optional: a normal cast (no sacrifice) makes no copy.
+#[test]
+fn casualty_normal_cast_no_copy() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::mountain()); }
+    let id = g.add_card_to_hand(0, catalog::cut_of_the_profits());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("plain cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew 2, no copy");
+}

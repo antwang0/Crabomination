@@ -334,6 +334,11 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.attacked_this_turn)
                 .unwrap_or(false),
+            Predicate::SourceSaddled => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .map(|c| c.saddled)
+                .unwrap_or(false),
             Predicate::PlayerAttackedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

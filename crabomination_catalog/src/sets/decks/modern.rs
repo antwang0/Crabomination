@@ -9,6 +9,7 @@
 use crate::card::{
     Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword, LandType,
     SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    WardCost,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{
@@ -343,6 +344,7 @@ pub fn behold_the_multiverse() -> CardDefinition {
         ]),
         foretell_cost: Some(cost(&[generic(1), u()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -362,6 +364,7 @@ pub fn demon_bolt() -> CardDefinition {
         },
         foretell_cost: Some(cost(&[r()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -378,6 +381,7 @@ pub fn augury_raven() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         foretell_cost: Some(cost(&[generic(2), u()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -394,6 +398,7 @@ pub fn mistwalker() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         foretell_cost: Some(cost(&[u()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -413,6 +418,7 @@ pub fn ravenous_lindwurm() -> CardDefinition {
         })],
         foretell_cost: Some(cost(&[generic(3), g()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -429,6 +435,7 @@ pub fn sarulfs_packmate() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
         foretell_cost: Some(cost(&[generic(2), g()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -458,6 +465,7 @@ pub fn dwarven_reinforcements() -> CardDefinition {
         },
         foretell_cost: Some(cost(&[generic(1), r()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -509,6 +517,7 @@ pub fn beskir_shieldmate() -> CardDefinition {
         })],
         foretell_cost: Some(cost(&[w()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -894,6 +903,7 @@ pub fn doomskar_titan() -> CardDefinition {
         )],
         foretell_cost: Some(cost(&[generic(2), r()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -1090,6 +1100,7 @@ pub fn ravenform() -> CardDefinition {
         ]),
         foretell_cost: Some(cost(&[u()])),
         adventure: None,
+        plot_cost: None,
         ..Default::default()
     }
 }
@@ -15415,6 +15426,93 @@ pub fn rimrock_knight() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         })),
+        ..Default::default()
+    }
+}
+
+/// Spinewoods Paladin — {3}{G} Creature — Bear Knight 4/3, Trample.
+/// Plot {2}{G} (CR 702.170).
+pub fn spinewoods_paladin() -> CardDefinition {
+    CardDefinition {
+        name: "Spinewoods Paladin",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        plot_cost: Some(cost(&[generic(2), g()])),
+        ..Default::default()
+    }
+}
+
+/// Vault Plunderer — {3}{B} Creature — Human Rogue 2/3. When it enters, draw
+/// a card. Plot {2}{B} (CR 702.170).
+pub fn vault_plunderer() -> CardDefinition {
+    CardDefinition {
+        name: "Vault Plunderer",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        plot_cost: Some(cost(&[generic(2), b()])),
+        ..Default::default()
+    }
+}
+
+/// Cut of the Profits — {X}{B}{B} Sorcery. Draw X cards and lose X life.
+/// Casualty 1 (CR 702.153): sacrificing a power-1+ creature copies the spell.
+pub fn cut_of_the_profits() -> CardDefinition {
+    CardDefinition {
+        name: "Cut of the Profits",
+        cost: cost(&[ManaSymbol::X, b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Casualty(1)],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+            Effect::LoseLife { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Stingerback Terror — {3}{B}{B} Legendary Creature — Insect Mount 5/5,
+/// Menace, Ward—Pay 3 life. Whenever it attacks while saddled, each opponent
+/// loses life (the printed "half their life, rounded up" collapses to a flat
+/// drain). Saddle 3 (CR 702.171).
+pub fn stingerback_terror() -> CardDefinition {
+    use crate::effect::shortcut::attacks_while_saddled;
+    CardDefinition {
+        name: "Stingerback Terror",
+        cost: cost(&[generic(3), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Mount],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![
+            Keyword::Menace,
+            Keyword::Ward(WardCost::Life(3)),
+            Keyword::Saddle(3),
+        ],
+        triggered_abilities: vec![attacks_while_saddled(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        })],
         ..Default::default()
     }
 }

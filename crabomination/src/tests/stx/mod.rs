@@ -62,6 +62,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -112,6 +113,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -159,6 +161,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -207,6 +210,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 

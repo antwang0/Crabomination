@@ -878,6 +878,58 @@ impl GameState {
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], true, false, false)
     }
 
+    /// CR 702.153 — cast a spell paying its optional Casualty cost. The named
+    /// creature (controlled by the caster, power ≥ the casualty number) is
+    /// sacrificed as an additional cost before the spell is put on the stack;
+    /// then the just-cast spell is copied (the copy's controller may choose
+    /// new targets — AutoDecider keeps the originals).
+    pub(crate) fn cast_spell_casualty(
+        &mut self,
+        card_id: CardId,
+        sacrifice: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        // Validate the casualty number and the sacrifice creature up front so
+        // a rejected cast doesn't sacrifice anything.
+        let n = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.casualty_cost())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let sac_ok = self.battlefield.iter().any(|c| {
+            c.id == sacrifice
+                && c.controller == p
+                && c.definition.is_creature()
+                && c.power().max(0) as u32 >= n
+        });
+        if !sac_ok {
+            return Err(GameError::InvalidTarget);
+        }
+        // Pay the casualty cost (CR 601.2b additional cost): sacrifice now, so
+        // its death triggers go on the stack under the spell.
+        if let Some(c) = self.battlefield_find(sacrifice) {
+            self.died_card_snapshots.insert(sacrifice, c.clone());
+        }
+        let mut events = vec![
+            GameEvent::CreatureSacrificed { card_id: sacrifice, who: p },
+            GameEvent::CreatureDied { card_id: sacrifice },
+            GameEvent::PermanentSacrificed { card_id: sacrifice, who: p },
+        ];
+        let mut die = self.remove_to_graveyard_with_triggers(sacrifice);
+        events.append(&mut die);
+        // Cast the spell normally, then copy it on the stack (CR 702.153a).
+        let mut cast_events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        events.append(&mut cast_events);
+        self.copy_stack_spell(card_id, 1, true, &mut events);
+        Ok(events)
+    }
+
     /// CR 702.27 — cast a spell paying its optional Buyback cost. The
     /// resolving spell returns to its owner's hand instead of the
     /// graveyard (`continue_spell_resolution` consults `card.bought_back`).
@@ -1167,6 +1219,76 @@ impl GameState {
             x_value.unwrap_or(0),
             0,
             mana_spent,
+        );
+        Ok(events)
+    }
+
+    /// CR 702.170 — plot a card from hand: pay its plot cost and exile it
+    /// face-up. Special action; main phase + empty stack only (sorcery speed).
+    pub(crate) fn plot_card(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let cost = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.plot_cost.clone())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mut events = receipt.auto_events;
+        let card = self
+            .players[p]
+            .remove_from_hand(card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        self.exile.push(card);
+        self.plotted_cards.insert(card_id);
+        self.plotted_this_turn.insert(card_id);
+        events.push(GameEvent::PermanentExiled { card_id });
+        Ok(events)
+    }
+
+    /// CR 702.170d — cast a plotted card from exile without paying its mana
+    /// cost. Sorcery speed; legal only on a turn after it was plotted.
+    pub(crate) fn cast_plotted(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let pos = self
+            .exile
+            .iter()
+            .position(|c| c.id == card_id && c.owner == p)
+            .filter(|_| self.plotted_cards.contains(&card_id))
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // CR 702.170d — only as a sorcery, and not the turn it was plotted.
+        if self.plotted_this_turn.contains(&card_id) || !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality_with_source(tgt, p, Some(card_id))?;
+        }
+        let card = self.exile.remove(pos);
+        self.plotted_cards.remove(&card_id);
+        let events = vec![GameEvent::SpellCast { player: p, card_id, face: CastFace::Front }];
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            0,
         );
         Ok(events)
     }

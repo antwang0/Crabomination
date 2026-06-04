@@ -59,6 +59,7 @@ pub fn prismari_pledgemage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -124,6 +125,7 @@ pub fn prismari_apprentice() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -176,6 +178,7 @@ pub fn prismari_drakelord() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -228,6 +231,7 @@ pub fn prismari_emberseer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -283,6 +287,7 @@ pub fn prismari_pyrowriter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -527,6 +532,7 @@ pub fn prismari_pyrotechnician() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -578,6 +584,7 @@ pub fn prismari_looter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -632,6 +639,7 @@ pub fn prismari_chromaticist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -683,6 +691,7 @@ pub fn prismari_drakeward() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -738,6 +747,7 @@ pub fn prismari_spellsmith() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -783,6 +793,7 @@ pub fn prismari_storm_caller() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -840,6 +851,7 @@ pub fn prismari_ignite_apprentice() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -895,6 +907,7 @@ pub fn prismari_volley() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -942,6 +955,7 @@ pub fn prismari_stormcaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -988,6 +1002,7 @@ pub fn prismari_sparkmaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1041,6 +1056,7 @@ pub fn prismari_ember_channeler() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1166,6 +1182,7 @@ pub fn prismari_cantrip() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1222,6 +1239,7 @@ pub fn prismari_flarespark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1280,6 +1298,7 @@ pub fn prismari_cascade_volley() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1333,6 +1352,7 @@ pub fn prismari_initiate() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1393,6 +1413,7 @@ pub fn prismari_spellbinder() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1445,6 +1466,7 @@ pub fn prismari_treasurer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1503,6 +1525,7 @@ pub fn prismari_embershaper() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1555,6 +1578,7 @@ pub fn prismari_sparkforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1603,6 +1627,7 @@ pub fn prismari_mindwave() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1657,6 +1682,7 @@ pub fn prismari_pyrocrafter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1705,6 +1731,7 @@ pub fn prismari_stormspire() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1766,6 +1793,7 @@ pub fn prismari_spellforger_b22() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1820,6 +1848,7 @@ pub fn prismari_volleyfire() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1865,6 +1894,7 @@ pub fn prismari_spell_shaper() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1919,6 +1949,7 @@ pub fn prismari_stormgaze() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -1974,6 +2005,7 @@ pub fn prismari_vortexweaver() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2019,6 +2051,7 @@ pub fn prismari_quickfire() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2076,6 +2109,7 @@ pub fn prismari_treasurer_surge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2118,6 +2152,7 @@ pub fn prismari_pyreburst() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2190,6 +2225,7 @@ pub fn prismari_vorthos() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2242,6 +2278,7 @@ pub fn prismari_cinderspark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2305,6 +2342,7 @@ pub fn prismari_tempo_adept() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2362,6 +2400,7 @@ pub fn prismari_hotburst() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2419,6 +2458,7 @@ pub fn prismari_magmaspark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2466,6 +2506,7 @@ pub fn prismari_mindkindler() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2516,6 +2557,7 @@ pub fn prismari_embergem() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2586,6 +2628,7 @@ pub fn prismari_pyromancer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2638,6 +2681,7 @@ pub fn prismari_spitfire() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2694,6 +2738,7 @@ pub fn prismari_wildform() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2746,6 +2791,7 @@ pub fn prismari_sparkbright() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2804,6 +2850,7 @@ pub fn prismari_drakeforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2851,6 +2898,7 @@ pub fn prismari_sparkdrake() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2901,6 +2949,7 @@ pub fn prismari_lavalifter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -2956,6 +3005,7 @@ pub fn prismari_spelltheorist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3004,6 +3054,7 @@ pub fn prismari_stormwriter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3055,6 +3106,7 @@ pub fn prismari_igniter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3121,6 +3173,7 @@ pub fn prismari_embershaper_wizard() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3171,6 +3224,7 @@ pub fn prismari_magmaboon() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3219,6 +3273,7 @@ pub fn prismari_tideburst() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3262,6 +3317,7 @@ pub fn prismari_tempest_caller() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3314,6 +3370,7 @@ pub fn prismari_pyresurge_b28() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3365,6 +3422,7 @@ pub fn prismari_sparksong() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3404,6 +3462,7 @@ pub fn prismari_glasscaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3457,6 +3516,7 @@ pub fn prismari_treasurewright_b30() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3498,6 +3558,7 @@ pub fn prismari_tideforger() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3553,6 +3614,7 @@ pub fn prismari_splashcaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3593,6 +3655,7 @@ pub fn prismari_embertongue() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3638,6 +3701,7 @@ pub fn prismari_treasurewright_b32() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3699,6 +3763,7 @@ pub fn prismari_sparkpainter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3747,6 +3812,7 @@ pub fn prismari_burning_lesson() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3790,6 +3856,7 @@ pub fn prismari_sparkscribe() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3829,6 +3896,7 @@ pub fn prismari_ember_adept() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3871,6 +3939,7 @@ pub fn prismari_sparkflare() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3909,6 +3978,7 @@ pub fn prismari_flameforger() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3955,6 +4025,7 @@ pub fn prismari_stormfront() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -3994,6 +4065,7 @@ pub fn prismari_eruption_mage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4045,6 +4117,7 @@ pub fn prismari_flamescribe() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4089,6 +4162,7 @@ pub fn prismari_sparkriot() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4127,6 +4201,7 @@ pub fn prismari_pyrosage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4180,6 +4255,7 @@ pub fn prismari_spellforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4219,6 +4295,7 @@ pub fn prismari_b35_pyromage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4263,6 +4340,7 @@ pub fn prismari_stormforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4300,6 +4378,7 @@ pub fn prismari_mirror_mage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4353,6 +4432,7 @@ pub fn prismari_sparkmage_v2() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4396,6 +4476,7 @@ pub fn prismari_eddy() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4436,6 +4517,7 @@ pub fn prismari_dazzler() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4475,6 +4557,7 @@ pub fn prismari_cinderpoet() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4523,6 +4606,7 @@ pub fn prismari_pyrocaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4566,6 +4650,7 @@ pub fn prismari_drift() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4607,6 +4692,7 @@ pub fn prismari_sparkbolt() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4645,6 +4731,7 @@ pub fn prismari_stormrider() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4684,6 +4771,7 @@ pub fn prismari_hothead() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4727,6 +4815,7 @@ pub fn prismari_cantrip_bolt() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4764,6 +4853,7 @@ pub fn prismari_wildmage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4805,6 +4895,7 @@ pub fn prismari_stormbearer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4852,6 +4943,7 @@ pub fn prismari_pyromancer_v2() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4894,6 +4986,7 @@ pub fn prismari_tempestmage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4942,6 +5035,7 @@ pub fn prismari_cinderdrake() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -4983,6 +5077,7 @@ pub fn prismari_cinderbolt() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5032,6 +5127,7 @@ pub fn prismari_stormblade() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5081,6 +5177,7 @@ pub fn prismari_maestro() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5124,6 +5221,7 @@ pub fn prismari_emberscribe() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5167,6 +5265,7 @@ pub fn prismari_treasurer_v2() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5213,6 +5312,7 @@ pub fn prismari_quickcast() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5254,6 +5354,7 @@ pub fn prismari_starcaller() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5296,6 +5397,7 @@ pub fn prismari_scryer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5342,6 +5444,7 @@ pub fn prismari_inferno_v2() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5381,6 +5484,7 @@ pub fn prismari_glasshammer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5421,6 +5525,7 @@ pub fn prismari_skywarp() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5471,6 +5576,7 @@ pub fn prismari_stagewright() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5511,6 +5617,7 @@ pub fn prismari_soundsmith() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5557,6 +5664,7 @@ pub fn prismari_pyroartist() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5596,6 +5704,7 @@ pub fn prismari_brushpyre() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5640,6 +5749,7 @@ pub fn prismari_blastcaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5681,6 +5791,7 @@ pub fn prismari_oddsmaker() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5724,6 +5835,7 @@ pub fn prismari_glassforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5769,6 +5881,7 @@ pub fn prismari_emberweaver() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5817,6 +5930,7 @@ pub fn prismari_skyflare() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5861,6 +5975,7 @@ pub fn prismari_volcanic_song() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5900,6 +6015,7 @@ pub fn prismari_inkjet_apprentice() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5940,6 +6056,7 @@ pub fn prismari_scribbler() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -5991,6 +6108,7 @@ pub fn prismari_skyspark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6039,6 +6157,7 @@ pub fn prismari_embershout() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6078,6 +6197,7 @@ pub fn prismari_stormcoil() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6122,6 +6242,7 @@ pub fn prismari_treasurespark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6169,6 +6290,7 @@ pub fn prismari_burnscribe() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6215,6 +6337,7 @@ pub fn prismari_treasurespell() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6257,6 +6380,7 @@ pub fn prismari_sparkmage_v3() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6302,6 +6426,7 @@ pub fn prismari_embergale() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6340,6 +6465,7 @@ pub fn prismari_stormgale() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6390,6 +6516,7 @@ pub fn prismari_flamewright() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6438,6 +6565,7 @@ pub fn prismari_cantrip_spark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6482,6 +6610,7 @@ pub fn prismari_dragonkin() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6523,6 +6652,7 @@ pub fn prismari_sparktwister() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6561,6 +6691,7 @@ pub fn prismari_spelljay() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6600,6 +6731,7 @@ pub fn prismari_quickburn() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6645,6 +6777,7 @@ pub fn prismari_spellscribe() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6691,6 +6824,7 @@ pub fn prismari_sparkforge_v2() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6737,6 +6871,7 @@ pub fn prismari_tidesinger() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6775,6 +6910,7 @@ pub fn prismari_searbolt() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6813,6 +6949,7 @@ pub fn prismari_inkflame() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6852,6 +6989,7 @@ pub fn prismari_bonfire() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6899,6 +7037,7 @@ pub fn prismari_snapcaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6936,6 +7075,7 @@ pub fn prismari_pyrolancer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -6974,6 +7114,7 @@ pub fn prismari_drakemage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7011,6 +7152,7 @@ pub fn prismari_cinder_apprentice() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7063,6 +7205,7 @@ pub fn prismari_pyroceptor() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7109,6 +7252,7 @@ pub fn prismari_coinforger() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7161,6 +7305,7 @@ pub fn prismari_flashforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7211,6 +7356,7 @@ pub fn prismari_riftspark() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7248,6 +7394,7 @@ pub fn prismari_sparkwing() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7295,6 +7442,7 @@ pub fn prismari_cantrip_mage() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7342,6 +7490,7 @@ pub fn prismari_firebrand() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7382,6 +7531,7 @@ pub fn prismari_emberveil() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7419,6 +7569,7 @@ pub fn prismari_firechord() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7457,6 +7608,7 @@ pub fn prismari_drakekin() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7504,6 +7656,7 @@ pub fn prismari_inscribe() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7542,6 +7695,7 @@ pub fn prismari_pyremaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7582,6 +7736,7 @@ pub fn prismari_cinderpath() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7625,6 +7780,7 @@ pub fn prismari_searstorm() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7670,6 +7826,7 @@ pub fn prismari_embertide() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7710,6 +7867,7 @@ pub fn prismari_stormcaller() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7747,6 +7905,7 @@ pub fn prismari_embershock() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7791,6 +7950,7 @@ pub fn prismari_spellscholar() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7828,6 +7988,7 @@ pub fn prismari_reverberator() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7872,6 +8033,7 @@ pub fn prismari_volcanist_b55() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7912,6 +8074,7 @@ pub fn prismari_sparkleap() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -7962,6 +8125,7 @@ pub fn prismari_flamewriter() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8009,6 +8173,7 @@ pub fn prismari_cinderchant() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8046,6 +8211,7 @@ pub fn prismari_skydrake() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8090,6 +8256,7 @@ pub fn prismari_floodfire() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8131,6 +8298,7 @@ pub fn prismari_pyromage_b57() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8170,6 +8338,7 @@ pub fn prismari_stormcaller_v2() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8208,6 +8377,7 @@ pub fn prismari_sparkscribe_b57() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8248,6 +8418,7 @@ pub fn prismari_apprentice_b58() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8286,6 +8457,7 @@ pub fn prismari_flamewriter_b58() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8325,6 +8497,7 @@ pub fn prismari_tideflame() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8377,6 +8550,7 @@ pub fn prismari_stormcaster_b58() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8416,6 +8590,7 @@ pub fn prismari_emberglyph() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8454,6 +8629,7 @@ pub fn prismari_iceforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8492,6 +8668,7 @@ pub fn prismari_flameseer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8540,6 +8717,7 @@ pub fn prismari_artificer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8580,6 +8758,7 @@ pub fn prismari_spell_smith_b60() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8617,6 +8796,7 @@ pub fn prismari_fluxshaper() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8669,6 +8849,7 @@ pub fn prismari_glassblower() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8707,6 +8888,7 @@ pub fn prismari_blast_apprentice() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8748,6 +8930,7 @@ pub fn prismari_sparkscribe_b61() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8797,6 +8980,7 @@ pub fn prismari_emberforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8834,6 +9018,7 @@ pub fn prismari_torchsmith() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8872,6 +9057,7 @@ pub fn prismari_iceshaper() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8925,6 +9111,7 @@ pub fn prismari_smiteforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -8965,6 +9152,7 @@ pub fn prismari_sparksinger() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9004,6 +9192,7 @@ pub fn prismari_pyreforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9050,6 +9239,7 @@ pub fn prismari_goldcaster() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9098,6 +9288,7 @@ pub fn prismari_echoflame() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9136,6 +9327,7 @@ pub fn prismari_loresprite() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9190,6 +9382,7 @@ pub fn prismari_stormcaller_b63() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9229,6 +9422,7 @@ pub fn prismari_combustomancer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9274,6 +9468,7 @@ pub fn prismari_sparkforger() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9311,6 +9506,7 @@ pub fn prismari_flashbinder() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9360,6 +9556,7 @@ pub fn prismari_tidefurnace() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9397,6 +9594,7 @@ pub fn prismari_embergloss() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9435,6 +9633,7 @@ pub fn prismari_stormtide() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9474,6 +9673,7 @@ pub fn prismari_glassflame() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9511,6 +9711,7 @@ pub fn prismari_cinderdancer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9549,6 +9750,7 @@ pub fn prismari_tidescryer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9598,6 +9800,7 @@ pub fn prismari_magmaforge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9636,6 +9839,7 @@ pub fn prismari_mistwarden() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9677,6 +9881,7 @@ pub fn prismari_cinderspell() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9722,6 +9927,7 @@ pub fn prismari_sparkbearer() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9760,6 +9966,7 @@ pub fn prismari_stormcaller_b68() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9798,6 +10005,7 @@ pub fn prismari_flarewinder() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9847,6 +10055,7 @@ pub fn prismari_brewbinder() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9894,6 +10103,7 @@ pub fn prismari_ember_surge() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9935,6 +10145,7 @@ pub fn prismari_blazewright_b125() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -9982,6 +10193,7 @@ pub fn prismari_riftscholar_b125() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10030,6 +10242,7 @@ pub fn prismari_sparkshow_b125() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10079,6 +10292,7 @@ pub fn prismari_tempest_bearer_b125() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10118,6 +10332,7 @@ pub fn prismari_cinderscholar_b126() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10155,6 +10370,7 @@ pub fn prismari_riftrider_b126() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10193,6 +10409,7 @@ pub fn prismari_sparkstudent_b126() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10240,6 +10457,7 @@ pub fn prismari_tempest_skipper_b126() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10288,6 +10506,7 @@ pub fn prismari_coil_caller_b126() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10337,6 +10556,7 @@ pub fn prismari_sparkbolt_b127() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10374,6 +10594,7 @@ pub fn prismari_flarescholar_b127() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10411,6 +10632,7 @@ pub fn prismari_mistscholar_b127() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10448,6 +10670,7 @@ pub fn prismari_surgebearer_b127() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10490,6 +10713,7 @@ pub fn prismari_ember_wave_b127() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10531,6 +10755,7 @@ pub fn prismari_stormcrafter_b128() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10570,6 +10795,7 @@ pub fn prismari_firebrand_b128() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10608,6 +10834,7 @@ pub fn prismari_tide_surger_b128() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10650,6 +10877,7 @@ pub fn prismari_pyroblast_b128() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10699,6 +10927,7 @@ pub fn prismari_sparkmaker_b129() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10738,6 +10967,7 @@ pub fn prismari_tempestmage_b129() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10776,6 +11006,7 @@ pub fn prismari_inkwave_b129() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10814,6 +11045,7 @@ pub fn prismari_stormbolt_b129() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10854,6 +11086,7 @@ pub fn prismari_emberseer_b130() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10892,6 +11125,7 @@ pub fn prismari_inktrickster_b130() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10930,6 +11164,7 @@ pub fn prismari_burnstrike_b130() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -10981,6 +11216,7 @@ pub fn prismari_artistic_burst_b131() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11018,6 +11254,7 @@ pub fn prismari_inkpyromancer_b131() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11065,6 +11302,7 @@ pub fn prismari_volatile_inkstroke_b131() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11105,6 +11343,7 @@ pub fn prismari_sparkscholar_ii_b132() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11143,6 +11382,7 @@ pub fn prismari_glasswright_b132() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11187,6 +11427,7 @@ pub fn prismari_spellstrike_b132() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11225,6 +11466,7 @@ pub fn prismari_tempest_scribe_b132() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11271,6 +11513,7 @@ pub fn prismari_ember_sprite_b133() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11309,6 +11552,7 @@ pub fn prismari_wave_surger_b133() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11347,6 +11591,7 @@ pub fn prismari_magma_cleric_b133() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11388,6 +11633,7 @@ pub fn prismari_sparkmage_b135() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11436,6 +11682,7 @@ pub fn prismari_splash_b135() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11475,6 +11722,7 @@ pub fn prismari_glasswright_ii_b135() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11521,6 +11769,7 @@ pub fn prismari_stormcaller_b135() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11574,6 +11823,7 @@ pub fn prismari_ember_scribe_b136() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11611,6 +11861,7 @@ pub fn prismari_burnpaste_b136() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11658,6 +11909,7 @@ pub fn prismari_treasure_pyro_b136() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11705,6 +11957,7 @@ pub fn prismari_sparkforge_b138() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11743,6 +11996,7 @@ pub fn prismari_embersinger_b138() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11784,6 +12038,7 @@ pub fn prismari_surgebolt_b138() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11821,6 +12076,7 @@ pub fn prismari_wavecaller_b138() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11870,6 +12126,7 @@ pub fn prismari_stormhand_b138() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11909,6 +12166,7 @@ pub fn prismari_flarewright_b139() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11958,6 +12216,7 @@ pub fn prismari_shocksinger_b139() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -11998,6 +12257,7 @@ pub fn prismari_glassflinger_b136() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12037,6 +12297,7 @@ pub fn prismari_magma_channeler_b141() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12075,6 +12336,7 @@ pub fn prismari_pyromage_b141() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12122,6 +12384,7 @@ pub fn prismari_tidalstorm_b141() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12160,6 +12423,7 @@ pub fn prismari_embergeist_b141() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12201,6 +12465,7 @@ pub fn prismari_surgemage_b142() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12248,6 +12513,7 @@ pub fn prismari_cinderwave_b142() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12286,6 +12552,7 @@ pub fn prismari_tidemaster_b142() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12324,6 +12591,7 @@ pub fn prismari_pyrocaster_b142() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12361,6 +12629,7 @@ pub fn prismari_magmarush_b142() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12400,6 +12669,7 @@ pub fn prismari_pyroartist_b143() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12443,6 +12713,7 @@ pub fn prismari_cantripflinger_b143() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12481,6 +12752,7 @@ pub fn prismari_stormcaster_b143() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12528,6 +12800,7 @@ pub fn prismari_cantriplord_b143() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12565,6 +12838,7 @@ pub fn prismari_elementalmage_b143() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12610,6 +12884,7 @@ pub fn prismari_stormgust_b144() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12646,6 +12921,7 @@ pub fn prismari_ember_cantor_b144() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12686,6 +12962,7 @@ pub fn prismari_frosthand_b145() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12723,6 +13000,7 @@ pub fn prismari_magmasplitter_b145() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12760,6 +13038,7 @@ pub fn prismari_wavecraft_b144() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12801,6 +13080,7 @@ pub fn prismari_volcanist_b143() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12841,6 +13121,7 @@ pub fn prismari_pyromage_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12882,6 +13163,7 @@ pub fn prismari_volcanic_spell_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12925,6 +13207,7 @@ pub fn prismari_sleetcaster_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -12963,6 +13246,7 @@ pub fn prismari_treasurer_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13000,6 +13284,7 @@ pub fn prismari_mage_champion_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13048,6 +13333,7 @@ pub fn prismari_charge_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13086,6 +13372,7 @@ pub fn prismari_reflectionist_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13123,6 +13410,7 @@ pub fn prismari_pyrolancer_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13165,6 +13453,7 @@ pub fn prismari_tidemage_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13212,6 +13501,7 @@ pub fn prismari_surge_b146() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13252,6 +13542,7 @@ pub fn prismari_embercaller_b147() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13289,6 +13580,7 @@ pub fn prismari_tidescribe_b147() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13326,6 +13618,7 @@ pub fn prismari_flamekind_b147() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13364,6 +13657,7 @@ pub fn prismari_counterscribe_b147() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13402,6 +13696,7 @@ pub fn prismari_arcanist_b147() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13442,6 +13737,7 @@ pub fn prismari_sparkmage_b148() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13485,6 +13781,7 @@ pub fn prismari_splashmage_b148() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13532,6 +13829,7 @@ pub fn prismari_treasurehunter_b148() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13569,6 +13867,7 @@ pub fn prismari_brawler_b148() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13612,6 +13911,7 @@ pub fn prismari_mindstrike_b148() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13651,6 +13951,7 @@ pub fn prismari_etherealist_b149() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13688,6 +13989,7 @@ pub fn prismari_stormbringer_b149() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13727,6 +14029,7 @@ pub fn prismari_pyromage_b150() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13765,6 +14068,7 @@ pub fn prismari_tidemage_b150() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13802,6 +14106,7 @@ pub fn prismari_galemaster_b150() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13839,6 +14144,7 @@ pub fn prismari_stormcaller_b150() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13876,6 +14182,7 @@ pub fn prismari_treasure_smith_b150() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13916,6 +14223,7 @@ pub fn prismari_inferno_b150() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13960,6 +14268,7 @@ pub fn prismari_aetherwave_b150() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -13999,6 +14308,7 @@ pub fn prismari_brawler_b151() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14042,6 +14352,7 @@ pub fn prismari_inferno_tide_b151() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14079,6 +14390,7 @@ pub fn prismari_glassblower_b151() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14117,6 +14429,7 @@ pub fn prismari_wavecaller_b151() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14154,6 +14467,7 @@ pub fn prismari_stormcrest_b151() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14196,6 +14510,7 @@ pub fn prismari_spellburst_b153() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14234,6 +14549,7 @@ pub fn prismari_elementalist_b153() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14271,6 +14587,7 @@ pub fn prismari_spellsplash_b153() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14311,6 +14628,7 @@ pub fn prismari_treasurelord_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14350,6 +14668,7 @@ pub fn prismari_inferno_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14387,6 +14706,7 @@ pub fn prismari_tempestmage_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14425,6 +14745,7 @@ pub fn prismari_crashbinder_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14466,6 +14787,7 @@ pub fn prismari_sparkglyph_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14514,6 +14836,7 @@ pub fn prismari_stormbreaker_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14551,6 +14874,7 @@ pub fn prismari_flameseeker_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14589,6 +14913,7 @@ pub fn prismari_calligrapher_b154() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14629,6 +14954,7 @@ pub fn prismari_combustion_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14667,6 +14993,7 @@ pub fn elemental_stormcaller_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14704,6 +15031,7 @@ pub fn prismari_surge_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14741,6 +15069,7 @@ pub fn prismari_looter_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14778,6 +15107,7 @@ pub fn elemental_brawler_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14821,6 +15151,7 @@ pub fn prismari_treasure_spawner_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14860,6 +15191,7 @@ pub fn prismari_quickdraw_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14904,6 +15236,7 @@ pub fn elemental_whirlwind_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14950,6 +15283,7 @@ pub fn prismari_pyromancer_b156() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -14989,6 +15323,7 @@ pub fn prismari_sparkmaster_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15026,6 +15361,7 @@ pub fn prismari_treasureseeker_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15063,6 +15399,7 @@ pub fn prismari_flameshape_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15103,6 +15440,7 @@ pub fn prismari_tidepainter_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15140,6 +15478,7 @@ pub fn prismari_pyroshaper_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15184,6 +15523,7 @@ pub fn prismari_forgewright_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15230,6 +15570,7 @@ pub fn prismari_tinkertinker_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15267,6 +15608,7 @@ pub fn prismari_flowcaster_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15304,6 +15646,7 @@ pub fn prismari_bolthurler_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15346,6 +15689,7 @@ pub fn prismari_spellsign_b155() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15385,6 +15729,7 @@ pub fn prismari_sparkmage_ii_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15422,6 +15767,7 @@ pub fn prismari_bellringer_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15459,6 +15805,7 @@ pub fn prismari_cinder_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15496,6 +15843,7 @@ pub fn prismari_lootworker_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15533,6 +15881,7 @@ pub fn prismari_ember_scribe_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15571,6 +15920,7 @@ pub fn prismari_flameweaver_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15608,6 +15958,7 @@ pub fn prismari_stormbearer_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15649,6 +16000,7 @@ pub fn prismari_pyroglyph_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15687,6 +16039,7 @@ pub fn prismari_brewscholar_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15731,6 +16084,7 @@ pub fn prismari_flickerflame_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15807,6 +16161,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15849,6 +16204,7 @@ pub fn prismari_brushflare_b160() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15887,6 +16243,7 @@ pub fn prismari_stormbinder_b160() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15925,6 +16282,7 @@ pub fn prismari_spellscribe_b160() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15962,6 +16320,7 @@ pub fn prismari_magmadancer_b160() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -15999,6 +16358,7 @@ pub fn prismari_sparkthrower_b160() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16048,6 +16408,7 @@ pub fn prismari_treasureforge_b160() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16088,6 +16449,7 @@ pub fn prismari_tideforge_b161() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16129,6 +16491,7 @@ pub fn prismari_sparksmith_b161() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16167,6 +16530,7 @@ pub fn prismari_goblinforge_b161() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16211,6 +16575,7 @@ pub fn prismari_voidshaper_b161() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16251,6 +16616,7 @@ pub fn prismari_sparkflower_b162() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16292,6 +16658,7 @@ pub fn prismari_burnscribe_b162() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16330,6 +16697,7 @@ pub fn prismari_spellslinger_b162() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16367,6 +16735,7 @@ pub fn prismari_firefoot_b162() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16407,6 +16776,7 @@ pub fn prismari_stormbolt_b162() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16446,6 +16816,7 @@ pub fn prismari_blazetide_b164() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16483,6 +16854,7 @@ pub fn prismari_spellfury_b164() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16523,6 +16895,7 @@ pub fn prismari_spellwaver_b164() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16560,6 +16933,7 @@ pub fn prismari_fireweaver_b164() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16600,6 +16974,7 @@ pub fn prismari_stormcrash_b164() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16636,6 +17011,7 @@ pub fn prismari_sparkdancer_b164() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16673,6 +17049,7 @@ pub fn prismari_dracoshaper_b164() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16712,6 +17089,7 @@ pub fn prismari_stormchaser_b165() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16749,6 +17127,7 @@ pub fn prismari_flamebolt_b165() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16787,6 +17166,7 @@ pub fn prismari_stormwielder_b165() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16824,6 +17204,7 @@ pub fn prismari_cannonade_b165() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16862,6 +17243,7 @@ pub fn prismari_tidecaller_b165() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16911,6 +17293,7 @@ pub fn prismari_sparkfire_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16959,6 +17342,7 @@ pub fn prismari_smithy_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -16996,6 +17380,7 @@ pub fn prismari_magmamage_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17033,6 +17418,7 @@ pub fn prismari_stormsage_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17074,6 +17460,7 @@ pub fn prismari_flarewave_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17111,6 +17498,7 @@ pub fn prismari_tidehunter_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17151,6 +17539,7 @@ pub fn prismari_inferno_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17188,6 +17577,7 @@ pub fn prismari_skyforger_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17226,6 +17616,7 @@ pub fn prismari_elementalist_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17263,6 +17654,7 @@ pub fn prismari_flamewing_b166() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17309,6 +17701,7 @@ pub fn prismari_spellbreaker_b167() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17346,6 +17739,7 @@ pub fn prismari_brimblast_b167() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17392,6 +17786,7 @@ pub fn prismari_treasurehunter_b167() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17429,6 +17824,7 @@ pub fn prismari_skyrider_b167() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -17902,6 +18298,7 @@ pub fn prismari_volley_b167() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -18968,6 +19365,7 @@ pub fn prismari_pyromancer_b193() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19002,6 +19400,7 @@ pub fn prismari_cantrap_b193() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19039,6 +19438,7 @@ pub fn prismari_floodlord_b193() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19079,6 +19479,7 @@ pub fn prismari_wavewright_b193() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19120,6 +19521,7 @@ pub fn prismari_magmaforge_b193() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19157,6 +19559,7 @@ pub fn prismari_sparkscribe_b193() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19194,6 +19597,7 @@ pub fn prismari_burnbloom_b193() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19235,6 +19639,7 @@ pub fn prismari_sparkboost_b194() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19273,6 +19678,7 @@ pub fn prismari_tinkerlord_b194() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19311,6 +19717,7 @@ pub fn prismari_magmacrafter_b194() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19348,6 +19755,7 @@ pub fn prismari_drakeforge_b194() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19385,6 +19793,7 @@ pub fn prismari_coinforge_b195() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19422,6 +19831,7 @@ pub fn prismari_drakeling_b195() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19469,6 +19879,7 @@ pub fn prismari_riverlord_b195() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19506,6 +19917,7 @@ pub fn prismari_magmaspark_b195() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19546,6 +19958,7 @@ pub fn prismari_discoverer_b196() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19583,6 +19996,7 @@ pub fn prismari_stormcaster_b196() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19627,6 +20041,7 @@ pub fn prismari_pinger_b196() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19665,6 +20080,7 @@ pub fn prismari_spellforge_b196() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19705,6 +20121,7 @@ pub fn prismari_wavebound_b197() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19742,6 +20159,7 @@ pub fn prismari_burnscholar_b197() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19781,6 +20199,7 @@ pub fn prismari_sparkroost_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19819,6 +20238,7 @@ pub fn prismari_glassblower_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19856,6 +20276,7 @@ pub fn prismari_treasurewright_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19893,6 +20314,7 @@ pub fn prismari_burst_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19930,6 +20352,7 @@ pub fn prismari_cantrip_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -19967,6 +20390,7 @@ pub fn prismari_skyforger_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20008,6 +20432,7 @@ pub fn prismari_loot_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20046,6 +20471,7 @@ pub fn prismari_magmaforge_b198() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20085,6 +20511,7 @@ pub fn prismari_apprentice_ii_b199() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20122,6 +20549,7 @@ pub fn prismari_smolderwight_b199() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20170,6 +20598,7 @@ pub fn prismari_surge_b199() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20207,6 +20636,7 @@ pub fn prismari_mathlord_b199() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20245,6 +20675,7 @@ pub fn prismari_wavemaster_b199() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20283,6 +20714,7 @@ pub fn prismari_sparkbolt_b200() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20319,6 +20751,7 @@ pub fn prismari_magmamage_b200() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20353,6 +20786,7 @@ pub fn prismari_notebook_b200() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20394,6 +20828,7 @@ pub fn prismari_stormcrash_b201() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20432,6 +20867,7 @@ pub fn prismari_sparkkeeper_b201() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20471,6 +20907,7 @@ pub fn prismari_treasurehunter_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20506,6 +20943,7 @@ pub fn prismari_bolt_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20544,6 +20982,7 @@ pub fn prismari_drakebreeder_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20581,6 +21020,7 @@ pub fn prismari_spellcraft_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20618,6 +21058,7 @@ pub fn prismari_sparkforger_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20656,6 +21097,7 @@ pub fn prismari_squallcaller_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20694,6 +21136,7 @@ pub fn prismari_pyroartisan_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20732,6 +21175,7 @@ pub fn prismari_tinkerer_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20769,6 +21213,7 @@ pub fn prismari_soothsayer_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20807,6 +21252,7 @@ pub fn prismari_surge_ii_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20844,6 +21290,7 @@ pub fn prismari_volcanist_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20881,6 +21328,7 @@ pub fn prismari_spiketide_b202() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20920,6 +21368,7 @@ pub fn prismari_apprentice_ii_b203() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20956,6 +21405,7 @@ pub fn prismari_cantrip_b203() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -20990,6 +21440,7 @@ pub fn prismari_counter_b203() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21024,6 +21475,7 @@ pub fn prismari_flame_b203() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21061,6 +21513,7 @@ pub fn prismari_squallcaller_ii_b203() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21097,6 +21550,7 @@ pub fn prismari_mage_b203() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21136,6 +21590,7 @@ pub fn prismari_pyromage_b204() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21173,6 +21628,7 @@ pub fn prismari_stormrider_b204() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21211,6 +21667,7 @@ pub fn prismari_sparkboost_b204() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21253,6 +21710,7 @@ pub fn prismari_flarecaster_b205() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21294,6 +21752,7 @@ pub fn prismari_tidescribe_b205() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21335,6 +21794,7 @@ pub fn prismari_emberbolt_b205() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21373,6 +21833,7 @@ pub fn prismari_stormloot_b205() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21411,6 +21872,7 @@ pub fn prismari_pyrosmith_b205() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21448,6 +21910,7 @@ pub fn prismari_galemage_b205() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21493,6 +21956,7 @@ pub fn prismari_inferno_b206() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21534,6 +21998,7 @@ pub fn prismari_windscholar_b206() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21575,6 +22040,7 @@ pub fn prismari_pyrologist_b207() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21612,6 +22078,7 @@ pub fn prismari_goldcaster_b207() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21655,6 +22122,7 @@ pub fn prismari_firebolt_ii_b207() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21692,6 +22160,7 @@ pub fn prismari_goldsmith_b207() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21736,6 +22205,7 @@ pub fn prismari_stormloot_ii_b207() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21773,6 +22243,7 @@ pub fn prismari_galeblaster_b207() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21814,6 +22285,7 @@ pub fn prismari_scorchmage_b208() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }
 
@@ -21851,5 +22323,6 @@ pub fn prismari_scholar_adept_b208() -> CardDefinition {
         bestow: None,
         foretell_cost: None,
         adventure: None,
+        plot_cost: None,
     }
 }

@@ -225,11 +225,20 @@ feature; sweep card-batch by card-batch.
   ⏳ Daybound/Nightbound, ✅ Blitz (`shortcut::blitz` /
   `AlternativeCost.blitz` — CR 702.152: alt-cost haste + "when this dies,
   draw a card" + sacrifice at next end step via `Effect::SacrificeSource`;
-  Tenacious Underdog, Ardent Elementalist, Goldhound), 🟡 Casualty,
+  Tenacious Underdog, Ardent Elementalist, Goldhound), ✅ Casualty
+  (CR 702.153 — `Keyword::Casualty(n)` + `GameAction::CastSpellCasualty`:
+  optional sacrifice-a-creature-of-power-≥-n additional cost that copies the
+  spell on cast via `copy_stack_spell`; Cut of the Profits),
   ✅ Connive (`shortcut::connive` — CR 702.158, draw/discard +
   +1/+1-per-nonland via `Selector::DiscardedThisResolution`; Quandrix
   Cryptomancer), ⏳ Backup,
-  ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,
+  ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ✅ Plot (CR 702.170 —
+  `CardDefinition.plot_cost` + `GameState.{plotted_cards,plotted_this_turn}`
+  + `GameAction::Plot` / `CastPlotted`: exile face-up for the plot cost, cast
+  free on a later turn; Spinewoods Paladin, Vault Plunderer),
+  ✅ Saddle (CR 702.171 — `Keyword::Saddle(n)` + `CardInstance.saddled` +
+  `GameAction::Saddle` + `shortcut::attacks_while_saddled`; Stingerback
+  Terror), ⏳ Gift,
   ⏳ Offspring, ⏳ Impending, ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
   `GameAction::Ninjutsu` — declare-blockers special action that returns an
   unblocked attacker and swaps the ninja in tapped + attacking; Fallen

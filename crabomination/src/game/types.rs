@@ -115,6 +115,31 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.153 — cast a spell paying its optional Casualty cost,
+    /// sacrificing `sacrifice` (a creature you control with power ≥ the
+    /// casualty number) as an additional cost. On cast the spell is copied.
+    CastSpellCasualty {
+        card_id: CardId,
+        sacrifice: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 702.170 — Plot a card from hand: pay its plot cost and exile it
+    /// face-up. Special action, main phase + empty stack only.
+    Plot { card_id: CardId },
+    /// CR 702.170d — cast a plotted card from exile without paying its mana
+    /// cost, on a turn after it was plotted.
+    CastPlotted {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a modal-double-faced card via its **back face**. Mirrors
     /// `PlayLandBack` but for non-land back faces (creature/instant/
     /// sorcery). The card's `definition` is swapped to the back face's
@@ -272,6 +297,11 @@ pub enum GameAction {
     /// creature until end of turn. Crew is an activated ability usable any
     /// time the controller has priority (instant speed, CR 702.122c).
     Crew { vehicle: CardId, crew_creatures: Vec<CardId> },
+    /// CR 702.171 — Saddle a Mount. Taps each creature in `creatures` (each
+    /// an untapped creature the activator controls, other than the Mount);
+    /// their total power must meet or exceed the Mount's `Keyword::Saddle(N)`.
+    /// On success the Mount becomes saddled until end of turn. Sorcery speed.
+    Saddle { mount: CardId, creatures: Vec<CardId> },
     /// CR 702.49 — Ninjutsu. During the declare-blockers step, return an
     /// unblocked attacker (`returning`) to hand and put `ninja` (a card with
     /// Ninjutsu in your hand) onto the battlefield tapped and attacking the

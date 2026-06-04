@@ -472,6 +472,10 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
+    /// True if the effect's source permanent is currently saddled (CR
+    /// 702.171). Backed by `CardInstance.saddled`; gates "whenever this
+    /// attacks while saddled" triggers on Mounts.
+    SourceSaddled,
     /// True if any player `who` resolves to attacked with a creature this
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.
@@ -3756,6 +3760,16 @@ pub mod shortcut {
     pub fn on_attack(effect: Effect) -> TriggeredAbility {
         TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect,
+        }
+    }
+    /// CR 702.171 — "Whenever this Mount attacks while saddled, [effect]."
+    /// The `SourceSaddled` filter gates the trigger on the Mount's saddled
+    /// state (set by a Saddle activation earlier in the turn).
+    pub fn attacks_while_saddled(effect: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::SourceSaddled),
             effect,
         }
     }
