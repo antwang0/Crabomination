@@ -374,7 +374,10 @@ feature; sweep card-batch by card-batch.
   CR 702.27, optional additional cost; bought-back spell returns to its
   owner's hand instead of the graveyard on resolution; surfaced in
   `PlayerView.buyback_hand`; Corpse Dance), ⏳ Miracle,
-  ⏳ Bloodrush, ⏳ Unleash, ⏳ Scavenge,
+  ⏳ Bloodrush, ✅ Unleash (`Keyword::Unleash` + `shortcut::unleash()` — CR
+  702.98: ETB "may enter with a +1/+1 counter" + computed `CantBlock` while it
+  has one; Rakdos Cackler, Gore-House Chainwalker, Spawn of Rix Maadi),
+  ⏳ Scavenge,
   ✅ Bestow (`CardDefinition.bestow` + `GameAction::CastBestow` +
   `CardInstance.bestowed` — CR 702.103; cast an enchantment-creature as an
   Aura for its bestow cost, granting its `equipped_bonus`; not a creature

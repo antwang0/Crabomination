@@ -6099,3 +6099,173 @@ pub fn kismet() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Viscera Seer — {B} Creature — Vampire Wizard 1/1. "Sacrifice a creature:
+/// Scry 1." (M11)
+pub fn viscera_seer() -> CardDefinition {
+    CardDefinition {
+        name: "Viscera Seer",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
+            from_hand: false,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thalia's Lieutenant — {1}{W}{W} Creature — Human Soldier 2/2. "When this
+/// enters, put a +1/+1 counter on each other Human you control. Whenever
+/// another Human enters under your control, put a +1/+1 counter on this." (EMN)
+pub fn thalias_lieutenant() -> CardDefinition {
+    CardDefinition {
+        name: "Thalia's Lieutenant",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Human)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(crate::card::Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCreatureType(CreatureType::Human)
+                            .and(SelectionRequirement::OtherThanSource),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mentor of the Meek — {2}{W} Creature — Human Soldier 2/2. "Whenever another
+/// creature with power 2 or less enters under your control, you may pay {1}.
+/// If you do, draw a card." (M13)
+pub fn mentor_of_the_meek() -> CardDefinition {
+    CardDefinition {
+        name: "Mentor of the Meek",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::PowerAtMost(2))
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::MayPay {
+                description: "Pay {1}: draw a card".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// 1/1 white Soldier token (Hero of Bladehold).
+fn white_soldier_token() -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Hero of Bladehold — {2}{W}{W} Creature — Human Knight 3/4 with Battle cry.
+/// "Whenever this attacks, create two 1/1 white Soldier creature tokens
+/// tapped and attacking." (MBS)
+pub fn hero_of_bladehold() -> CardDefinition {
+    CardDefinition {
+        name: "Hero of Bladehold",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![
+            crate::effect::shortcut::battle_cry(1),
+            crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: white_soldier_token(),
+                cleanup: Default::default(),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mirran Crusader — {1}{W}{W} Creature — Human Knight 2/2 with Double strike,
+/// protection from black, and protection from green. (MBS)
+pub fn mirran_crusader() -> CardDefinition {
+    CardDefinition {
+        name: "Mirran Crusader",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![
+            Keyword::DoubleStrike,
+            Keyword::Protection(crate::mana::Color::Black),
+            Keyword::Protection(crate::mana::Color::Green),
+        ],
+        ..Default::default()
+    }
+}

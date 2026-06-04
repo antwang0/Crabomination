@@ -2743,6 +2743,87 @@ fn unleash_creature_can_decline_counter_and_block() {
         "without a +1/+1 counter the unleash creature can still block");
 }
 
+// ── Tribal / aggro creatures ─────────────────────────────────────────────────
+
+#[test]
+fn viscera_seer_sacrifices_a_creature() {
+    let mut g = two_player_game();
+    let seer = g.add_card_to_battlefield(0, catalog::viscera_seer());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island()); // something to scry
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seer, ability_index: 0, target: None, x_value: None,
+    }).expect("Sacrifice a creature: Scry 1");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder),
+        "the sacrificed creature is in the graveyard");
+}
+
+#[test]
+fn thalias_lieutenant_pumps_humans_on_entry() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::doomed_traveler()); // Human 1/1
+    let lt = g.add_card_to_battlefield(0, catalog::thalias_lieutenant());
+    g.fire_self_etb_triggers(lt, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "ETB puts a +1/+1 counter on each other Human");
+}
+
+#[test]
+fn thalias_lieutenant_grows_when_a_human_enters() {
+    let mut g = two_player_game();
+    let lt = g.add_card_to_battlefield(0, catalog::thalias_lieutenant());
+    let human = g.add_card_to_battlefield(0, catalog::doomed_traveler());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: human }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(lt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "another Human entering grows the Lieutenant");
+}
+
+#[test]
+fn mentor_of_the_meek_draws_for_small_creatures() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_battlefield(0, catalog::mentor_of_the_meek());
+    g.players[0].mana_pool.add_colorless(1);
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // power 2
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: small }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "paid one mana to draw a card");
+}
+
+#[test]
+fn hero_of_bladehold_makes_soldiers_on_attack() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::hero_of_bladehold());
+    g.battlefield.iter_mut().find(|c| c.id == hero).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    g.declare_attackers(vec![Attack { attacker: hero, target: AttackTarget::Player(1) }])
+        .expect("Hero attacks");
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Soldier" && c.tapped)
+        .count();
+    assert_eq!(soldiers, 2, "two Soldier tokens created tapped and attacking");
+    assert!(g.battlefield.iter().filter(|c| c.controller == 0).count() >= before + 2);
+}
+
+#[test]
+fn mirran_crusader_has_double_strike_and_two_protections() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let mc = g.add_card_to_battlefield(0, catalog::mirran_crusader());
+    let kws = g.computed_permanent(mc).unwrap().keywords;
+    assert!(kws.contains(&Keyword::DoubleStrike), "double strike");
+    assert!(kws.contains(&Keyword::Protection(Color::Black)), "protection from black");
+    assert!(kws.contains(&Keyword::Protection(Color::Green)), "protection from green");
+}
+
 #[test]
 fn honor_of_the_pure_buffs_only_white_creatures() {
     let mut g = two_player_game();
