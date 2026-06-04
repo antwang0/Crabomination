@@ -111,6 +111,21 @@ impl NetInbox {
 #[derive(Resource, Default)]
 pub struct CurrentView(pub Option<ClientView>);
 
+/// Client-side mirror of the server's lobby protocol, kept current by
+/// [`poll_net`]. The lobby-browser UI renders from this; cleared between
+/// sessions by [`teardown_net_session`].
+#[derive(Resource, Default)]
+pub struct LobbyState {
+    /// Latest advertised open lobbies (from `ServerMsg::LobbyList`).
+    pub lobbies: Vec<crabomination::net::LobbyInfo>,
+    /// The lobby we've created/joined and are waiting in, with our slot.
+    pub joined: Option<(crabomination::net::LobbyInfo, usize)>,
+    /// Most recent lobby error, for display in the browser.
+    pub last_error: Option<String>,
+    /// Set once `MatchStarted` arrives so the browser can hand off to InGame.
+    pub match_started: bool,
+}
+
 /// Seat index assigned by the server during handshake.
 #[derive(Resource, Default)]
 pub struct OurSeat(pub usize);
@@ -144,6 +159,7 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<MatchEnded>()
             .init_resource::<NetConnection>()
             .init_resource::<PendingManaCast>()
+            .init_resource::<LobbyState>()
             .add_systems(PreUpdate, poll_net)
             .add_systems(Update, (drive_pending_mana_cast, update_pending_cast_banner));
         // Network installation happens via `crate::menu::start_net_session_from_menu`
@@ -162,13 +178,16 @@ pub fn poll_net(
     mut events: ResMut<LatestServerEvents>,
     mut ended: ResMut<MatchEnded>,
     mut pending_cast: ResMut<PendingManaCast>,
+    mut lobby: ResMut<LobbyState>,
 ) {
     let Some(inbox) = inbox else { return };
     events.0.clear();
     for msg in inbox.drain() {
         match msg {
             ServerMsg::YourSeat(s) => seat.0 = s,
-            ServerMsg::MatchStarted => {}
+            // The match is starting — the lobby browser uses this to leave the
+            // browser and enter the game.
+            ServerMsg::MatchStarted => lobby.match_started = true,
             ServerMsg::View(v) => view.0 = Some(*v),
             ServerMsg::Events(evs) => events.0 = evs,
             // Combined per-action frame: apply the events (for animation)
@@ -198,6 +217,24 @@ pub fn poll_net(
                 }
             }
             ServerMsg::MatchOver { winner } => ended.0 = Some(winner),
+            // ── Lobby protocol → client-side mirror (rendered by the lobby
+            //    browser UI) ────────────────────────────────────────────────
+            ServerMsg::LobbyList { lobbies } => {
+                lobby.lobbies = lobbies;
+                lobby.last_error = None;
+            }
+            ServerMsg::LobbyJoined { lobby: info, your_slot } => {
+                lobby.joined = Some((info, your_slot));
+                lobby.last_error = None;
+            }
+            ServerMsg::LobbyUpdated { lobby: info } => {
+                let slot = lobby.joined.as_ref().map(|(_, s)| *s).unwrap_or(0);
+                lobby.joined = Some((info, slot));
+            }
+            ServerMsg::LobbyError { message } => {
+                eprintln!("lobby: {message}");
+                lobby.last_error = Some(message);
+            }
         }
     }
 }
@@ -216,6 +253,7 @@ pub fn teardown_net_session(
     mut view: ResMut<CurrentView>,
     mut ended: ResMut<MatchEnded>,
     mut pending_cast: ResMut<PendingManaCast>,
+    mut lobby: ResMut<LobbyState>,
 ) {
     if let Some(stream) = conn.0.take() {
         let _ = stream.shutdown(std::net::Shutdown::Both);
@@ -226,6 +264,7 @@ pub fn teardown_net_session(
     view.0 = None;
     ended.0 = None;
     pending_cast.0 = None;
+    *lobby = LobbyState::default();
 }
 
 /// Drive a `PendingCast`: re-submit the held cast each time the player's

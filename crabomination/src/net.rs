@@ -20,8 +20,21 @@ use crate::mana::{Color, ManaCost, ManaPool};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClientMsg {
-    /// Sent once on connect. The server replies with `YourSeat`.
+    /// Sent once on connect to announce a display name. On a lobby server the
+    /// server replies with a `LobbyList`; on the legacy auto-pairing path it
+    /// is the cue to seat the connection.
     JoinMatch { name: String },
+    /// Lobby: request the current list of open (not-yet-started) lobbies. The
+    /// server replies with [`ServerMsg::LobbyList`].
+    ListLobbies,
+    /// Lobby: create a new lobby with this display name + gamemode and join it
+    /// as host. The server replies with [`ServerMsg::LobbyJoined`].
+    CreateLobby { name: String, format: LobbyFormat },
+    /// Lobby: join the open lobby with this id. Fills a seat; when the lobby
+    /// reaches capacity the server starts the match for everyone in it.
+    JoinLobby { lobby_id: u64 },
+    /// Lobby: leave the lobby you're currently in and return to browsing.
+    LeaveLobby,
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
     SubmitAction(GameAction),
     /// Debug-console cheat: bypasses turn order / priority and mutates the
@@ -29,6 +42,47 @@ pub enum ClientMsg {
     /// server routes it to whichever seat owns the originating channel.
     /// Intended for local single-player debugging only.
     Debug(DebugAction),
+}
+
+/// Gamemode a lobby is built around. Mirrors the deck-pool choices the client
+/// exposes; the server maps each to a `GameState` builder when the lobby fills
+/// (`crate::server::lobby::build_state`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LobbyFormat {
+    /// BRG / Goryo's demo decklists (`demo::build_demo_state`).
+    Modern,
+    /// Fresh random two-color cube decks (`cube::build_cube_state`).
+    Cube,
+    /// Random Strixhaven college decks (`sos_mode::build_sos_state`).
+    Sos,
+    /// Multiplayer Commander (`demo::build_commander_state`).
+    Commander,
+}
+
+impl LobbyFormat {
+    /// Short human label for lobby listings.
+    pub fn label(self) -> &'static str {
+        match self {
+            LobbyFormat::Modern => "Modern",
+            LobbyFormat::Cube => "Cube",
+            LobbyFormat::Sos => "SoS",
+            LobbyFormat::Commander => "Commander",
+        }
+    }
+}
+
+/// A lobby as advertised to clients: enough to render a browser row and to
+/// show how full it is. The authoritative lobby (with its pre-built game
+/// state and member channels) lives server-side.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LobbyInfo {
+    pub id: u64,
+    pub name: String,
+    pub format: LobbyFormat,
+    /// Seats currently filled.
+    pub players: usize,
+    /// Seats required to start the match.
+    pub capacity: usize,
 }
 
 /// Direct-mutation cheats issued by the debug console. Each variant
@@ -81,6 +135,16 @@ pub enum ServerMsg {
     ActionError(String),
     /// The match has ended. `winner` follows `GameState::game_over` semantics.
     MatchOver { winner: Option<usize> },
+    /// Lobby: the current set of open lobbies, in response to `ListLobbies`
+    /// (or pushed when the set changes while browsing).
+    LobbyList { lobbies: Vec<LobbyInfo> },
+    /// Lobby: you have created or joined this lobby and are now waiting for it
+    /// to fill. `your_slot` is your seat index within the lobby.
+    LobbyJoined { lobby: LobbyInfo, your_slot: usize },
+    /// Lobby: the lobby you're waiting in changed (someone joined or left).
+    LobbyUpdated { lobby: LobbyInfo },
+    /// Lobby: an operation failed (lobby full, gone, or an illegal request).
+    LobbyError { message: String },
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────

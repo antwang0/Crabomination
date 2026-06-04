@@ -67,10 +67,12 @@ impl SnapshotSinkState {
 pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 
 pub mod bot;
+pub mod lobby;
 pub mod tcp;
 pub mod view;
 
 pub use bot::{Bot, RandomBot};
+pub use lobby::{serve_lobbies, ConnId, LobbyManager};
 pub use tcp::{tcp_client, tcp_seat};
 pub use view::project;
 
@@ -553,6 +555,12 @@ fn run_match_inner(
                     publish_snapshot(&state, &snapshot_sink);
                 }
             }
+            // Lobby messages are meaningless once a match is under way (the
+            // lobby driver consumes them before the match begins).
+            ClientMsg::ListLobbies
+            | ClientMsg::CreateLobby { .. }
+            | ClientMsg::JoinLobby { .. }
+            | ClientMsg::LeaveLobby => {}
         }
     }
 }
