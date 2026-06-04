@@ -2713,6 +2713,36 @@ fn always_watching_buffs_only_nontokens() {
     assert_eq!(g.computed_permanent(tok).unwrap().power, 2, "token unaffected");
 }
 
+// ── Unleash (CR 702.98) ──────────────────────────────────────────────────────
+
+#[test]
+fn unleash_creature_may_enter_with_counter_then_cant_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let cackler = g.add_card_to_battlefield(0, catalog::rakdos_cackler());
+    g.fire_self_etb_triggers(cackler, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cackler).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "unleash accepted: enters with a +1/+1 counter");
+    assert!(g.computed_permanent(cackler).unwrap().keywords.contains(&Keyword::CantBlock),
+        "a 2/2 with a +1/+1 counter from unleash can't block");
+}
+
+#[test]
+fn unleash_creature_can_decline_counter_and_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let cackler = g.add_card_to_battlefield(0, catalog::rakdos_cackler());
+    g.fire_self_etb_triggers(cackler, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cackler).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "unleash declined: no counter");
+    assert!(!g.computed_permanent(cackler).unwrap().keywords.contains(&Keyword::CantBlock),
+        "without a +1/+1 counter the unleash creature can still block");
+}
+
 #[test]
 fn honor_of_the_pure_buffs_only_white_creatures() {
     let mut g = two_player_game();

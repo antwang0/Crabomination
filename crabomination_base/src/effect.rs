@@ -5301,6 +5301,23 @@ pub mod shortcut {
         ]))
     }
 
+    /// Unleash (CR 702.98): "You may have this permanent enter with an
+    /// additional +1/+1 counter on it." Modeled as an ETB `MayDo(add a +1/+1
+    /// counter to this)`. The companion "can't block while it has a +1/+1
+    /// counter" restriction is enforced as a computed `CantBlock` keyword in
+    /// `gather_continuous_effects`. Pair with `Keyword::Unleash` on the card.
+    pub fn unleash() -> TriggeredAbility {
+        use crate::card::CounterType;
+        etb(Effect::MayDo {
+            description: "Unleash — enter with a +1/+1 counter?".into(),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })
+    }
+
     /// Soulshift N (CR 702.46): "When this creature dies, you may return
     /// target Spirit card with mana value N or less from your graveyard
     /// to your hand." A `CreatureDied / SelfSource` trigger wrapping a

@@ -5970,6 +5970,61 @@ pub fn blind_obedience() -> CardDefinition {
     }
 }
 
+/// Helper: a vanilla creature body with Unleash (CR 702.98) — Keyword marker
+/// plus the `shortcut::unleash()` ETB "may enter with a +1/+1 counter" trigger.
+fn unleash_creature(
+    name: &'static str,
+    mana: ManaCost,
+    types: Vec<CreatureType>,
+    power: i32,
+    toughness: i32,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power,
+        toughness,
+        keywords: vec![Keyword::Unleash],
+        triggered_abilities: vec![crate::effect::shortcut::unleash()],
+        ..Default::default()
+    }
+}
+
+/// Rakdos Cackler — {B/R} Creature — Devil 1/1 with Unleash. (RTR)
+pub fn rakdos_cackler() -> CardDefinition {
+    unleash_creature(
+        "Rakdos Cackler",
+        cost(&[crate::mana::hybrid(crate::mana::Color::Black, crate::mana::Color::Red)]),
+        vec![CreatureType::Devil],
+        1,
+        1,
+    )
+}
+
+/// Gore-House Chainwalker — {1}{R} Creature — Human Warrior 2/2 with Unleash. (RTR)
+pub fn gore_house_chainwalker() -> CardDefinition {
+    unleash_creature(
+        "Gore-House Chainwalker",
+        cost(&[generic(1), r()]),
+        vec![CreatureType::Human, CreatureType::Warrior],
+        2,
+        2,
+    )
+}
+
+/// Spawn of Rix Maadi — {3}{R} Creature — Zombie 2/2 with Unleash. (DIS)
+pub fn spawn_of_rix_maadi() -> CardDefinition {
+    unleash_creature(
+        "Spawn of Rix Maadi",
+        cost(&[generic(3), r()]),
+        vec![CreatureType::Zombie],
+        2,
+        2,
+    )
+}
+
 /// Helper: PumpPT + GrantKeyword(Vigilance) over a token/nontoken creature
 /// anthem selector (Intangible Virtue / Always Watching share the shape).
 fn vigilance_anthem(token: bool, pump_desc: &'static str) -> Vec<StaticAbility> {

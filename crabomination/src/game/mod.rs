@@ -1895,6 +1895,23 @@ impl GameState {
                     });
                 }
             }
+            // CR 702.98 — Unleash's second static: a creature with the
+            // Unleash keyword can't block while it has a +1/+1 counter.
+            // Injected as a computed `CantBlock` so the existing block-
+            // legality enforcement (`declare_blockers`) honors it.
+            if card.definition.keywords.contains(&Keyword::Unleash)
+                && card.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0) > 0
+            {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(Keyword::CantBlock),
+                });
+            }
         }
         // Graveyard-resident static-ability injection — covers Anger / Wonder /
         // Filth-style Incarnations from STA whose printed Oracle reads "As

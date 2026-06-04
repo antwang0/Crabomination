@@ -47,7 +47,7 @@ pub enum CreatureType {
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
-    Imp, Nightmare, Shade, Minion, Thrull, Carrier,
+    Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil,
     Drake, Griffin, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat,
@@ -410,6 +410,13 @@ pub enum Keyword {
     /// Silence). Enforced from the *computed* keyword set in
     /// `declare_attackers`, so layer-granted variants are honored.
     CantAttack,
+    /// CR 702.98 — Unleash. A marker keyword; the "may enter with a +1/+1
+    /// counter" half rides a `shortcut::unleash()` ETB trigger, and the
+    /// "can't block while it has a +1/+1 counter" half is injected as a
+    /// computed `CantBlock` in `gather_continuous_effects` when the bearer
+    /// holds at least one +1/+1 counter. Rakdos Cackler, Gore-House
+    /// Chainwalker, Spawn of Rix Maadi.
+    Unleash,
     /// CR 508.0 — "This creature can't attack unless it's the only creature
     /// attacking" (Master of Cruelties). Enforced in `declare_attackers`:
     /// a batch that declares this creature alongside any other attacker is
