@@ -2594,6 +2594,36 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn honor_of_the_pure_buffs_only_white_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::honor_of_the_pure());
+    let white = g.add_card_to_battlefield(0, catalog::savannah_lions()); // white 2/1
+    let green = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green 2/2
+    assert_eq!(g.computed_permanent(white).unwrap().power, 3, "white creature buffed");
+    assert_eq!(g.computed_permanent(green).unwrap().power, 2, "non-white unaffected");
+}
+
+#[test]
+fn benalish_marshal_buffs_others_not_itself() {
+    let mut g = two_player_game();
+    let marshal = g.add_card_to_battlefield(0, catalog::benalish_marshal());
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(marshal).unwrap().power, 3, "marshal not self-buffed");
+    assert_eq!(g.computed_permanent(other).unwrap().power, 3, "other creature gets +1/+1");
+}
+
+#[test]
+fn luminarch_aspirant_counters_at_combat() {
+    let mut g = two_player_game();
+    let asp = g.add_card_to_battlefield(0, catalog::luminarch_aspirant());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(asp).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "a +1/+1 counter placed at beginning of combat");
+}
+
+#[test]
 fn steel_overseer_grows_all_artifact_creatures() {
     let mut g = two_player_game();
     let overseer = g.add_card_to_battlefield(0, catalog::steel_overseer());

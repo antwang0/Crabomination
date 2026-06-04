@@ -145,6 +145,11 @@ pub enum AffectedPermanents {
         card_types: Vec<CardType>,
         #[serde(default)]
         exclude_source: bool,
+        /// Optional color filter (Honor of the Pure's "White creatures you
+        /// control"). `None` = any color. Matched against the card's cost
+        /// colors. `#[serde(default)]` keeps old snapshots valid.
+        #[serde(default)]
+        color: Option<crate::mana::Color>,
     },
     /// All permanents controlled by any player on a team other than the
     /// source's. In 1v1 / free-for-all this is "everyone but the source's
@@ -421,14 +426,19 @@ fn affects(effect: &ContinuousEffect, card: &crate::card::CardInstance) -> bool 
     match &effect.affected {
         AffectedPermanents::Source => effect.source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
-        AffectedPermanents::All { controller, card_types, exclude_source } => {
+        AffectedPermanents::All { controller, card_types, exclude_source, color } => {
             if *exclude_source && effect.source == card.id {
                 return false;
             }
             let ctrl_ok = controller.is_none_or(|c| c == card.controller);
             let type_ok = card_types.is_empty()
                 || card_types.iter().all(|t| card.definition.card_types.contains(t));
-            ctrl_ok && type_ok
+            let color_ok = color.is_none_or(|want| {
+                card.definition.cost.symbols.iter().any(|s| {
+                    matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
+                })
+            });
+            ctrl_ok && type_ok && color_ok
         }
         AffectedPermanents::AllOpponents { source_controller, card_types, friendly_seats } => {
             // Empty `friendly_seats` → legacy 1v1 check (snapshots from

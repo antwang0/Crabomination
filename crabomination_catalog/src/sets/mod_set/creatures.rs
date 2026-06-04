@@ -5717,3 +5717,88 @@ pub fn foundry_inspector() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Honor of the Pure — {1}{W} Enchantment. "White creatures you control get
+/// +1/+1." (M10)
+pub fn honor_of_the_pure() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Honor of the Pure",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "White creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::White))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Benalish Marshal — {W}{W}{W} Creature — Human Knight 3/3. "Other creatures
+/// you control get +1/+1." (DOM)
+pub fn benalish_marshal() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Benalish Marshal",
+        cost: cost(&[w(), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Luminarch Aspirant — {1}{W} Creature — Human Cleric 1/1. "At the beginning
+/// of combat on your turn, put a +1/+1 counter on target creature you
+/// control." (ZNR)
+pub fn luminarch_aspirant() -> CardDefinition {
+    CardDefinition {
+        name: "Luminarch Aspirant",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

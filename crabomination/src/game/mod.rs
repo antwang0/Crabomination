@@ -1840,6 +1840,7 @@ impl GameState {
                         controller: Some(card.controller),
                         card_types: vec![CardType::Creature],
                         exclude_source: false,
+                        color: None,
                     },
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
@@ -1854,6 +1855,7 @@ impl GameState {
                             controller: Some(card.controller),
                             card_types: vec![CardType::Creature],
                             exclude_source: false,
+                            color: None,
                         },
                         layer: Layer::L6Ability,
                         sublayer: None,
@@ -1881,6 +1883,7 @@ impl GameState {
                             controller: Some(card.controller),
                             card_types: vec![CardType::Creature],
                             exclude_source: false,
+                            color: None,
                         },
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
@@ -1919,6 +1922,7 @@ impl GameState {
                                 controller: Some(card.owner),
                                 card_types: vec![CardType::Creature],
                                 exclude_source: false,
+                                color: None,
                             },
                             layer: Layer::L6Ability,
                             sublayer: None,
@@ -5694,6 +5698,7 @@ fn affected_from_requirement(
     let mut types: Vec<CardType> = vec![];
     let mut creature_type: Option<crate::card::CreatureType> = None;
     let mut counter_filter: Option<crate::card::CounterType> = None;
+    let mut color_filter: Option<crate::mana::Color> = None;
     // CR-driven "other" exclusion (push XXXV). `SelectionRequirement::
     // OtherThanSource` flips this to true; the resulting AffectedPermanents
     // variant carries `exclude_source: true` so the layer-time `affects()`
@@ -5725,6 +5730,7 @@ fn affected_from_requirement(
             R::HasCardType(t) => types.push(t.clone()),
             R::HasCreatureType(ct) => creature_type = Some(*ct),
             R::WithCounter(ct) => counter_filter = Some(*ct),
+            R::HasColor(c) => color_filter = Some(*c),
             R::OtherThanSource => other_than_source = true,
             R::Any | R::Permanent => {}
             _ => return None,
@@ -5749,6 +5755,7 @@ fn affected_from_requirement(
         controller: ctrl.unwrap_or(None),
         card_types: types,
         exclude_source: other_than_source,
+        color: color_filter,
     })
 }
 
