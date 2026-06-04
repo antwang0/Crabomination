@@ -1241,6 +1241,252 @@ pub fn steel_leaf_champion() -> CardDefinition {
     }
 }
 
+// ── modern_decks batch: high-confidence value bodies ────────────────────────
+
+/// Cloudblazer — {3}{U}{U}, 2/2 Flying. "When this enters, you draw two
+/// cards and you gain two life." (KLD)
+pub fn cloudblazer() -> CardDefinition {
+    CardDefinition {
+        name: "Cloudblazer",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Scout], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Invisible Stalker — {1}{U}, 1/1. "Hexproof. Invisible Stalker can't be
+/// blocked." (ISD)
+pub fn invisible_stalker() -> CardDefinition {
+    CardDefinition {
+        name: "Invisible Stalker",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Rogue], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Hexproof, Keyword::Unblockable],
+        ..Default::default()
+    }
+}
+
+/// Slither Blade — {1}{U}, 1/1. "Slither Blade can't be blocked." (AKH)
+pub fn slither_blade() -> CardDefinition {
+    CardDefinition {
+        name: "Slither Blade",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Unblockable],
+        ..Default::default()
+    }
+}
+
+/// Mistral Charger — {1}{W}, 2/1 Flying. (ORI)
+pub fn mistral_charger() -> CardDefinition {
+    CardDefinition {
+        name: "Mistral Charger",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Vorstclaw — {4}{G}{G}, 6/4 Elemental. Vanilla green top-end. (AVR)
+pub fn vorstclaw() -> CardDefinition {
+    CardDefinition {
+        name: "Vorstclaw",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 6,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
+/// Shadowmage Infiltrator — {1}{U}{B}, 1/3 Fear. "Whenever this deals combat
+/// damage to a player, you may draw a card." (DIS)
+pub fn shadowmage_infiltrator() -> CardDefinition {
+    CardDefinition {
+        name: "Shadowmage Infiltrator",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Wizard], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Fear],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Liliana's Specter — {2}{B}{B}, 2/1 Flying. "When this enters, each
+/// opponent discards a card." (M11)
+pub fn lilianas_specter() -> CardDefinition {
+    CardDefinition {
+        name: "Liliana's Specter",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Specter], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bone Shredder — {2}{B}, 1/1 Flying. Echo {1}{B}. "When this enters,
+/// destroy target nonartifact, nonblack creature." (UDS)
+pub fn bone_shredder() -> CardDefinition {
+    CardDefinition {
+        name: "Bone Shredder",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Minion], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Echo(cost(&[generic(1), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Artifact.negate())
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate()),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goldnight Commander — {3}{W}, 2/2. "Whenever another creature you control
+/// enters, creatures you control get +1/+1 until end of turn." (AVR)
+pub fn goldnight_commander() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Goldnight Commander",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Soldier], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elvish Archdruid — {1}{G}{G}, 2/2 Elf Druid. "Other Elf creatures you
+/// control get +1/+1. {T}: Add {G} for each Elf you control." (M10)
+pub fn elvish_archdruid() -> CardDefinition {
+    CardDefinition {
+        name: "Elvish Archdruid",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Druid], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Elf creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    crate::mana::Color::Green,
+                    Value::count(Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Priest of Titania — {1}{G}, 1/1 Elf Druid. "{T}: Add {G} for each Elf on
+/// the battlefield." (various)
+pub fn priest_of_titania() -> CardDefinition {
+    CardDefinition {
+        name: "Priest of Titania",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Druid], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    crate::mana::Color::Green,
+                    Value::count(Selector::EachPermanent(SelectionRequirement::HasCreatureType(
+                        CreatureType::Elf,
+                    ))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Llanowar Visionary — {2}{G}, 2/2 Elf Druid. ETB: draw a card. "{T}: Add
 /// {G}."
 pub fn llanowar_visionary() -> CardDefinition {

@@ -1134,6 +1134,23 @@ pub fn pongify() -> CardDefinition {
     }
 }
 
+/// Dark Banishing — {2}{B} Instant. "Destroy target nonblack creature. It
+/// can't be regenerated." (various)
+pub fn dark_banishing() -> CardDefinition {
+    CardDefinition {
+        name: "Dark Banishing",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DestroyNoRegen {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasColor(Color::Black).negate()),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Grim Affliction — {2}{B} Instant. "Put a -1/-1 counter on target
 /// creature. At the beginning of the next end step, proliferate."
 pub fn grim_affliction() -> CardDefinition {

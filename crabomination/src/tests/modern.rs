@@ -15354,6 +15354,138 @@ fn lord_xander_death_sacrifices_half_permanents() {
         "opp sacrifices half their permanents rounded down");
 }
 
+// ── modern_decks value-body batch ───────────────────────────────────────────
+
+/// Cloudblazer draws two and gains two on ETB.
+#[test]
+fn cloudblazer_etb_draws_two_gains_two() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::cloudblazer());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew 2");
+    assert_eq!(g.players[0].life, life + 2, "gained 2");
+}
+
+/// Invisible Stalker is hexproof and can't be blocked.
+#[test]
+fn invisible_stalker_is_hexproof_and_unblockable() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let stalker = g.add_card_to_battlefield(0, catalog::invisible_stalker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cp = g.compute_battlefield();
+    let scp = cp.iter().find(|c| c.id == stalker).unwrap();
+    assert!(scp.keywords.contains(&Keyword::Hexproof));
+    assert!(!g.blocker_can_block_attacker(bear, stalker), "can't be blocked");
+}
+
+/// Slither Blade can't be blocked.
+#[test]
+fn slither_blade_unblockable() {
+    let mut g = two_player_game();
+    let sb = g.add_card_to_battlefield(0, catalog::slither_blade());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(!g.blocker_can_block_attacker(bear, sb));
+}
+
+/// Shadowmage Infiltrator draws when it deals combat damage to a player.
+#[test]
+fn shadowmage_infiltrator_draws_on_combat_damage() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::island());
+    let inf = g.add_card_to_battlefield(0, catalog::shadowmage_infiltrator());
+    let hand = g.players[0].hand.len();
+    let trig = catalog::shadowmage_infiltrator().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(inf, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on combat damage");
+}
+
+/// Liliana's Specter makes each opponent discard on ETB.
+#[test]
+fn lilianas_specter_etb_each_opponent_discards() {
+    let mut g = two_player_game();
+    g.players[1].hand.clear();
+    g.add_card_to_hand(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::lilianas_specter());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(g.players[1].hand.len(), 0, "opp discarded a card");
+}
+
+/// Bone Shredder destroys a target nonblack, nonartifact creature on ETB and
+/// can't target a black creature.
+#[test]
+fn bone_shredder_etb_destroys_legal_target_only() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green, legal
+    // A black creature is not a legal target.
+    let zombie = g.add_card_to_battlefield(1, catalog::hypnotic_specter());
+    let filter = SelectionRequirement::Creature
+        .and(SelectionRequirement::Artifact.negate())
+        .and(SelectionRequirement::HasColor(Color::Black).negate());
+    assert!(g.evaluate_requirement_static(&filter, &Target::Permanent(bear), 0, None));
+    assert!(!g.evaluate_requirement_static(&filter, &Target::Permanent(zombie), 0, None),
+        "black creature is an illegal target");
+}
+
+/// Goldnight Commander pumps your team when another creature enters.
+#[test]
+fn goldnight_commander_pumps_team_on_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goldnight_commander());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    // The pre-existing bear got +1/+1 from the new creature's ETB.
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (3, 3), "team pumped +1/+1");
+}
+
+/// Elvish Archdruid buffs other Elves and taps for {G} per Elf you control.
+#[test]
+fn elvish_archdruid_lord_and_mana() {
+    let mut g = two_player_game();
+    let archdruid = g.add_card_to_battlefield(0, catalog::elvish_archdruid());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.clear_sickness(archdruid);
+    // Lord (continuous, layer-7): the other Elf is 1/1 base → 2/2.
+    let cp = g.compute_battlefield();
+    let e = cp.iter().find(|c| c.id == elf).unwrap();
+    assert_eq!((e.power, e.toughness), (2, 2), "other Elf gets +1/+1");
+    // Archdruid itself isn't buffed by its own "other" lord.
+    let a = cp.iter().find(|c| c.id == archdruid).unwrap();
+    assert_eq!(a.power, 2);
+    // Mana: {T}: Add {G} for each Elf you control (2 Elves).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: archdruid, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for elf mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2, "two green from two Elves");
+}
+
+/// Dark Banishing can't target a black creature.
+#[test]
+fn dark_banishing_rejects_black_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let zombie = g.add_card_to_battlefield(1, catalog::hypnotic_specter());
+    let filter = SelectionRequirement::Creature
+        .and(SelectionRequirement::HasColor(Color::Black).negate());
+    assert!(!g.evaluate_requirement_static(&filter, &Target::Permanent(zombie), 0, None));
+}
+
 #[test]
 fn master_of_cruelties_attack_sets_opp_life_to_one() {
     let mut g = two_player_game();
