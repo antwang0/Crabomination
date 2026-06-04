@@ -4902,14 +4902,14 @@ pub fn roast() -> CardDefinition {
 /// Smother — {1}{B} Instant. Destroy target creature with mana value 3
 /// or less. It can't be regenerated.
 ///
-/// Cast-time filter `Creature ∧ ManaValueAtMost(3)`. The "can't be
-/// regenerated" clause collapses (already collapsed elsewhere).
+/// Cast-time filter `Creature ∧ ManaValueAtMost(3)`; `DestroyNoRegen`
+/// honours the can't-be-regenerated clause.
 pub fn smother() -> CardDefinition {
     CardDefinition {
         name: "Smother",
         cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
+        effect: Effect::DestroyNoRegen {
             what: target_filtered(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::ManaValueAtMost(3)),

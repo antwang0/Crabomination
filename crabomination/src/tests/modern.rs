@@ -9480,6 +9480,24 @@ fn smother_rejects_high_cmc_target() {
         "Smother should reject a 6-CMC Craw Wurm: {:?}", err);
 }
 
+/// Smother's "can't be regenerated" clause: a shielded creature still dies.
+#[test]
+fn smother_ignores_regeneration_shield() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().regeneration_shields = 1;
+    let id = g.add_card_to_hand(0, catalog::smother());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Smother castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Smother destroys through a regeneration shield");
+}
+
 /// Final Reward: exiles a creature.
 #[test]
 fn final_reward_exiles_target_creature() {
