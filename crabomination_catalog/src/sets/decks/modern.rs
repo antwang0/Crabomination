@@ -10946,13 +10946,12 @@ pub fn collective_brutality() -> CardDefinition {
 /// starting value.
 /// **-3**: Gain control of target creature or planeswalker until end of
 /// turn. Untap it. It gains haste until end of turn.
-/// **-7**: Ult — every opponent loses half their life.
+/// **-7**: Ult — each opponent loses half their life, rounded up.
 ///
-/// Cube-style approximation. The +1's "loyalty reset" rider collapses
-/// (engine has no loyalty-set primitive). The -3 GainControl + Untap +
-/// Haste is the headline Threaten-style play pattern. The -7 ult uses
-/// `LoseLife(EachOpponent, 10)` as the half-life approximation
-/// (typical mid-late-game value).
+/// The +1's "loyalty reset" rider collapses (engine has no loyalty-set
+/// primitive). The -3 GainControl + Untap + Haste is the headline
+/// Threaten-style play pattern; the -7 ult is faithful via
+/// `Effect::LoseHalfLife`.
 pub fn geyadrone_dihada() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     use crate::effect::Duration;
@@ -11004,9 +11003,9 @@ pub fn geyadrone_dihada() -> CardDefinition {
             },
             LoyaltyAbility {
                 loyalty_cost: -7,
-                effect: Effect::LoseLife {
+                effect: Effect::LoseHalfLife {
                     who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(10),
+                    rounded_up: true,
                 },
             },
         ],
@@ -15489,8 +15488,7 @@ pub fn cut_of_the_profits() -> CardDefinition {
 
 /// Stingerback Terror — {3}{B}{B} Legendary Creature — Insect Mount 5/5,
 /// Menace, Ward—Pay 3 life. Whenever it attacks while saddled, each opponent
-/// loses life (the printed "half their life, rounded up" collapses to a flat
-/// drain). Saddle 3 (CR 702.171).
+/// loses half their life, rounded up. Saddle 3 (CR 702.171).
 pub fn stingerback_terror() -> CardDefinition {
     use crate::effect::shortcut::attacks_while_saddled;
     CardDefinition {
@@ -15509,9 +15507,9 @@ pub fn stingerback_terror() -> CardDefinition {
             Keyword::Ward(WardCost::Life(3)),
             Keyword::Saddle(3),
         ],
-        triggered_abilities: vec![attacks_while_saddled(Effect::LoseLife {
+        triggered_abilities: vec![attacks_while_saddled(Effect::LoseHalfLife {
             who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(3),
+            rounded_up: true,
         })],
         ..Default::default()
     }
@@ -16170,11 +16168,11 @@ pub fn outcaster_trailblazer() -> CardDefinition {
     }
 }
 
-/// Lovestruck Beast — {1}{G} Creature — Beast Noble 5/5 (the printed
-/// "can't attack unless you control a 1/1" rider is dropped — no engine
-/// gate for it yet).
+/// Lovestruck Beast — {1}{G} Creature — Beast Noble 5/5 that can't attack
+/// unless you control a 1/1 creature (`CanAttackOnlyIfYouControl`).
 /// Adventure: Heart's Desire {G} Sorcery — create a 1/1 white Human token.
 pub fn lovestruck_beast() -> CardDefinition {
+    use crate::card::SelectionRequirement as SR;
     CardDefinition {
         name: "Lovestruck Beast",
         cost: cost(&[generic(1), g()]),
@@ -16185,6 +16183,13 @@ pub fn lovestruck_beast() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
+        keywords: vec![Keyword::CanAttackOnlyIfYouControl(Box::new(
+            SR::Creature
+                .and(SR::PowerAtMost(1))
+                .and(SR::PowerAtLeast(1))
+                .and(SR::ToughnessAtMost(1))
+                .and(SR::ToughnessAtLeast(1)),
+        ))],
         adventure: Some(Box::new(Adventure {
             name: "Heart's Desire",
             cost: cost(&[g()]),

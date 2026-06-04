@@ -448,6 +448,11 @@ pub enum Keyword {
     /// player's controlled permanents). Dandân ("can't attack unless
     /// defending player controls an Island").
     CanAttackOnlyIfDefenderControls(Box<SelectionRequirement>),
+    /// "This creature can't attack unless you control a [filter]." Mirror of
+    /// `CanAttackOnlyIfDefenderControls`, enforced against the attacking
+    /// creature's own controller. Lovestruck Beast ("can't attack unless you
+    /// control a 1/1 creature").
+    CanAttackOnlyIfYouControl(Box<SelectionRequirement>),
     /// CR 702.49 — Ninjutsu [cost]. A special action usable during the
     /// declare-blockers step: pay the cost and return an unblocked attacker
     /// you control to hand, then put this card from your hand onto the

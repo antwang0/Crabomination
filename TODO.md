@@ -15,13 +15,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   client cast-mode picker off the new affordance sets (mirror the kicker /
   bestow toggle). `CastAdventureCreature` / `CastPlotted` from exile also have
   no client surface yet.
-- **Adventure/Mount rider riders dropped on a few cards**: Lovestruck Beast's
-  "can't attack unless you control a 1/1" (needs a `CanAttackOnlyIfYouControl`
-  attack gate, mirror of `CanAttackOnlyIfDefenderControls`), Queen of Ice's
+- **Adventure/Mount rider riders dropped on a few cards**: Queen of Ice's
   "doesn't untap next turn" stun (needs a `skip_next_untap`-style grant on a
-  *target*), and Rimrock Knight's body is faithful. Stingerback Terror's
-  "half their life rounded up" collapses to a flat drain (needs a
-  `Value::HalfPlayerLife`).
+  *target*). Lovestruck Beast ✅ (`Keyword::CanAttackOnlyIfYouControl`) and
+  Stingerback Terror ✅ (`Effect::LoseHalfLife`) are now faithful; Rimrock
+  Knight's body was already faithful.
 - **"Nth spell each turn" trigger** (Ledger Shredder, Storm-Kiln Artist's
   payoffs). Needs a predicate reading the *caster's* `spells_cast_this_turn`
   ordinal at trigger time (the count is already incremented before

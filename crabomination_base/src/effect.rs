@@ -1211,6 +1211,12 @@ pub enum Effect {
     Fight { attacker: Selector, defender: Selector },
     GainLife  { who: Selector, amount: Value },
     LoseLife  { who: Selector, amount: Value },
+    /// Each player the selector resolves to loses life equal to half their
+    /// *own* current life total (rounded up when `rounded_up`, else down).
+    /// Per-player evaluation — `LoseLife`'s single global amount can't scale
+    /// to each target's own total. Stingerback Terror ("each opponent loses
+    /// half their life, rounded up").
+    LoseHalfLife { who: Selector, rounded_up: bool },
     /// Set a player's life total to a specific value (CR 119.5).
     /// "If an effect sets a player's life total to a specific number, the
     /// player gains or loses the necessary amount of life to end up with
@@ -2247,6 +2253,7 @@ impl Effect {
             Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
+            Effect::LoseHalfLife { who, .. } => sel_has_target(who),
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
@@ -2464,6 +2471,7 @@ impl Effect {
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
+            Effect::LoseHalfLife { who, .. } => sel_filter(who),
             Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }
             | Effect::DestroyNoRegen { what }
@@ -3033,6 +3041,7 @@ impl Effect {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
                 Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_find(who, slot),
+                Effect::LoseHalfLife { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
                 Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
                 Effect::Draw { who, .. } | Effect::Mill { who, .. } => sel_find(who, slot),

@@ -1081,6 +1081,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LoseHalfLife { who, rounded_up } => {
+                // Per-player: each loses half of their *own* total.
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in seats {
+                    let life = self.players[p].life.max(0);
+                    let amt = if *rounded_up { (life + 1) / 2 } else { life / 2 } as u32;
+                    if amt == 0 { continue; }
+                    self.adjust_life(p, -(amt as i32));
+                    events.push(GameEvent::LifeLost { player: p, amount: amt });
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::SetLifeTotal { who, amount } => {
                 let new_total = self.evaluate_value(amount, ctx);
                 for ent in self.resolve_selector(who, ctx) {

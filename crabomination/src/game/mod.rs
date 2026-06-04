@@ -2399,6 +2399,10 @@ impl GameState {
                                 })
                         })
                     }
+                    Keyword::CanAttackOnlyIfYouControl(req) => self
+                        .battlefield
+                        .iter()
+                        .any(|p| p.controller == seat && self.evaluate_requirement_on_card(req, p, seat)),
                     _ => true,
                 })
             })

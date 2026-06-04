@@ -184,6 +184,14 @@ impl Bot for RandomBot {
                                                             )
                                                     })
                                                 }
+                                                Keyword::CanAttackOnlyIfYouControl(req) => {
+                                                    state.battlefield.iter().any(|d| {
+                                                        d.controller == c.controller
+                                                            && state.evaluate_requirement_on_card(
+                                                                req, d, c.controller,
+                                                            )
+                                                    })
+                                                }
                                                 _ => true,
                                             })
                                     })

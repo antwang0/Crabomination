@@ -14092,6 +14092,19 @@ fn geyadrone_dihada_plus_one_drains_each_opponent_for_one() {
 }
 
 #[test]
+fn geyadrone_dihada_minus_seven_halves_opponent_life() {
+    let mut g = two_player_game();
+    let dihada = g.add_card_to_battlefield(0, catalog::geyadrone_dihada());
+    g.battlefield_find_mut(dihada).unwrap().add_counters(CounterType::Loyalty, 4); // 3 + 4 = 7
+    g.players[1].life = 21;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dihada, ability_index: 2, target: None,
+    }).expect("Dihada -7");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 10, "21 → loses 11 (half rounded up)");
+}
+
+#[test]
 fn geyadrone_dihada_minus_three_steals_creature() {
     use crate::game::types::Target;
     let mut g = two_player_game();
@@ -22078,6 +22091,27 @@ fn juggernaut_tapped_is_exempt_from_must_attack() {
     g.declare_attackers(vec![]).expect("a tapped Juggernaut isn't forced to attack");
 }
 
+#[test]
+fn lovestruck_beast_cant_attack_without_a_one_one() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let beast = g.add_card_to_battlefield(0, catalog::lovestruck_beast());
+    g.clear_sickness(beast);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+
+    // No 1/1 in play → can't attack.
+    let err = g
+        .declare_attackers(vec![Attack { attacker: beast, target: AttackTarget::Player(1) }])
+        .unwrap_err();
+    assert!(matches!(err, GameError::CannotAttack(id) if id == beast));
+
+    // A 1/1 (Goldhound) satisfies the gate.
+    g.add_card_to_battlefield(0, catalog::goldhound());
+    g.declare_attackers(vec![Attack { attacker: beast, target: AttackTarget::Player(1) }])
+        .expect("Lovestruck Beast attacks with a 1/1 in play");
+}
+
 // ── Spellbomb cycle + utility (claude/modern_decks) ──────────────────────────
 
 #[test]
@@ -23866,14 +23900,33 @@ fn saddle_stingerback_attack_trigger_gated_on_saddled() {
     assert!(g.battlefield_find(terror).unwrap().saddled, "Mount is saddled");
     assert!(g.battlefield_find(b1).unwrap().tapped && g.battlefield_find(b2).unwrap().tapped,
         "saddlers tapped");
-    // Attack while saddled — each opponent loses 3.
+    // Attack while saddled — each opponent loses half their life, rounded up.
     let life = g.players[1].life;
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker: terror, target: AttackTarget::Player(1),
     }])).unwrap();
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life - 3, "saddled attack drains the opponent");
+    assert_eq!(g.players[1].life, life - (life + 1) / 2,
+        "saddled attack drains half the opponent's life, rounded up");
+}
+
+/// Half-life drain rounds up on an odd total (7 → loses 4).
+#[test]
+fn stingerback_half_life_rounds_up() {
+    let mut g = two_player_game();
+    let terror = g.add_card_to_battlefield(0, catalog::stingerback_terror());
+    g.clear_sickness(terror);
+    g.battlefield_find_mut(terror).unwrap().saddled = true;
+    g.players[1].life = 7;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: terror, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 3, "7 → loses 4 (rounded up)");
 }
 
 /// Without saddling, the attack trigger does not fire.

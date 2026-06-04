@@ -136,6 +136,20 @@ impl GameState {
                     return Err(GameError::CannotAttack(id));
                 }
             }
+            // "Can't attack unless you control a [filter]" (Lovestruck Beast):
+            // require ≥1 matching permanent under the attacker's controller.
+            if let Some(req) = computed_kw(id).iter().find_map(|kw| match kw {
+                Keyword::CanAttackOnlyIfYouControl(r) => Some(r.clone()),
+                _ => None,
+            }) {
+                let satisfied = self
+                    .battlefield
+                    .iter()
+                    .any(|c| c.controller == p && self.evaluate_requirement_on_card(&req, c, p));
+                if !satisfied {
+                    return Err(GameError::CannotAttack(id));
+                }
+            }
             // Filter by *controller*, not *owner* — a creature you've
             // stolen (Threaten / Mind Control) attacks for you, even
             // though its `owner` field still points at the original
