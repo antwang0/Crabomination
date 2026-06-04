@@ -97,7 +97,15 @@ read of the code and should be re-verified before picking up an item.
   pick is a heuristic like `Punisher`). Karn and Tezzeret, Cruel Captain now
   match their printed oracle text (Tezzeret: artifact-ETB loyalty trigger +
   0 untap-and-buff + −3 artifact tutor + −7 combat-counters emblem with a
-  `BecomeCreature` Robot rider).
+  `BecomeCreature` Robot rider). **Block restrictions** (CR 509.1b/g):
+  `Keyword::CantBeBlockedExceptBy(filter)` / `CantBeBlockedBy(filter)` (Silhana
+  Ledgewalker, Steel Leaf Champion) read in `can_block_attacker_computed` and
+  honored by the bot's block legality gate; `CantBeBlockedByMoreThanOne`
+  (Charging Rhino). `SelectionRequirement::IsNonbasicLand` +
+  `AffectedPermanents::CardMatch` (a card-local matcher routing disjunctive /
+  nonbasic-land filters the conjunctive walker can't flatten — Thalia, Heretic
+  Cathar). Per-player **half-of-their-own** effects
+  (`Effect::{MillHalf, DiscardHalf, SacrificeHalf}` — Lord Xander now faithful).
 
 ---
 

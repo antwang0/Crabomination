@@ -33,6 +33,19 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   play this exiled card this turn by paying {E} instead of its mana cost"
   permission. Would also serve other energy-impulse cards.
 
+- **Block-restriction follow-ups (CR 509.1b).** The `CantBeBlockedExceptBy`
+  filter matcher (`blocker_matches_block_filter`) covers type/color/keyword/
+  P-T; "except by Walls/multicolored/specific subtype" compose already. Still
+  needing other primitives: Signal Pest / Goblin Piledriver (Scryfall-verified
+  stats, host firewalled), Soldier of the Pantheon ("protection from
+  multicolored" — a non-color protection grant). Brimaz's block-token rider
+  and Whirler Rogue's "tap an artifact: grant unblockable" activated cost are
+  also still ⏳.
+- **`AffectedPermanents::CardMatch` could absorb P/T-gated anthems** if its
+  matcher read *computed* power/toughness (it's card-printed-only today, so
+  power/toughness thresholds still fall through to `None` — the P/T-gated lord
+  gap noted under "Anthem coverage" below).
+
 - **Protection on *ability* targeting + damage from spell sources.** CR
   702.16e/f are wired for spell targeting, equip, and the combat/noncombat
   *permanent*-source damage paths, but `check_target_legality` (activated/
