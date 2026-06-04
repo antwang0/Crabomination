@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Adventure / Plot client modals** (CR 715 / 702.170). Engine + bot +
+  affordance hints (`adventurable_hand` / `plottable_hand`) ship, but a
+  `wants_ui` human gets no modal to *choose* between casting the creature vs.
+  the adventure half, or to plot a card / cast it from exile later. Wire a
+  client cast-mode picker off the new affordance sets (mirror the kicker /
+  bestow toggle). `CastAdventureCreature` / `CastPlotted` from exile also have
+  no client surface yet.
+- **Adventure/Mount rider riders dropped on a few cards**: Lovestruck Beast's
+  "can't attack unless you control a 1/1" (needs a `CanAttackOnlyIfYouControl`
+  attack gate, mirror of `CanAttackOnlyIfDefenderControls`), Queen of Ice's
+  "doesn't untap next turn" stun (needs a `skip_next_untap`-style grant on a
+  *target*), and Rimrock Knight's body is faithful. Stingerback Terror's
+  "half their life rounded up" collapses to a flat drain (needs a
+  `Value::HalfPlayerLife`).
 - **"Nth spell each turn" trigger** (Ledger Shredder, Storm-Kiln Artist's
   payoffs). Needs a predicate reading the *caster's* `spells_cast_this_turn`
   ordinal at trigger time (the count is already incremented before
@@ -411,6 +425,21 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ✅ **CR 715 — Adventure** (claude/modern_decks). `CardDefinition.adventure`
+  + `CardInstance.{adventuring,on_adventure}` + `GameAction::CastAdventure` /
+  `CastAdventureCreature`. Adventure halves resolve as instant/sorcery spells
+  (Prowess/Magecraft fire via the adventure types) and exile-with-permission;
+  the creature half casts from exile later. ~13 Eldraine adventurers wired.
+- ✅ **CR 702.170 — Plot** (claude/modern_decks). `CardDefinition.plot_cost`
+  + `GameState.{plotted_cards,plotted_this_turn}` + `GameAction::Plot` /
+  `CastPlotted` (exile face-up for the plot cost, free cast on a later turn).
+  Spinewoods Paladin, Vault Plunderer, Slickshot Show-Off, Outcaster Trailblazer.
+- ✅ **CR 702.171 — Saddle** (claude/modern_decks). `Keyword::Saddle(n)` +
+  `CardInstance.saddled` + `Predicate::SourceSaddled` + `GameAction::Saddle`
+  + `shortcut::attacks_while_saddled`. Stingerback Terror.
+- ✅ **CR 702.153 — Casualty** (claude/modern_decks). `Keyword::Casualty(n)`
+  + `GameAction::CastSpellCasualty` (optional sacrifice-a-creature additional
+  cost that copies the spell via `copy_stack_spell`). Cut of the Profits.
 - ✅ **CR 702.108 — Raid** (claude/modern_decks, ability word).
   `shortcut::raid_etb(body)` + `Predicate::PlayerAttackedThisTurn` backed by
   `Player.attacked_this_turn` (set in `declare_attackers`, reset in
