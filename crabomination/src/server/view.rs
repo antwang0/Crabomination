@@ -114,6 +114,9 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
         let p = attacker.power();
         p > 0
             && !defender.has_keyword(&Keyword::Indestructible)
+            // CR 702.16e — combat damage from a color the defender has
+            // protection from is prevented, so it never dies to that source.
+            && !state.damage_prevented_by_protection(attacker.id, defender.id)
             && (p >= defender.toughness() || attacker.has_keyword(&Keyword::Deathtouch))
     };
 

@@ -1274,13 +1274,22 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                     c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
                 })
             };
+            // CR 702.16e — protection prevents combat damage either way:
+            // a blocker protected from the attacker's color takes none (won't
+            // die), and an attacker protected from the blocker's color takes
+            // none (won't be killed). Factor both into the trade math.
+            let blocker_takes_no_dmg = state.damage_prevented_by_protection(*a_id, b_id);
+            let attacker_takes_no_dmg = state.damage_prevented_by_protection(b_id, *a_id);
             let dies_before_striking = atk_first_strike
                 && !blk_first_strike
+                && !blocker_takes_no_dmg
                 && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
-            let kills_attacker =
-                !dies_before_striking && (b_dt || b_pow >= (a_tough - queued));
+            let kills_attacker = !attacker_takes_no_dmg
+                && !dies_before_striking
+                && (b_dt || b_pow >= (a_tough - queued));
             // A deathtouch attacker kills the blocker on any damage.
-            let dies_to_attacker = *a_pow >= b_tough || (*a_dt && *a_pow >= 1);
+            let dies_to_attacker =
+                !blocker_takes_no_dmg && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
             // Scoring: clean trade (kill, don't die) > kill-and-die >
             // chump (don't kill, die). Higher attacker power adds value.
             let score = if kills_attacker && !dies_to_attacker {
@@ -2028,6 +2037,33 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(wall, vanilla)],
             "chump the non-trampler (saves 4) over the trampler (saves only 3)");
+    }
+
+    /// CR 702.16e — the bot treats a block by a protection-from-the-attacker's
+    /// -color creature as a clean kill (it survives + kills) rather than a
+    /// suicidal trade, so it blocks even at full life.
+    #[test]
+    fn bot_blocks_freely_with_protected_creature() {
+        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::game::types::{Attack, AttackTarget};
+        use crate::mana::{cost, r, Color};
+        let mut g = two_player_game();
+        let mut red_atk = CardDefinition {
+            name: "Red Beater", card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(), power: 3, toughness: 3, ..Default::default()
+        };
+        red_atk.cost = cost(&[r()]);
+        let atk = g.add_card_to_battlefield(0, red_atk);
+        let prot = CardDefinition {
+            name: "Warded Blocker", card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(), power: 3, toughness: 3,
+            keywords: vec![Keyword::Protection(Color::Red)], ..Default::default()
+        };
+        let blk = g.add_card_to_battlefield(1, prot);
+        // Not life-threatened (only a chump would otherwise be declined).
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert_eq!(blocks, vec![(blk, atk)], "protected 3/3 kills the red 3/3 and takes no damage");
     }
 
     /// Color-choice mana abilities (Ornithopter of Paradise's `{T}: Add one
