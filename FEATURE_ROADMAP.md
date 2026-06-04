@@ -367,7 +367,12 @@ feature; sweep card-batch by card-batch.
   `StaticEffect::NotCreatureWhileDevotionBelow` god gate,
   `ManaPayload::DevotionOfChosenColor`; surfaced in `PlayerView.devotion`
   + HUD chip), ⏳ Ascend / city's blessing,
-  ⏳ Initiative / monarch, ⏳ Day/Night, ⏳ Ring-bearer (the Ring tempts you).
+  🟡 Initiative / **monarch ✅** (CR 724 — `GameState.monarch` +
+  `Effect::BecomeMonarch`; the monarch draws at their end step, combat damage
+  to the monarch steals the crown, leaves-game transfer per 724.3; surfaced in
+  `PlayerView.is_monarch` + `MonarchChanged` log event. The Initiative/
+  Undercity dungeon is still ⏳), ⏳ Day/Night,
+  ⏳ Ring-bearer (the Ring tempts you).
 - **Fading family:** ✅ Fading (`Keyword::Fading(N)`, CR 702.32),
   ✅ Vanishing (`Keyword::Vanishing(N)`, CR 702.62) — enter with N fade/time
   counters; `process_fading_vanishing` ticks them down at the controller's

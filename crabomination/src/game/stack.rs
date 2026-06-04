@@ -187,6 +187,11 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::End => {
+                // CR 724 — the monarch draws a card at the beginning of
+                // their end step (a turn-based action).
+                if self.monarch == Some(self.active_player_idx) {
+                    self.draw_one(self.active_player_idx, &mut events);
+                }
                 self.fire_step_triggers(TurnStep::End);
                 self.give_priority_to_active();
             }
@@ -1187,6 +1192,12 @@ impl GameState {
         self.players[p].hand.clear();
         self.players[p].library.clear();
         self.players[p].graveyard.clear();
+        // CR 724.3 — if the monarch leaves the game, the active player
+        // becomes the monarch (no monarch if the active player is the one
+        // leaving).
+        if self.monarch == Some(p) {
+            self.monarch = if self.active_player_idx == p { None } else { Some(self.active_player_idx) };
+        }
     }
 
     pub(crate) fn check_state_based_actions(&mut self) -> Vec<GameEvent> {

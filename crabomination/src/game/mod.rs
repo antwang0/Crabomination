@@ -481,6 +481,12 @@ pub struct GameState {
     /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub(crate) plotted_this_turn: std::collections::HashSet<CardId>,
+    /// CR 724 — the monarch (if any). The monarch draws a card at the
+    /// beginning of their end step, and a creature dealing combat damage to
+    /// the monarch makes its controller the new monarch. `#[serde(default)]`
+    /// (None = no monarch) for snapshot back-compat.
+    #[serde(default)]
+    pub monarch: Option<usize>,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -550,6 +556,7 @@ impl Clone for GameState {
             foretold_this_turn: self.foretold_this_turn.clone(),
             plotted_cards: self.plotted_cards.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
+            monarch: self.monarch,
         }
     }
 }
@@ -624,7 +631,18 @@ impl GameState {
             foretold_this_turn: std::collections::HashSet::new(),
             plotted_cards: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
+            monarch: None,
         }
+    }
+
+    /// CR 724 — make `player` the monarch. No-op if they already are; emits
+    /// `MonarchChanged` on a real change.
+    pub(crate) fn set_monarch(&mut self, player: usize, events: &mut Vec<GameEvent>) {
+        if self.monarch == Some(player) {
+            return;
+        }
+        self.monarch = Some(player);
+        events.push(GameEvent::MonarchChanged { player });
     }
 
     /// Transient triggers granted to a permanent until EOT (Root

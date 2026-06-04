@@ -2036,6 +2036,8 @@ pub enum Effect {
     /// of coins that came up heads.") via a `FlipCoin` + `SkipTurns`
     /// chain.
     SkipTurns { who: PlayerRef, count: Value },
+    /// CR 724 — `who` becomes the monarch. "You become the monarch."
+    BecomeMonarch { who: PlayerRef },
     /// CR 500.7 — "[Player] takes [count] extra turn(s) after this one."
     /// Banks `count` onto each resolved player's `extra_turns`; consumed
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
@@ -2412,6 +2414,7 @@ impl Effect {
             }
             Effect::RevealTopOpponentChoosesToHand { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
+            Effect::BecomeMonarch { who } => player_has_target(who),
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

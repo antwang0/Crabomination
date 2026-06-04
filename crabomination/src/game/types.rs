@@ -681,6 +681,8 @@ pub enum GameEvent {
     /// until end of turn.
     VehicleCrewed { vehicle: CardId },
     PoisonAdded { player: usize, amount: u32 },
+    /// CR 724 — `player` became the monarch.
+    MonarchChanged { player: usize },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },

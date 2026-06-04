@@ -695,3 +695,58 @@ fn cr_702_16e_protection_prevents_combat_damage() {
     assert_eq!(g.battlefield_find(blk).unwrap().damage, 0, "protected blocker takes no red damage");
     assert_eq!(g.battlefield_find(atk).unwrap().damage, 2, "attacker still takes the blocker's 2");
 }
+
+// ── CR 724 The Monarch ───────────────────────────────────────────────────────
+
+#[test]
+fn cr_724_monarch_draws_at_their_end_step() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.monarch = Some(0);
+    let before = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::End);
+    assert_eq!(g.players[0].hand.len(), before + 1, "monarch drew at their end step");
+}
+
+#[test]
+fn cr_724_non_monarch_end_step_does_not_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.monarch = Some(1); // P1 is monarch, but it's P0's turn/end step
+    let before = g.players[0].hand.len();
+    advance_to(&mut g, TurnStep::End);
+    assert_eq!(g.players[0].hand.len(), before, "active non-monarch does not draw");
+}
+
+#[test]
+fn cr_724_combat_damage_to_monarch_steals_the_crown() {
+    let mut g = two_player_game();
+    g.monarch = Some(1); // the opponent starts as monarch
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0), "dealing combat damage to the monarch steals the crown");
+}
+
+#[test]
+fn cr_724_become_monarch_effect_via_etb() {
+    use crate::card::Effect;
+    use crate::effect::PlayerRef;
+    let mut g = two_player_game();
+    let mut def = body("Crown Claimer", 2, 2,
+        vec![shortcut::etb(Effect::BecomeMonarch { who: PlayerRef::You })]);
+    def.cost = crate::mana::cost(&[crate::mana::generic(1)]);
+    let id = g.add_card_to_hand(0, def);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0), "ETB BecomeMonarch made the controller the monarch");
+}

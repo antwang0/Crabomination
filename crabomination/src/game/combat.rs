@@ -1259,6 +1259,16 @@ impl GameState {
                 if self.is_commander(atk.id) {
                     self.record_commander_damage(p, atk.id, amount);
                 }
+                // CR 724 — a creature dealing combat damage to the monarch
+                // makes its controller the new monarch.
+                if amount > 0 && self.monarch == Some(p) {
+                    let ctrl = self.battlefield.iter()
+                        .find(|c| c.id == atk.id).map(|c| c.controller);
+                    if let Some(ctrl) = ctrl
+                        && ctrl != p {
+                            self.set_monarch(ctrl, events);
+                        }
+                }
                 self.fire_combat_damage_to_player_triggers(atk.id, p);
             }
             AttackTarget::Planeswalker(pw_id) => {

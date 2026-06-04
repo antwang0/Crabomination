@@ -341,6 +341,11 @@ pub struct PlayerView {
     /// for snapshot back-compat (defaults to all-zero).
     #[serde(default)]
     pub devotion: [u32; 5],
+    /// CR 724 — true when this player is the monarch. Surfaced so UIs can
+    /// show a crown on the monarch's portrait. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub is_monarch: bool,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to
@@ -1131,6 +1136,7 @@ pub enum GameEventWire {
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
     VehicleCrewed { vehicle: CardId },
     PoisonAdded { player: usize, amount: u32 },
+    MonarchChanged { player: usize },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },
@@ -1301,6 +1307,7 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 amount: *amount,
             },
+            GameEvent::MonarchChanged { player } => GameEventWire::MonarchChanged { player: *player },
             GameEvent::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
                 GameEventWire::LoyaltyAbilityActivated {
                     planeswalker: *planeswalker,
@@ -1446,6 +1453,7 @@ impl GameEventWire {
             },
             E::VehicleCrewed { vehicle } => format!("{} crewed", name(*vehicle)),
             E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
+            E::MonarchChanged { player } => format!("P{player} becomes the monarch"),
             E::LoyaltyAbilityActivated {
                 planeswalker,
                 loyalty_change,

@@ -35,7 +35,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(p, i, seat, &state.prevention_shields, devotion, state.draw_cap_for(i))
+                project_player(p, i, seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i))
             })
             .collect(),
         battlefield: {
@@ -232,6 +232,7 @@ fn project_player(
     prevention_shields: &[crate::game::types::PreventionShield],
     devotion: [u32; 5],
     draw_cap: Option<u32>,
+    is_monarch: bool,
 ) -> PlayerView {
     use crate::game::types::PreventionTarget;
     let has_prevention_shield = prevention_shields
@@ -280,6 +281,7 @@ fn project_player(
         emblems: player.emblems.iter().map(|e| e.name.clone()).collect(),
         has_prevention_shield,
         devotion,
+        is_monarch,
     }
 }
 

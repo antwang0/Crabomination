@@ -3622,6 +3622,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeMonarch { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.set_monarch(p, events);
+                }
+                Ok(())
+            }
+
             Effect::ReturnFromExileWithCounter { counter } => {
                 let p = ctx.controller;
                 // Highest-value qualifying card (owned by p, has the counter).
