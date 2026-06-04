@@ -11622,6 +11622,24 @@ fn mortify_destroys_creature() {
 }
 
 #[test]
+fn mortify_ignores_regeneration_shield() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().regeneration_shields = 1;
+    let id = g.add_card_to_hand(0, catalog::mortify());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mortify castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Mortify destroys through a regeneration shield");
+}
+
+#[test]
 fn mortify_destroys_enchantment() {
     let mut g = two_player_game();
     // Phyrexian Arena is an enchantment; use it as the target.

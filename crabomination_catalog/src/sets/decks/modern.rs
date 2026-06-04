@@ -4617,10 +4617,10 @@ pub fn smelt() -> CardDefinition {
 // ── X-cost burn / sweepers ───────────────────────────────────────────────────
 
 /// Banefire — {X}{R} Sorcery. Banefire deals X damage to any target.
+/// If X is 5 or more, this spell can't be countered.
 ///
-/// X is read at resolution from `Value::XFromCost`. The "can't be
-/// countered if X ≥ 5" rider is omitted (no conditional-uncounterable
-/// primitive yet) — the spell is otherwise functionally identical.
+/// X is read at resolution from `Value::XFromCost`; the "can't be
+/// countered if X ≥ 5" rider rides `Keyword::CantBeCounteredIfXAtLeast(5)`.
 pub fn banefire() -> CardDefinition {
     CardDefinition {
         name: "Banefire",
@@ -4919,7 +4919,7 @@ pub fn smother() -> CardDefinition {
     }
 }
 
-/// Final Reward — {4}{B} Sorcery. Exile target creature.
+/// Final Reward — {4}{B} Instant. Exile target creature.
 ///
 /// Higher-cost answer that goes around indestructible / regeneration /
 /// graveyard recursion since it exiles. Strict upgrade in flexibility
@@ -6539,16 +6539,16 @@ pub fn hieroglyphic_illumination() -> CardDefinition {
 }
 
 /// Mortify — {1}{W}{B} Instant. Destroy target creature or enchantment.
+/// It can't be regenerated.
 ///
 /// Premium WB removal. Cast-time filter `Creature ∨ Enchantment` accepts
-/// either type; "can't be regenerated" rider collapses (no observable
-/// regeneration site). Strictly better than Doom Blade vs enchantments.
+/// either type; `DestroyNoRegen` honors the can't-be-regenerated rider.
 pub fn mortify() -> CardDefinition {
     CardDefinition {
         name: "Mortify",
         cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
+        effect: Effect::DestroyNoRegen {
             what: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Enchantment),
             ),
