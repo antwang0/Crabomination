@@ -5438,3 +5438,84 @@ pub fn massacre_wurm() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Meteor Golem — {7} Artifact Creature — Golem 3/3. "When Meteor Golem enters,
+/// destroy target nonland permanent an opponent controls." (M19)
+pub fn meteor_golem() -> CardDefinition {
+    CardDefinition {
+        name: "Meteor Golem",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Merciless Executioner — {2}{B} Creature — Goblin Warrior 3/1. "When Merciless
+/// Executioner enters, each player sacrifices a creature." (FRF)
+pub fn merciless_executioner() -> CardDefinition {
+    CardDefinition {
+        name: "Merciless Executioner",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Burnished Hart — {3} Artifact Creature — Elk 2/2. "{3}, Sacrifice Burnished
+/// Hart: Search your library for up to two basic land cards, put them onto the
+/// battlefield tapped, then shuffle." (THS)
+pub fn burnished_hart() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let fetch = Effect::Seq(vec![
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+    ]);
+    CardDefinition {
+        name: "Burnished Hart",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            sac_cost: true,
+            effect: fetch,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

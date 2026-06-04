@@ -2594,6 +2594,57 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn meteor_golem_etb_destroys_opponent_permanent() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let golem = g.add_card_to_hand(0, catalog::meteor_golem());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: golem, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Meteor Golem castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "opponent's permanent destroyed");
+}
+
+#[test]
+fn merciless_executioner_etb_edicts_each_player() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let exec = g.add_card_to_hand(0, catalog::merciless_executioner());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: exec, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Executioner castable");
+    drain_stack(&mut g);
+    // Each player sacrifices a creature (the executioner can satisfy P0's edict).
+    assert!(g.battlefield_find(mine).is_none() || g.battlefield_find(exec).is_none(),
+        "P0 sacrificed a creature");
+    assert!(g.battlefield_find(theirs).is_none(), "P1 sacrificed its only creature");
+}
+
+#[test]
+fn burnished_hart_sacrifices_to_fetch_two_lands() {
+    let mut g = two_player_game();
+    let f = g.add_card_to_library(0, catalog::forest());
+    let m = g.add_card_to_library(0, catalog::mountain());
+    let hart = g.add_card_to_battlefield(0, catalog::burnished_hart());
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f)),
+        DecisionAnswer::Search(Some(m)),
+    ]));
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hart, ability_index: 0, target: None, x_value: None }).expect("{3}, Sac");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(hart).is_none(), "Hart sacrificed");
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before + 2, "fetched two basics");
+}
+
+#[test]
 fn massacre_wurm_etb_shrinks_and_death_drains() {
     let mut g = two_player_game();
     let x = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies to -2/-2
