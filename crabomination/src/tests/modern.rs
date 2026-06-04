@@ -2594,6 +2594,54 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn rotting_regisaur_discards_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rotting_regisaur());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::island());
+    g.active_player_idx = 0;
+    let hand = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "discards one at upkeep");
+}
+
+#[test]
+fn sun_titan_etb_reanimates_cheap_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2 ≤ 3
+    let titan = g.add_card_to_hand(0, catalog::sun_titan());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: titan, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sun Titan castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "Sun Titan returned the bear to the battlefield");
+}
+
+#[test]
+fn primeval_titan_etb_fetches_two_lands() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let mountain = g.add_card_to_library(0, catalog::mountain());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+        DecisionAnswer::Search(Some(mountain)),
+    ]));
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let titan = g.add_card_to_hand(0, catalog::primeval_titan());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: titan, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Primeval Titan castable");
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before + 2, "fetched two lands to the battlefield");
+}
+
+#[test]
 fn bitterblossom_upkeep_makes_faerie_and_drains() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::bitterblossom());

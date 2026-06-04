@@ -5229,3 +5229,94 @@ pub fn brineborn_cutthroat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rotting Regisaur — {1}{B}{B} Creature — Zombie Dinosaur 7/6. "At the
+/// beginning of your upkeep, discard a card." (M20)
+pub fn rotting_regisaur() -> CardDefinition {
+    CardDefinition {
+        name: "Rotting Regisaur",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 6,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sun Titan — {4}{W}{W} Creature — Giant 6/6, Vigilance. "Whenever Sun Titan
+/// enters or attacks, return target permanent card with mana value 3 or less
+/// from your graveyard to the battlefield." (M11)
+pub fn sun_titan() -> CardDefinition {
+    let recur = || Effect::Move {
+        what: target_filtered(
+            SelectionRequirement::Permanent.and(SelectionRequirement::ManaValueAtMost(3)),
+        ),
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+    };
+    CardDefinition {
+        name: "Sun Titan",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: recur(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: recur(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Primeval Titan — {4}{G}{G} Creature — Giant 6/6, Trample. "Whenever Primeval
+/// Titan enters or attacks, search your library for up to two land cards, put
+/// them onto the battlefield tapped, then shuffle." (M11)
+pub fn primeval_titan() -> CardDefinition {
+    let fetch = || Effect::Seq(vec![
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land,
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+        },
+    ]);
+    CardDefinition {
+        name: "Primeval Titan",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: fetch(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: fetch(),
+            },
+        ],
+        ..Default::default()
+    }
+}
