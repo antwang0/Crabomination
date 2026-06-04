@@ -8,6 +8,31 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Cards need Scryfall.** This run's environment has Scryfall on the deny
+  list (`api.scryfall.com` → "Host not in allowlist") and the local cache
+  (`scripts/.scryfall_cache.json`, 332 cards) is already fully implemented in
+  the catalog, so no new real cards could be verified/added. When Scryfall is
+  reachable again, land monarch / Ascend / day-night payoff cards (the engine
+  now supports all three) plus the long tail in `CUBE_FEATURES.md`.
+- **Daybound / Nightbound DFC transform** (CR 702.145). The day/night game
+  state + the CR 502.2 transition now ship (`GameState.day_night`,
+  `Effect::BecomeDay`/`BecomeNight`, `Predicate::IsDay`/`IsNight`); what
+  remains is the keyword that transforms a daybound/nightbound DFC as it
+  becomes night/day, and the "any daybound permanent → it becomes day" /
+  "any nightbound, no daybound → it becomes night" entry rules (702.145d/g).
+- **The Initiative** (CR 726) reuses the monarch infrastructure (designation +
+  combat-damage steal + leaves-game transfer) but needs Venture into the
+  Dungeon / the Undercity (CR 701.49) for its payoff — implement the dungeon
+  zone first, then the Initiative is a thin wrapper over the monarch pattern.
+- **Client HUD for monarch / day-night / city's blessing.** `PlayerView`
+  carries `is_monarch` + `has_city_blessing` and `ClientView` carries
+  `day_night`; the Bevy HUD still needs a crown badge, a day/night indicator,
+  and a "blessed" pip. (Client can't be compiled in this sandbox — wayland
+  dev libs absent — so it wasn't touched this run.)
+- **Energy-pay-to-cast-from-exile** (Amped Raptor's omitted clause): a "may
+  play this exiled card this turn by paying {E} instead of its mana cost"
+  permission. Would also serve other energy-impulse cards.
+
 - **Protection on *ability* targeting + damage from spell sources.** CR
   702.16e/f are wired for spell targeting, equip, and the combat/noncombat
   *permanent*-source damage paths, but `check_target_legality` (activated/

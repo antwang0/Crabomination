@@ -131,9 +131,18 @@ impl Bot for RandomBot {
             TurnStep::DeclareAttackers if is_active => {
                 if !self.attackers_declared {
                     self.attackers_declared = true;
-                    // Pick the next alive opponent as the default attack
-                    // target; in multiplayer this is just the next seat.
-                    let target_player = state.next_alive_seat(seat);
+                    // Pick the attack target: prefer an opposing monarch (CR
+                    // 724 — stealing the crown denies their end-step card and
+                    // hands it to us); otherwise the next alive opponent.
+                    let target_player = match state.monarch {
+                        Some(m)
+                            if m != seat
+                                && state.players.get(m).map(|p| p.is_alive()).unwrap_or(false) =>
+                        {
+                            m
+                        }
+                        _ => state.next_alive_seat(seat),
+                    };
                     // Filter on `controller`, not `owner`: cards that have
                     // changed control (Threaten / Mind Control / etc.) are
                     // attacked WITH by the new controller, not the original
@@ -2641,5 +2650,37 @@ mod tests {
                 GameAction::CastBestow { target: Some(crate::game::Target::Permanent(t)), .. } if t == host)
         });
         assert!(bestowed, "bot offers a Bestow line enchanting its creature");
+    }
+}
+
+#[cfg(test)]
+mod monarch_tests {
+    use super::*;
+    use crate::catalog;
+    use crate::player::Player;
+
+    #[test]
+    fn bot_attacks_the_monarch_over_the_next_seat() {
+        // 3 players: next_alive_seat(0) is 1, but seat 2 is the monarch, so
+        // the bot should swing at seat 2 to steal the crown.
+        let players = vec![Player::new(0, "A"), Player::new(1, "B"), Player::new(2, "C")];
+        let mut g = GameState::new(players);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.monarch = Some(2);
+        let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+
+        let mut bot = RandomBot::new();
+        match bot.next_action(&g, 0).expect("an action") {
+            GameAction::DeclareAttackers(attacks) => {
+                assert!(
+                    attacks.iter().any(|a| matches!(a.target, AttackTarget::Player(2))),
+                    "bot swings at the monarch (seat 2), not the next seat"
+                );
+            }
+            other => panic!("expected DeclareAttackers, got {other:?}"),
+        }
     }
 }

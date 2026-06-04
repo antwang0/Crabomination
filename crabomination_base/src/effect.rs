@@ -463,6 +463,8 @@ pub enum Predicate {
     IsDay,
     /// CR 731 — it's currently night.
     IsNight,
+    /// CR 724 — `who` is the monarch ("as long as you're the monarch, …").
+    IsMonarch { who: PlayerRef },
     /// True if any player matched by `who` has been dealt damage this turn.
     /// Backed by `Player.was_dealt_damage_this_turn`. Powers Bloodthirst
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was

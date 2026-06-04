@@ -750,3 +750,15 @@ fn cr_724_become_monarch_effect_via_etb() {
     drain_stack(&mut g);
     assert_eq!(g.monarch, Some(0), "ETB BecomeMonarch made the controller the monarch");
 }
+
+#[test]
+fn cr_724_is_monarch_predicate() {
+    use crate::card::Predicate;
+    use crate::effect::PlayerRef;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    g.monarch = Some(0);
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    assert!(g.evaluate_predicate(&Predicate::IsMonarch { who: PlayerRef::You }, &ctx));
+    assert!(!g.evaluate_predicate(&Predicate::IsMonarch { who: PlayerRef::EachOpponent }, &ctx));
+}
