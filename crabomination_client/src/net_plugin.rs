@@ -171,6 +171,12 @@ pub fn poll_net(
             ServerMsg::MatchStarted => {}
             ServerMsg::View(v) => view.0 = Some(*v),
             ServerMsg::Events(evs) => events.0 = evs,
+            // Combined per-action frame: apply the events (for animation)
+            // and the post-action view together.
+            ServerMsg::Update { events: evs, view: v } => {
+                events.0 = evs;
+                view.0 = Some(*v);
+            }
             ServerMsg::ActionError(e) => {
                 // `ManualTapRequired`: the player has a choice of which mana
                 // to tap. Arm a pending cast that re-fires once they tap

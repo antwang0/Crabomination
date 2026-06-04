@@ -62,7 +62,21 @@ pub enum ServerMsg {
     View(Box<ClientView>),
     /// Events produced by the most recent action, in order. Clients animate
     /// off these; the accompanying `View` is the post-event state.
+    ///
+    /// No longer emitted on its own by the match actor — accepted actions now
+    /// ship events and the post-action view together in a single [`Self::Update`]
+    /// frame. Retained for wire/back-compat (older peers, and clients that
+    /// still match it).
     Events(Vec<GameEventWire>),
+    /// The events produced by the most recent accepted action plus the
+    /// resulting post-action [`ClientView`], bundled into one frame. Replaces
+    /// the old back-to-back `Events` + `View` pair so each accepted action
+    /// costs a single length-prefixed write/flush instead of two. Clients
+    /// animate off `events`, then snap to `view`.
+    Update {
+        events: Vec<GameEventWire>,
+        view: Box<ClientView>,
+    },
     /// A submitted action was rejected.
     ActionError(String),
     /// The match has ended. `winner` follows `GameState::game_over` semantics.

@@ -109,7 +109,14 @@ impl Outboxable for ServerMsg {
         matches!((self, prev), (ServerMsg::View(_), ServerMsg::View(_)))
     }
     fn is_sheddable(&self) -> bool {
-        matches!(self, ServerMsg::View(_) | ServerMsg::Events(_))
+        // Stream data the next update repairs: a standalone View/Events, or a
+        // combined per-action Update. A combined Update is not coalesced
+        // (it carries animation events), but it is sheddable under the cap
+        // since a later Update/View re-establishes authoritative state.
+        matches!(
+            self,
+            ServerMsg::View(_) | ServerMsg::Events(_) | ServerMsg::Update { .. }
+        )
     }
 }
 
@@ -709,17 +716,35 @@ mod tests {
         assert!(!ServerMsg::Events(vec![]).supersedes(&ServerMsg::Events(vec![])));
         assert!(!ServerMsg::YourSeat(1).supersedes(&ServerMsg::YourSeat(0)));
 
-        // Two real Views coalesce to the latest in the outbox.
+        // A combined Update is sheddable (a later update repairs state) but
+        // never coalesced — it carries animation events that mustn't be lost
+        // silently the way a superseded View can be.
         use crate::game::GameState;
         use crate::player::Player;
         let state = GameState::new(vec![Player::new(0, "P0"), Player::new(1, "P1")]);
+        let mk_update = || ServerMsg::Update {
+            events: vec![],
+            view: Box::new(crate::server::view::project(&state, 0)),
+        };
+        assert!(mk_update().is_sheddable());
+        assert!(!mk_update().supersedes(&mk_update()), "Updates never coalesce");
+
+        // Two real Views coalesce to the latest in the outbox.
         let v1 = ServerMsg::View(Box::new(crate::server::view::project(&state, 0)));
         let v2 = ServerMsg::View(Box::new(crate::server::view::project(&state, 0)));
         let ob = Outbox::<ServerMsg>::new();
         ob.push(v1);
         ob.push(v2);
-        let mut g = ob.inner.lock().unwrap();
-        assert_eq!(g.queue.len(), 1, "consecutive Views coalesce to one");
-        assert!(matches!(g.queue.pop_front(), Some(ServerMsg::View(_))));
+        {
+            let mut g = ob.inner.lock().unwrap();
+            assert_eq!(g.queue.len(), 1, "consecutive Views coalesce to one");
+            assert!(matches!(g.queue.pop_front(), Some(ServerMsg::View(_))));
+        }
+
+        // Two Updates do NOT coalesce — both remain queued.
+        let ob2 = Outbox::<ServerMsg>::new();
+        ob2.push(mk_update());
+        ob2.push(mk_update());
+        assert_eq!(ob2.inner.lock().unwrap().queue.len(), 2, "Updates don't collapse");
     }
 }

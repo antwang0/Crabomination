@@ -74,13 +74,14 @@ pub fn handle_export_prompt_input(
                     return;
                 };
                 let sink = snapshot.as_ref().map(|s| s.read()).unwrap_or_default();
-                let had_snapshot = sink.snapshot.is_some();
-                let had_full = sink.full_state_json.is_some();
-                let full_state = sink
-                    .full_state_json
-                    .as_deref()
-                    .and_then(|json| serde_json::from_str(json).ok());
-                match debug_export::export_full(cv, &state.message, sink.snapshot, full_state) {
+                // Both fidelity levels are derived on demand from the shared
+                // state Arc here at export time, rather than being serialized
+                // on every accepted action.
+                let snapshot_capture = sink.snapshot();
+                let full_state = sink.full_state();
+                let had_snapshot = snapshot_capture.is_some();
+                let had_full = full_state.is_some();
+                match debug_export::export_full(cv, &state.message, snapshot_capture, full_state) {
                     Ok(path) => {
                         let suffix = match (had_full, had_snapshot) {
                             (true, _) => " (full GameState + snapshot)",

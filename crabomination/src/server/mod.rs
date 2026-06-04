@@ -19,20 +19,49 @@ use crate::game::{GameAction, GameState, TurnStep};
 use crate::net::{ClientMsg, DebugAction, GameEventWire, ServerMsg};
 use crate::snapshot::GameSnapshot;
 
-/// Shared snapshot sink. The match actor writes the latest authoritative
-/// engine state here after every accepted action, so an in-process
-/// client can grab it for debug exports without fighting the borrow
-/// checker over `&mut GameState`. Carries both:
+/// Shared snapshot sink. The match actor stores the latest authoritative
+/// engine state here after every accepted action, so an in-process client
+/// can grab it for debug exports without fighting the borrow checker over
+/// `&mut GameState`.
 ///
-/// - `snapshot` — structured, schema-stable `GameSnapshot` (lossy on
-///   triggers) suitable for human inspection of saved files.
-/// - `full_state_json` — full `GameState` serialized via `serde_json`
-///   (bit-exact replay). Stored as a String to keep the sink `Clone +
-///   Send + Sync` without cloning the engine state on every publish.
-#[derive(Debug, Default, Clone)]
+/// The state is held behind an `Arc` so a publish is a single
+/// `GameState::clone` (refcounted, cheap to hand to readers) rather than a
+/// per-action `serde_json::to_string` — the export consumer is rare, so the
+/// two derived fidelity levels are produced lazily, on demand:
+///
+/// - [`snapshot`](Self::snapshot) — structured, schema-stable `GameSnapshot`
+///   (lossy on triggers) suitable for human inspection of saved files.
+/// - [`full_state`](Self::full_state) — a full `GameState` clone for
+///   bit-exact replay (preserves triggers, delayed triggers, continuous
+///   effects, pending decisions).
+#[derive(Default, Clone)]
 pub struct SnapshotSinkState {
-    pub snapshot: Option<GameSnapshot>,
-    pub full_state_json: Option<String>,
+    /// Latest published authoritative state, or `None` before the first
+    /// publish. Shared via `Arc`, so cloning the sink state is cheap.
+    pub state: Option<Arc<GameState>>,
+}
+
+// `GameState` isn't `Debug`, so report only whether a state is present.
+impl std::fmt::Debug for SnapshotSinkState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SnapshotSinkState")
+            .field("state", &self.state.as_ref().map(|_| "<GameState>"))
+            .finish()
+    }
+}
+
+impl SnapshotSinkState {
+    /// Schema-stable snapshot of the latest published state, captured on
+    /// demand. `None` before the first publish.
+    pub fn snapshot(&self) -> Option<GameSnapshot> {
+        self.state.as_ref().map(|s| GameSnapshot::capture(s))
+    }
+
+    /// An owned clone of the latest published `GameState` for bit-exact
+    /// replay, on demand. `None` before the first publish.
+    pub fn full_state(&self) -> Option<GameState> {
+        self.state.as_ref().map(|s| s.as_ref().clone())
+    }
 }
 
 pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
@@ -372,13 +401,14 @@ pub fn run_match_full(
 
 fn publish_snapshot(state: &GameState, sink: &Option<SnapshotSink>) {
     let Some(sink) = sink else { return };
-    let snapshot = GameSnapshot::capture(state);
-    let full_state_json = serde_json::to_string(state).ok();
+    // One refcounted clone of the live state. The `GameSnapshot` capture and
+    // the JSON serialization that the export consumer needs are deferred to
+    // `SnapshotSinkState::snapshot` / `full_state`, since the vast majority
+    // of publishes are overwritten by the next action before anyone reads
+    // them.
+    let shared = Arc::new(state.clone());
     if let Ok(mut guard) = sink.lock() {
-        *guard = SnapshotSinkState {
-            snapshot: Some(snapshot),
-            full_state_json,
-        };
+        guard.state = Some(shared);
     }
 }
 
@@ -541,17 +571,24 @@ fn handle_action(
     match state.perform_action(action) {
         Ok(events) => {
             let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+            // One combined frame per seat: events + the post-action view,
+            // halving the per-action writes/flushes versus the old
+            // Events-then-View pair.
             for (i, maybe_tx) in seat_tx.iter().enumerate() {
                 if let Some(tx) = maybe_tx {
-                    let _ = tx.send(ServerMsg::Events(wire_events.clone()));
-                    let _ = tx.send(ServerMsg::View(Box::new(view::project(state, i))));
+                    let _ = tx.send(ServerMsg::Update {
+                        events: wire_events.clone(),
+                        view: Box::new(view::project(state, i)),
+                    });
                 }
             }
             // Spectators always see seat-0's projection so they get a
             // stable POV across the match.
             for tx in spectator_tx {
-                let _ = tx.send(ServerMsg::Events(wire_events.clone()));
-                let _ = tx.send(ServerMsg::View(Box::new(view::project(state, 0))));
+                let _ = tx.send(ServerMsg::Update {
+                    events: wire_events.clone(),
+                    view: Box::new(view::project(state, 0)),
+                });
             }
             true
         }
@@ -691,7 +728,7 @@ mod tests {
     use crate::card::CardId;
     use crate::catalog;
     use crate::game::{GameAction, TurnStep};
-    use crate::net::{ClientMsg, ServerMsg};
+    use crate::net::{ClientMsg, GameEventWire, ServerMsg};
     use crate::player::Player;
     use crate::server::bot::RandomBot;
 
@@ -818,11 +855,23 @@ mod tests {
         c0.tx.send(ClientMsg::SubmitAction(GameAction::PlayLand(card_id)))
             .unwrap();
 
-        // Both seats should receive Events + View.
-        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::Events(_)));
-        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::View(_)));
-        assert!(matches!(c1.rx.recv().unwrap(), ServerMsg::Events(_)));
-        assert!(matches!(c1.rx.recv().unwrap(), ServerMsg::View(_)));
+        // Each seat receives a single combined Update frame (not a separate
+        // Events then View), carrying both the action's events and the
+        // post-action view.
+        match c0.rx.recv().unwrap() {
+            ServerMsg::Update { events, view } => {
+                assert!(
+                    events.iter().any(|e| matches!(e, GameEventWire::LandPlayed { .. })),
+                    "Update must carry the action's events: {events:?}",
+                );
+                assert!(
+                    view.battlefield.iter().any(|p| p.id == card_id),
+                    "Update's view must reflect the played land",
+                );
+            }
+            other => panic!("expected combined Update, got {other:?}"),
+        }
+        assert!(matches!(c1.rx.recv().unwrap(), ServerMsg::Update { .. }));
 
         drop(c0);
         drop(c1);
@@ -897,13 +946,13 @@ mod tests {
 
         drain_initial(&c0);
 
-        // Human plays a land — the human seat should still receive Events + View.
+        // Human plays a land — the human seat should still receive a
+        // combined Events+View Update.
         c0.tx
             .send(ClientMsg::SubmitAction(GameAction::PlayLand(card_id)))
             .unwrap();
 
-        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::Events(_)));
-        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::View(_)));
+        assert!(matches!(c0.rx.recv().unwrap(), ServerMsg::Update { .. }));
 
         drop(c0);
         handle.join().unwrap();
@@ -941,8 +990,8 @@ mod tests {
     /// accepted (broadcast lands on both seats), and seat 1's attempt is
     /// rejected with an `ActionError`. The point of this test is to confirm
     /// concurrent submissions don't deadlock or interleave the broadcast with
-    /// itself: each accepted action emits a single `Events + View` pair to
-    /// every seat, in order.
+    /// itself: each accepted action emits a single combined `Update` (events
+    /// + view) to every seat, in order.
     #[test]
     fn concurrent_submissions_processed_serially() {
         let mut state = two_player_game();
@@ -975,15 +1024,13 @@ mod tests {
         let m0 = drain_within(&c0.rx, 6, Duration::from_secs(2));
         let m1 = drain_within(&c1.rx, 6, Duration::from_secs(2));
 
-        let events0 = m0.iter().filter(|m| matches!(m, ServerMsg::Events(_))).count();
-        let views0 = m0.iter().filter(|m| matches!(m, ServerMsg::View(_))).count();
+        let updates0 = m0.iter().filter(|m| matches!(m, ServerMsg::Update { .. })).count();
         let errs1 = m1.iter().filter(|m| matches!(m, ServerMsg::ActionError(_))).count();
-        let events1 = m1.iter().filter(|m| matches!(m, ServerMsg::Events(_))).count();
+        let updates1 = m1.iter().filter(|m| matches!(m, ServerMsg::Update { .. })).count();
 
-        assert_eq!(events0, 1, "c0 should see exactly one Events broadcast: {m0:?}");
-        assert_eq!(views0, 1, "c0 should see exactly one View broadcast: {m0:?}");
+        assert_eq!(updates0, 1, "c0 should see exactly one Update broadcast: {m0:?}");
         assert_eq!(errs1, 1, "c1 should see exactly one ActionError: {m1:?}");
-        assert_eq!(events1, 1, "c1 should see exactly one Events broadcast: {m1:?}");
+        assert_eq!(updates1, 1, "c1 should see exactly one Update broadcast: {m1:?}");
 
         drop(c0);
         drop(c1);
@@ -1015,7 +1062,7 @@ mod tests {
         thread::sleep(Duration::from_millis(20));
 
         // Seat 0 keeps playing — this must succeed and produce a normal
-        // Events + View pair on c0, no panic on the broadcast to the
+        // combined Update on c0, no panic on the broadcast to the
         // already-dead seat 1.
         c0.tx
             .send(ClientMsg::SubmitAction(GameAction::PlayLand(card_id)))
@@ -1023,8 +1070,8 @@ mod tests {
 
         let m0 = drain_within(&c0.rx, 2, Duration::from_secs(2));
         assert!(
-            m0.iter().any(|m| matches!(m, ServerMsg::Events(_))),
-            "c0 missing Events after peer disconnect: {m0:?}"
+            m0.iter().any(|m| matches!(m, ServerMsg::Update { .. })),
+            "c0 missing Update after peer disconnect: {m0:?}"
         );
 
         drop(c0);
@@ -1321,7 +1368,7 @@ mod tests {
         let deadline = Instant::now() + Duration::from_secs(5);
         loop {
             if let Ok(guard) = sink.lock()
-                && let Some(snap) = guard.snapshot.as_ref()
+                && let Some(snap) = guard.snapshot()
             {
                 assert_eq!(
                     snap.players[0].life, 7,
