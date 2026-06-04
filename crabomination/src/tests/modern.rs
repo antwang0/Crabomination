@@ -2839,6 +2839,43 @@ fn goldmeadow_harrier_taps_target_creature() {
 }
 
 #[test]
+fn diregraf_ghoul_enters_tapped() {
+    let mut g = two_player_game();
+    let ghoul = g.add_card_to_battlefield(0, catalog::diregraf_ghoul());
+    g.fire_self_etb_triggers(ghoul, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ghoul).unwrap().tapped, "Diregraf Ghoul enters tapped");
+}
+
+#[test]
+fn pulse_tracker_drains_on_attack() {
+    let mut g = two_player_game();
+    let pt = g.add_card_to_battlefield(0, catalog::pulse_tracker());
+    g.clear_sickness(pt);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let life = g.players[1].life;
+    g.declare_attackers(vec![Attack { attacker: pt, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "each opponent loses 1 life on attack");
+}
+
+#[test]
+fn mesmeric_fiend_exiles_a_card_until_it_leaves() {
+    let mut g = two_player_game();
+    let stolen = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let fiend = g.add_card_to_battlefield(0, catalog::mesmeric_fiend());
+    g.fire_self_etb_triggers(fiend, 0);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == stolen), "the chosen card is exiled");
+    // When the Fiend leaves, the card returns to its owner's hand.
+    g.remove_from_battlefield_to_graveyard(fiend);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == stolen), "card returns when the Fiend leaves");
+}
+
+#[test]
 fn vraskas_contempt_exiles_and_gains_life() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());

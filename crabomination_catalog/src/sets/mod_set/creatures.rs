@@ -6438,3 +6438,69 @@ pub fn palladium_myr() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── More black aggro / disruption ────────────────────────────────────────────
+
+/// Diregraf Ghoul — {B} Creature — Zombie 2/2. "Diregraf Ghoul enters the
+/// battlefield tapped." (ISD)
+pub fn diregraf_ghoul() -> CardDefinition {
+    CardDefinition {
+        name: "Diregraf Ghoul",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap { what: Selector::This },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pulse Tracker — {B} Creature — Vampire Rogue 1/1. "Whenever this attacks,
+/// each opponent loses 1 life." (ZEN)
+pub fn pulse_tracker() -> CardDefinition {
+    CardDefinition {
+        name: "Pulse Tracker",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mesmeric Fiend — {1}{B} Creature — Horror 1/1. "When this enters, target
+/// opponent reveals their hand and you choose a nonland card from it. Exile
+/// that card until this creature leaves the battlefield." (TOR)
+pub fn mesmeric_fiend() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Mesmeric Fiend",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Horror], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileChosenUntilSourceLeaves {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+                return_to: ExileReturnZone::Hand,
+            },
+        }],
+        ..Default::default()
+    }
+}
