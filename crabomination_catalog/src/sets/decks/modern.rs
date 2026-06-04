@@ -15736,6 +15736,47 @@ pub fn realm_cloaked_giant() -> CardDefinition {
     }
 }
 
+/// Pillar of Flame — {1}{R} Sorcery. Deal 2 damage to any target; if a
+/// creature dealt damage this way would die this turn, exile it instead.
+pub fn pillar_of_flame() -> CardDefinition {
+    CardDefinition {
+        name: "Pillar of Flame",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Merfolk Secretkeeper — {U} Creature — Merfolk Wizard 0/4.
+/// Adventure: Venture Deeper {U} Sorcery — target player mills four cards.
+pub fn merfolk_secretkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Merfolk Secretkeeper",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        adventure: Some(Box::new(Adventure {
+            name: "Venture Deeper",
+            cost: cost(&[u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Mill {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(4),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
 /// Outcaster Trailblazer — {3}{G} Creature — Elf Druid Scout 4/3, Reach.
 /// Whenever you cast a spell with mana value 5 or greater, draw a card and
 /// create a Treasure token. Plot {2}{G} (CR 702.170).

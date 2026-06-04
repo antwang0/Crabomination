@@ -24196,3 +24196,58 @@ fn outcaster_trailblazer_pays_off_big_spells() {
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
         && c.definition.name == "Treasure").count(), 1, "made a Treasure");
 }
+
+// ── Burn & utility additions ─────────────────────────────────────────────────
+
+/// Lightning Helix deals 3 and gains 3 life.
+#[test]
+fn lightning_helix_burns_and_gains() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::lightning_helix());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, 17, "3 damage to the opponent");
+    assert_eq!(g.players[0].life, life + 3, "gained 3 life");
+}
+
+/// Pillar of Flame exiles a creature it kills instead of letting it die.
+#[test]
+fn pillar_of_flame_exiles_what_it_kills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::pillar_of_flame());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).is_none(), "creature killed");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+    assert!(g.exile.iter().any(|c| c.id == bear), "exiled instead");
+}
+
+/// Venture Deeper (Merfolk Secretkeeper) mills the opponent four.
+#[test]
+fn adventure_merfolk_secretkeeper_venture_deeper_mills() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(1, catalog::mountain()); }
+    let before = g.players[1].library.len();
+    let id = g.add_card_to_hand(0, catalog::merfolk_secretkeeper());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Venture Deeper");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), before - 4, "milled four");
+}
+
+/// Goblin Guide is a {R} 2/2 with haste.
+#[test]
+fn goblin_guide_is_hasty_two_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::goblin_guide());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (2, 2));
+    assert!(c.definition.keywords.contains(&Keyword::Haste));
+}
