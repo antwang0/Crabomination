@@ -12382,6 +12382,31 @@ fn tezzeret_minus_three_tutors_a_cheap_artifact() {
 }
 
 #[test]
+fn tezzeret_minus_seven_emblem_buffs_and_animates_artifact() {
+    let mut g = two_player_game();
+    let tez = g.add_card_to_battlefield(0, catalog::tezzeret_cruel_captain());
+    g.battlefield_find_mut(tez).unwrap().add_counters(CounterType::Loyalty, 3); // 4+3 = 7
+    let stone = g.add_card_to_battlefield(0, catalog::mind_stone()); // noncreature artifact
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: tez, ability_index: 2, target: None,
+    }).expect("Tezzeret -7");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].emblems.len(), 1, "emblem created");
+
+    // Beginning of combat on your turn → the emblem trigger fires.
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+
+    let s = g.battlefield_find(stone).expect("Mind Stone still here");
+    assert_eq!(s.counter_count(CounterType::PlusOnePlusOne), 3, "three +1/+1 counters");
+    let cp = g.compute_battlefield();
+    let view = cp.iter().find(|c| c.id == stone).unwrap();
+    assert!(view.card_types.contains(&CardType::Creature), "noncreature artifact became a creature");
+    assert_eq!((view.power, view.toughness), (3, 3), "0/0 Robot + three +1/+1 = 3/3");
+}
+
+#[test]
 fn balefire_dragon_combat_damage_burns_each_opp_creature() {
     let mut g = two_player_game();
     let dragon = g.add_card_to_battlefield(0, catalog::balefire_dragon());
@@ -20975,12 +21000,22 @@ fn saheeli_rai_minus_seven_emblem_copies_on_end_step() {
         card_id: saheeli, ability_index: 2, target: None,
     }).expect("Saheeli -7 castable at 10 loyalty");
     drain_stack(&mut g);
-    // The -7 grants a real CR 114 emblem whose end-step trigger fires from
-    // the command zone (verified by the emblem zone + step-keyed dispatch).
-    // The copy body's auto-target through the step-trigger path is a known
-    // gap (Seq-wrapped CreateTokenCopyOf target — tracked in TODO.md), so
-    // this test asserts the emblem half only.
     assert_eq!(g.players[0].emblems.len(), 1, "emblem created by -7");
+    // The end-step trigger auto-targets the friendly Grizzly Bears and mints
+    // two haste token copies of it (CR 114 emblem + step-keyed dispatch).
+    let bears = |g: &GameState| g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears").count();
+    let before = bears(&g);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(bears(&g), before + 2, "emblem minted two token copies");
+    let hasty = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Grizzly Bears")
+        .filter(|c| g.computed_permanent(c.id)
+            .map(|p| p.keywords.contains(&crate::card::Keyword::Haste)).unwrap_or(false))
+        .count();
+    assert_eq!(hasty, 2, "both copies have haste");
 }
 
 #[test]

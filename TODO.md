@@ -273,8 +273,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   ETB (`DealDamageDivided { max_targets: 2 }`) auto-targets a single
   creature and dumps the whole total there; the multi-slot fill in
   `auto_targets_for_effect_all_slots` isn't reached from the trigger
-  dispatch path (same root as the Saheeli emblem note below). Thread the
-  multi-slot picker through `fire_step_triggers` / trigger auto-target.
+  dispatch path. Thread the multi-slot picker through `fire_step_triggers`
+  / trigger auto-target. (Single-slot auto-target through step/emblem
+  triggers works — Saheeli Rai's -7 emblem copy body resolves correctly.)
 - **Client kicker affordance.** `kickable_hand` (and `pitchable_hand`) now
   light up green as "playable now" via `update_castable_highlights` (unioned
   into the castable set alongside `dashable_hand`). Still wanted: a *distinct*
@@ -442,14 +443,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - **Nexus of Fate graveyard replacement** — needs a
   shuffle-instead-of-graveyard replacement once a leaves-graveyard
   replacement primitive exists (the rest of the extra-turn pipeline ships).
-- **Auto-target through step-keyed triggers** — `auto_target_for_effect`
-  does not fill the target slot of a `Seq`-wrapped `CreateTokenCopyOf`
-  source when the trigger fires from the command zone (emblem) or a
-  step-keyed battlefield trigger, so Saheeli Rai's -7 emblem creates +
-  fires but its copy body resolves to 0 tokens. Fix: thread auto-target
-  through the `fire_step_triggers` push path the way
-  `dispatch_triggers_for_events` does (or surface `Decision::ChooseTarget`
-  for bot/auto deciders there).
 - **Choose-N modes ("choose two")** — still open per `FEATURE_ROADMAP.md`
   Tier 1 (additional cast costs, `GrantActivatedAbility` static, and "when
   target dies this turn" delayed trigger already shipped).
