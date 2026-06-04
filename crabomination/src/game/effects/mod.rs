@@ -1100,6 +1100,92 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::MillHalf { who, rounded_up } => {
+                // Per-player: each mills half of their *own* library.
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in seats {
+                    let lib = self.players[p].library.len();
+                    let n = if *rounded_up { lib.div_ceil(2) } else { lib / 2 };
+                    for _ in 0..n {
+                        if self.players[p].library.is_empty() { break; }
+                        let card = self.players[p].library.remove(0);
+                        let cid = card.id;
+                        self.players[p].graveyard.push(card);
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                        self.last_moved_cards.push(cid);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DiscardHalf { who, rounded_up } => {
+                // Per-player: each discards half of their *own* hand (pick-first,
+                // matching the random-discard bot harness in `Effect::Discard`).
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in seats {
+                    let hand = self.players[p].hand.len();
+                    let n = if *rounded_up { hand.div_ceil(2) } else { hand / 2 };
+                    for _ in 0..n {
+                        let Some(cid) = self.players[p].hand.first().map(|c| c.id) else { break };
+                        self.discard_card(p, cid, events);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SacrificeHalf { who, filter, rounded_up } => {
+                // Per-player: each sacrifices half of the permanents they
+                // control matching `filter` (weakest/cheapest first, like
+                // `Effect::Sacrifice`'s AutoDecider heuristic).
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in seats {
+                    let mut candidates: Vec<&CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == p)
+                        .filter(|c| {
+                            let t = Target::Permanent(c.id);
+                            self.evaluate_requirement_static(filter, &t, p, ctx.source)
+                        })
+                        .collect();
+                    candidates.sort_by_key(|c| (!c.is_token, c.definition.cost.cmc(), c.power()));
+                    let total = candidates.len();
+                    let n = if *rounded_up { total.div_ceil(2) } else { total / 2 };
+                    let ids: Vec<CardId> = candidates.into_iter().take(n).map(|c| c.id).collect();
+                    for id in ids {
+                        let is_creature = self
+                            .battlefield_find(id)
+                            .map(|c| c.definition.is_creature())
+                            .unwrap_or(false);
+                        if is_creature {
+                            if let Some(c) = self.battlefield_find(id) {
+                                self.died_card_snapshots.insert(id, c.clone());
+                            }
+                            events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
+                            events.push(GameEvent::CreatureDied { card_id: id });
+                        }
+                        events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
+                        let mut die_evs = self.remove_to_graveyard_with_triggers(id);
+                        events.append(&mut die_evs);
+                    }
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::SetLifeTotal { who, amount } => {
                 let new_total = self.evaluate_value(amount, ctx);
                 for ent in self.resolve_selector(who, ctx) {

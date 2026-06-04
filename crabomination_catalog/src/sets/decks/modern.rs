@@ -11090,18 +11090,15 @@ pub fn korvold_fae_cursed_king() -> CardDefinition {
 
 /// Lord Xander, the Collector — {3}{U}{B}{R} Legendary Creature — Vampire
 /// Demon Noble. 6/6 Flying.
-/// **When this enters**: Target opponent discards three cards.
+/// **When this enters**: Target opponent discards half the cards in their
+/// hand, rounded down.
 /// **Whenever this attacks**: Defending player mills half their library,
 /// rounded down.
-/// **When this dies**: Target opponent sacrifices half their nonland
-/// permanents, rounded down.
+/// **When this dies**: Target opponent sacrifices half the permanents they
+/// control, rounded down.
 ///
-/// Cube-style approximation. The "half their library, rounded down" is
-/// approximated as `Mill 8` (typical midgame library size around 16 →
-/// half). The "sacrifices half their permanents" is collapsed to
-/// `Sacrifice(EachOpponent, 3, Permanent ∧ Nonland)` (typical board
-/// state). Both halves use `target_filtered(Player)` for the attack/die
-/// triggers — the cube AutoDecider picks the active opponent.
+/// Now faithful via the per-player half effects (`DiscardHalf` / `MillHalf` /
+/// `SacrificeHalf`), each scaling to the affected player's own zone size.
 pub fn lord_xander_the_collector() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -11123,25 +11120,24 @@ pub fn lord_xander_the_collector() -> CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::DiscardChosen {
-                    from: target_filtered(SelectionRequirement::Player),
-                    count: Value::Const(3),
-                    filter: SelectionRequirement::Any,
+                effect: Effect::DiscardHalf {
+                    who: target_filtered(SelectionRequirement::Player),
+                    rounded_up: false,
                 },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::Mill {
+                effect: Effect::MillHalf {
                     who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(8),
+                    rounded_up: false,
                 },
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-                effect: Effect::Sacrifice {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    count: Value::Const(3),
-                    filter: SelectionRequirement::Nonland,
+                effect: Effect::SacrificeHalf {
+                    who: target_filtered(SelectionRequirement::Player),
+                    filter: SelectionRequirement::Permanent,
+                    rounded_up: false,
                 },
             },
         ],

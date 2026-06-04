@@ -1313,6 +1313,22 @@ pub enum Effect {
     /// `do_cleanup`.
     SetNoMaxHandSize { who: Selector },
     Mill    { who: Selector, amount: Value },
+    /// Each player the selector resolves to mills half the cards in their
+    /// *own* library (rounded up when `rounded_up`, else down). Per-player —
+    /// `Mill`'s global amount can't scale to each target's own library size.
+    /// Lord Xander, the Collector ("target opponent mills half their library,
+    /// rounded down").
+    MillHalf { who: Selector, rounded_up: bool },
+    /// Each player the selector resolves to discards half the cards in their
+    /// *own* hand (rounded up when `rounded_up`, else down), chosen the same
+    /// way as `Discard` (random pick-first for the bot harness). Lord Xander
+    /// ("target opponent discards half the cards in their hand, rounded down").
+    DiscardHalf { who: Selector, rounded_up: bool },
+    /// Each player the selector resolves to sacrifices half the permanents
+    /// they control matching `filter` (rounded up when `rounded_up`, else
+    /// down). Per-player. Lord Xander ("target opponent sacrifices half the
+    /// permanents they control, rounded down" — `filter` = `Permanent`).
+    SacrificeHalf { who: Selector, filter: SelectionRequirement, rounded_up: bool },
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },
@@ -2298,7 +2314,10 @@ impl Effect {
             Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
-            Effect::LoseHalfLife { who, .. } => sel_has_target(who),
+            Effect::LoseHalfLife { who, .. }
+            | Effect::MillHalf { who, .. }
+            | Effect::DiscardHalf { who, .. }
+            | Effect::SacrificeHalf { who, .. } => sel_has_target(who),
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
@@ -2521,7 +2540,10 @@ impl Effect {
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
-            Effect::LoseHalfLife { who, .. } => sel_filter(who),
+            Effect::LoseHalfLife { who, .. }
+            | Effect::MillHalf { who, .. }
+            | Effect::DiscardHalf { who, .. }
+            | Effect::SacrificeHalf { who, .. } => sel_filter(who),
             Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }
             | Effect::DestroyNoRegen { what }
@@ -2855,6 +2877,9 @@ impl Effect {
             | Effect::SetNoMaxHandSize { .. }
             | Effect::Draw { .. }
             | Effect::Mill { .. }
+            | Effect::MillHalf { .. }
+            | Effect::DiscardHalf { .. }
+            | Effect::SacrificeHalf { .. }
             | Effect::AddPoison { .. } => true,
             // Divided damage allows player targets only when its filter can
             // match a player (Crackle with Power "any target"); creature-only
@@ -3092,7 +3117,10 @@ impl Effect {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
                 Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_find(who, slot),
-                Effect::LoseHalfLife { who, .. } => sel_find(who, slot),
+                Effect::LoseHalfLife { who, .. }
+                | Effect::MillHalf { who, .. }
+                | Effect::DiscardHalf { who, .. }
+                | Effect::SacrificeHalf { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
                 Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
                 Effect::Draw { who, .. } | Effect::Mill { who, .. } => sel_find(who, slot),

@@ -15294,11 +15294,11 @@ fn korvold_fae_cursed_king_triggers_on_artifact_sacrifice_via_permanent_event() 
 }
 
 #[test]
-fn lord_xander_the_collector_etb_makes_opponent_discard_three() {
+fn lord_xander_the_collector_etb_discards_half_opponent_hand() {
     use crate::game::types::Target;
     let mut g = two_player_game();
-    // Stack opp hand
-    for _ in 0..5 {
+    g.players[1].hand.clear();
+    for _ in 0..6 {
         g.add_card_to_hand(1, catalog::island());
     }
     let hand_before = g.players[1].hand.len();
@@ -15312,8 +15312,46 @@ fn lord_xander_the_collector_etb_makes_opponent_discard_three() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Xander castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].hand.len(), hand_before - 3,
-        "Opp discarded 3 from Xander ETB");
+    // 6 cards, half rounded down = 3 discarded.
+    assert_eq!(g.players[1].hand.len(), hand_before - hand_before / 2,
+        "opp discards half their hand rounded down");
+}
+
+/// Lord Xander's attack trigger mills half the defending player's library.
+#[test]
+fn lord_xander_attack_mills_half_library() {
+    let mut g = two_player_game();
+    g.players[1].library.clear();
+    for _ in 0..11 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let xander = g.add_card_to_battlefield(0, catalog::lord_xander_the_collector());
+    let trig = catalog::lord_xander_the_collector().triggered_abilities[1].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(xander, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    // 11 cards, half rounded down = 5 milled.
+    assert_eq!(g.players[1].library.len(), 11 - 5, "milled half (rounded down)");
+    assert_eq!(g.players[1].graveyard.len(), 5, "5 in graveyard");
+}
+
+/// Lord Xander's death trigger makes target opponent sacrifice half their
+/// permanents, rounded down.
+#[test]
+fn lord_xander_death_sacrifices_half_permanents() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let xander = g.add_card_to_battlefield(0, catalog::lord_xander_the_collector());
+    for _ in 0..5 {
+        g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    }
+    let trig = catalog::lord_xander_the_collector().triggered_abilities[2].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        xander, 0, Some(Target::Player(1)), 0,
+    );
+    g.resolve_effect(&trig, &ctx).unwrap();
+    // 5 permanents, half rounded down = 2 sacrificed → 3 remain.
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1).count(), 3,
+        "opp sacrifices half their permanents rounded down");
 }
 
 #[test]
