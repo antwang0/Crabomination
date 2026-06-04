@@ -2207,8 +2207,8 @@ pub fn strip_mine() -> CardDefinition {
 ///
 /// Alt cost: "If you control a Swamp, you may pay 4 life rather than pay
 /// this spell's mana cost." The Swamp gate rides the alt-cost `condition`
-/// predicate (controls ≥1 Swamp). The "can't be regenerated" rider
-/// collapses (no regen primitive).
+/// predicate (controls ≥1 Swamp); `DestroyNoRegen` honors the can't-be-
+/// regenerated rider.
 pub fn snuff_out() -> CardDefinition {
     use crate::card::{AlternativeCost, LandType, Predicate};
     CardDefinition {
@@ -2219,7 +2219,7 @@ pub fn snuff_out() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Destroy {
+        effect: Effect::DestroyNoRegen {
             what: target_filtered(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::HasColor(Color::Black).negate()),

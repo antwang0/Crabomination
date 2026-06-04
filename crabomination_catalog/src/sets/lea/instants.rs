@@ -75,7 +75,8 @@ pub fn dark_ritual() -> CardDefinition {
     }
 }
 
-/// Terror — {1}{B}: destroy target non-black, non-artifact creature
+/// Terror — {1}{B}: destroy target nonartifact, nonblack creature. It
+/// can't be regenerated.
 pub fn terror() -> CardDefinition {
     let filter = SelectionRequirement::Creature
         .and(SelectionRequirement::HasColor(Color::Black).negate())
@@ -88,7 +89,7 @@ pub fn terror() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Destroy { what: target_filtered(filter) },
+        effect: Effect::DestroyNoRegen { what: target_filtered(filter) },
         triggered_abilities: vec![],
         ..Default::default()
     }
