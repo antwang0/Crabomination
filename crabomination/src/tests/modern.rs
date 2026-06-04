@@ -23948,3 +23948,104 @@ fn casualty_normal_cast_no_copy() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew 2, no copy");
 }
+
+// ── More Adventure cards (CR 715) ────────────────────────────────────────────
+
+/// Rider in Need (Lonesome Unicorn) makes a 2/2 Knight; the Unicorn casts later.
+#[test]
+fn adventure_lonesome_unicorn_rider_in_need() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lonesome_unicorn());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rider in Need");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Knight").count(), 1, "made a Knight");
+    assert!(g.exile.iter().any(|c| c.id == id && c.on_adventure));
+}
+
+/// Harvest Fear (Reaper of Night) makes the opponent discard two.
+#[test]
+fn adventure_reaper_of_night_harvest_fear() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::shock());
+    let id = g.add_card_to_hand(0, catalog::reaper_of_night());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Harvest Fear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "opponent discarded both cards");
+}
+
+/// Cast Off (Realm-Cloaked Giant) destroys non-Giants but spares Giants.
+#[test]
+fn adventure_realm_cloaked_giant_cast_off_spares_giants() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let giant = g.add_card_to_battlefield(1, catalog::charging_monstrosaur()); // not a Giant
+    let friendly_giant = g.add_card_to_battlefield(0, catalog::bonecrusher_giant());
+    let id = g.add_card_to_hand(0, catalog::realm_cloaked_giant());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cast Off");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "non-Giant destroyed");
+    assert!(g.battlefield_find(giant).is_none(), "Dinosaur (non-Giant) destroyed");
+    assert!(g.battlefield_find(friendly_giant).is_some(), "Giant spared");
+}
+
+/// Welcome Home (Flaxen Intruder) makes three 2/2 Bears.
+#[test]
+fn adventure_flaxen_intruder_welcome_home() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::flaxen_intruder());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Welcome Home");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Bear").count(), 3, "three Bears");
+}
+
+/// Usher to Safety (Shepherd of the Flock) bounces your own permanent.
+#[test]
+fn adventure_shepherd_usher_to_safety_bounces_own() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::shepherd_of_the_flock());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Usher to Safety");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "own permanent back in hand");
+}
+
+/// Haggle (Merchant of the Vale) draws then discards (loots).
+#[test]
+fn adventure_merchant_of_the_vale_haggle_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_hand(0, catalog::shock()); // a card to discard
+    let id = g.add_card_to_hand(0, catalog::merchant_of_the_vale());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len(); // includes Merchant + Shock
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Haggle");
+    drain_stack(&mut g);
+    // -1 (Merchant leaves) +1 (draw) -1 (discard) = hand_before - 1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "drew then discarded");
+}

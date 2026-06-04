@@ -15546,6 +15546,196 @@ pub fn garenbrig_carver() -> CardDefinition {
     }
 }
 
+/// Lonesome Unicorn — {4}{W} Creature — Unicorn 3/4.
+/// Adventure: Rider in Need {1}{W} Sorcery — create a 2/2 white Knight token.
+pub fn lonesome_unicorn() -> CardDefinition {
+    CardDefinition {
+        name: "Lonesome Unicorn",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Unicorn],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        adventure: Some(Box::new(Adventure {
+            name: "Rider in Need",
+            cost: cost(&[generic(1), w()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Knight".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Knight],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Reaper of Night — {4}{B} Creature — Zombie Wraith 3/4, Flying.
+/// Adventure: Harvest Fear {3}{B} Sorcery — target player discards two cards.
+pub fn reaper_of_night() -> CardDefinition {
+    CardDefinition {
+        name: "Reaper of Night",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(Adventure {
+            name: "Harvest Fear",
+            cost: cost(&[generic(3), b()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Discard {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(2),
+                random: true,
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Merchant of the Vale — {2}{R} Creature — Human Rogue 1/4.
+/// Adventure: Haggle {R} Sorcery — draw a card, then discard a card.
+pub fn merchant_of_the_vale() -> CardDefinition {
+    CardDefinition {
+        name: "Merchant of the Vale",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        adventure: Some(Box::new(Adventure {
+            name: "Haggle",
+            cost: cost(&[r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Shepherd of the Flock — {1}{W} Creature — Human Cleric 2/2.
+/// Adventure: Usher to Safety {W} Sorcery — return target permanent you
+/// control to its owner's hand.
+pub fn shepherd_of_the_flock() -> CardDefinition {
+    CardDefinition {
+        name: "Shepherd of the Flock",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        adventure: Some(Box::new(Adventure {
+            name: "Usher to Safety",
+            cost: cost(&[w()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Flaxen Intruder — {G} Creature — Human Berserker 1/1.
+/// Adventure: Welcome Home {3}{G}{G}{G} Sorcery — create three 2/2 green
+/// Bear tokens.
+pub fn flaxen_intruder() -> CardDefinition {
+    CardDefinition {
+        name: "Flaxen Intruder",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        adventure: Some(Box::new(Adventure {
+            name: "Welcome Home",
+            cost: cost(&[generic(3), g(), g(), g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: TokenDefinition {
+                    name: "Bear".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Bear],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Realm-Cloaked Giant — {5}{W}{W} Creature — Giant 7/7, Vigilance.
+/// Adventure: Cast Off {3}{W}{W} Sorcery — destroy all non-Giant creatures.
+pub fn realm_cloaked_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Realm-Cloaked Giant",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Vigilance],
+        adventure: Some(Box::new(Adventure {
+            name: "Cast Off",
+            cost: cost(&[generic(3), w(), w()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Giant).negate()),
+                ),
+                body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
 /// Esika's Chariot — {3}{G} Legendary Artifact — Vehicle 4/4.
 /// When this enters, create two 2/2 green Cat creature tokens. Whenever it
 /// attacks, create a token that's a copy of target token you control.
