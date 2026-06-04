@@ -5356,7 +5356,16 @@ impl GameState {
                         StackItem::Spell { card, caster, .. } if card.id == cid => Some(*caster),
                         _ => None,
                     })
-                    .or_else(|| self.battlefield_find(cid).map(|c| c.controller)),
+                    .or_else(|| self.battlefield_find(cid).map(|c| c.controller))
+                    // A just-drawn / discarded card lives in a player's
+                    // hand/graveyard/etc. — bind Triggerer to that player
+                    // (Sheoldred's "whenever an opponent draws a card, they
+                    // lose 2 life"; Strict Tutelage).
+                    .or_else(|| {
+                        self.players.iter().position(|pl| {
+                            pl.hand.iter().chain(&pl.graveyard).any(|c| c.id == cid)
+                        })
+                    }),
             }),
             PlayerRef::Target(idx) => ctx.targets.get(*idx as usize).and_then(|t| match t {
                 Target::Player(p) => Some(*p),

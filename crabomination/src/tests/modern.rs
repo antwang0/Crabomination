@@ -2594,6 +2594,40 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn guttersnipe_pings_each_opponent_on_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::guttersnipe());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3 - 2, "bolt 3 + Guttersnipe 2");
+}
+
+#[test]
+fn sheoldred_apocalypse_punishes_and_rewards_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sheoldred_the_apocalypse());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    let you = g.players[0].life;
+    let opp = g.players[1].life;
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you + 2, "you gain 2 on your draw");
+    let mut events = Vec::new();
+    g.draw_one(1, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "opponent loses 2 on their draw");
+}
+
+#[test]
 fn apostles_blessing_grants_protection_to_your_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

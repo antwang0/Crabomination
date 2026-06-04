@@ -5104,3 +5104,62 @@ pub fn ledger_shredder() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Guttersnipe — {2}{R} Creature — Goblin Shaman 2/2. "Whenever you cast an
+/// instant or sorcery spell, Guttersnipe deals 2 damage to each opponent." (RTR)
+pub fn guttersnipe() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    CardDefinition {
+        name: "Guttersnipe",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sheoldred, the Apocalypse — {2}{B}{B} Legendary Creature — Phyrexian Praetor
+/// 4/5, Deathtouch. "Whenever you draw a card, you gain 2 life. Whenever an
+/// opponent draws a card, that player loses 2 life." (DMU)
+pub fn sheoldred_the_apocalypse() -> CardDefinition {
+    CardDefinition {
+        name: "Sheoldred, the Apocalypse",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Praetor],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
