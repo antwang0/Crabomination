@@ -24351,3 +24351,123 @@ fn hellspark_elemental_has_flashback() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_some(), "Hellspark on the battlefield via flashback");
 }
+
+/// Isamaru is a {W} legendary 2/2.
+#[test]
+fn isamaru_is_legendary_two_two() {
+    use crate::card::Supertype;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::isamaru_hound_of_konda());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (2, 2));
+    assert!(c.definition.supertypes.contains(&Supertype::Legendary));
+}
+
+/// Mogg War Marshal makes a Goblin on entry and another on death.
+#[test]
+fn mogg_war_marshal_makes_goblins() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mogg_war_marshal());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let goblins = |g: &GameState| g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Goblin").count();
+    assert_eq!(goblins(&g), 1, "ETB Goblin");
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(goblins(&g), 2, "death Goblin");
+}
+
+/// Seasonal Ritual (Rosethorn Acolyte) adds one mana of any color.
+#[test]
+fn adventure_rosethorn_acolyte_seasonal_ritual_ramps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::rosethorn_acolyte());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Seasonal Ritual");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "ritual added one mana");
+    assert!(g.exile.iter().any(|c| c.id == id && c.on_adventure), "exiled on adventure");
+}
+
+/// Vampire of the Dire Moon is a {B} 1/1 with deathtouch + lifelink.
+#[test]
+fn vampire_of_the_dire_moon_keywords() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::vampire_of_the_dire_moon());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (1, 1));
+    assert!(c.definition.keywords.contains(&Keyword::Deathtouch));
+    assert!(c.definition.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Accorder Paladin's Battle Cry pumps other attackers by +1/+0.
+#[test]
+fn accorder_paladin_battle_cry_pumps_team() {
+    let mut g = two_player_game();
+    let paladin = g.add_card_to_battlefield(0, catalog::accorder_paladin());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(paladin);
+    g.clear_sickness(ally);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: paladin, target: AttackTarget::Player(1) },
+        Attack { attacker: ally, target: AttackTarget::Player(1) },
+    ])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(ally).unwrap().power, 3, "other attacker got +1/+0");
+}
+
+/// Precinct Captain makes a Soldier when it connects.
+#[test]
+fn precinct_captain_makes_soldier_on_combat_damage() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::precinct_captain());
+    g.clear_sickness(cap);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: cap, target: AttackTarget::Player(1) },
+    ])).unwrap();
+    // Precinct Captain has first strike, so its damage lands in the
+    // first-strike combat-damage step.
+    // Precinct Captain has first strike — its damage lands in the
+    // first-strike combat-damage step.
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().expect("first-strike damage");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Soldier").count(), 1, "made a Soldier on hit");
+}
+
+/// Nivix Cyclops gets +3/+0 when you cast an instant or sorcery.
+#[test]
+fn nivix_cyclops_pumps_on_instant() {
+    let mut g = two_player_game();
+    let cy = g.add_card_to_battlefield(0, catalog::nivix_cyclops());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.battlefield_find(cy).unwrap().power(), 4, "+3/+0 from the spell");
+}
+
+/// Festival Crasher grows a +1/+1 counter per instant/sorcery cast.
+#[test]
+fn festival_crasher_grows_on_spells() {
+    let mut g = two_player_game();
+    let fc = g.add_card_to_battlefield(0, catalog::festival_crasher());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    let c = g.battlefield_find(fc).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "permanent +1/+1 counter");
+}

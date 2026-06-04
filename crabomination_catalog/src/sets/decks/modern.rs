@@ -15736,6 +15736,206 @@ pub fn realm_cloaked_giant() -> CardDefinition {
     }
 }
 
+/// Nivix Cyclops — {1}{U}{R} Creature — Cyclops Wizard 1/4. Whenever you cast
+/// an instant or sorcery spell, it gets +3/+0 until end of turn.
+pub fn nivix_cyclops() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Nivix Cyclops",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cyclops, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![magecraft_self_pump(3, 0)],
+        ..Default::default()
+    }
+}
+
+/// Festival Crasher — {1}{R} Creature — Elemental 2/2. Magecraft — whenever
+/// you cast or copy an instant or sorcery, put a +1/+1 counter on it.
+pub fn festival_crasher() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Festival Crasher",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Vampire of the Dire Moon — {B} Creature — Vampire 1/1, Deathtouch,
+/// Lifelink.
+pub fn vampire_of_the_dire_moon() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire of the Dire Moon",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Accorder Paladin — {1}{W} Creature — Human Knight 2/1, Battle Cry.
+pub fn accorder_paladin() -> CardDefinition {
+    use crate::effect::shortcut::battle_cry;
+    CardDefinition {
+        name: "Accorder Paladin",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![battle_cry(1)],
+        ..Default::default()
+    }
+}
+
+/// Precinct Captain — {1}{W} Creature — Human Soldier 2/2, First Strike.
+/// Whenever it deals combat damage to a player, create a 1/1 white Soldier.
+pub fn precinct_captain() -> CardDefinition {
+    CardDefinition {
+        name: "Precinct Captain",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Isamaru, Hound of Konda — {W} Legendary Creature — Dog 2/2.
+pub fn isamaru_hound_of_konda() -> CardDefinition {
+    CardDefinition {
+        name: "Isamaru, Hound of Konda",
+        cost: cost(&[w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Mogg War Marshal — {1}{R} Creature — Goblin Warrior 1/1, Echo {1}{R}.
+/// When it enters and when it dies, create a 1/1 red Goblin creature token.
+pub fn mogg_war_marshal() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    let goblin = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: TokenDefinition {
+            name: "Goblin".into(),
+            power: 1,
+            toughness: 1,
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::Red],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Goblin],
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    };
+    CardDefinition {
+        name: "Mogg War Marshal",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Echo(cost(&[generic(1), r()]))],
+        triggered_abilities: vec![etb(goblin()), on_dies(goblin())],
+        ..Default::default()
+    }
+}
+
+/// Rosethorn Acolyte — {2}{G} Creature — Elf Druid 1/3. {T}: Add one mana of
+/// any color.
+/// Adventure: Seasonal Ritual {G} Sorcery — add one mana of any color.
+pub fn rosethorn_acolyte() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::add_any_one_color;
+    CardDefinition {
+        name: "Rosethorn Acolyte",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: add_any_one_color(1),
+            ..Default::default()
+        }],
+        adventure: Some(Box::new(Adventure {
+            name: "Seasonal Ritual",
+            cost: cost(&[g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: add_any_one_color(1),
+        })),
+        ..Default::default()
+    }
+}
+
 /// End-step self-sacrifice trigger ("At the beginning of the end step,
 /// sacrifice this") shared by the Ball Lightning family.
 fn sacrifice_at_end_step() -> TriggeredAbility {
