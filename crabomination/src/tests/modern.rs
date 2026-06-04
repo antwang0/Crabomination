@@ -2825,6 +2825,65 @@ fn mirran_crusader_has_double_strike_and_two_protections() {
 }
 
 #[test]
+fn goldmeadow_harrier_taps_target_creature() {
+    let mut g = two_player_game();
+    let harrier = g.add_card_to_battlefield(0, catalog::goldmeadow_harrier());
+    g.clear_sickness(harrier);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: harrier, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("{W}, T: Tap target creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped, "target creature is tapped");
+}
+
+#[test]
+fn gideons_lawkeeper_taps_target_creature() {
+    let mut g = two_player_game();
+    let lk = g.add_card_to_battlefield(0, catalog::gideons_lawkeeper());
+    g.clear_sickness(lk);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lk, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("{W}, T: Tap target creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).unwrap().tapped);
+}
+
+#[test]
+fn steppe_lynx_grows_on_landfall() {
+    let mut g = two_player_game();
+    let lynx = g.add_card_to_battlefield(0, catalog::steppe_lynx());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: land }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(lynx).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "landfall gives +2/+2 until end of turn");
+}
+
+#[test]
+fn usher_of_the_fallen_boasts_a_soldier() {
+    let mut g = two_player_game();
+    let usher = g.add_card_to_battlefield(0, catalog::usher_of_the_fallen());
+    g.clear_sickness(usher);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: usher, target: AttackTarget::Player(1) }])
+        .expect("Usher attacks");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: usher, ability_index: 0, target: None, x_value: None,
+    }).expect("Boast after attacking");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Soldier"),
+        "boast mints a Soldier token");
+}
+
+#[test]
 fn honor_of_the_pure_buffs_only_white_creatures() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::honor_of_the_pure());

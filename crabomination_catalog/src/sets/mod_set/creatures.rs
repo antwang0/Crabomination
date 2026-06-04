@@ -6269,3 +6269,98 @@ pub fn mirran_crusader() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Helper: "{W}, {T}: Tap target creature." (Goldmeadow Harrier / Gideon's
+/// Lawkeeper share this ability.)
+fn tapper_1_1(name: &'static str, types: Vec<CreatureType>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[w()]),
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+            from_hand: false,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goldmeadow Harrier — {W} Creature — Kithkin Soldier 1/1. "{W}, {T}: Tap
+/// target creature." (LRW)
+pub fn goldmeadow_harrier() -> CardDefinition {
+    tapper_1_1("Goldmeadow Harrier", vec![CreatureType::Kithkin, CreatureType::Soldier])
+}
+
+/// Gideon's Lawkeeper — {W} Creature — Human Soldier 1/1. "{W}, {T}: Tap
+/// target creature." (ORI)
+pub fn gideons_lawkeeper() -> CardDefinition {
+    tapper_1_1("Gideon's Lawkeeper", vec![CreatureType::Human, CreatureType::Soldier])
+}
+
+/// Steppe Lynx — {W} Creature — Cat 0/1. "Landfall — Whenever a land you
+/// control enters, this creature gets +2/+2 until end of turn." (ZEN)
+pub fn steppe_lynx() -> CardDefinition {
+    CardDefinition {
+        name: "Steppe Lynx",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Usher of the Fallen — {W} Creature — Human Soldier 1/1. "Boast — {1}{W}:
+/// Create a 1/1 white Human Soldier creature token." (KHM)
+pub fn usher_of_the_fallen() -> CardDefinition {
+    CardDefinition {
+        name: "Usher of the Fallen",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![crate::effect::shortcut::boast(
+            cost(&[generic(1), w()]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: white_soldier_token(),
+            },
+        )],
+        ..Default::default()
+    }
+}
