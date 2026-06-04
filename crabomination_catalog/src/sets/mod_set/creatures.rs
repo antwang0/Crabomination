@@ -5610,3 +5610,110 @@ pub fn lotus_cobra() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Steel Overseer — {2} Artifact Creature — Construct 1/1. "{T}: Put a +1/+1
+/// counter on each artifact creature you control." (M11)
+pub fn steel_overseer() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Steel Overseer",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vault Skirge — {B/P} Artifact Creature — Imp 1/1, Flying, Lifelink. (MBS)
+pub fn vault_skirge() -> CardDefinition {
+    use crate::mana::ManaSymbol;
+    CardDefinition {
+        name: "Vault Skirge",
+        cost: ManaCost { symbols: vec![ManaSymbol::Phyrexian(crate::mana::Color::Black)] },
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Imp], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Master of Etherium — {2}{U} Artifact Creature — Vedalken Artificer 0/0. "Its
+/// power and toughness are each equal to the number of artifacts you control.
+/// Other artifact creatures you control get +1/+1." (ALA)
+pub fn master_of_etherium() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Master of Etherium",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Power/toughness each equal the number of artifacts you control.",
+                effect: StaticEffect::PumpSelfByControlledPermanents {
+                    filter: SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    per_power: 1,
+                    per_toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "Other artifact creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Foundry Inspector — {3} Artifact Creature — Construct 3/2. "Artifact spells
+/// you cast cost {1} less to cast." (KLD)
+pub fn foundry_inspector() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Foundry Inspector",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Artifact spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::Artifact,
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}

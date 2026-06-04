@@ -2594,6 +2594,43 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn steel_overseer_grows_all_artifact_creatures() {
+    let mut g = two_player_game();
+    let overseer = g.add_card_to_battlefield(0, catalog::steel_overseer());
+    let skirge = g.add_card_to_battlefield(0, catalog::vault_skirge());
+    g.clear_sickness(overseer);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: overseer, ability_index: 0, target: None, x_value: None }).expect("{T}: counters");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(overseer).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(skirge).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn master_of_etherium_sizes_to_artifact_count() {
+    let mut g = two_player_game();
+    let master = g.add_card_to_battlefield(0, catalog::master_of_etherium());
+    // Master + itself counts; add two more artifacts → 3 artifacts total.
+    g.add_card_to_battlefield(0, catalog::vault_skirge());
+    g.add_card_to_battlefield(0, catalog::steel_overseer());
+    let cp = g.computed_permanent(master).unwrap();
+    assert_eq!(cp.power, 3, "P/T = artifacts you control (3)");
+}
+
+#[test]
+fn foundry_inspector_discounts_artifact_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::foundry_inspector());
+    // A {2} artifact now castable for {1}.
+    let skirge_cost = catalog::burnished_hart(); // {3} artifact
+    let id = g.add_card_to_hand(0, skirge_cost);
+    g.players[0].mana_pool.add_colorless(2); // {3} - {1} = {2}
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("artifact spell costs {1} less");
+}
+
+#[test]
 fn beast_whisperer_draws_on_creature_cast() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::beast_whisperer());
