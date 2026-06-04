@@ -354,6 +354,9 @@ pub enum Keyword {
     /// cast has haste). First field = N, second = the suspend cost. Cast
     /// via `GameAction::Suspend`.
     Suspend(u32, crate::mana::ManaCost),
+    /// Suspend accelerant (Deep-Sea Kraken): while this card is suspended,
+    /// remove a time counter from it whenever an opponent casts a spell.
+    SuspendAccelerant,
     Convoke,
     Delve,
     Cascade,
@@ -1259,6 +1262,9 @@ pub struct CardInstance {
     /// — on ETB it gains haste and is scheduled to return to its owner's
     /// hand at the beginning of the next end step.
     pub dashed: bool,
+    /// True if this card was free-cast off the last Suspend time counter
+    /// (CR 702.62f) — on ETB a creature so cast gains haste.
+    pub cast_from_suspend: bool,
     /// True if this card was cast from its owner's hand on its current
     /// trip through the stack. Used by the rebound resolution path to
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
@@ -1400,6 +1406,7 @@ impl CardInstance {
             used_loyalty_ability_this_turn: false,
             evoked: false,
             dashed: false,
+            cast_from_suspend: false,
             cast_from_hand: false,
             cast_via_flashback: false,
             chosen_creature_type: None,
@@ -1564,6 +1571,8 @@ struct CardInstanceWire {
     evoked: bool,
     #[serde(default)]
     dashed: bool,
+    #[serde(default)]
+    cast_from_suspend: bool,
     cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field deserialize
     /// as `false` (matching the old "not cast via flashback" path).
@@ -1633,6 +1642,7 @@ impl serde::Serialize for CardInstance {
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
             evoked: self.evoked,
             dashed: self.dashed,
+            cast_from_suspend: self.cast_from_suspend,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
             chosen_creature_type: self.chosen_creature_type,
@@ -1677,6 +1687,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;
         c.evoked = wire.evoked;
         c.dashed = wire.dashed;
+        c.cast_from_suspend = wire.cast_from_suspend;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
         c.chosen_creature_type = wire.chosen_creature_type;

@@ -116,6 +116,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
         Keyword::Ninjutsu(_) => "Ninjutsu",
         Keyword::Suspend(..) => "Suspend",
+        Keyword::SuspendAccelerant => "Suspend accelerant",
     };
     Some(s.to_string())
 }

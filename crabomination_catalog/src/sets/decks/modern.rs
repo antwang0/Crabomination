@@ -456,8 +456,7 @@ pub fn dwarven_reinforcements() -> CardDefinition {
 }
 
 /// Deep-Sea Kraken — {8}{U} 6/6 Kraken that can't be countered. Suspend 9—{1}{U}.
-/// (The "remove a time counter whenever another spell is suspended" accelerant
-/// is dropped — no cross-suspend trigger; tracked in TODO.md.)
+/// While suspended, an opponent's spell removes a time counter (accelerant).
 pub fn deep_sea_kraken() -> CardDefinition {
     CardDefinition {
         name: "Deep-Sea Kraken",
@@ -466,7 +465,11 @@ pub fn deep_sea_kraken() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Kraken], ..Default::default() },
         power: 6,
         toughness: 6,
-        keywords: vec![Keyword::CantBeCountered, Keyword::Suspend(9, cost(&[generic(1), u()]))],
+        keywords: vec![
+            Keyword::CantBeCountered,
+            Keyword::Suspend(9, cost(&[generic(1), u()])),
+            Keyword::SuspendAccelerant,
+        ],
         ..Default::default()
     }
 }

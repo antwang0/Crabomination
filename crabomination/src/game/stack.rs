@@ -596,6 +596,18 @@ impl GameState {
                         });
                     }
 
+                    // Suspend (CR 702.62f): a creature cast off its last time
+                    // counter gains haste. The flag rode the instance from
+                    // exile; clear it once consumed.
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && c.cast_from_suspend
+                    {
+                        c.cast_from_suspend = false;
+                        if !c.granted_keywords_eot.contains(&Keyword::Haste) {
+                            c.granted_keywords_eot.push(Keyword::Haste);
+                        }
+                    }
+
                     // Push ETB triggers onto the stack — Elesh Norn
                     // replacement adjusts the trigger count (0 = suppressed
                     // by opponent's Norn, 1+N = each of your Norns adds an

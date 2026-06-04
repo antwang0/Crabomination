@@ -8,18 +8,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Suspend (CR 702.62) — ✅ DONE (primitive), two follow-ups.**
+- **Suspend (CR 702.62) — ✅ DONE (primitive + haste + accelerant).**
   `Keyword::Suspend(n, cost)` + `GameAction::Suspend` + `process_suspend`
   ship the exile-with-time-counters → tick-at-upkeep → free-cast loop
-  (Rift Bolt, Ancestral Vision, Lotus Bloom). Remaining: (1) a suspended
-  *creature* gains haste (CR 702.62f) — not modeled, so it's summoning-sick
-  the turn it resolves; needs a "cast-from-suspend" flag plumbed onto the
-  resolved permanent. (2) The free cast auto-targets via the AutoDecider's
-  first-legal pick; a `wants_ui` human should be prompted for the targets
-  (and X) of the cast spell. Also: no client affordance exists to suspend a
-  card from hand. (3) Deep-Sea Kraken's "remove a time counter whenever
-  another spell is suspended" accelerant is dropped — needs a cross-suspend
-  trigger; `process_suspend` only ticks at upkeep.
+  (Rift Bolt, Ancestral Vision, Lotus Bloom). A suspend-cast creature now
+  gains haste (CR 702.62f) via `CardInstance.cast_from_suspend`; Deep-Sea
+  Kraken's accelerant ships via `Keyword::SuspendAccelerant` +
+  `process_suspend_accelerants` (opponent's cast ticks a time counter).
+  Remaining: the free cast auto-targets via the AutoDecider's first-legal
+  pick; a `wants_ui` human should be prompted for the targets (and X) of the
+  cast spell. Also: no client affordance exists to suspend a card from hand.
 - **One-shot spell-cost discount — ✅ DONE (primitive).**
   `Effect::GrantNextInstantOrSorceryDiscountThisTurn { amount }` pushes a
   `(amount, granted_at)` entry onto `Player.pending_is_discounts`;

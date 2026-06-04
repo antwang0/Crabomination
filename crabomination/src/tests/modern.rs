@@ -83,6 +83,43 @@ fn suspend_deep_sea_kraken_resolves() {
     assert_eq!((k.power(), k.toughness()), (6, 6));
 }
 
+/// A creature free-cast off its last Suspend time counter gains haste
+/// (CR 702.62f) — it enters with a granted Haste keyword.
+#[test]
+fn suspend_cast_creature_gains_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::keldon_halberdier());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 { let _ = g.process_suspend(); }
+    drain_stack(&mut g);
+    let h = g.battlefield_find(id).expect("Halberdier on battlefield");
+    assert!(h.granted_keywords_eot.contains(&Keyword::Haste), "suspend-cast creature has haste");
+}
+
+/// Deep-Sea Kraken's accelerant: while it's suspended, an opponent casting a
+/// spell removes a time counter from it.
+#[test]
+fn suspend_accelerant_ticks_on_opponent_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::deep_sea_kraken());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::Suspend { card_id: id }).expect("suspend");
+    let before = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
+    // Player 1 (an opponent of the owner) casts a spell.
+    let _ = g.process_suspend_accelerants(1);
+    let after = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
+    assert_eq!(after, before - 1, "opponent's cast removes one time counter");
+    // The owner's own cast does NOT tick it.
+    let _ = g.process_suspend_accelerants(0);
+    let same = g.exile.iter().find(|c| c.id == id).unwrap().counter_count(CounterType::Time);
+    assert_eq!(same, after, "owner's own cast leaves it untouched");
+}
+
 /// Beskir Shieldmate leaves two 1/1 tokens behind when it dies.
 #[test]
 fn beskir_shieldmate_dies_into_two_tokens() {

@@ -1625,6 +1625,9 @@ impl GameState {
         // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
         // observe the actual amount paid for *this* spell.
         self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value);
+        // CR 702.62 suspend accelerants (Deep-Sea Kraken): an opponent's cast
+        // ticks a time counter off their suspended accelerant cards.
+        self.process_suspend_accelerants(p);
         // CR 702.21: Ward triggers on each chosen target permanent the caster
         // doesn't control. Pushed last so Ward sits on top of the caster's
         // own SpellCast triggers (Magecraft, Prowess) — correct APNAP order

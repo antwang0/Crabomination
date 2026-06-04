@@ -1268,43 +1268,85 @@ impl GameState {
             .map(|c| c.id)
             .collect();
         for id in suspended {
-            let Some(card) = self.exile.iter_mut().find(|c| c.id == id) else { continue };
-            card.remove_counters(CounterType::Time, 1);
-            events.push(crate::game::GameEvent::CounterRemoved {
-                card_id: id,
-                counter_type: CounterType::Time,
-                count: 1,
-            });
-            if card.counter_count(CounterType::Time) > 0 {
-                continue;
-            }
-            // Last counter removed — cast it for free from exile. Compute an
-            // auto-target against the card's effect (the owner chooses in
-            // real play; we collapse to the AutoDecider's first-legal pick).
-            let effect = card.definition.effect.clone();
-            let auto_target = self.auto_target_for_effect_avoiding(&effect, active, Some(id));
-            // The suspending owner casts it; route priority so the cast helper
-            // attributes it correctly.
-            let saved_priority = self.priority.player_with_priority;
-            self.priority.player_with_priority = active;
-            let cast = self.cast_card_for_free(
-                active,
-                id,
-                crate::card::Zone::Exile,
-                auto_target,
-                vec![],
-                None,
-                None,
-                false,
-            );
-            self.priority.player_with_priority = saved_priority;
-            // If it can't be cast (e.g. no legal target) CR 702.62e leaves it
-            // exiled with 0 time counters. (A creature so cast gains haste —
-            // CR 702.62f; not yet modeled, so a suspended creature is
-            // summoning-sick the turn it resolves. Tracked in TODO.md.)
-            if let Ok(mut evs) = cast {
-                events.append(&mut evs);
-            }
+            events.append(&mut self.remove_suspend_time_counter(id));
+        }
+        events
+    }
+
+    /// Remove one time counter from a suspended card in exile; when the last
+    /// is removed, free-cast it from exile (CR 702.62e–f). Shared by the
+    /// upkeep tick (`process_suspend`) and accelerants (Deep-Sea Kraken).
+    pub(crate) fn remove_suspend_time_counter(
+        &mut self,
+        id: CardId,
+    ) -> Vec<crate::game::GameEvent> {
+        use crate::card::CounterType;
+        let mut events = Vec::new();
+        let Some(card) = self.exile.iter_mut().find(|c| c.id == id) else { return events };
+        if card.counter_count(CounterType::Time) == 0 {
+            return events;
+        }
+        card.remove_counters(CounterType::Time, 1);
+        events.push(crate::game::GameEvent::CounterRemoved {
+            card_id: id,
+            counter_type: CounterType::Time,
+            count: 1,
+        });
+        if card.counter_count(CounterType::Time) > 0 {
+            return events;
+        }
+        let owner = card.owner;
+        // Last counter removed — cast it for free from exile. Compute an
+        // auto-target against the card's effect (the owner chooses in real
+        // play; we collapse to the AutoDecider's first-legal pick). Stamp the
+        // suspend-cast flag so a creature gains haste on ETB (CR 702.62f).
+        card.cast_from_suspend = true;
+        let effect = card.definition.effect.clone();
+        let auto_target = self.auto_target_for_effect_avoiding(&effect, owner, Some(id));
+        // The suspending owner casts it; route priority so the cast helper
+        // attributes it correctly.
+        let saved_priority = self.priority.player_with_priority;
+        self.priority.player_with_priority = owner;
+        let cast = self.cast_card_for_free(
+            owner,
+            id,
+            crate::card::Zone::Exile,
+            auto_target,
+            vec![],
+            None,
+            None,
+            false,
+        );
+        self.priority.player_with_priority = saved_priority;
+        // If it can't be cast (e.g. no legal target) CR 702.62e leaves it
+        // exiled with 0 time counters.
+        if let Ok(mut evs) = cast {
+            events.append(&mut evs);
+        }
+        events
+    }
+
+    /// CR 702.62 accelerants — when `caster` casts a spell, tick a time
+    /// counter off every opponent-owned suspended card that has
+    /// `Keyword::SuspendAccelerant` (Deep-Sea Kraken).
+    pub(crate) fn process_suspend_accelerants(
+        &mut self,
+        caster: usize,
+    ) -> Vec<crate::game::GameEvent> {
+        use crate::card::{CounterType, Keyword};
+        let targets: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| {
+                c.owner != caster
+                    && c.counter_count(CounterType::Time) > 0
+                    && c.definition.keywords.contains(&Keyword::SuspendAccelerant)
+            })
+            .map(|c| c.id)
+            .collect();
+        let mut events = Vec::new();
+        for id in targets {
+            events.append(&mut self.remove_suspend_time_counter(id));
         }
         events
     }
