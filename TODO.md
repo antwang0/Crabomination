@@ -8,6 +8,26 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Protection on *ability* targeting + damage from spell sources.** CR
+  702.16e/f are wired for spell targeting, equip, and the combat/noncombat
+  *permanent*-source damage paths, but `check_target_legality` (activated/
+  triggered ability targets) doesn't yet reject a protected target, and a
+  *spell* damage source (Pyroclasm-style mass damage) isn't color-known at
+  damage time (the card is in transient ownership), so its protection-from-
+  color prevention degrades. Thread the resolving spell's color into the
+  damage path and add a protection check to `check_target_legality`.
+  Also: "protection from artifacts/colorless" (Giver of Runes, Apostle's
+  Blessing's artifact mode) needs a non-color protection grant.
+- **Per-player "half their own X" generalization.** `Effect::LoseHalfLife`
+  scales to each target's own life; the same per-player pattern would finish
+  Lord Xander (mill half *their* library, sacrifice half *their* permanents)
+  — generalize to `Effect::MillHalf`/`SacrificeHalf` or a context-bound
+  current-player ref so `Mill`/`Sacrifice` can read each target's count.
+- **Plague Engineer / named-creature-type -1/-1.** Needs a
+  `StaticEffect` that diminishes only a chosen creature type among opponents
+  (the existing `DiminishCreaturesExceptChosenType` is the inverse). Dropped
+  this run to avoid an inaccurate flat anthem.
+
 - **Adventure / Plot client modals** (CR 715 / 702.170). Engine + bot +
   affordance hints (`adventurable_hand` / `plottable_hand`) ship, but a
   `wants_ui` human gets no modal to *choose* between casting the creature vs.

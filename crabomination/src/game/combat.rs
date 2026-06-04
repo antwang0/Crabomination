@@ -566,17 +566,20 @@ impl GameState {
             if already { continue; }
             // Could it have blocked any declared attacker?
             let could_block = self.attacking.iter().any(|atk| {
-                self.same_team(b.controller, self.defender_for(atk.target).unwrap_or(usize::MAX))
-                    .then(|| ())
-                    .and_then(|_| self.battlefield_find(atk.attacker))
-                    .zip(cp_of(b.id))
-                    .is_some_and(|(attacker, bcp)| {
-                        let atk_colors =
-                            cp_of(atk.attacker).map(|c| c.colors.clone()).unwrap_or_default();
-                        super::can_block_attacker_computed(
-                            b, attacker, bcp, kws_of(atk.attacker), &atk_colors,
-                        )
-                    })
+                let same_team = self
+                    .defender_for(atk.target)
+                    .is_some_and(|d| self.same_team(b.controller, d));
+                same_team
+                    && self
+                        .battlefield_find(atk.attacker)
+                        .zip(cp_of(b.id))
+                        .is_some_and(|(attacker, bcp)| {
+                            let atk_colors =
+                                cp_of(atk.attacker).map(|c| c.colors.clone()).unwrap_or_default();
+                            super::can_block_attacker_computed(
+                                b, attacker, bcp, kws_of(atk.attacker), &atk_colors,
+                            )
+                        })
             });
             if could_block {
                 return Err(GameError::MustBeBlockedIfAble(b.id));

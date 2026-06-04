@@ -79,7 +79,16 @@ read of the code and should be re-verified before picking up an item.
   stealing permanently); **opponent-attacks-you control flip**
   (`EventScope::ControllerAttackedByOpponent`, an `Attacks` listener on the
   defending player's permanents binding the attacker's controller into the
-  target slot — Coveted Jewel gains control + untaps).
+  target slot — Coveted Jewel gains control + untaps);
+  **protection-from-color completeness** (CR 702.16e damage prevention in both
+  combat-damage paths + the noncommat `deal_damage_to_from` path, and 702.16f
+  equip legality, via `is_protected_from`; targeting now reads *computed*
+  protection; combat-math preview + bot block eval honor it);
+  `Keyword::CanAttackOnlyIfYouControl` (Lovestruck Beast),
+  `Keyword::MustBlock` (CR 509.1c), `Effect::LoseHalfLife` (Stingerback),
+  `Effect::GrantProtectionFromChosenColor` (Mother of Runes / Gods Willing /
+  Brave the Elements), `Predicate::SpellsCastThisTurnEquals` +
+  `PlayerRef::Triggerer`→caster/owner (Ledger Shredder, Sheoldred).
 
 ---
 
