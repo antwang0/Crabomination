@@ -88,7 +88,9 @@ read of the code and should be re-verified before picking up an item.
   `Keyword::MustBlock` (CR 509.1c), `Effect::LoseHalfLife` (Stingerback),
   `Effect::GrantProtectionFromChosenColor` (Mother of Runes / Gods Willing /
   Brave the Elements), `Predicate::SpellsCastThisTurnEquals` +
-  `PlayerRef::Triggerer`→caster/owner (Ledger Shredder, Sheoldred).
+  `PlayerRef::Triggerer`→caster/owner (Ledger Shredder, Sheoldred);
+  **color-filtered anthems** (`AffectedPermanents::All.color` decoded from a
+  `HasColor` requirement — Honor of the Pure, Crusade, Bad Moon).
 
 ---
 

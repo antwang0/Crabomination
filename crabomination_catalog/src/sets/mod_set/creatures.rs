@@ -5802,3 +5802,91 @@ pub fn luminarch_aspirant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Crusade — {W}{W} Enchantment. "White creatures get +1/+1." (both players'). (LEA)
+pub fn crusade() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Crusade",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "White creatures get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::White)),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bad Moon — {1}{B} Enchantment. "Black creatures get +1/+0." (LEA)
+pub fn bad_moon() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Bad Moon",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Black creatures get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black)),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dictate of Heliod — {3}{W}{W} Enchantment, Flash. "Creatures you control get
+/// +2/+2." (JOU)
+pub fn dictate_of_heliod() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Dictate of Heliod",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +2/+2.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 2,
+                toughness: 2,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gaea's Anthem — {1}{G}{G} Enchantment. "Creatures you control get +1/+1." (PLC)
+pub fn gaeas_anthem() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Gaea's Anthem",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}

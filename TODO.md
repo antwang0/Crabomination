@@ -23,6 +23,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Lord Xander (mill half *their* library, sacrifice half *their* permanents)
   — generalize to `Effect::MillHalf`/`SacrificeHalf` or a context-bound
   current-player ref so `Mill`/`Sacrifice` can read each target's count.
+- **`StaticEffect::EntersTapped` is a no-op.** The variant exists but nothing
+  consumes it during the ETB path, so "creatures your opponents control enter
+  tapped" (Imposing Sovereign, Thalia Heretic Cathar, Authority of the
+  Consuls) can't be wired yet. Add an ETB replacement that taps an entering
+  permanent when an opposing `EntersTapped` static's `applies_to` selector
+  matches it. (Anthem color filters are now wired — see roadmap.)
+- **Anthem `affected_from_requirement` coverage.** Color (`HasColor`) is now
+  decomposed into `AffectedPermanents::All.color`; `IsToken`/`NotToken`,
+  `HasColor` on the opponent path, and power/toughness thresholds still fall
+  through to `None` (anthem silently doesn't apply). Extend for token anthems
+  (Intangible Virtue, Always Watching) and P/T-gated lords.
 - **Plague Engineer / named-creature-type -1/-1.** Needs a
   `StaticEffect` that diminishes only a chosen creature type among opponents
   (the existing `DiminishCreaturesExceptChosenType` is the inverse). Dropped

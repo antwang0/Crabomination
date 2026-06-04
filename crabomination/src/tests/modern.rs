@@ -2594,6 +2594,43 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn gaeas_anthem_buffs_your_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::gaeas_anthem());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3, "+1/+1 to yours");
+}
+
+#[test]
+fn crusade_buffs_white_creatures_both_players() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::crusade());
+    let mine = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    let theirs = g.add_card_to_battlefield(1, catalog::savannah_lions());
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 3);
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 3, "affects both players' white creatures");
+}
+
+#[test]
+fn bad_moon_buffs_power_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bad_moon());
+    let z = g.add_card_to_battlefield(0, catalog::gifted_aetherborn()); // black 2/3
+    let cp = g.computed_permanent(z).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+0 to a black creature");
+}
+
+#[test]
+fn dictate_of_heliod_buffs_your_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dictate_of_heliod());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 4, "+2/+2 to yours");
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 2, "opponent's unaffected");
+}
+
+#[test]
 fn honor_of_the_pure_buffs_only_white_creatures() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::honor_of_the_pure());
