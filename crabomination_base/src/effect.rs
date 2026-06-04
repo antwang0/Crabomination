@@ -461,6 +461,10 @@ pub enum Predicate {
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
     /// dealt damage this turn."
     PlayerDamagedThisTurn { who: PlayerRef },
+    /// True if any player matched by `who` has lost life this turn (damage or
+    /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
+    /// Spectacle (CR 702.111) — pair with `who: EachOpponent`.
+    PlayerLostLifeThisTurn { who: PlayerRef },
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
@@ -3673,6 +3677,16 @@ pub mod shortcut {
     /// sacrificed at the beginning of the next end step.
     pub fn blitz(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
         crate::card::AlternativeCost { mana_cost, blitz: true, ..Default::default() }
+    }
+
+    /// Spectacle (CR 702.111) alternative cost: cast for `mana_cost` rather
+    /// than the printed cost if an opponent lost life this turn.
+    pub fn spectacle(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+        crate::card::AlternativeCost {
+            mana_cost,
+            condition: Some(Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent }),
+            ..Default::default()
+        }
     }
 
     /// "[Permanents matching `filter`] have '{T}: Add one mana of any

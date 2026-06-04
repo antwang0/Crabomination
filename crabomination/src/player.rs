@@ -105,6 +105,12 @@ pub struct Player {
     /// back-compat.
     #[serde(default)]
     pub was_dealt_damage_this_turn: bool,
+    /// True if this player has lost life this turn (damage or direct life
+    /// loss). Set in `adjust_life` on a negative delta, reset at the active
+    /// player's `do_untap`. Powers Spectacle (CR 702.111). Defaults to false
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub lost_life_this_turn: bool,
     /// Card ids of creatures that have dealt damage to this player so far
     /// this turn (combat or non-combat). Reset for all players at the
     /// active player's `do_untap`. Powers "destroy target creature that
@@ -289,6 +295,7 @@ impl Player {
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
             was_dealt_damage_this_turn: false,
+            lost_life_this_turn: false,
             creatures_that_damaged_me_this_turn: Vec::new(),
             attacked_this_turn: false,
             cards_exiled_this_turn: 0,

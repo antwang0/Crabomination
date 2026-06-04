@@ -608,6 +608,38 @@ pub fn goldhound() -> CardDefinition {
     }
 }
 
+// ── Spectacle (CR 702.111) ───────────────────────────────────────────────────
+
+/// Skewer the Critics — {2}{R} Sorcery. Deal 3 damage to any target.
+/// Spectacle {R}.
+pub fn skewer_the_critics() -> CardDefinition {
+    CardDefinition {
+        name: "Skewer the Critics",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        alternative_cost: Some(crate::effect::shortcut::spectacle(cost(&[r()]))),
+        ..Default::default()
+    }
+}
+
+/// Light Up the Stage — {2}{R} Sorcery. Exile the top two cards of your
+/// library; until the end of your next turn, you may play them. Spectacle {R}.
+pub fn light_up_the_stage() -> CardDefinition {
+    CardDefinition {
+        name: "Light Up the Stage",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+        },
+        alternative_cost: Some(crate::effect::shortcut::spectacle(cost(&[r()]))),
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 

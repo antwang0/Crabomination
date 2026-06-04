@@ -853,6 +853,9 @@ impl GameState {
         if delta > 0 {
             self.players[seat].life_gained_this_turn =
                 self.players[seat].life_gained_this_turn.saturating_add(delta as u32);
+        } else {
+            // delta < 0 — this player lost life (CR 119.3). Powers Spectacle.
+            self.players[seat].lost_life_this_turn = true;
         }
         new_total
     }

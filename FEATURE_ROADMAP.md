@@ -310,7 +310,11 @@ feature; sweep card-batch by card-batch.
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
   per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,
-  ⏳ Replicate, ⏳ Overload, ⏳ Cipher, ⏳ Surge, ⏳ Spectacle, ⏳ Addendum,
+  ⏳ Replicate, ⏳ Overload, ⏳ Cipher, ⏳ Surge, ✅ Spectacle
+  (`shortcut::spectacle` / `AlternativeCost.condition` —
+  `Predicate::PlayerLostLifeThisTurn` + `Player.lost_life_this_turn`, CR
+  702.111: cast for the spectacle cost if an opponent lost life this turn;
+  Skewer the Critics, Light Up the Stage), ⏳ Addendum,
   ⏳ Conspire, ⏳ Demonstrate.
 - **Resource systems:** ✅ Energy ({E}) — `Player.energy` pool +
   `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`

@@ -168,6 +168,30 @@ fn blitz_ardent_elementalist_etb_returns_instant() {
     );
 }
 
+// ── Spectacle (CR 702.111) ───────────────────────────────────────────────────
+
+/// Skewer the Critics can be cast for its Spectacle cost only after an
+/// opponent has lost life this turn.
+#[test]
+fn spectacle_gated_on_opponent_life_loss() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::skewer_the_critics());
+    g.players[0].mana_pool.add(Color::Red, 1); // only {R} — the Spectacle cost
+    let spectacle_cast = GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    };
+    // No opponent life loss yet → Spectacle cast rejected.
+    assert!(!g.would_accept(spectacle_cast.clone()), "Spectacle off without life loss");
+    // Opponent loses life → Spectacle becomes available.
+    g.adjust_life(1, -1);
+    assert!(g.would_accept(spectacle_cast.clone()), "Spectacle on after life loss");
+    g.perform_action(spectacle_cast).expect("cast for Spectacle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 1 - 3, "Skewer dealt 3 after the {{R}} Spectacle cast");
+}
+
 /// Goldhound taps and sacrifices itself for one mana of any color.
 #[test]
 fn goldhound_sac_for_mana() {
