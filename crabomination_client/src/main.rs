@@ -49,7 +49,8 @@ use systems::game_ui::{
     setup_game_hud,
     spawn_ability_menu, spawn_alt_cast_modal, sync_command_zone, sync_flipped_hand_cards,
     sync_game_visuals,
-    handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons, sync_player_hud_seat,
+    handle_audit_buttons, handle_surrender_leave_buttons, pulse_urgent_pass_button,
+    sync_audit_buttons, sync_player_hud_seat,
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
     update_attack_button_label,
     animate_phase_banner, trigger_phase_banner, PhaseBannerTracker,
@@ -285,6 +286,7 @@ fn main() {
         .insert_resource(systems::debug_console::DebugConsoleState::default())
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()
+        .init_resource::<systems::game_ui::SurrenderConfirm>()
         .insert_resource(menu::CliBootHint(load_state_arg))
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
@@ -317,7 +319,7 @@ fn main() {
         // click → save + return to picker.
         .add_systems(
             Update,
-            (sync_audit_buttons, handle_audit_buttons)
+            (sync_audit_buttons, handle_audit_buttons, handle_surrender_leave_buttons)
                 .run_if(in_state(AppState::InGame)),
         )
         // Button polling runs first so handle_game_input can read latched state.

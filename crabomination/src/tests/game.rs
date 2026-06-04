@@ -624,6 +624,37 @@ fn compute_hand_affordances_matches_individual_methods() {
     assert!(empty.castable.is_empty() && empty.kickable.is_empty());
 }
 
+/// Conceding (CR 104.3a) eliminates the player, removes their objects, and
+/// runs state-based actions so the surviving opponent wins. It works
+/// regardless of priority and is a no-op once already eliminated / over.
+#[test]
+fn concede_eliminates_player_and_awards_win_to_opponent() {
+    let mut g = two_player_game();
+    // A permanent owned by the conceding seat should leave with them.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let events = g.concede(1);
+    assert!(g.players[1].eliminated, "conceding seat is eliminated");
+    assert_eq!(g.game_over, Some(Some(0)), "the opponent wins");
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "the conceding player's permanents leave the game (CR 800.4a)",
+    );
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::PlayerConceded { player: 1 })),
+        "a PlayerConceded event is emitted: {events:?}",
+    );
+    assert!(
+        events.iter().any(|e| matches!(e, GameEvent::GameOver { winner: Some(0) })),
+        "a GameOver event names the winner: {events:?}",
+    );
+
+    // Idempotent: conceding again (either seat) once the game is over is a
+    // no-op that emits nothing.
+    assert!(g.concede(1).is_empty(), "re-conceding is a no-op");
+    assert!(g.concede(0).is_empty(), "conceding after game over is a no-op");
+}
+
 /// `pitchable_hand_cards` lists hand cards with a `from_hand` ability
 /// (Spirit Guides) and respects priority.
 #[test]

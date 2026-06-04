@@ -1186,7 +1186,7 @@ impl GameState {
     /// are removed directly (not via the death/exile pipelines) since a
     /// departing player's objects "cease to exist" rather than being
     /// destroyed or sacrificed.
-    fn objects_leave_with_player(&mut self, p: usize) {
+    pub(crate) fn objects_leave_with_player(&mut self, p: usize) {
         self.battlefield.retain(|c| c.owner != p);
         for c in &mut self.battlefield {
             if c.controller == p {

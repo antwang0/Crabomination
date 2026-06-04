@@ -10,9 +10,9 @@ mod player_stats;
 mod popups;
 
 pub use buttons::{
-    handle_audit_buttons, handle_export_keypress, poll_action_buttons, poll_player_chip_clicks,
-    pulse_urgent_pass_button, sync_audit_buttons, update_attack_all_visibility,
-    update_attack_button_label, update_pass_button,
+    handle_audit_buttons, handle_export_keypress, handle_surrender_leave_buttons,
+    poll_action_buttons, poll_player_chip_clicks, pulse_urgent_pass_button, sync_audit_buttons,
+    update_attack_all_visibility, update_attack_button_label, update_pass_button,
 };
 pub use player_stats::{
     animate_life_flash, sync_player_hud_seat, trigger_life_flash, update_mana_pips,
@@ -290,6 +290,33 @@ pub struct NextTurnButton;
 
 #[derive(Component)]
 pub struct ExportStateButton;
+
+/// "Surrender" button — concedes the match (CR 104.3a). Guarded by a
+/// two-click confirm (see [`SurrenderConfirm`]) so a stray click can't throw
+/// the game.
+#[derive(Component)]
+pub struct SurrenderButton;
+
+/// Text label inside [`SurrenderButton`], swapped to a confirm prompt while
+/// the surrender is armed.
+#[derive(Component)]
+pub struct SurrenderButtonLabel;
+
+/// "Leave Match" button — abandons the match and returns to the main menu.
+/// `OnExit(AppState::InGame)` (`teardown_net_session`) drops the connection.
+#[derive(Component)]
+pub struct LeaveButton;
+
+/// Two-click arming state for the Surrender button. The first click arms it
+/// (and the label changes to a confirm prompt) until `armed_until`; a second
+/// click before then sends the concession, and the arm lapses silently
+/// otherwise so a forgotten first click can't surrender later.
+#[derive(Resource, Default)]
+pub struct SurrenderConfirm {
+    /// `Time::elapsed_secs` after which an armed confirm expires. `None` when
+    /// not armed.
+    pub armed_until: Option<f32>,
+}
 
 /// Audit-mode "Mark Verified" button — only `Display::Flex` when the
 /// in-game session was launched from the audit picker. Adds the card
@@ -716,6 +743,49 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 .with_children(|p| {
                     p.spawn((
                         Text::new("Skip"),
+                        tf(13.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                    ));
+                });
+
+                // Match-exit controls, kept at the bottom of the strip and
+                // visually separated (danger red / neutral) so they're not
+                // mistaken for in-turn actions.
+                p.spawn((
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        margin: UiRect::top(Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_DANGER_BG),
+                    HoverTint::new(theme::BUTTON_DANGER_BG),
+                    Button,
+                    SurrenderButton,
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Surrender"),
+                        tf(13.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        SurrenderButtonLabel,
+                    ));
+                });
+
+                p.spawn((
+                    Node {
+                        padding: UiRect::all(Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    Button,
+                    LeaveButton,
+                ))
+                .with_children(|p| {
+                    p.spawn((
+                        Text::new("Leave Match"),
                         tf(13.0),
                         TextColor(theme::TEXT_PRIMARY),
                     ));

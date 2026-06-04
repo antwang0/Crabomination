@@ -713,6 +713,32 @@ fn broadcast_match_over(
 
 /// Apply one action and broadcast results. Returns `true` if the action was
 /// accepted (state changed), `false` if it was rejected.
+/// Broadcast a single combined `Update` (events + post-action view) to every
+/// seat and spectator — one length-prefixed write/flush per recipient instead
+/// of a back-to-back `Events` + `View` pair. Spectators always get seat 0's
+/// projection for a stable POV.
+fn broadcast_update(
+    state: &GameState,
+    wire_events: &[GameEventWire],
+    seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
+    spectator_tx: &[mpsc::Sender<ServerMsg>],
+) {
+    for (i, maybe_tx) in seat_tx.iter().enumerate() {
+        if let Some(tx) = maybe_tx {
+            let _ = tx.send(ServerMsg::Update {
+                events: wire_events.to_vec(),
+                view: Box::new(view::project(state, i)),
+            });
+        }
+    }
+    for tx in spectator_tx {
+        let _ = tx.send(ServerMsg::Update {
+            events: wire_events.to_vec(),
+            view: Box::new(view::project(state, 0)),
+        });
+    }
+}
+
 fn handle_action(
     state: &mut GameState,
     seat: usize,
@@ -720,6 +746,20 @@ fn handle_action(
     seat_tx: &[Option<mpsc::Sender<ServerMsg>>],
     spectator_tx: &[mpsc::Sender<ServerMsg>],
 ) -> bool {
+    // CR 104.3a — a concession is legal at any time, by the conceding seat,
+    // regardless of whose priority it is. Route it straight to the *sending*
+    // seat (so a client can't concede on another's behalf) instead of through
+    // the priority-gated `perform_action` path.
+    if matches!(action, GameAction::Concede) {
+        let events = state.concede(seat);
+        if events.is_empty() {
+            return false; // already eliminated / game already over
+        }
+        let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
+        broadcast_update(state, &wire_events, seat_tx, spectator_tx);
+        return true;
+    }
+
     let expected = expected_actor(state, &action);
     if seat != expected {
         let err = format!("seat {seat} may not act now (expected seat {expected})");
@@ -729,25 +769,7 @@ fn handle_action(
     match state.perform_action(action) {
         Ok(events) => {
             let wire_events: Vec<GameEventWire> = events.iter().map(Into::into).collect();
-            // One combined frame per seat: events + the post-action view,
-            // halving the per-action writes/flushes versus the old
-            // Events-then-View pair.
-            for (i, maybe_tx) in seat_tx.iter().enumerate() {
-                if let Some(tx) = maybe_tx {
-                    let _ = tx.send(ServerMsg::Update {
-                        events: wire_events.clone(),
-                        view: Box::new(view::project(state, i)),
-                    });
-                }
-            }
-            // Spectators always see seat-0's projection so they get a
-            // stable POV across the match.
-            for tx in spectator_tx {
-                let _ = tx.send(ServerMsg::Update {
-                    events: wire_events.clone(),
-                    view: Box::new(view::project(state, 0)),
-                });
-            }
+            broadcast_update(state, &wire_events, seat_tx, spectator_tx);
             true
         }
         Err(e) => {
@@ -1263,6 +1285,41 @@ mod tests {
             .recv_timeout(Duration::from_secs(5))
             .expect("run_match should terminate after all humans disconnect");
         watcher.join().unwrap();
+    }
+
+    /// A `Concede` is accepted from a seat that does *not* hold priority
+    /// (CR 104.3a) — the server intercepts it, eliminates the sender, and the
+    /// match ends with the opponent as winner.
+    #[test]
+    fn concede_off_priority_ends_match() {
+        // Seat 0 holds priority at game start; seat 1 concedes anyway.
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)])
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        c1.tx
+            .send(ClientMsg::SubmitAction(GameAction::Concede))
+            .unwrap();
+
+        // Seat 0 wins; both seats should see a MatchOver to that effect.
+        let msgs = drain_within(&c0.rx, 10, Duration::from_secs(2));
+        assert!(
+            msgs.iter()
+                .any(|m| matches!(m, ServerMsg::MatchOver { winner: Some(0) })),
+            "seat 0 must win after seat 1 concedes off-priority: {:?}",
+            msgs.iter().map(std::mem::discriminant).collect::<Vec<_>>(),
+        );
+
+        let outcome = handle.join().unwrap();
+        assert_eq!(outcome.winner, Some(Some(0)));
+        drop(c0);
+        drop(c1);
     }
 
     // ── Reconnection (run_match_reconnectable) ───────────────────────────────

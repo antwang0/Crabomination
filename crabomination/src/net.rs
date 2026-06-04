@@ -1167,6 +1167,9 @@ pub enum GameEventWire {
     /// can animate cycle activations distinctly from regular
     /// hand-discards. Per CR 702.29.
     CardCycled { player: usize, card_id: CardId },
+    /// Wire mirror of `GameEvent::PlayerConceded` (CR 104.3a). Lets client
+    /// UIs log "Player N conceded" distinctly from a life-loss game end.
+    PlayerConceded { player: usize },
     GameOver { winner: Option<usize> },
 }
 
@@ -1364,6 +1367,9 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
+            GameEvent::PlayerConceded { player } => {
+                GameEventWire::PlayerConceded { player: *player }
+            }
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
         }
     }
@@ -1502,6 +1508,7 @@ impl GameEventWire {
             E::CardCycled { player, card_id } => {
                 format!("P{player} cycled {}", name(*card_id))
             }
+            E::PlayerConceded { player } => format!("P{player} conceded"),
             E::GameOver { winner } => match winner {
                 Some(p) => format!("Game over — P{p} wins"),
                 None => "Game over — draw".into(),

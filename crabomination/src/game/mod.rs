@@ -3208,9 +3208,38 @@ impl GameState {
             GameAction::Crew { vehicle, crew_creatures } => self.crew(vehicle, &crew_creatures),
             GameAction::Saddle { mount, creatures } => self.saddle(mount, &creatures),
             GameAction::Ninjutsu { ninja, returning } => self.ninjutsu(ninja, returning),
+            // Fallback attribution for direct (non-networked) callers — the
+            // server intercepts `Concede` in `handle_action` and routes it to
+            // the *sending* seat via `concede`, bypassing this path entirely.
+            GameAction::Concede => Ok(self.concede(self.active_player_idx)),
         }?;
         self.dispatch_triggers_for_events(&events);
         Ok(events)
+    }
+
+    /// CR 104.3a — `seat` concedes and leaves the game immediately. Legal at
+    /// any time, regardless of priority, so this does *not* go through the
+    /// priority-gated action path. Marks the player eliminated, removes the
+    /// objects that leave with them (CR 800.4a), then runs state-based
+    /// actions, which resolve the win/draw for the remaining team(s).
+    ///
+    /// No-ops (returns no events) if `seat` is out of range, already
+    /// eliminated, or the game is already over.
+    pub fn concede(&mut self, seat: usize) -> Vec<GameEvent> {
+        if seat >= self.players.len()
+            || self.players[seat].eliminated
+            || self.game_over.is_some()
+        {
+            return Vec::new();
+        }
+        self.players[seat].eliminated = true;
+        let mut events = vec![GameEvent::PlayerConceded { player: seat }];
+        // CR 800.4a — the conceding player's objects leave with them. SBAs
+        // skip already-eliminated seats, so this won't fire for them there.
+        self.objects_leave_with_player(seat);
+        // Resolve the game-over / surviving-team determination.
+        events.extend(self.check_state_based_actions());
+        events
     }
 
     /// CR 701.8 / 702.35 — discard `card_id` from player `p`'s hand. This

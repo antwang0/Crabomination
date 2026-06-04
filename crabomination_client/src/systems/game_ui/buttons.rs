@@ -12,16 +12,22 @@
 //!   surface in one place.
 
 use bevy::prelude::*;
-use crabomination::game::TurnStep;
+use crabomination::game::{GameAction, TurnStep};
 
-use crate::net_plugin::CurrentView;
+use crate::menu::AppState;
+use crate::net_plugin::{CurrentView, NetOutbox};
 use crate::theme::{self, HoverTint};
 
 use super::{
     AttackAllButton, AttackAllPanel, AttackButtonLabel, AuditMarkVerifiedButton, AuditSkipButton,
-    ButtonState, EndTurnButton, ExportStateButton, NextTurnButton, PassButtonLabel,
-    PassButtonUrgent, PassPriorityButton, PlayerHudPanel,
+    ButtonState, EndTurnButton, ExportStateButton, LeaveButton, NextTurnButton, PassButtonLabel,
+    PassButtonUrgent, PassPriorityButton, PlayerHudPanel, SurrenderButton, SurrenderButtonLabel,
+    SurrenderConfirm,
 };
+
+/// How long (seconds) an armed Surrender stays armed waiting for the confirm
+/// second click before lapsing back to its idle label.
+const SURRENDER_CONFIRM_SECS: f32 = 3.0;
 
 // ── Button polling ───────────────────────────────────────────────────────────
 
@@ -275,5 +281,78 @@ pub fn handle_export_keypress(
     }
     if keyboard.just_pressed(KeyCode::KeyX) || btns.export {
         crate::systems::export_prompt::open_export_prompt(&mut state);
+    }
+}
+
+// ── Surrender / Leave ──────────────────────────────────────────────────────────
+
+/// Drive the two match-exit buttons:
+/// * **Surrender** — concede the game (CR 104.3a). Guarded by a two-click
+///   confirm: the first press arms it (and the label flips to a prompt); a
+///   second press within [`SURRENDER_CONFIRM_SECS`] submits
+///   [`GameAction::Concede`]. A lone first press lapses silently so it can't
+///   surrender a later game.
+/// * **Leave Match** — return to the main menu; the `OnExit(InGame)`
+///   `teardown_net_session` drops the connection.
+#[allow(clippy::too_many_arguments)]
+pub fn handle_surrender_leave_buttons(
+    time: Res<Time>,
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut confirm: ResMut<SurrenderConfirm>,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut pending: ResMut<crate::menu::PendingNetMode>,
+    surrender_btn: Query<&Interaction, (Changed<Interaction>, With<SurrenderButton>)>,
+    leave_btn: Query<&Interaction, (Changed<Interaction>, With<LeaveButton>)>,
+    mut label_q: Query<&mut Text, With<SurrenderButtonLabel>>,
+) {
+    let now = time.elapsed_secs();
+
+    // Lapse a stale arm so a forgotten first click can't surrender later.
+    if let Some(until) = confirm.armed_until
+        && now > until
+    {
+        confirm.armed_until = None;
+        set_surrender_label(&mut label_q, "Surrender");
+    }
+
+    if leave_btn.iter().any(|i| *i == Interaction::Pressed) {
+        confirm.armed_until = None;
+        set_surrender_label(&mut label_q, "Surrender");
+        // Mirror the settings-modal "Leave Game": drop any queued mode so the
+        // next menu visit starts clean. `OnExit(InGame)` disconnects.
+        pending.0 = None;
+        next_state.set(AppState::Menu);
+        return;
+    }
+
+    if surrender_btn.iter().any(|i| *i == Interaction::Pressed) {
+        // Nothing to concede once the game is already decided.
+        if view.0.as_ref().is_some_and(|cv| cv.game_over.is_some()) {
+            return;
+        }
+        match confirm.armed_until {
+            None => {
+                confirm.armed_until = Some(now + SURRENDER_CONFIRM_SECS);
+                set_surrender_label(&mut label_q, "Confirm Surrender?");
+            }
+            Some(_) => {
+                if let Some(outbox) = &outbox {
+                    outbox.submit(GameAction::Concede);
+                }
+                confirm.armed_until = None;
+                set_surrender_label(&mut label_q, "Surrender");
+            }
+        }
+    }
+}
+
+/// Set the Surrender button's label text (idempotent — skips redundant
+/// writes so it doesn't dirty change-detection every frame).
+fn set_surrender_label(q: &mut Query<&mut Text, With<SurrenderButtonLabel>>, s: &str) {
+    if let Ok(mut t) = q.single_mut()
+        && t.0 != s
+    {
+        t.0 = s.to_string();
     }
 }

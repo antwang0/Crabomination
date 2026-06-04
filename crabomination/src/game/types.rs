@@ -307,6 +307,12 @@ pub enum GameAction {
     /// Ninjutsu in your hand) onto the battlefield tapped and attacking the
     /// same defender, paying the ninjutsu cost.
     Ninjutsu { ninja: CardId, returning: CardId },
+    /// CR 104.3a — the acting player concedes and leaves the game
+    /// immediately. Carries no seat: the *server* attributes it to the
+    /// connection that sent it (so a client can't concede on another seat's
+    /// behalf), and a player may concede at any time regardless of priority.
+    /// See `GameState::concede` and the server's `handle_action` intercept.
+    Concede,
 }
 
 // ── Delayed triggers ─────────────────────────────────────────────────────────
@@ -719,6 +725,9 @@ pub enum GameEvent {
     /// player cycles a card") see a distinct event from regular hand
     /// discards.
     CardCycled { player: usize, card_id: CardId },
+    /// CR 104.3a — `player` conceded and left the game. Emitted before the
+    /// `GameOver` that the resulting state-based-action pass produces.
+    PlayerConceded { player: usize },
     GameOver { winner: Option<usize> },
 }
 
