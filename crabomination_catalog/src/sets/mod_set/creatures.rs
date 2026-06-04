@@ -5163,3 +5163,69 @@ pub fn sheoldred_the_apocalypse() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Bitterblossom — {1}{B} Tribal Enchantment — Faerie. "At the beginning of
+/// your upkeep, you lose 1 life and create a 1/1 black Faerie Rogue creature
+/// token with flying." (MOR)
+pub fn bitterblossom() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Bitterblossom",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Faerie Rogue".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+                            ..Default::default()
+                        },
+                        keywords: vec![Keyword::Flying],
+                        ..Default::default()
+                    },
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Brineborn Cutthroat — {1}{U} Creature — Merfolk Pirate 1/2, Flash. "Whenever
+/// you cast a spell during an opponent's turn, put a +1/+1 counter on Brineborn
+/// Cutthroat." (M20)
+pub fn brineborn_cutthroat() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Brineborn Cutthroat",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::Not(Box::new(Predicate::IsTurnOf(PlayerRef::You)))),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

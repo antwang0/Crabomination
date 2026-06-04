@@ -2594,6 +2594,36 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn bitterblossom_upkeep_makes_faerie_and_drains() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bitterblossom());
+    g.active_player_idx = 0;
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "lose 1 at upkeep");
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Faerie Rogue").count(),
+        1, "one Faerie Rogue minted");
+}
+
+#[test]
+fn brineborn_cutthroat_grows_on_opponents_turn_cast() {
+    let mut g = two_player_game();
+    let bc = g.add_card_to_battlefield(0, catalog::brineborn_cutthroat());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1; // opponent's turn
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("flash-cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bc).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "grew on opponent's-turn cast");
+}
+
+#[test]
 fn guttersnipe_pings_each_opponent_on_instant() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::guttersnipe());
