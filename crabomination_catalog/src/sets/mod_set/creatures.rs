@@ -6635,3 +6635,49 @@ pub fn river_boa() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── French-vanilla filler ────────────────────────────────────────────────────
+
+/// Razorfoot Griffin — {2}{W} Creature — Griffin 2/2 with Flying and First
+/// strike. (7ED)
+pub fn razorfoot_griffin() -> CardDefinition {
+    CardDefinition {
+        name: "Razorfoot Griffin",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Griffin], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        ..Default::default()
+    }
+}
+
+/// Canopy Spider — {1}{G} Creature — Spider 1/3 with Reach. (M10)
+pub fn canopy_spider() -> CardDefinition {
+    CardDefinition {
+        name: "Canopy Spider",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Bog Wraith — {3}{B} Creature — Wraith 3/3 with Swampwalk. (LEA)
+pub fn bog_wraith() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Bog Wraith",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wraith], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Landwalk(LandType::Swamp)],
+        ..Default::default()
+    }
+}

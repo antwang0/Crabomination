@@ -2839,6 +2839,75 @@ fn goldmeadow_harrier_taps_target_creature() {
 }
 
 #[test]
+fn french_vanilla_filler_stats_and_keywords() {
+    use crate::card::{Keyword, LandType};
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::snapping_drake());
+    let griffin = g.add_card_to_battlefield(0, catalog::razorfoot_griffin());
+    let spider = g.add_card_to_battlefield(0, catalog::canopy_spider());
+    let wraith = g.add_card_to_battlefield(0, catalog::bog_wraith());
+    let cd = g.computed_permanent(drake).unwrap();
+    assert_eq!((cd.power, cd.toughness), (3, 2));
+    assert!(cd.keywords.contains(&Keyword::Flying));
+    let cg = g.computed_permanent(griffin).unwrap();
+    assert!(cg.keywords.contains(&Keyword::Flying) && cg.keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(spider).unwrap().keywords.contains(&Keyword::Reach));
+    assert!(g.computed_permanent(wraith).unwrap().keywords.contains(&Keyword::Landwalk(LandType::Swamp)));
+}
+
+#[test]
+fn mana_rocks_enter_tapped_and_produce_mana() {
+    // (factory, mana produced) for the new tapped rocks.
+    for (factory, expected) in [
+        (catalog::worn_powerstone as fn() -> _, 2),
+        (catalog::marble_diamond as fn() -> _, 1),
+        (catalog::charcoal_diamond as fn() -> _, 1),
+    ] {
+        let mut g = two_player_game();
+        let rock = g.add_card_to_battlefield(0, factory());
+        g.fire_self_etb_triggers(rock, 0);
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(rock).unwrap().tapped, "rock enters tapped");
+        // Untap it (simulate next turn) then tap for mana.
+        g.battlefield_find_mut(rock).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: rock, ability_index: 0, target: None, x_value: None,
+        }).expect("tap for mana");
+        assert_eq!(g.players[0].mana_pool.total(), expected);
+    }
+}
+
+#[test]
+fn prophetic_prism_cantrips_on_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let prism = g.add_card_to_battlefield(0, catalog::prophetic_prism());
+    let hand = g.players[0].hand.len();
+    g.fire_self_etb_triggers(prism, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "Prophetic Prism draws a card on entry");
+}
+
+#[test]
+fn fountain_of_renewal_gains_life_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fountain_of_renewal());
+    g.active_player_idx = 0;
+    let life = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gain 1 life at your upkeep");
+}
+
+#[test]
+fn phyrexian_walker_is_a_zero_three() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::phyrexian_walker());
+    let cp = g.computed_permanent(w).unwrap();
+    assert_eq!((cp.power, cp.toughness), (0, 3));
+}
+
+#[test]
 fn green_beaters_have_expected_stats_and_keywords() {
     use crate::card::Keyword;
     let mut g = two_player_game();

@@ -1048,3 +1048,93 @@ pub fn hedron_archive() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Mana rocks & utility artifacts ───────────────────────────────────────────
+
+/// Triggered ability: this permanent enters the battlefield tapped.
+fn enters_tapped_trigger() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::Tap { what: Selector::This },
+    }
+}
+
+/// Tap-for-mana ability shorthand (no mana cost).
+fn tap_for(pool: ManaPayload) -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool },
+        ..Default::default()
+    }
+}
+
+/// Worn Powerstone — {3} Artifact. Enters tapped. "{T}: Add {C}{C}." (mana
+/// rock that ramps two colorless). (5ED)
+pub fn worn_powerstone() -> CardDefinition {
+    CardDefinition {
+        name: "Worn Powerstone",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![enters_tapped_trigger()],
+        activated_abilities: vec![tap_for(ManaPayload::Colorless(Value::Const(2)))],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Walker — {0} Artifact Creature — Construct 0/3 (vanilla). (HML)
+pub fn phyrexian_walker() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Walker",
+        cost: cost(&[generic(0)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![crate::card::CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Prophetic Prism — {2} Artifact. "When this enters, draw a card. {1}, {T}:
+/// Add one mana of any color." (CON)
+pub fn prophetic_prism() -> CardDefinition {
+    CardDefinition {
+        name: "Prophetic Prism",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fountain of Renewal — {1} Artifact. "At the beginning of your upkeep, you
+/// gain 1 life." (The {4},{T}, Sacrifice: draw a card mode is omitted.) (M19)
+pub fn fountain_of_renewal() -> CardDefinition {
+    CardDefinition {
+        name: "Fountain of Renewal",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
