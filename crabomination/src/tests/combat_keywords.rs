@@ -290,6 +290,30 @@ fn combat_preview_flags_a_losing_trade() {
     assert!(prev.damage_to_players.is_empty(), "no trample, no player damage");
 }
 
+#[test]
+fn combat_preview_first_strike_attacker_survives_lethal_blocker() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // 2/2 first-strike attacker into a 2/2 blocker: the attacker kills the
+    // blocker before it deals damage, so only the blocker is projected to die.
+    let mut striker = body("Striker", 2, 2, vec![]);
+    striker.keywords = vec![Keyword::FirstStrike];
+    let atk = g.add_card_to_battlefield(0, striker);
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    let prev = crate::server::view::project(&g, 0).combat_preview.expect("preview");
+    assert_eq!(prev.dying_creatures, vec![blk],
+        "first strike kills the blocker before it deals damage; attacker survives");
+}
+
 // ── CR 702.135 Afterlife ─────────────────────────────────────────────────────
 
 #[test]

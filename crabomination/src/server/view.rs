@@ -141,26 +141,40 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
         } else {
             // Blocked: attacker assigns lethal to blockers in id order;
             // trample overflows to the defending player.
-            let total_blocker_power: i32 = blockers.iter().map(|b| b.power().max(0)).sum();
-            // Attacker dies if blockers' combined power (or any deathtouch
-            // blocker dealing ≥1) is lethal.
-            let dt_blocker = blockers.iter().any(|b| b.power() > 0 && b.has_keyword(&Keyword::Deathtouch));
+            let has_fs = |c: &crate::card::CardInstance| {
+                c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
+            };
+            let attacker_fs = has_fs(a);
+            // Which blockers does the attacker kill? (lethal spread, deathtouch
+            // first-blocker-eats-all). Computed first so first-strike removal
+            // can suppress those blockers' damage back.
+            let mut remaining = a_power;
+            let mut killed: Vec<CardId> = Vec::new();
+            for b in &blockers {
+                let needed = b.toughness().max(1);
+                if lethal_from(a, b) && (a.has_keyword(&Keyword::Deathtouch) || remaining >= needed) {
+                    killed.push(b.id);
+                    remaining -= if a.has_keyword(&Keyword::Deathtouch) { 1 } else { needed };
+                }
+            }
+            // CR 702.7 — a non-first-strike blocker the attacker kills in the
+            // first-strike step deals no damage back. Such blockers don't
+            // count toward the attacker's death.
+            let deals_back =
+                |b: &crate::card::CardInstance| !(attacker_fs && !has_fs(b) && killed.contains(&b.id));
+            let total_blocker_power: i32 =
+                blockers.iter().filter(|b| deals_back(b)).map(|b| b.power().max(0)).sum();
+            let dt_blocker = blockers
+                .iter()
+                .any(|b| b.power() > 0 && b.has_keyword(&Keyword::Deathtouch) && deals_back(b));
             if (total_blocker_power > 0 || dt_blocker)
                 && !a.has_keyword(&Keyword::Indestructible)
                 && (total_blocker_power >= a.toughness() || dt_blocker)
             {
                 dying.push(a.id);
             }
-            // Blockers that take lethal from the attacker. With deathtouch
-            // the first blocker eats all of it; otherwise damage is spread
-            // lethal-first across the assignment order.
-            let mut remaining = a_power;
-            for b in &blockers {
-                let needed = b.toughness().max(1);
-                if lethal_from(a, b) && (a.has_keyword(&Keyword::Deathtouch) || remaining >= needed) {
-                    dying.push(b.id);
-                    remaining -= if a.has_keyword(&Keyword::Deathtouch) { 1 } else { needed };
-                }
+            for bid in &killed {
+                dying.push(*bid);
             }
             // Trample overflow (CR 510.1c): leftover after lethal to all
             // blockers spills to the defending player.
@@ -180,9 +194,10 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
                 *lifegain.entry(a.controller).or_insert(0) += a_power;
             }
             // Blockers with lifelink gain their controller life for the
-            // damage they deal to the attacker.
+            // damage they deal to the attacker (a first-struck-dead blocker
+            // deals none).
             for b in &blockers {
-                if b.has_keyword(&Keyword::Lifelink) {
+                if b.has_keyword(&Keyword::Lifelink) && deals_back(b) {
                     *lifegain.entry(b.controller).or_insert(0) += b.power().max(0);
                 }
             }

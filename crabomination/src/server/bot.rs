@@ -492,11 +492,21 @@ fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &
     body.map(|b| !effect_imposes_self_cost(b)).unwrap_or(true)
 }
 
-/// Recursively find the `Effect::MayDo` body with description `desc`.
+/// Recursively find the optional-effect body whose prompt is `desc`. Both
+/// `Effect::MayDo` and `Effect::MayPay` surface as a `Decision::OptionalTrigger`
+/// keyed on their description, so the bot's self-cost screen (e.g. a "you may
+/// pay {2}: each player loses 3 life" body it shouldn't auto-accept) applies to
+/// both shapes.
 fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
     match eff {
-        Effect::MayDo { description, body } if description == desc => Some(body),
-        Effect::MayDo { body, .. } | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
+        Effect::MayDo { description, body } | Effect::MayPay { description, body, .. }
+            if description == desc =>
+        {
+            Some(body)
+        }
+        Effect::MayDo { body, .. }
+        | Effect::MayPay { body, .. }
+        | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
         Effect::Seq(v) => v.iter().find_map(|e| find_maydo_body(e, desc)),
         Effect::If { then, else_, .. } => {
             find_maydo_body(then, desc).or_else(|| find_maydo_body(else_, desc))
@@ -1738,6 +1748,35 @@ mod tests {
         );
         assert!(!optional_trigger_beneficial(&g, id, "you may"),
             "a 'you may lose 3 life' optional trigger is declined");
+    }
+
+    /// `MayPay` shares the `OptionalTrigger` decision shape with `MayDo`, so
+    /// the bot's self-cost screen must introspect it too: a "pay {1}: you lose
+    /// 3 life" body is declined even though it's reachable only via MayPay.
+    #[test]
+    fn bot_declines_self_costly_maypay() {
+        use crate::card::{CardType, Subtypes, TriggeredAbility};
+        use crate::effect::{EventKind, EventScope, EventSpec, Selector, Value};
+        let mut g = two_player_game();
+        let def = CardDefinition {
+            name: "PayDownside",
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(),
+            power: 2,
+            toughness: 2,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::MayPay {
+                    description: "you may pay".to_string(),
+                    mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
+                    body: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(3) }),
+                },
+            }],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, def);
+        assert!(!optional_trigger_beneficial(&g, id, "you may pay"),
+            "a MayPay whose body costs the bot 3 life is declined");
     }
 
     /// Free, fixed-payload mana rocks like Sol Ring should be picked up by
