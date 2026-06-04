@@ -2839,6 +2839,62 @@ fn goldmeadow_harrier_taps_target_creature() {
 }
 
 #[test]
+fn faerie_seer_flies_and_scries_on_entry() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let fs = g.add_card_to_battlefield(0, catalog::faerie_seer());
+    g.fire_self_etb_triggers(fs, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(fs).unwrap().keywords.contains(&Keyword::Flying), "has flying");
+}
+
+#[test]
+fn looter_il_kor_loots_on_combat_damage() {
+    let mut g = two_player_game();
+    let looter = g.add_card_to_battlefield(0, catalog::looter_il_kor());
+    g.add_card_to_hand(0, catalog::island()); // a card to discard
+    g.add_card_to_library(0, catalog::grizzly_bears()); // a card to draw
+    g.clear_sickness(looter);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: looter, target: AttackTarget::Player(1),
+    }])).expect("attack (Shadow → unblockable)");
+    for _ in 0..12 {
+        if g.players[0].graveyard.len() > gy { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[0].graveyard.len() > gy, "looted: a card was discarded after drawing");
+}
+
+#[test]
+fn ninja_of_the_deep_hours_draws_on_combat_damage() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ninja = g.add_card_to_battlefield(0, catalog::ninja_of_the_deep_hours());
+    g.add_card_to_library(0, catalog::island());
+    g.clear_sickness(ninja);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ninja, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..12 {
+        if g.players[0].hand.len() > hand { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card on connect");
+}
+
+#[test]
 fn diregraf_ghoul_enters_tapped() {
     let mut g = two_player_game();
     let ghoul = g.add_card_to_battlefield(0, catalog::diregraf_ghoul());

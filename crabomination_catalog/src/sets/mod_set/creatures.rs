@@ -6504,3 +6504,75 @@ pub fn mesmeric_fiend() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Blue tempo / fliers / ninjas ─────────────────────────────────────────────
+
+/// Faerie Seer — {U} Creature — Faerie Wizard 1/1 with Flying. "When this
+/// enters, scry 2." (MH2)
+pub fn faerie_seer() -> CardDefinition {
+    CardDefinition {
+        name: "Faerie Seer",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::etb_scry(2)],
+        ..Default::default()
+    }
+}
+
+/// Looter il-Kor — {1}{U} Creature — Kor Rogue 1/1 with Shadow. "Whenever
+/// this deals combat damage to a player, draw a card, then discard a card." (TSP)
+pub fn looter_il_kor() -> CardDefinition {
+    CardDefinition {
+        name: "Looter il-Kor",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Shadow],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ninja of the Deep Hours — {1}{U} Creature — Human Ninja 2/2 with
+/// Ninjutsu {1}{U}. "Whenever this deals combat damage to a player, you may
+/// draw a card." (BOK)
+pub fn ninja_of_the_deep_hours() -> CardDefinition {
+    CardDefinition {
+        name: "Ninja of the Deep Hours",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Ninja],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Ninjutsu(cost(&[generic(1), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Draw a card?".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
