@@ -612,6 +612,15 @@ pub struct PreventionShield {
     pub remaining: Option<u32>,
 }
 
+/// CR 731 — the game's day/night designation. The game starts as neither
+/// (`GameState.day_night == None`); once it becomes day or night it has
+/// exactly one of these from then on.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum DayNight {
+    Day,
+    Night,
+}
+
 #[derive(Debug, Clone)]
 pub enum GameEvent {
     StepChanged(TurnStep),
@@ -685,6 +694,8 @@ pub enum GameEvent {
     MonarchChanged { player: usize },
     /// CR 700.6 — `player` got the city's blessing (Ascend).
     CityBlessingGained { player: usize },
+    /// CR 731 — the game became day or night.
+    DayNightChanged { day_night: DayNight },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },

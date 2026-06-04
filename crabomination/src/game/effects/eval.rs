@@ -321,6 +321,8 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].city_blessing),
+            Predicate::IsDay => self.day_night == Some(crate::game::types::DayNight::Day),
+            Predicate::IsNight => self.day_night == Some(crate::game::types::DayNight::Night),
             Predicate::PlayerDamagedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

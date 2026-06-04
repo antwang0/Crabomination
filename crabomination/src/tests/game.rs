@@ -6499,3 +6499,60 @@ fn city_blessing_predicate_gates_an_effect() {
     g.resolve_effect(&gated, &ctx).unwrap();
     assert_eq!(g.players[0].hand.len(), before + 1, "with blessing → draw");
 }
+
+// ── CR 731 Day and Night + CR 502.2 transition ───────────────────────────────
+
+#[test]
+fn become_day_and_night_set_the_designation() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&Effect::BecomeDay, &ctx).unwrap();
+    assert_eq!(g.day_night, Some(DayNight::Day));
+    g.resolve_effect(&Effect::BecomeNight, &ctx).unwrap();
+    assert_eq!(g.day_night, Some(DayNight::Night));
+}
+
+#[test]
+fn cr_502_2_day_becomes_night_with_no_spells_last_turn() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    g.day_night = Some(DayNight::Day);
+    g.previous_turn_active = Some(1);
+    g.players[1].spells_cast_this_turn = 0;
+    let mut ev = vec![];
+    g.check_day_night_transition(&mut ev);
+    assert_eq!(g.day_night, Some(DayNight::Night), "day → night when no spells were cast");
+}
+
+#[test]
+fn cr_502_2_night_becomes_day_with_two_spells_last_turn() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    g.day_night = Some(DayNight::Night);
+    g.previous_turn_active = Some(1);
+    g.players[1].spells_cast_this_turn = 2;
+    let mut ev = vec![];
+    g.check_day_night_transition(&mut ev);
+    assert_eq!(g.day_night, Some(DayNight::Day), "night → day when 2+ spells were cast");
+}
+
+#[test]
+fn cr_502_2_neither_stays_neither() {
+    let mut g = two_player_game();
+    g.previous_turn_active = Some(1);
+    let mut ev = vec![];
+    g.check_day_night_transition(&mut ev);
+    assert_eq!(g.day_night, None, "no check while the game is neither day nor night");
+}
+
+#[test]
+fn cr_731_is_day_is_night_predicates() {
+    use crate::card::Predicate;
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.day_night = Some(DayNight::Day);
+    assert!(g.evaluate_predicate(&Predicate::IsDay, &ctx));
+    assert!(!g.evaluate_predicate(&Predicate::IsNight, &ctx));
+}

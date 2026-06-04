@@ -487,6 +487,15 @@ pub struct GameState {
     /// (None = no monarch) for snapshot back-compat.
     #[serde(default)]
     pub monarch: Option<usize>,
+    /// CR 731 — the game's day/night designation (None = neither, the
+    /// starting state). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub day_night: Option<crate::game::types::DayNight>,
+    /// The active player of the turn that just ended — read by the CR 502.2
+    /// day/night turn-based check (which consults the *previous* turn's
+    /// active player's spell count). `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub(crate) previous_turn_active: Option<usize>,
 }
 
 /// A pending control-reversion entry — see `GameState.temporary_control`.
@@ -557,6 +566,8 @@ impl Clone for GameState {
             plotted_cards: self.plotted_cards.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
             monarch: self.monarch,
+            day_night: self.day_night,
+            previous_turn_active: self.previous_turn_active,
         }
     }
 }
@@ -632,6 +643,8 @@ impl GameState {
             plotted_cards: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
             monarch: None,
+            day_night: None,
+            previous_turn_active: None,
         }
     }
 
@@ -643,6 +656,32 @@ impl GameState {
         }
         self.monarch = Some(player);
         events.push(GameEvent::MonarchChanged { player });
+    }
+
+    /// CR 731 — set the game's day/night designation, emitting
+    /// `DayNightChanged` on a real change.
+    pub(crate) fn set_day_night(&mut self, dn: crate::game::types::DayNight, events: &mut Vec<GameEvent>) {
+        if self.day_night == Some(dn) {
+            return;
+        }
+        self.day_night = Some(dn);
+        events.push(GameEvent::DayNightChanged { day_night: dn });
+    }
+
+    /// CR 502.2 — the day/night turn-based check run as each turn begins.
+    /// If it's day and the previous turn's active player cast no spells, it
+    /// becomes night; if it's night and they cast two or more, it becomes
+    /// day. No effect while the game is neither day nor night.
+    pub(crate) fn check_day_night_transition(&mut self, events: &mut Vec<GameEvent>) {
+        use crate::game::types::DayNight;
+        let Some(current) = self.day_night else { return };
+        let Some(prev) = self.previous_turn_active else { return };
+        let cast = self.players.get(prev).map(|p| p.spells_cast_this_turn).unwrap_or(0);
+        match current {
+            DayNight::Day if cast == 0 => self.set_day_night(DayNight::Night, events),
+            DayNight::Night if cast >= 2 => self.set_day_night(DayNight::Day, events),
+            _ => {}
+        }
     }
 
     /// Transient triggers granted to a permanent until EOT (Root

@@ -108,6 +108,12 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// CR 731 — the game's day/night designation: `None` = neither (the
+    /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
+    /// so UIs can show a day/night indicator. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub day_night: Option<bool>,
     /// Projected combat outcome for the current attacker/blocker
     /// assignment (Tier-7 #3 "combat math preview"). `None` outside of
     /// combat or when no attackers are declared. `#[serde(default)]` for
@@ -1142,6 +1148,7 @@ pub enum GameEventWire {
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
     CityBlessingGained { player: usize },
+    DayNightChanged { is_day: bool },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
     PlaneswalkerDied { card_id: CardId },
@@ -1314,6 +1321,9 @@ impl From<&GameEvent> for GameEventWire {
             },
             GameEvent::MonarchChanged { player } => GameEventWire::MonarchChanged { player: *player },
             GameEvent::CityBlessingGained { player } => GameEventWire::CityBlessingGained { player: *player },
+            GameEvent::DayNightChanged { day_night } => GameEventWire::DayNightChanged {
+                is_day: matches!(day_night, crate::game::types::DayNight::Day),
+            },
             GameEvent::LoyaltyAbilityActivated { planeswalker, loyalty_change } => {
                 GameEventWire::LoyaltyAbilityActivated {
                     planeswalker: *planeswalker,
@@ -1461,6 +1471,9 @@ impl GameEventWire {
             E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
             E::MonarchChanged { player } => format!("P{player} becomes the monarch"),
             E::CityBlessingGained { player } => format!("P{player} gets the city's blessing"),
+            E::DayNightChanged { is_day } => {
+                format!("it becomes {}", if *is_day { "day" } else { "night" })
+            }
             E::LoyaltyAbilityActivated {
                 planeswalker,
                 loyalty_change,

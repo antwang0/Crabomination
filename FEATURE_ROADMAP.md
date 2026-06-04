@@ -370,6 +370,11 @@ feature; sweep card-batch by card-batch.
   `Effect::Ascend` grants `Player.city_blessing` at ten+ permanents,
   `Predicate::HasCityBlessing` gates payoffs; surfaced in
   `PlayerView.has_city_blessing` + `CityBlessingGained` log event),
+  🟡 **Day/Night** (CR 731 + 502.2 — `GameState.day_night` +
+  `Effect::BecomeDay`/`BecomeNight` + `Predicate::IsDay`/`IsNight`; the
+  502.2 turn-based day↔night transition is wired off the previous turn's
+  active-player spell count; surfaced in `ClientView.day_night` +
+  `DayNightChanged` log. Remaining: Daybound/Nightbound DFC transform),
   🟡 Initiative / **monarch ✅** (CR 724 — `GameState.monarch` +
   `Effect::BecomeMonarch`; the monarch draws at their end step, combat damage
   to the monarch steals the crown, leaves-game transfer per 724.3; surfaced in

@@ -72,6 +72,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         exile: state.exile.iter().map(exile_entry).collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
+        day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
         combat_preview: combat_preview(state),
         // One pass over the hand builds a single library-stripped probe
         // template and reuses it across every affordance category, rather

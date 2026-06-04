@@ -459,6 +459,10 @@ pub enum Predicate {
     /// CR 700.6 — `who` has the city's blessing. "As long as you have the
     /// city's blessing, …" (Ascend payoffs).
     HasCityBlessing { who: PlayerRef },
+    /// CR 731 — it's currently day.
+    IsDay,
+    /// CR 731 — it's currently night.
+    IsNight,
     /// True if any player matched by `who` has been dealt damage this turn.
     /// Backed by `Player.was_dealt_damage_this_turn`. Powers Bloodthirst
     /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
@@ -2046,6 +2050,10 @@ pub enum Effect {
     /// otherwise. "Ascend" on a sorcery/instant resolves once; the
     /// permanent-static variant re-checks each time it's seen.
     Ascend { who: PlayerRef },
+    /// CR 731 — "it becomes day." Sets the game's day designation.
+    BecomeDay,
+    /// CR 731 — "it becomes night." Sets the game's night designation.
+    BecomeNight,
     /// CR 500.7 — "[Player] takes [count] extra turn(s) after this one."
     /// Banks `count` onto each resolved player's `extra_turns`; consumed
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
@@ -2423,6 +2431,7 @@ impl Effect {
             Effect::RevealTopOpponentChoosesToHand { .. }
             | Effect::ReturnFromExileWithCounter { .. } => false,
             Effect::BecomeMonarch { who } | Effect::Ascend { who } => player_has_target(who),
+            Effect::BecomeDay | Effect::BecomeNight => false,
             Effect::PutOnLibraryFromHand { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

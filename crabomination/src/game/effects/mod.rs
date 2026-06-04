@@ -3629,6 +3629,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeDay => {
+                self.set_day_night(crate::game::types::DayNight::Day, events);
+                Ok(())
+            }
+            Effect::BecomeNight => {
+                self.set_day_night(crate::game::types::DayNight::Night, events);
+                Ok(())
+            }
+
             Effect::Ascend { who } => {
                 // CR 702.131 — get the city's blessing if `who` controls ten
                 // or more permanents (once obtained it's permanent).

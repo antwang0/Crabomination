@@ -122,6 +122,8 @@ impl GameState {
             // Untap has no priority window — auto-execute and move on.
             TurnStep::Untap => {
                 self.do_untap();
+                // CR 502.2 — day/night turn-based check (doesn't use the stack).
+                self.check_day_night_transition(&mut events);
                 events.push(GameEvent::TurnStarted {
                     player: self.active_player_idx,
                     turn: self.turn_number,
@@ -1098,6 +1100,9 @@ impl GameState {
         // turn (Time Walk, Ral Zarek's -7 emblem), keep the turn instead
         // of passing: consume one charge and just bump the turn number.
         let active = self.active_player_idx;
+        // Remember the just-ended turn's active player for the CR 502.2
+        // day/night turn-based check at the next untap.
+        self.previous_turn_active = Some(active);
         if self.players[active].is_alive() && self.players[active].extra_turns > 0 {
             self.players[active].extra_turns -= 1;
             self.turn_number += 1;
