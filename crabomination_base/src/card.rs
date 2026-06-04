@@ -512,6 +512,18 @@ pub enum Keyword {
     /// `AutoDecider` declines by default (so ordinary bot games are
     /// unaffected); tests pre-float the cost and feed `Bool(true)`.
     Madness(crate::mana::ManaCost),
+    /// CR 509.1b — "This creature can't be blocked except by [filter]"
+    /// (Signal Pest — "except by artifact creatures and/or creatures with
+    /// flying"; Silhana Ledgewalker — "except by creatures with flying").
+    /// A blocker may be assigned to this attacker only if it matches the
+    /// filter. Enforced in `can_block_attacker_computed` against the
+    /// blocker's *computed* characteristics.
+    CantBeBlockedExceptBy(Box<SelectionRequirement>),
+    /// CR 509.1b — "This creature can't be blocked by [filter]"
+    /// (Steel Leaf Champion — "can't be blocked by creatures with power 2 or
+    /// less"). A blocker matching the filter may not be assigned to this
+    /// attacker. Enforced in `can_block_attacker_computed`.
+    CantBeBlockedBy(Box<SelectionRequirement>),
 }
 
 /// Composable filter for valid targets of a spell or ability.
@@ -568,6 +580,11 @@ pub enum SelectionRequirement {
     IsToken,
     NotToken,
     IsBasicLand,
+    /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
+    /// lacking the Basic supertype. Powers Thalia, Heretic Cathar's
+    /// "nonbasic lands … enter the battlefield tapped" clause and any
+    /// nonbasic-land targeting filter.
+    IsNonbasicLand,
     IsAttacking,
     IsBlocking,
     /// True when the candidate creature dealt damage to the ability's

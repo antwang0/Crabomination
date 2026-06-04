@@ -552,6 +552,8 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),
         K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),
+        K::CantBeBlockedExceptBy(_) => "Can't be blocked except by certain creatures".into(),
+        K::CantBeBlockedBy(_) => "Can't be blocked by certain creatures".into(),
         K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
         K::Suspend(n, cost) => format!("Suspend {n}—{}", cost.summary()),
         _ => format!("{kw:?}"),

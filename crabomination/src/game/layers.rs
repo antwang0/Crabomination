@@ -18,7 +18,8 @@
 //!      Counters (+1/+1, -1/-1) are applied after 7c per CR 613.7f.
 
 use crate::card::{
-    CardId, CardType, CounterType, CreatureType, Keyword, LandType, Subtypes, Supertype,
+    CardId, CardType, CounterType, CreatureType, Keyword, LandType, SelectionRequirement, Subtypes,
+    Supertype,
 };
 use crate::mana::Color;
 use serde::{Deserialize, Serialize};
@@ -194,6 +195,18 @@ pub enum AffectedPermanents {
         card_types: Vec<CardType>,
         counter: crate::card::CounterType,
         at_least: u32,
+    },
+    /// A requirement the simpler variants can't express (disjunctions,
+    /// `IsNonbasicLand`, type unions). Evaluated card-locally via
+    /// [`requirement_matches_card`], relative to `source_controller` for
+    /// `ControlledByYou`/`ControlledByOpponent`. Only emitted for filters
+    /// whose every leaf is computable from a card's printed characteristics
+    /// (no power/combat/zone state), so the match is correct without a
+    /// `GameState` handle. Powers Thalia, Heretic Cathar ("creatures **and
+    /// nonbasic lands** your opponents control enter tapped").
+    CardMatch {
+        source_controller: usize,
+        requirement: Box<SelectionRequirement>,
     },
 }
 
@@ -488,5 +501,88 @@ pub(crate) fn affected_includes(
             let counter_ok = card.counter_count(*counter) >= *at_least;
             ctrl_ok && type_ok && counter_ok
         }
+        AffectedPermanents::CardMatch { source_controller, requirement } => {
+            requirement_matches_card(requirement, card, *source_controller)
+        }
+    }
+}
+
+/// True when `req`'s every leaf is computable from a card's *printed*
+/// characteristics alone (type/supertype/subtype/color/token/controller and
+/// boolean combinations) — i.e. no power/toughness, combat, counter, or zone
+/// state. Such requirements can be matched by [`requirement_matches_card`]
+/// without a `GameState`, so `affected_from_requirement` may safely route them
+/// through [`AffectedPermanents::CardMatch`].
+pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::Any | R::Permanent | R::Creature | R::Artifact | R::Enchantment
+        | R::Planeswalker | R::Land | R::Nonland | R::Noncreature | R::IsBasicLand
+        | R::IsNonbasicLand | R::IsToken | R::NotToken | R::ControlledByYou
+        | R::ControlledByOpponent | R::Colorless => true,
+        R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
+        | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
+        | R::HasKeyword(_) => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_is_card_only(a) && requirement_is_card_only(b)
+        }
+        R::Not(inner) => requirement_is_card_only(inner),
+        _ => false,
+    }
+}
+
+/// Evaluate a card-only requirement (see [`requirement_is_card_only`]) against
+/// a single permanent. `source_controller` resolves `ControlledByYou` /
+/// `ControlledByOpponent`. Unsupported leaves resolve to `false`.
+pub(crate) fn requirement_matches_card(
+    req: &SelectionRequirement,
+    card: &crate::card::CardInstance,
+    source_controller: usize,
+) -> bool {
+    use SelectionRequirement as R;
+    let def = &card.definition;
+    match req {
+        R::Any | R::Permanent => true,
+        R::Creature => def.card_types.contains(&CardType::Creature),
+        R::Artifact => def.card_types.contains(&CardType::Artifact),
+        R::Enchantment => def.card_types.contains(&CardType::Enchantment),
+        R::Planeswalker => def.card_types.contains(&CardType::Planeswalker),
+        R::Land => def.card_types.contains(&CardType::Land),
+        R::Nonland => !def.card_types.contains(&CardType::Land),
+        R::Noncreature => !def.card_types.contains(&CardType::Creature),
+        R::IsBasicLand => def.is_land() && def.supertypes.contains(&Supertype::Basic),
+        R::IsNonbasicLand => def.is_land() && !def.supertypes.contains(&Supertype::Basic),
+        R::IsToken => card.is_token,
+        R::NotToken => !card.is_token,
+        R::ControlledByYou => card.controller == source_controller,
+        R::ControlledByOpponent => card.controller != source_controller,
+        R::HasCardType(t) => def.card_types.contains(t),
+        R::HasSupertype(s) => def.supertypes.contains(s),
+        R::HasCreatureType(ct) => def.subtypes.creature_types.contains(ct)
+            || def.keywords.contains(&Keyword::Changeling),
+        R::HasLandType(lt) => def.subtypes.land_types.contains(lt),
+        R::HasArtifactSubtype(a) => def.subtypes.artifact_subtypes.contains(a),
+        R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
+        R::HasKeyword(k) => def.keywords.contains(k),
+        R::HasColor(c) => def
+            .cost
+            .symbols
+            .iter()
+            .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(col) if col == c)),
+        R::Colorless => !def
+            .cost
+            .symbols
+            .iter()
+            .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))),
+        R::And(a, b) => {
+            requirement_matches_card(a, card, source_controller)
+                && requirement_matches_card(b, card, source_controller)
+        }
+        R::Or(a, b) => {
+            requirement_matches_card(a, card, source_controller)
+                || requirement_matches_card(b, card, source_controller)
+        }
+        R::Not(inner) => !requirement_matches_card(inner, card, source_controller),
+        _ => false,
     }
 }

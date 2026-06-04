@@ -1198,6 +1198,49 @@ pub fn essence_warden() -> CardDefinition {
     }
 }
 
+/// Silhana Ledgewalker — {1}{G}, 1/1 Elf Rogue. "Hexproof. Silhana
+/// Ledgewalker can't be blocked except by creatures with flying." (RAV)
+pub fn silhana_ledgewalker() -> CardDefinition {
+    CardDefinition {
+        name: "Silhana Ledgewalker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![
+            Keyword::Hexproof,
+            Keyword::CantBeBlockedExceptBy(Box::new(SelectionRequirement::HasKeyword(
+                Keyword::Flying,
+            ))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Steel Leaf Champion — {G}{G}{G}, 5/4 Elf Knight. "Steel Leaf Champion
+/// can't be blocked by creatures with power 2 or less." (DAR)
+pub fn steel_leaf_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Steel Leaf Champion",
+        cost: cost(&[g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(
+            SelectionRequirement::PowerAtMost(2),
+        ))],
+        ..Default::default()
+    }
+}
+
 /// Llanowar Visionary — {2}{G}, 2/2 Elf Druid. ETB: draw a card. "{T}: Add
 /// {G}."
 pub fn llanowar_visionary() -> CardDefinition {
@@ -5944,6 +5987,30 @@ pub fn authority_of_the_consuls() -> CardDefinition {
                 }),
             effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
         }],
+        ..Default::default()
+    }
+}
+
+/// Thalia, Heretic Cathar — {2}{W} Legendary Creature — Human Soldier 3/2,
+/// First Strike. "Creatures and nonbasic lands your opponents control enter
+/// the battlefield tapped." (EMN)
+pub fn thalia_heretic_cathar() -> CardDefinition {
+    CardDefinition {
+        name: "Thalia, Heretic Cathar",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![opp_enters_tapped(
+            SelectionRequirement::Creature.or(SelectionRequirement::IsNonbasicLand),
+            "Creatures and nonbasic lands your opponents control enter the battlefield tapped.",
+        )],
         ..Default::default()
     }
 }

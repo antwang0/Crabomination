@@ -447,6 +447,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         soul_warden,
         essence_warden,
         llanowar_visionary,
+        // ── modern_decks: block-restriction evasion (CR 509.1b) ──
+        silhana_ledgewalker,
+        steel_leaf_champion,
+        thalia_heretic_cathar,
         augur_of_bolas,
         pestermite,
         suture_priest,

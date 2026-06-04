@@ -788,6 +788,7 @@ impl GameState {
                     R::IsToken => card.is_token,
                     R::NotToken => !card.is_token,
                     R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+                    R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
                     // CR 506.5: attacking alone = card is in attacking AND
@@ -949,6 +950,7 @@ impl GameState {
             R::IsToken => card.is_token,
             R::NotToken => !card.is_token,
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
+            R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,

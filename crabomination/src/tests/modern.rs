@@ -25667,3 +25667,50 @@ fn festival_crasher_grows_on_spells() {
     let c = g.battlefield_find(fc).unwrap();
     assert_eq!((c.power(), c.toughness()), (3, 3), "permanent +1/+1 counter");
 }
+
+// ── CR 509.1b block-restriction keywords ────────────────────────────────────
+
+/// Silhana Ledgewalker can't be blocked except by creatures with flying.
+#[test]
+fn silhana_ledgewalker_only_blocked_by_flyers() {
+    let mut g = two_player_game();
+    let ledge = g.add_card_to_battlefield(0, catalog::silhana_ledgewalker());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // flyer
+    assert!(!g.blocker_can_block_attacker(bear, ledge), "ground can't block");
+    assert!(g.blocker_can_block_attacker(angel, ledge), "flyer can block");
+}
+
+/// Steel Leaf Champion can't be blocked by creatures with power 2 or less.
+#[test]
+fn steel_leaf_champion_blocked_only_by_power_three_plus() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::steel_leaf_champion());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    assert!(!g.blocker_can_block_attacker(bear, champ), "power 2 can't block");
+    assert!(g.blocker_can_block_attacker(angel, champ), "power 4 can block");
+}
+
+/// Thalia, Heretic Cathar taps opponents' creatures and nonbasic lands as
+/// they enter; the controller's own and basic lands are unaffected.
+#[test]
+fn thalia_heretic_cathar_taps_opponent_creatures_and_nonbasics() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thalia_heretic_cathar());
+    // Opponent's creature enters tapped.
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(opp_bear, 1);
+    assert!(g.battlefield_find(opp_bear).unwrap().tapped, "opp creature tapped");
+    // Controller's own creature is unaffected.
+    let own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.fire_self_etb_triggers(own_bear, 0);
+    assert!(!g.battlefield_find(own_bear).unwrap().tapped, "own creature untapped");
+    // Opponent's nonbasic land enters tapped; a basic does not.
+    let nonbasic = g.add_card_to_battlefield(1, catalog::cephalid_coliseum());
+    g.fire_self_etb_triggers(nonbasic, 1);
+    assert!(g.battlefield_find(nonbasic).unwrap().tapped, "opp nonbasic land tapped");
+    let basic = g.add_card_to_battlefield(1, catalog::island());
+    g.fire_self_etb_triggers(basic, 1);
+    assert!(!g.battlefield_find(basic).unwrap().tapped, "opp basic land untapped");
+}

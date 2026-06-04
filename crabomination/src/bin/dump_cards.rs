@@ -117,6 +117,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::CanAttackOnlyIfYouControl(_)
         | Keyword::AttacksAlone | Keyword::DealsNoCombatDamage
+        | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
         Keyword::Unleash => "Unleash",
         Keyword::Ninjutsu(_) => "Ninjutsu",

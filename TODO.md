@@ -52,9 +52,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (CR 614.13, called from `fire_self_etb_triggers`, the universal "entered"
   hook) taps an entrant when an opposing `EntersTapped` static's `applies_to`
   selector matches it. Ships Imposing Sovereign, Authority of the Consuls,
-  Blind Obedience, Kismet. Remaining: Thalia, Heretic Cathar's *nonbasic*-land
-  clause needs an `IsNonbasicLand` selector requirement (only `IsBasicLand`
-  exists today).
+  Blind Obedience, Kismet, **and Thalia, Heretic Cathar** (its "creatures and
+  *nonbasic lands*" clause now ships via `SelectionRequirement::IsNonbasicLand`
+  plus the new `AffectedPermanents::CardMatch` card-local matcher, which routes
+  any card-only filter the conjunctive And-tree walker can't flatten —
+  disjunctions, nonbasic-land gates — through `requirement_matches_card`).
 - **Anthem `affected_from_requirement` coverage.** Color (`HasColor`),
   `IsToken`/`NotToken` (→ `AffectedPermanents::All.token`, ships Intangible
   Virtue / Always Watching) are decomposed, and the opponent path
@@ -65,12 +67,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `StaticEffect` that diminishes only a chosen creature type among opponents
   (the existing `DiminishCreaturesExceptChosenType` is the inverse). Dropped
   this run to avoid an inaccurate flat anthem.
-- **"Can't be blocked except by …" restrictions.** Several aggro cards want a
-  per-attacker block gate by blocker characteristic — Steel Leaf Champion
-  (power ≤ 2), Goblin Piledriver / Soldier of the Pantheon (color), Signal
-  Pest (flying/artifact). Needs a `Keyword::CantBeBlockedExceptBy(filter)`
-  read in `can_block_attacker_computed`. (Shipped these cards' simpler riders;
-  these three were skipped to avoid an unfaithful body.)
+- **"Can't be blocked except by …" restrictions — ✅ DONE (primitive).**
+  `Keyword::CantBeBlockedExceptBy(filter)` / `CantBeBlockedBy(filter)` (CR
+  509.1b) are read in `can_block_attacker_computed` via
+  `blocker_matches_block_filter` (a computed-characteristic matcher: type,
+  color, keyword, power/toughness thresholds). Ships Silhana Ledgewalker
+  (except by flyers) and Steel Leaf Champion (not by power ≤ 2). Remaining
+  consumers: Goblin Piledriver / Soldier of the Pantheon (these have other
+  riders — protection-from-color is their real evasion), Signal Pest (needs
+  Scryfall-verified P/T, firewalled).
 - **Choose-color-on-ETB mana rocks.** Coldsteel Heart / Star Compass enter,
   choose a color, then tap for it. Needs an ETB `Decision::ChooseColor` that
   stamps a fixed color onto the tap ability (today only the fixed-color

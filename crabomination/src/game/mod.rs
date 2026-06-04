@@ -5766,11 +5766,38 @@ fn selector_to_affected(
     }
 }
 
+/// Whether the conjunctive And-tree walker in `affected_from_requirement`
+/// recognizes every leaf of `req`. Mirrors that walker's match arms; any
+/// other leaf (or a disjunction) falls outside it.
+fn simple_walker_can_handle(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::And(a, b) => simple_walker_can_handle(a) && simple_walker_can_handle(b),
+        R::ControlledByYou | R::ControlledByOpponent | R::Creature | R::Artifact
+        | R::Enchantment | R::Planeswalker | R::Land | R::HasCardType(_)
+        | R::HasCreatureType(_) | R::WithCounter(_) | R::HasColor(_) | R::IsToken
+        | R::NotToken | R::OtherThanSource | R::Any | R::Permanent => true,
+        _ => false,
+    }
+}
+
 fn affected_from_requirement(
     req: &SelectionRequirement,
     source_controller: usize,
 ) -> Option<AffectedPermanents> {
     use SelectionRequirement as R;
+    // Disjunctive / nonbasic-land filters can't be flattened into the simple
+    // controller+type decomposition below (`card_types` is conjunctive, and
+    // there's no plain CardType for "nonbasic land"). When every leaf is
+    // computable from a card's printed characteristics, route the whole filter
+    // through the card-local matcher instead of dropping the static (CR 614.13
+    // Thalia, Heretic Cathar). Only used when the simple walker can't.
+    if !simple_walker_can_handle(req) && crate::game::layers::requirement_is_card_only(req) {
+        return Some(AffectedPermanents::CardMatch {
+            source_controller,
+            requirement: Box::new(req.clone()),
+        });
+    }
     // Decompose And-trees to extract controller filter + card-type filter.
     let mut ctrl: Option<Option<usize>> = None; // Outer Some(None) = all players; Some(Some(n)) = specific player
     let mut types: Vec<CardType> = vec![];
@@ -5924,5 +5951,65 @@ pub(crate) fn can_block_attacker_computed(
             return false;
         }
     }
+    // CR 509.1b "can't be blocked except by [filter]" / "can't be blocked by
+    // [filter]" — evaluate the blocker's computed characteristics against the
+    // attacker's filter keywords.
+    for kw in attacker_kws {
+        match kw {
+            Keyword::CantBeBlockedExceptBy(filter) => {
+                if !blocker_matches_block_filter(blocker, blocker_computed, filter) {
+                    return false;
+                }
+            }
+            Keyword::CantBeBlockedBy(filter) => {
+                if blocker_matches_block_filter(blocker, blocker_computed, filter) {
+                    return false;
+                }
+            }
+            _ => {}
+        }
+    }
     true
+}
+
+/// Lightweight evaluation of a block-restriction filter against a blocker's
+/// *computed* characteristics. Covers the subset of `SelectionRequirement`
+/// that "can't be blocked except by [filter]" cards actually use (type,
+/// color, keyword, power/toughness thresholds). Unsupported variants resolve
+/// to `false` (conservatively excluding the blocker).
+fn blocker_matches_block_filter(
+    blocker: &CardInstance,
+    computed: &ComputedPermanent,
+    req: &SelectionRequirement,
+) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::Any | R::Permanent | R::Creature => true,
+        R::Artifact => blocker.definition.is_artifact(),
+        R::Enchantment => blocker.definition.is_enchantment(),
+        R::Land => blocker.definition.is_land(),
+        R::IsToken => blocker.is_token,
+        R::NotToken => !blocker.is_token,
+        R::HasColor(c) => computed.colors.contains(c),
+        R::Colorless => computed.colors.is_empty(),
+        R::HasKeyword(k) => computed.keywords.contains(k),
+        R::HasCreatureType(t) => blocker.definition.subtypes.creature_types.contains(t)
+            || computed.keywords.contains(&Keyword::Changeling),
+        R::HasArtifactSubtype(a) => blocker.definition.subtypes.artifact_subtypes.contains(a),
+        R::PowerAtMost(n) => computed.power <= *n,
+        R::PowerAtLeast(n) => computed.power >= *n,
+        R::ToughnessAtMost(n) => computed.toughness <= *n,
+        R::ToughnessAtLeast(n) => computed.toughness >= *n,
+        R::HasCardType(ct) => blocker.definition.card_types.contains(ct),
+        R::And(a, b) => {
+            blocker_matches_block_filter(blocker, computed, a)
+                && blocker_matches_block_filter(blocker, computed, b)
+        }
+        R::Or(a, b) => {
+            blocker_matches_block_filter(blocker, computed, a)
+                || blocker_matches_block_filter(blocker, computed, b)
+        }
+        R::Not(inner) => !blocker_matches_block_filter(blocker, computed, inner),
+        _ => false,
+    }
 }
