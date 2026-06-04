@@ -19,6 +19,7 @@ use crate::player::Player;
 /// Project the authoritative `state` into the view visible to `seat`.
 pub fn project(state: &GameState, seat: usize) -> ClientView {
     let computed = state.compute_battlefield();
+    let affordances = state.compute_hand_affordances(seat);
 
     ClientView {
         your_seat: seat,
@@ -72,15 +73,20 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
         combat_preview: combat_preview(state),
-        castable_hand: state.castable_hand_cards(seat),
-        pitchable_hand: state.pitchable_hand_cards(seat),
-        kickable_hand: state.kickable_hand_cards(seat),
-        buyback_hand: state.buyback_hand_cards(seat),
-        bestowable_hand: state.bestowable_hand_cards(seat),
-        dashable_hand: state.dashable_hand_cards(seat),
-        suspendable_hand: state.suspendable_hand_cards(seat),
-        foretellable_hand: state.foretellable_hand_cards(seat),
-        activatable_permanents: state.activatable_permanents(seat),
+        // One pass over the hand builds a single library-stripped probe
+        // template and reuses it across every affordance category, rather
+        // than each `*_hand_cards` call cloning the whole `GameState` (incl.
+        // both libraries) per candidate. Runs on every accepted action for
+        // the priority-holding seat, so it's the projection's hot path.
+        castable_hand: affordances.castable,
+        pitchable_hand: affordances.pitchable,
+        kickable_hand: affordances.kickable,
+        buyback_hand: affordances.buyback,
+        bestowable_hand: affordances.bestowable,
+        dashable_hand: affordances.dashable,
+        suspendable_hand: affordances.suspendable,
+        foretellable_hand: affordances.foretellable,
+        activatable_permanents: affordances.activatable_permanents,
         legal_attackers: state.legal_attackers(seat),
         legal_blockers: state.legal_blockers(seat),
     }

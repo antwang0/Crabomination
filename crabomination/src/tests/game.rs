@@ -529,6 +529,99 @@ fn castable_hand_cards_reflects_mana_timing_and_lands() {
     );
 }
 
+/// The affordance probes dry-run against a library-stripped clone of the
+/// state ([`GameState::affordance_probe_template`]) for speed. This pins the
+/// safety invariant: seeding both libraries with cards must NOT change the
+/// castable set, because cast legality never reads library contents (the
+/// spell is pushed to the stack; resolution — the only library-touching
+/// step — happens on a later priority pass the probe never reaches).
+#[test]
+fn castable_hand_cards_ignores_library_contents() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    let forest_in_hand = g.add_card_to_hand(0, catalog::forest());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+
+    // Baseline with empty libraries: land playable, bears castable off the
+    // two Forests.
+    let baseline = g.castable_hand_cards(0);
+    assert!(baseline.contains(&forest_in_hand));
+    assert!(baseline.contains(&bears));
+
+    // Seed both libraries with a pile of cards. The stripped-template probe
+    // must produce the identical castable set.
+    for _ in 0..30 {
+        g.add_card_to_library(0, catalog::forest());
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    assert_eq!(
+        g.castable_hand_cards(0),
+        baseline,
+        "library contents must not affect cast legality"
+    );
+
+    // And it must still agree with the authoritative full-clone `would_accept`
+    // (libraries intact) on each candidate.
+    assert!(g.would_accept(GameAction::PlayLand(forest_in_hand)));
+    assert!(g.would_accept(GameAction::CastSpell {
+        card_id: bears,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }));
+}
+
+/// `compute_hand_affordances` (the consolidated single-template sweep used by
+/// the per-seat view projection) must return exactly what the individual
+/// `*_hand_cards` / `activatable_permanents` methods return — it's just those
+/// same probes sharing one probe template instead of each cloning their own.
+#[test]
+fn compute_hand_affordances_matches_individual_methods() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+
+    // A mix that lights up several categories: a land, a vanilla creature, a
+    // kicker spell (with a target on the opponent's board), and a pitch card.
+    g.add_card_to_hand(0, catalog::forest());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::tear_asunder());
+    g.add_card_to_hand(0, catalog::simian_spirit_guide());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Seed libraries so the stripped template differs from raw `self`.
+    for _ in 0..20 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+
+    let a = g.compute_hand_affordances(0);
+    assert_eq!(a.castable, g.castable_hand_cards(0));
+    assert_eq!(a.pitchable, g.pitchable_hand_cards(0));
+    assert_eq!(a.kickable, g.kickable_hand_cards(0));
+    assert_eq!(a.buyback, g.buyback_hand_cards(0));
+    assert_eq!(a.bestowable, g.bestowable_hand_cards(0));
+    assert_eq!(a.dashable, g.dashable_hand_cards(0));
+    assert_eq!(a.suspendable, g.suspendable_hand_cards(0));
+    assert_eq!(a.foretellable, g.foretellable_hand_cards(0));
+    assert_eq!(a.activatable_permanents, g.activatable_permanents(0));
+
+    // Off-priority: the whole sweep short-circuits to all-empty.
+    g.priority.player_with_priority = 1;
+    let empty = g.compute_hand_affordances(0);
+    assert!(empty.castable.is_empty() && empty.kickable.is_empty());
+}
+
 /// `pitchable_hand_cards` lists hand cards with a `from_hand` ability
 /// (Spirit Guides) and respects priority.
 #[test]

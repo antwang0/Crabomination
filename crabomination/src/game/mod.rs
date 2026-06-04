@@ -160,6 +160,24 @@ fn deserialize_decider<'de, D: serde::Deserializer<'de>>(
 
 // ── Game state ────────────────────────────────────────────────────────────────
 
+/// Every from-hand affordance hint for one seat, produced in a single sweep
+/// by [`GameState::compute_hand_affordances`]. Each field is the set of
+/// CardIds the client should highlight for that affordance; the view layer
+/// copies them straight into the matching `ClientView` fields. All-empty
+/// when the seat doesn't currently hold priority.
+#[derive(Debug, Clone, Default)]
+pub struct HandAffordances {
+    pub castable: Vec<CardId>,
+    pub pitchable: Vec<CardId>,
+    pub kickable: Vec<CardId>,
+    pub buyback: Vec<CardId>,
+    pub bestowable: Vec<CardId>,
+    pub dashable: Vec<CardId>,
+    pub suspendable: Vec<CardId>,
+    pub foretellable: Vec<CardId>,
+    pub activatable_permanents: Vec<CardId>,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct GameState {
     pub players: Vec<Player>,
@@ -2110,6 +2128,45 @@ impl GameState {
         probe.perform_action(action).is_ok()
     }
 
+    /// A clone of `self` with every player's library emptied, for use as a
+    /// reusable dry-run *template* by the from-hand affordance probes
+    /// ([`would_accept_on`](Self::would_accept_on)).
+    ///
+    /// Why this is safe: cast / activate / play-land legality never reads
+    /// library contents. A cast validates against hand, battlefield,
+    /// graveyard (delve), and player flags, then pushes the spell to the
+    /// stack and returns — resolution (the only library-touching step, e.g.
+    /// a draw or fetch) happens on a *later* priority pass that the probe
+    /// never reaches. An empty library is not itself a game-loss (deck-out
+    /// fires only on a draw *attempt*, CR 104.3a/120.3), so clearing it
+    /// can't flip `would_accept`'s `is_ok()` outcome.
+    ///
+    /// Why it's worth it: the affordance sweep dry-runs one `perform_action`
+    /// per candidate hand card, each on a fresh `GameState` clone. The
+    /// libraries are by far the largest part of that clone (a 60-card deck
+    /// is ~53 `CardInstance`s vs. ~7 in hand). Cloning the template once and
+    /// then cheaply re-cloning the library-less template per card turns N
+    /// full-deck clones into one full clone + N light clones.
+    fn affordance_probe_template(&self) -> GameState {
+        let mut template = self.clone();
+        for p in &mut template.players {
+            p.library.clear();
+        }
+        template
+    }
+
+    /// Dry-run `action` against a prebuilt [`affordance_probe_template`]
+    /// instead of cloning the whole `GameState`. Equivalent to
+    /// [`would_accept`](Self::would_accept) for cast / activate / play-land
+    /// actions (see the template doc for why library contents are
+    /// irrelevant to their legality), but cheap to repeat across a hand.
+    ///
+    /// [`affordance_probe_template`]: Self::affordance_probe_template
+    fn would_accept_on(template: &GameState, action: GameAction) -> bool {
+        let mut probe = template.clone();
+        probe.perform_action(action).is_ok()
+    }
+
     /// CardIds in `caster`'s hand they could begin casting (or play, for
     /// lands) **right now**. Drives the client's "castable" hand-card
     /// highlight.
@@ -2132,6 +2189,16 @@ impl GameState {
         if self.player_with_priority() != caster {
             return Vec::new();
         }
+        self.castable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`castable_hand_cards`] against a prebuilt probe template. The caller
+    /// is responsible for the priority short-circuit; this runs the per-card
+    /// dry-runs against `template` so a consolidated affordance sweep can
+    /// share one template across every category.
+    ///
+    /// [`castable_hand_cards`]: Self::castable_hand_cards
+    fn castable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         // Snapshot what each probe needs up front so the immutable borrow
         // of `self.players[caster].hand` is released before the cloning
         // probes run. The effect is cloned only for targeted non-lands.
@@ -2148,7 +2215,7 @@ impl GameState {
         let mut out = Vec::new();
         for (id, is_land, targeted_effect) in &hand {
             let accepted = if *is_land {
-                self.would_accept(GameAction::PlayLand(*id))
+                Self::would_accept_on(template, GameAction::PlayLand(*id))
             } else {
                 // Auto-pick targets the way the bot does so a targeted
                 // removal spell isn't reported uncastable merely for lack
@@ -2159,7 +2226,7 @@ impl GameState {
                     Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
                     None => (None, Vec::new()),
                 };
-                self.would_accept(GameAction::CastSpell {
+                Self::would_accept_on(template, GameAction::CastSpell {
                     card_id: *id,
                     target,
                     additional_targets,
@@ -2185,6 +2252,14 @@ impl GameState {
         if self.player_with_priority() != seat {
             return Vec::new();
         }
+        self.activatable_permanents_on(&self.affordance_probe_template(), seat)
+    }
+
+    /// [`activatable_permanents`] against a prebuilt probe template; the
+    /// caller owns the priority short-circuit.
+    ///
+    /// [`activatable_permanents`]: Self::activatable_permanents
+    fn activatable_permanents_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
         // Snapshot (id, [ability effects]) so the borrow of `self.battlefield`
         // is released before the cloning probes run.
         let perms: Vec<(CardId, Vec<Option<Effect>>)> = self
@@ -2209,7 +2284,7 @@ impl GameState {
                     Some(eff) => self.auto_targets_for_effect_all_slots(eff, seat, None).0,
                     None => None,
                 };
-                self.would_accept(GameAction::ActivateAbility {
+                Self::would_accept_on(template, GameAction::ActivateAbility {
                     card_id: *id,
                     ability_index: idx,
                     target,
@@ -2296,6 +2371,14 @@ impl GameState {
         if self.player_with_priority() != caster {
             return Vec::new();
         }
+        self.kickable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`kickable_hand_cards`] against a prebuilt probe template; the caller
+    /// owns the priority short-circuit.
+    ///
+    /// [`kickable_hand_cards`]: Self::kickable_hand_cards
+    fn kickable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
             .hand
             .iter()
@@ -2319,7 +2402,7 @@ impl GameState {
             } else {
                 (None, Vec::new())
             };
-            if self.would_accept(GameAction::CastSpellKicked {
+            if Self::would_accept_on(template, GameAction::CastSpellKicked {
                 card_id: *id,
                 target,
                 additional_targets,
@@ -2338,6 +2421,14 @@ impl GameState {
         if self.player_with_priority() != caster {
             return Vec::new();
         }
+        self.buyback_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`buyback_hand_cards`] against a prebuilt probe template; the caller
+    /// owns the priority short-circuit.
+    ///
+    /// [`buyback_hand_cards`]: Self::buyback_hand_cards
+    fn buyback_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
             .hand
             .iter()
@@ -2357,7 +2448,7 @@ impl GameState {
             } else {
                 (None, Vec::new())
             };
-            if self.would_accept(GameAction::CastSpellBuyback {
+            if Self::would_accept_on(template, GameAction::CastSpellBuyback {
                 card_id: *id,
                 target,
                 additional_targets,
@@ -2377,6 +2468,14 @@ impl GameState {
         if self.player_with_priority() != caster {
             return Vec::new();
         }
+        self.bestowable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`bestowable_hand_cards`] against a prebuilt probe template; the caller
+    /// owns the priority short-circuit.
+    ///
+    /// [`bestowable_hand_cards`]: Self::bestowable_hand_cards
+    fn bestowable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         let candidates: Vec<CardId> = self.players[caster]
             .hand
             .iter()
@@ -2401,7 +2500,7 @@ impl GameState {
                 })
                 .map(|c| c.id);
             let Some(host) = host else { continue };
-            if self.would_accept(GameAction::CastBestow {
+            if Self::would_accept_on(template, GameAction::CastBestow {
                 card_id: id,
                 target: Some(Target::Permanent(host)),
                 additional_targets: vec![],
@@ -2443,13 +2542,21 @@ impl GameState {
         if self.player_with_priority() != caster {
             return Vec::new();
         }
+        self.dashable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`dashable_hand_cards`] against a prebuilt probe template; the caller
+    /// owns the priority short-circuit.
+    ///
+    /// [`dashable_hand_cards`]: Self::dashable_hand_cards
+    fn dashable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.players[caster]
             .hand
             .iter()
             .filter(|c| c.definition.alternative_cost.as_ref().is_some_and(|a| a.dash))
             .map(|c| c.id)
             .filter(|&id| {
-                self.would_accept(GameAction::CastSpellAlternative {
+                Self::would_accept_on(template, GameAction::CastSpellAlternative {
                     card_id: id,
                     pitch_card: None,
                     target: None,
@@ -2467,10 +2574,18 @@ impl GameState {
     /// `PlayerView.suspendable_hand` so the client can offer a "Suspend"
     /// affordance.
     pub fn suspendable_hand_cards(&self, caster: usize) -> Vec<CardId> {
-        use crate::card::Keyword;
         if self.player_with_priority() != caster {
             return Vec::new();
         }
+        self.suspendable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`suspendable_hand_cards`] against a prebuilt probe template; the
+    /// caller owns the priority short-circuit.
+    ///
+    /// [`suspendable_hand_cards`]: Self::suspendable_hand_cards
+    fn suspendable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        use crate::card::Keyword;
         self.players[caster]
             .hand
             .iter()
@@ -2478,7 +2593,7 @@ impl GameState {
                 c.definition.keywords.iter().any(|k| matches!(k, Keyword::Suspend(..)))
             })
             .map(|c| c.id)
-            .filter(|&id| self.would_accept(GameAction::Suspend { card_id: id }))
+            .filter(|&id| Self::would_accept_on(template, GameAction::Suspend { card_id: id }))
             .collect()
     }
 
@@ -2489,13 +2604,56 @@ impl GameState {
         if self.player_with_priority() != caster {
             return Vec::new();
         }
+        self.foretellable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`foretellable_hand_cards`] against a prebuilt probe template; the
+    /// caller owns the priority short-circuit.
+    ///
+    /// [`foretellable_hand_cards`]: Self::foretellable_hand_cards
+    fn foretellable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.players[caster]
             .hand
             .iter()
             .filter(|c| c.definition.foretell_cost.is_some())
             .map(|c| c.id)
-            .filter(|&id| self.would_accept(GameAction::Foretell { card_id: id }))
+            .filter(|&id| Self::would_accept_on(template, GameAction::Foretell { card_id: id }))
             .collect()
+    }
+
+    /// Compute every from-hand affordance hint for `seat` in one pass.
+    ///
+    /// The individual `*_hand_cards` / `activatable_permanents` methods each
+    /// build their own [`affordance_probe_template`] — fine when called in
+    /// isolation (tests, debug export), but the per-seat view projection
+    /// needs all of them on every accepted action. Building the template
+    /// once here and threading it through the `_on` variants collapses what
+    /// was eight independent full-`GameState` clones (plus the per-card
+    /// clones) into a single template clone reused across every category.
+    ///
+    /// Returns all-empty when `seat` doesn't hold priority — the same
+    /// short-circuit each individual method applies, hoisted so the template
+    /// (and the whole sweep) is skipped entirely off-priority.
+    ///
+    /// [`affordance_probe_template`]: Self::affordance_probe_template
+    pub fn compute_hand_affordances(&self, seat: usize) -> HandAffordances {
+        if self.player_with_priority() != seat {
+            return HandAffordances::default();
+        }
+        let template = self.affordance_probe_template();
+        HandAffordances {
+            castable: self.castable_hand_cards_on(&template, seat),
+            // Pitchable is a pure structural filter (no dry-run), so it
+            // needs no template and never touches the probe clone.
+            pitchable: self.pitchable_hand_cards(seat),
+            kickable: self.kickable_hand_cards_on(&template, seat),
+            buyback: self.buyback_hand_cards_on(&template, seat),
+            bestowable: self.bestowable_hand_cards_on(&template, seat),
+            dashable: self.dashable_hand_cards_on(&template, seat),
+            suspendable: self.suspendable_hand_cards_on(&template, seat),
+            foretellable: self.foretellable_hand_cards_on(&template, seat),
+            activatable_permanents: self.activatable_permanents_on(&template, seat),
+        }
     }
 
     /// Extra generic mana the caster owes on top of `card`'s printed
