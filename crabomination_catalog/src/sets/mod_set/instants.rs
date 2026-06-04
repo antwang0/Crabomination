@@ -1212,3 +1212,52 @@ pub fn cackling_counterpart() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gods Willing — {W} Instant. "Target creature you control gains protection
+/// from the color of your choice until end of turn. Scry 1." (THS)
+pub fn gods_willing() -> CardDefinition {
+    CardDefinition {
+        name: "Gods Willing",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantProtectionFromChosenColor {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mother of Runes — {W} Creature — Human Cleric 1/1. "{T}: Target creature
+/// you control gains protection from the color of your choice until end of
+/// turn." (Urza's Saga)
+pub fn mother_of_runes() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Mother of Runes",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantProtectionFromChosenColor {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

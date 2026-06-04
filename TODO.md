@@ -26,11 +26,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `fire_spell_cast_triggers`, so a `Predicate::CastSpellIsControllersNth { n }`
   comparing `players[caster].spells_cast_this_turn == n` would work — wire it
   with `EventScope::AnyPlayer` so it fires on each player's own count).
-- **Protection-from-chosen-color grant** (Mother of Runes, Giver of Runes,
-  Gods Willing, Apostle's Blessing). Needs `Decision::ChooseColor` feeding an
-  `Effect::GrantKeyword(Protection(color))`-style one-shot until-EOT grant on a
-  target. The choose-color machinery exists (`ManaPayload::AnyOneColor`,
-  `BecomeChosenColor`); only the protection-grant variant is missing.
+- **Protection-from-chosen-color grant — ✅ DONE.**
+  `Effect::GrantProtectionFromChosenColor { what, duration }` surfaces
+  `Decision::ChooseColor` then grants `Keyword::Protection(color)` for the
+  duration (Mother of Runes, Gods Willing wired). Spell-targeting protection
+  now reads *computed* keywords so the granted protection is honored.
+  Remaining: protection isn't checked on *ability* targeting
+  (`check_target_legality`) or combat-damage prevention reads — extend those
+  to read computed protection if a card needs it (Giver of Runes "protection
+  from colorless" also needs a colorless option).
 - **Turn-conditional pump** (Might of Old Krosa's +4/+4-on-your-turn /
   +2/+2-otherwise). Currently collapsed to +4/+4. Needs an
   `If(IsTurnOf(You))` wrapper around the pump value.

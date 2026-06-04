@@ -2371,6 +2371,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantProtectionFromChosenColor { what, duration } => {
+                // The controller picks a color; each target gains
+                // protection from it for `duration` (EOT today). Mother of
+                // Runes / Gods Willing.
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let source = ctx.source.unwrap_or(CardId(0));
+                let legal = vec![
+                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                ];
+                let color = match self.decider.decide(&Decision::ChooseColor { source, legal }) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::White,
+                };
+                let kw = Keyword::Protection(color);
+                let is_eot = matches!(
+                    duration,
+                    crate::effect::Duration::EndOfTurn | crate::effect::Duration::EndOfCombat
+                );
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        if is_eot {
+                            if !c.granted_keywords_eot.contains(&kw)
+                                && !c.definition.keywords.contains(&kw)
+                            {
+                                c.granted_keywords_eot.push(kw.clone());
+                            }
+                        } else if !c.definition.keywords.contains(&kw) {
+                            std::sync::Arc::make_mut(&mut c.definition).keywords.push(kw.clone());
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }

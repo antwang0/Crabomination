@@ -2567,6 +2567,49 @@ fn sylvan_caryatid_taps_for_one_mana_of_chosen_color() {
 }
 
 #[test]
+fn mother_of_runes_grants_protection_from_chosen_color() {
+    let mut g = two_player_game();
+    let mom = g.add_card_to_battlefield(0, catalog::mother_of_runes());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mom);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mom, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None })
+        .expect("{T}: grant protection");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Protection(Color::Red)),
+        "bear has protection from red");
+    // A red spell (Lightning Bolt) from the opponent can't target it.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None });
+    assert!(matches!(err, Err(GameError::TargetHasProtection(_))), "bolt blocked, got {err:?}");
+}
+
+#[test]
+fn gods_willing_grants_protection_and_scries() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let gw = g.add_card_to_hand(0, catalog::gods_willing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Color(Color::Black),
+        DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: gw, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Gods Willing");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Protection(Color::Black)),
+        "bear protected from black");
+}
+
+#[test]
 fn millstone_mills_target_for_two() {
     let mut g = two_player_game();
     g.add_card_to_library(1, catalog::forest());

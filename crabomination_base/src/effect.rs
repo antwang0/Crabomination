@@ -1469,6 +1469,11 @@ pub enum Effect {
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").
     BecomeChosenColor { what: Selector, duration: Duration },
+    /// Each permanent picked by `what` gains protection from a color of the
+    /// controller's choice for `duration` (`Decision::ChooseColor` →
+    /// `Keyword::Protection(color)`). Mother of Runes, Giver of Runes, Gods
+    /// Willing, Apostle's Blessing.
+    GrantProtectionFromChosenColor { what: Selector, duration: Duration },
     /// Grant a transient triggered ability to each permanent picked by
     /// `what`, for `duration`. Stashed in `GameState.
     /// granted_triggers_eot` (only EOT duration is wired today;
@@ -2330,7 +2335,8 @@ impl Effect {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
-            Effect::BecomeChosenColor { what, .. } => sel_has_target(what),
+            Effect::BecomeChosenColor { what, .. }
+            | Effect::GrantProtectionFromChosenColor { what, .. } => sel_has_target(what),
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
             | Effect::RemoveCounter { what, amount, .. }
@@ -2501,7 +2507,8 @@ impl Effect {
             Effect::PumpPT { what, .. } => sel_filter(what),
             Effect::SetBasePT { what, .. } => sel_filter(what),
             Effect::BecomeCreature { what, .. } => sel_filter(what),
-            Effect::GrantKeyword { what, .. } => sel_filter(what),
+            Effect::GrantKeyword { what, .. }
+            | Effect::GrantProtectionFromChosenColor { what, .. } => sel_filter(what),
             Effect::Move { what, .. } => sel_filter(what),
             // Player-targeting effects: surface the filter so the bot's
             // auto-target heuristic can find the opp / caster without a
@@ -3066,7 +3073,8 @@ impl Effect {
                 Effect::PumpPT { what, .. } => sel_find(what, slot),
                 Effect::SetBasePT { what, .. } => sel_find(what, slot),
                 Effect::BecomeCreature { what, .. } => sel_find(what, slot),
-                Effect::GrantKeyword { what, .. } => sel_find(what, slot),
+                Effect::GrantKeyword { what, .. }
+                | Effect::GrantProtectionFromChosenColor { what, .. } => sel_find(what, slot),
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }

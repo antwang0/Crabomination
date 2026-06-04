@@ -1469,7 +1469,13 @@ impl GameState {
             && target_card.controller != p
         {
             let spell_colors = card.definition.cost.colors();
-            for kw in &target_card.definition.keywords {
+            // Read computed keywords so granted protection (Mother of Runes,
+            // Gods Willing) is honored, not just printed protection.
+            let kws = self
+                .computed_permanent(cid)
+                .map(|cp| cp.keywords)
+                .unwrap_or_else(|| target_card.definition.keywords.clone());
+            for kw in &kws {
                 if let Keyword::Protection(prot_color) = kw
                     && spell_colors.contains(prot_color)
                 {
