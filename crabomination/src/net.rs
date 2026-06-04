@@ -151,6 +151,12 @@ pub struct ClientView {
     /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub dashable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand they could cast via their Blitz
+    /// alternative cost right now (CR 702.152). Lets the client offer a
+    /// "blitz?" affordance distinct from the plain castable highlight.
+    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub blitzable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could Suspend right now (CR 702.62):
     /// the card has `Keyword::Suspend` and the suspend cost is affordable at
     /// legal timing. Lets the client offer a "Suspend" affordance. Empty

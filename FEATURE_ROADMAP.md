@@ -214,7 +214,10 @@ feature; sweep card-batch by card-batch.
   `CastForetold` — CR 702.143: pay {2} to exile face-down, cast from exile
   for the foretell cost on a later turn; Saw It Coming, Doomskar, Behold the
   Multiverse), ⏳ Disturb,
-  ⏳ Daybound/Nightbound, ⏳ Blitz, 🟡 Casualty,
+  ⏳ Daybound/Nightbound, ✅ Blitz (`shortcut::blitz` /
+  `AlternativeCost.blitz` — CR 702.152: alt-cost haste + "when this dies,
+  draw a card" + sacrifice at next end step via `Effect::SacrificeSource`;
+  Tenacious Underdog, Ardent Elementalist, Goldhound), 🟡 Casualty,
   ✅ Connive (`shortcut::connive` — CR 702.158, draw/discard +
   +1/+1-per-nonland via `Selector::DiscardedThisResolution`; Quandrix
   Cryptomancer), ⏳ Backup,

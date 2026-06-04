@@ -173,6 +173,7 @@ pub struct HandAffordances {
     pub buyback: Vec<CardId>,
     pub bestowable: Vec<CardId>,
     pub dashable: Vec<CardId>,
+    pub blitzable: Vec<CardId>,
     pub suspendable: Vec<CardId>,
     pub foretellable: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
@@ -2610,6 +2611,39 @@ impl GameState {
             .collect()
     }
 
+    /// Cards in `caster`'s hand they could cast for their Blitz cost right now
+    /// (CR 702.152). Surfaced in `PlayerView.blitzable_hand` so the client can
+    /// offer a "Blitz" affordance alongside Dash.
+    pub fn blitzable_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        if self.player_with_priority() != caster {
+            return Vec::new();
+        }
+        self.blitzable_hand_cards_on(&self.affordance_probe_template(), caster)
+    }
+
+    /// [`blitzable_hand_cards`] against a prebuilt probe template; the caller
+    /// owns the priority short-circuit.
+    ///
+    /// [`blitzable_hand_cards`]: Self::blitzable_hand_cards
+    fn blitzable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.alternative_cost.as_ref().is_some_and(|a| a.blitz))
+            .map(|c| c.id)
+            .filter(|&id| {
+                Self::would_accept_on(template, GameAction::CastSpellAlternative {
+                    card_id: id,
+                    pitch_card: None,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+            })
+            .collect()
+    }
+
     /// Cards in `caster`'s hand they could suspend right now (CR 702.62):
     /// the card has `Keyword::Suspend` and the suspend action would be
     /// accepted (cost affordable + timing legal). Surfaced in
@@ -2692,6 +2726,7 @@ impl GameState {
             buyback: self.buyback_hand_cards_on(&template, seat),
             bestowable: self.bestowable_hand_cards_on(&template, seat),
             dashable: self.dashable_hand_cards_on(&template, seat),
+            blitzable: self.blitzable_hand_cards_on(&template, seat),
             suspendable: self.suspendable_hand_cards_on(&template, seat),
             foretellable: self.foretellable_hand_cards_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),

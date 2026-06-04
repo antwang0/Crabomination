@@ -533,6 +533,81 @@ pub fn keldon_halberdier() -> CardDefinition {
     }
 }
 
+// ── Blitz (CR 702.152) ───────────────────────────────────────────────────────
+
+/// Tenacious Underdog — {1}{B} 3/1 Human Warrior that can't block. Blitz {2}{B}.
+/// (The drew-two-cards graveyard recursion is omitted.)
+pub fn tenacious_underdog() -> CardDefinition {
+    CardDefinition {
+        name: "Tenacious Underdog",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        alternative_cost: Some(crate::effect::shortcut::blitz(cost(&[generic(2), b()]))),
+        ..Default::default()
+    }
+}
+
+/// Ardent Elementalist — {2}{R} 2/2 Human Wizard. ETB return target instant or
+/// sorcery card from a graveyard to its owner's hand. Blitz {1}{R}.
+pub fn ardent_elementalist() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Ardent Elementalist",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::InGraveyard.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                )),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        }],
+        alternative_cost: Some(crate::effect::shortcut::blitz(cost(&[generic(1), r()]))),
+        ..Default::default()
+    }
+}
+
+/// Goldhound — {R} 1/1 Artifact Creature — Dog. {T}, Sacrifice: Add one mana of
+/// any color. Blitz {R}.
+pub fn goldhound() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Goldhound",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dog], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            sac_cost: true,
+            ..Default::default()
+        }],
+        alternative_cost: Some(crate::effect::shortcut::blitz(cost(&[r()]))),
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 
@@ -1663,6 +1738,7 @@ pub fn snuff_out() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            blitz: false,
             flash: false,
         }),
         ..Default::default()
@@ -3169,6 +3245,7 @@ pub fn cyclonic_rift() -> CardDefinition {
                 }),
             }),
             dash: false,
+            blitz: false,
             flash: false,
         }),
         ..Default::default()
@@ -5672,6 +5749,7 @@ pub fn rout() -> CardDefinition {
         },
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(5), w(), w()]),
+            blitz: false,
             flash: true,
             ..Default::default()
         }),
@@ -12431,12 +12509,9 @@ pub fn keen_eyed_curator() -> CardDefinition {
 
 // ── Cube expansion: body-only stubs ─────────────────────────────────────────
 
-/// Enduring Innocence — {W}{W}{W} Enchantment Creature — Glimmer. 2/1.
-/// Lifelink. "Whenever a nontoken creature you control enters, draw a card."
-///
-/// 🟡 Body-only: the "return from exile after death" enchantment-recur
-/// clause is omitted. Wired as 2/1 Lifelink + AnotherOfYours ETB draw
-/// filtered to nontoken creatures.
+/// Enduring Innocence — {W}{W}{W} Enchantment Creature — Glimmer. 2/1
+/// Lifelink. Draw a card when a nontoken creature you control enters; when it
+/// dies it returns as a noncreature enchantment (`ReturnSelfAsEnchantment`).
 pub fn enduring_innocence() -> CardDefinition {
     CardDefinition {
         name: "Enduring Innocence",

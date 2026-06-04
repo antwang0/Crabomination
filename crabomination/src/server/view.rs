@@ -84,6 +84,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         buyback_hand: affordances.buyback,
         bestowable_hand: affordances.bestowable,
         dashable_hand: affordances.dashable,
+        blitzable_hand: affordances.blitzable,
         suspendable_hand: affordances.suspendable,
         foretellable_hand: affordances.foretellable,
         activatable_permanents: affordances.activatable_permanents,

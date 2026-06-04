@@ -3260,6 +3260,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeSource => {
+                if let Some(id) = ctx.source
+                    && let Some(c) = self.battlefield_find(id)
+                {
+                    let p = c.controller;
+                    let is_creature = c.definition.is_creature();
+                    if is_creature {
+                        self.died_card_snapshots.insert(id, c.clone());
+                        events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
+                        events.push(GameEvent::CreatureDied { card_id: id });
+                    }
+                    events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
+                    let mut die_evs = self.remove_to_graveyard_with_triggers(id);
+                    events.append(&mut die_evs);
+                }
+                Ok(())
+            }
+
             Effect::SacrificeGreatestMV { who, count, filter } => {
                 // Same picker as `Effect::Sacrifice` but reverses the CMC
                 // sort to pick the most-expensive match. Used by Soul

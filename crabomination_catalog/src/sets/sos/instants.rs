@@ -255,6 +255,7 @@ pub fn brush_off() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            blitz: false,
             flash: false,
         }),
         ..Default::default()
@@ -374,6 +375,7 @@ pub fn run_behind() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            blitz: false,
             flash: false,
         }),
         ..Default::default()
@@ -1269,6 +1271,7 @@ pub fn ajanis_response() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            blitz: false,
             flash: false,
         }),
         ..Default::default()
@@ -1453,6 +1456,7 @@ pub fn wilt_in_the_heat() -> CardDefinition {
                     sacrifice_permanents: None,
             effect_override: None,
             dash: false,
+            blitz: false,
             flash: false,
         }),
         ..Default::default()

@@ -120,6 +120,68 @@ fn suspend_accelerant_ticks_on_opponent_cast() {
     assert_eq!(same, after, "owner's own cast leaves it untouched");
 }
 
+// ── Blitz (CR 702.152) ───────────────────────────────────────────────────────
+
+fn blitz(g: &mut GameState, id: crate::card::CardId) {
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("blitz cast should succeed");
+    drain_stack(g);
+}
+
+/// A blitzed creature enters with haste, draws a card when it dies, and is
+/// sacrificed at the next end step.
+#[test]
+fn blitz_grants_haste_then_sacrifices_with_death_draw() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::shock()); // a card to draw on death
+    let id = g.add_card_to_hand(0, catalog::tenacious_underdog());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2); // Blitz {2}{B}
+    blitz(&mut g, id);
+    let c = g.battlefield_find(id).expect("blitzed creature on battlefield");
+    assert!(c.granted_keywords_eot.contains(&Keyword::Haste), "blitz grants haste");
+    let hand_before = g.players[0].hand.len();
+    // Next end step: sacrifice + death-draw.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "blitzed creature was sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "death-draw drew a card");
+}
+
+/// Ardent Elementalist's ETB returns an instant or sorcery from a graveyard.
+#[test]
+fn blitz_ardent_elementalist_etb_returns_instant() {
+    let mut g = two_player_game();
+    // Seed an instant in player 0's graveyard.
+    let bolt = g.add_card_to_graveyard(0, catalog::shock());
+    let id = g.add_card_to_hand(0, catalog::ardent_elementalist());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1); // Blitz {1}{R}
+    blitz(&mut g, id);
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == bolt),
+        "instant returned from graveyard to hand"
+    );
+}
+
+/// Goldhound taps and sacrifices itself for one mana of any color.
+#[test]
+fn goldhound_sac_for_mana() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::goldhound());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+    .expect("activate Goldhound mana ability");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Goldhound sacrificed itself");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+}
+
 /// Beskir Shieldmate leaves two 1/1 tokens behind when it dies.
 #[test]
 fn beskir_shieldmate_dies_into_two_tokens() {

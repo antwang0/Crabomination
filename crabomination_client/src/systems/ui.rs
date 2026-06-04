@@ -96,8 +96,8 @@ pub fn highlight_hovered_cards(
 /// Spawn / despawn a "playable now" border around each viewer hand card,
 /// in one of two colours: **green** for cards castable for their normal
 /// cost (`castable_hand`), **cyan** for cards playable only via an
-/// alternative path — Dash, pitch/exile, kicker, or Suspend
-/// (`dashable_hand` / `pitchable_hand` / `kickable_hand` /
+/// alternative path — Dash, Blitz, pitch/exile, kicker, or Suspend
+/// (`dashable_hand` / `blitzable_hand` / `pitchable_hand` / `kickable_hand` /
 /// `suspendable_hand`, minus anything already hard-castable). All are computed server-side via the engine's
 /// `would_accept` dry-run, so they already reflect timing, mana, taxes,
 /// and target availability. Mirrors the hover-border / put-on-library
@@ -145,6 +145,7 @@ pub fn update_castable_highlights(
         let alt = cv
             .dashable_hand
             .iter()
+            .chain(cv.blitzable_hand.iter())
             .chain(cv.pitchable_hand.iter())
             .chain(cv.kickable_hand.iter())
             .chain(cv.suspendable_hand.iter())

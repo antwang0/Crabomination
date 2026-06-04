@@ -596,6 +596,37 @@ impl GameState {
                         });
                     }
 
+                    // Blitz (CR 702.152): the blitzed creature gains haste and
+                    // "When this creature dies, draw a card," and is sacrificed
+                    // at the beginning of the next end step. Grant haste on the
+                    // entering instance and arm the two delayed triggers.
+                    if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+                        && c.blitzed
+                    {
+                        if !c.granted_keywords_eot.contains(&Keyword::Haste) {
+                            c.granted_keywords_eot.push(Keyword::Haste);
+                        }
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: caster,
+                            source: card_id,
+                            kind: crate::game::types::DelayedKind::WhenCardDies(card_id),
+                            effect: Effect::Draw {
+                                who: crate::effect::Selector::You,
+                                amount: crate::effect::Value::Const(1),
+                            },
+                            target: None,
+                            fires_once: true,
+                        });
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: caster,
+                            source: card_id,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::SacrificeSource,
+                            target: None,
+                            fires_once: true,
+                        });
+                    }
+
                     // Suspend (CR 702.62f): a creature cast off its last time
                     // counter gains haste. The flag rode the instance from
                     // exile; clear it once consumed.

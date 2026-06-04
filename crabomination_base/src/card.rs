@@ -1058,6 +1058,11 @@ pub struct AlternativeCost {
     /// beginning of the next end step.
     #[serde(default)]
     pub dash: bool,
+    /// True for Blitz (CR 702.152) alternative costs — the resulting creature
+    /// gains haste and "When this creature dies, draw a card," and is
+    /// sacrificed at the beginning of the next end step.
+    #[serde(default)]
+    pub blitz: bool,
     /// True when casting via this alternative cost grants the spell flash
     /// timing (e.g. Rout's "cast as though it had flash if you pay {2}
     /// more"). Bypasses the sorcery-speed gate the alt-cast path otherwise
@@ -1265,6 +1270,10 @@ pub struct CardInstance {
     /// True if this card was free-cast off the last Suspend time counter
     /// (CR 702.62f) — on ETB a creature so cast gains haste.
     pub cast_from_suspend: bool,
+    /// True if this card was cast via a Blitz alternative cost (CR 702.152)
+    /// — on ETB it gains haste and a death-draw rider, and is sacrificed at
+    /// the next end step.
+    pub blitzed: bool,
     /// True if this card was cast from its owner's hand on its current
     /// trip through the stack. Used by the rebound resolution path to
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
@@ -1407,6 +1416,7 @@ impl CardInstance {
             evoked: false,
             dashed: false,
             cast_from_suspend: false,
+            blitzed: false,
             cast_from_hand: false,
             cast_via_flashback: false,
             chosen_creature_type: None,
@@ -1573,6 +1583,8 @@ struct CardInstanceWire {
     dashed: bool,
     #[serde(default)]
     cast_from_suspend: bool,
+    #[serde(default)]
+    blitzed: bool,
     cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field deserialize
     /// as `false` (matching the old "not cast via flashback" path).
@@ -1643,6 +1655,7 @@ impl serde::Serialize for CardInstance {
             evoked: self.evoked,
             dashed: self.dashed,
             cast_from_suspend: self.cast_from_suspend,
+            blitzed: self.blitzed,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
             chosen_creature_type: self.chosen_creature_type,
@@ -1688,6 +1701,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.evoked = wire.evoked;
         c.dashed = wire.dashed;
         c.cast_from_suspend = wire.cast_from_suspend;
+        c.blitzed = wire.blitzed;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
         c.chosen_creature_type = wire.chosen_creature_type;

@@ -2740,6 +2740,9 @@ impl GameState {
         if alt.dash {
             card.dashed = true;
         }
+        if alt.blitz {
+            card.blitzed = true;
+        }
 
         // Timing: sorcery-speed unless instant-speed (or the alt cost grants
         // flash — Rout), plus Teferi-style opponent restriction.

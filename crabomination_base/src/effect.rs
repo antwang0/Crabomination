@@ -1799,6 +1799,11 @@ pub enum Effect {
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
+    /// Sacrifice this effect's source permanent (CR 701.16), firing proper
+    /// death triggers. Used by end-of-turn self-sacrifice (Blitz, Ball
+    /// Lightning) where `Effect::Move { This → Graveyard }` would skip the
+    /// `CreatureDied` event.
+    SacrificeSource,
     /// "Sacrifice any number of [filter]. [payoff] for each one." The
     /// controller chooses how many to sacrifice via `Decision::ChooseAmount`
     /// (AutoDecider sacrifices none). For each sacrifice, `per_each` runs
@@ -2193,6 +2198,7 @@ impl Effect {
             Effect::Noop => false,
             Effect::Myriad => false,
             Effect::Enlist => false,
+            Effect::SacrificeSource => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::Seq(v) => v.iter().any(|e| e.requires_target()),
@@ -3660,6 +3666,13 @@ pub mod shortcut {
     /// gains haste and returns to its owner's hand at the next end step.
     pub fn dash(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
         crate::card::AlternativeCost { mana_cost, dash: true, ..Default::default() }
+    }
+
+    /// Blitz (CR 702.152) alternative cost: cast for `mana_cost`; the creature
+    /// gains haste and "When this creature dies, draw a card," then is
+    /// sacrificed at the beginning of the next end step.
+    pub fn blitz(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+        crate::card::AlternativeCost { mana_cost, blitz: true, ..Default::default() }
     }
 
     /// "[Permanents matching `filter`] have '{T}: Add one mana of any

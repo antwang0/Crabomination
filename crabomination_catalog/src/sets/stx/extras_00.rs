@@ -253,6 +253,7 @@ pub fn baleful_mastery() -> CardDefinition {
                 },
             ])),
             dash: false,
+            blitz: false,
             flash: false,
         }),
         back_face: None,
