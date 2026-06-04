@@ -1555,6 +1555,79 @@ pub fn welkin_tern() -> CardDefinition {
     }
 }
 
+/// Indrik Stomphowler — {4}{G}, 4/4 Beast. "When this enters, destroy target
+/// artifact or enchantment." (M10)
+pub fn indrik_stomphowler() -> CardDefinition {
+    CardDefinition {
+        name: "Indrik Stomphowler",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ambassador Oak — {3}{G}, 2/2 Treefolk Shaman. "When this enters, create a
+/// 1/1 green Elf Warrior creature token." (SHM)
+pub fn ambassador_oak() -> CardDefinition {
+    CardDefinition {
+        name: "Ambassador Oak",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk, CreatureType::Shaman], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::card::TokenDefinition {
+                    name: "Elf Warrior".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![crate::mana::Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nessian Asp — {4}{G}, 4/5 Snake. "{6}{G}: Monstrosity 4." (THS)
+pub fn nessian_asp() -> CardDefinition {
+    CardDefinition {
+        name: "Nessian Asp",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 4,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), g()]),
+            effect: Effect::Monstrosity { n: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Charging Rhino — {3}{G}{G}, 4/4 Rhino. "Charging Rhino can't be blocked
 /// by more than one creature." (various)
 pub fn charging_rhino() -> CardDefinition {

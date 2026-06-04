@@ -15475,6 +15475,51 @@ fn elvish_archdruid_lord_and_mana() {
     assert_eq!(g.players[0].mana_pool.total(), 2, "two green from two Elves");
 }
 
+/// Indrik Stomphowler destroys a target artifact or enchantment on ETB.
+#[test]
+fn indrik_stomphowler_etb_destroys_artifact() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::ornithopter()); // artifact creature
+    let id = g.add_card_to_hand(0, catalog::indrik_stomphowler());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(art)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
+
+/// Ambassador Oak makes a 1/1 Elf Warrior on ETB.
+#[test]
+fn ambassador_oak_etb_makes_elf_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::ambassador_oak());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Elf Warrior").count(), 1, "made an Elf Warrior");
+}
+
+/// Nessian Asp's Monstrosity 4 adds four +1/+1 counters.
+#[test]
+fn nessian_asp_monstrosity_adds_counters() {
+    let mut g = two_player_game();
+    let asp = g.add_card_to_battlefield(0, catalog::nessian_asp());
+    g.clear_sickness(asp);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: asp, ability_index: 0, target: None, x_value: None,
+    }).expect("monstrosity activatable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(asp).unwrap();
+    assert_eq!((c.power(), c.toughness()), (8, 9), "4/5 + four +1/+1 = 8/9");
+}
+
 /// Welkin Tern can't block.
 #[test]
 fn welkin_tern_cant_block() {
