@@ -84,6 +84,8 @@ pub enum CreatureType {
     Ninja,
     // Outlaws of Thunder Junction Mount subtype (Saddle, CR 702.171).
     Mount,
+    // Eldraine Peasant subtype (Curious Pair, Giant Killer).
+    Peasant,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
     // Artifact-creature token subtypes (Hangarback Walker's Thopters,

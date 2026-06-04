@@ -15736,6 +15736,117 @@ pub fn realm_cloaked_giant() -> CardDefinition {
     }
 }
 
+/// Tuinvale Treefolk — {5}{G} Creature — Treefolk 4/5.
+/// Adventure: Oaken Boon {3}{G} Sorcery — put two +1/+1 counters on target
+/// creature.
+pub fn tuinvale_treefolk() -> CardDefinition {
+    CardDefinition {
+        name: "Tuinvale Treefolk",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        adventure: Some(Box::new(Adventure {
+            name: "Oaken Boon",
+            cost: cost(&[generic(3), g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Curious Pair — {2}{G} Creature — Human Peasant 1/3.
+/// Adventure: Treats to Share {G} Sorcery — create a Food token.
+pub fn curious_pair() -> CardDefinition {
+    CardDefinition {
+        name: "Curious Pair",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Peasant],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        adventure: Some(Box::new(Adventure {
+            name: "Treats to Share",
+            cost: cost(&[g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::food_token(),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Queen of Ice — {2}{U} Creature — Human Noble 2/3.
+/// Adventure: Rage of Winter {1}{U} Sorcery — tap target creature (the
+/// "doesn't untap next turn" rider is dropped).
+pub fn queen_of_ice() -> CardDefinition {
+    CardDefinition {
+        name: "Queen of Ice",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        adventure: Some(Box::new(Adventure {
+            name: "Rage of Winter",
+            cost: cost(&[generic(1), u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Hypnotic Sprite — {1}{U} Creature — Faerie Wizard 2/1, Flying.
+/// Adventure: Mesmeric Glare {2}{U} Instant — counter target spell with mana
+/// value 3 or less.
+pub fn hypnotic_sprite() -> CardDefinition {
+    CardDefinition {
+        name: "Hypnotic Sprite",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(Adventure {
+            name: "Mesmeric Glare",
+            cost: cost(&[generic(2), u()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::CounterSpell {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::ManaValueAtMost(3),
+                },
+            },
+        })),
+        ..Default::default()
+    }
+}
+
 /// Esika's Chariot — {3}{G} Legendary Artifact — Vehicle 4/4.
 /// When this enters, create two 2/2 green Cat creature tokens. Whenever it
 /// attacks, create a token that's a copy of target token you control.

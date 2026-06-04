@@ -24069,3 +24069,76 @@ fn affordances_surface_plot_and_adventure() {
     assert!(a.plottable.contains(&plot), "Spinewoods Paladin is plottable");
     assert!(a.adventurable.contains(&adv), "Bonecrusher Giant's Stomp is castable");
 }
+
+/// Oaken Boon (Tuinvale Treefolk) puts two +1/+1 counters on a creature.
+#[test]
+fn adventure_tuinvale_oaken_boon_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tuinvale_treefolk());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Oaken Boon");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (4, 4), "+2/+2 from two counters");
+}
+
+/// Treats to Share (Curious Pair) makes a Food token.
+#[test]
+fn adventure_curious_pair_treats_to_share_food() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::curious_pair());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Treats to Share");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Food").count(), 1, "made a Food token");
+}
+
+/// Rage of Winter (Queen of Ice) taps a creature.
+#[test]
+fn adventure_queen_of_ice_rage_of_winter_taps() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::queen_of_ice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rage of Winter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "creature tapped");
+}
+
+/// Mesmeric Glare (Hypnotic Sprite) counters a cheap spell on the stack.
+#[test]
+fn adventure_hypnotic_sprite_mesmeric_glare_counters() {
+    let mut g = two_player_game();
+    // Opponent casts Lightning Bolt (MV 1) targeting our face.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts Bolt");
+    // We respond with Mesmeric Glare.
+    let id = g.add_card_to_hand(0, catalog::hypnotic_sprite());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mesmeric Glare");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered to graveyard");
+    assert_eq!(g.players[0].life, 20, "Bolt countered, no damage");
+}
