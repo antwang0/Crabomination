@@ -889,6 +889,51 @@ pub fn doomskar_titan() -> CardDefinition {
     }
 }
 
+// ── Removal & combat tricks ──────────────────────────────────────────────────
+
+/// Ulcerate — {B} Instant. Destroy target creature; you lose 3 life.
+pub fn ulcerate() -> CardDefinition {
+    CardDefinition {
+        name: "Ulcerate",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Might of Old Krosa — {G} Instant. Target creature gets +4/+4 until end of
+/// turn. (The opponents'-turn +2/+2 split collapses to the on-turn value.)
+pub fn might_of_old_krosa() -> CardDefinition {
+    CardDefinition {
+        name: "Might of Old Krosa",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: crate::effect::shortcut::pump_target(4, 4),
+        ..Default::default()
+    }
+}
+
+/// Aspect of Hydra — {G} Instant. Target creature gets +X/+X until end of turn,
+/// where X is your devotion to green.
+pub fn aspect_of_hydra() -> CardDefinition {
+    CardDefinition {
+        name: "Aspect of Hydra",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::Target(0),
+            power: Value::DevotionTo(vec![Color::Green]),
+            toughness: Value::DevotionTo(vec![Color::Green]),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 

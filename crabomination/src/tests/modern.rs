@@ -168,6 +168,46 @@ fn blitz_ardent_elementalist_etb_returns_instant() {
     );
 }
 
+// ── Removal & combat tricks ──────────────────────────────────────────────────
+
+/// Ulcerate destroys a creature and costs you 3 life.
+#[test]
+fn ulcerate_destroys_and_costs_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ulcerate());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(g.players[0].life, 17, "lost 3 life");
+}
+
+/// Might of Old Krosa pumps a creature +4/+4.
+#[test]
+fn might_of_old_krosa_pumps_four() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::might_of_old_krosa());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (6, 6), "2/2 + 4/4");
+}
+
+/// Aspect of Hydra pumps by devotion to green.
+#[test]
+fn aspect_of_hydra_scales_with_devotion() {
+    let mut g = two_player_game();
+    // Two green creatures with {G}{G}-ish pips → devotion 3 here.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // {1}{G} → 1 green pip
+    let id = g.add_card_to_hand(0, catalog::aspect_of_hydra());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    let b = g.battlefield_find(bear).unwrap();
+    // Devotion to green = green pips among permanents = 1 (the bear) → +1/+1.
+    assert_eq!((b.power(), b.toughness()), (3, 3), "2/2 + devotion(1)");
+}
+
 // ── Rituals & impulse draw ───────────────────────────────────────────────────
 
 /// Pyretic Ritual nets +1 red mana ({1}{R} in, {R}{R}{R} out).
