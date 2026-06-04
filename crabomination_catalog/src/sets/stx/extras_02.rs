@@ -79,6 +79,7 @@ pub fn quandrix_surge() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -128,6 +129,7 @@ pub fn magecraft_insight() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -180,6 +182,7 @@ pub fn sparkmages_mantra() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -225,6 +228,7 @@ pub fn witherbloom_drainage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -295,6 +299,7 @@ pub fn mizzium_mortars() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -350,6 +355,7 @@ pub fn electrolyze() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -410,6 +416,7 @@ pub fn show_of_aggression() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -485,6 +492,7 @@ pub fn past_in_flames() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -541,6 +549,7 @@ pub fn inspired_idea() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -616,6 +625,7 @@ pub fn resurgent_belief() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -682,6 +692,7 @@ pub fn enthusiastic_study() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -744,6 +755,7 @@ pub fn forked_bolt() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -791,6 +803,7 @@ pub fn storms_wrath() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -842,6 +855,7 @@ pub fn cinderclasm() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -896,6 +910,7 @@ pub fn cathartic_pyre() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -940,6 +955,7 @@ pub fn stern_dismissal() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -986,6 +1002,7 @@ pub fn krosan_grip() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1063,6 +1080,7 @@ pub fn sublime_epiphany() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1138,6 +1156,7 @@ pub fn persist() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1187,6 +1206,7 @@ pub fn bone_to_ash() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1247,6 +1267,7 @@ pub fn ingenious_mastery() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1308,6 +1329,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1357,6 +1379,7 @@ pub fn damnable_pact() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1407,6 +1430,7 @@ pub fn shore_up() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1458,6 +1482,7 @@ pub fn symbol_of_strength() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1512,6 +1537,7 @@ pub fn magmatic_sinkhole() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1580,6 +1606,7 @@ pub fn sevinnes_reclamation() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1643,6 +1670,7 @@ pub fn light_of_promise() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1703,6 +1731,7 @@ pub fn skywarp_skaab() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1757,6 +1786,7 @@ pub fn anger() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1849,6 +1879,7 @@ pub fn triskaidekaphile() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1904,6 +1935,7 @@ pub fn excellent_education() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1964,6 +1996,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2035,6 +2068,7 @@ pub fn wonder() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2084,6 +2118,7 @@ pub fn brawn() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2134,6 +2169,7 @@ pub fn deep_analysis() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2192,6 +2228,7 @@ pub fn kasminas_transmutation() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2253,6 +2290,7 @@ pub fn crippling_fear() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2315,6 +2353,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2362,6 +2401,7 @@ pub fn valor() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2409,6 +2449,7 @@ pub fn pigment_storm() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2461,6 +2502,7 @@ pub fn step_through() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2516,6 +2558,7 @@ pub fn inkfathom_witch() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2588,6 +2631,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2653,6 +2697,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2711,6 +2756,7 @@ pub fn drannith_stinger() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2764,6 +2810,7 @@ pub fn mage_mauler() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2844,6 +2891,7 @@ pub fn heirloom_mirror() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2901,6 +2949,7 @@ pub fn quandrix_mascot() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2959,6 +3008,7 @@ pub fn witherbloom_mascot() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3018,6 +3068,7 @@ pub fn spiteful_squad() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3078,6 +3129,7 @@ pub fn master_symmetrist() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3145,6 +3197,7 @@ pub fn stinging_cave_crawler() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3196,6 +3249,7 @@ pub fn cogwork_archivist() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3255,6 +3309,7 @@ pub fn lorehold_mascot() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3312,6 +3367,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3416,6 +3472,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3467,6 +3524,7 @@ pub fn awesome_presentation() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -3531,5 +3589,6 @@ pub fn rise_of_extus() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }

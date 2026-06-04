@@ -75,6 +75,7 @@ pub fn quandrix_geometer() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -113,6 +114,7 @@ pub fn silverquill_sentinel_cleric() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -169,6 +171,7 @@ pub fn witherbloom_soilshaper() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -227,6 +230,7 @@ pub fn prismari_fireshaper() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -277,6 +281,7 @@ pub fn strixhaven_scry_wizard() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -335,6 +340,7 @@ pub fn lorehold_bookbinder() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -386,6 +392,7 @@ pub fn quandrix_wavecaster() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -434,6 +441,7 @@ pub fn silverquill_embodiment() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -477,6 +485,7 @@ pub fn witherbloom_plagueweaver() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -535,6 +544,7 @@ pub fn strixhaven_mage_hunter() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -583,6 +593,7 @@ pub fn lorehold_pyresmith() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -634,6 +645,7 @@ pub fn prismari_sparkbender() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -684,6 +696,7 @@ pub fn quandrix_mathmage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -733,6 +746,7 @@ pub fn silverquill_adjudicator() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -771,6 +785,7 @@ pub fn witherbloom_drain_mage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -821,6 +836,7 @@ pub fn strixhaven_pop_quiz_sage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -871,6 +887,7 @@ pub fn lorehold_spirit_champion() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -927,6 +944,7 @@ pub fn witherbloom_pest_spawner() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -990,6 +1008,7 @@ pub fn prismari_wave_mage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1048,6 +1067,7 @@ pub fn quandrix_counterstudent() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1094,6 +1114,7 @@ pub fn silverquill_drain_lord() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1140,6 +1161,7 @@ pub fn strixhaven_battle_cleric() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1185,6 +1207,7 @@ pub fn strixhaven_researcher() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1233,6 +1256,7 @@ pub fn strixhaven_combatant() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1281,6 +1305,7 @@ pub fn strixhaven_druid() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1323,6 +1348,7 @@ pub fn strixhaven_drainsong() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1377,6 +1403,7 @@ pub fn strixhaven_honor_guard() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1421,6 +1448,7 @@ pub fn strixhaven_sapper() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1471,6 +1499,7 @@ pub fn strixhaven_cartographer_b32() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1512,6 +1541,7 @@ pub fn strixhaven_glyphmage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1562,6 +1592,7 @@ pub fn strixhaven_mentor() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1635,6 +1666,7 @@ pub fn strixhaven_banner() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1677,6 +1709,7 @@ pub fn strixhaven_apprentice() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1724,6 +1757,7 @@ pub fn strixhaven_sorcerer() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1783,6 +1817,7 @@ pub fn strixhaven_pupil() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1832,6 +1867,7 @@ pub fn strixhaven_field_researcher() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1871,6 +1907,7 @@ pub fn strixhaven_quartermaster() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1907,6 +1944,7 @@ pub fn strixhaven_library_mage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1944,6 +1982,7 @@ pub fn strixhaven_demonstrator() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -1996,6 +2035,7 @@ pub fn strixhaven_crucible() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2045,6 +2085,7 @@ pub fn strixhaven_anthemcaster() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2088,6 +2129,7 @@ pub fn strixhaven_stormsage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2124,6 +2166,7 @@ pub fn strixhaven_skylancer() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2175,6 +2218,7 @@ pub fn silverquill_ledgerkeeper() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2214,6 +2258,7 @@ pub fn inkling_aerospread() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2252,6 +2297,7 @@ pub fn silverquill_brushmage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2295,6 +2341,7 @@ pub fn inkling_glaivemaster() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2334,6 +2381,7 @@ pub fn silverquill_lecturer_b103() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2385,6 +2433,7 @@ pub fn witherbloom_necromage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2423,6 +2472,7 @@ pub fn witherbloom_toxinsage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2463,6 +2513,7 @@ pub fn witherbloom_wildmage() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2508,6 +2559,7 @@ pub fn witherbloom_pestcaller_b103() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2546,6 +2598,7 @@ pub fn witherbloom_lecturer() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2603,6 +2656,7 @@ pub fn lorehold_battlemage_b103() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2656,6 +2710,7 @@ pub fn lorehold_embertusk() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2695,6 +2750,7 @@ pub fn lorehold_pyrescholar_b103() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2745,6 +2801,7 @@ pub fn lorehold_spirit_reclaimer() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2795,6 +2852,7 @@ pub fn lorehold_lecturer() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2845,6 +2903,7 @@ pub fn prismari_sparkblade() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }
 
@@ -2898,5 +2957,6 @@ pub fn prismari_aetherweaver() -> CardDefinition {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     }
 }

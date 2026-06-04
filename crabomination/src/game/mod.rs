@@ -2911,6 +2911,20 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_foretold(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastAdventure {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_adventure(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastAdventureCreature {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_adventure_creature(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellConvoke {
                 card_id,
                 target,
@@ -4751,7 +4765,19 @@ impl GameState {
         mana_spent: u32,
         override_effect: Option<Effect>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        let effect = override_effect.unwrap_or_else(|| card.definition.effect.clone());
+        let effect = override_effect.unwrap_or_else(|| {
+            if card.adventuring {
+                // CR 715 — resolve the adventure half's effect, not the
+                // creature body.
+                card.definition
+                    .adventure
+                    .as_ref()
+                    .map(|a| a.effect.clone())
+                    .unwrap_or(Effect::Noop)
+            } else {
+                card.definition.effect.clone()
+            }
+        });
         let mut ctx = EffectContext::for_spell_with_source_and_origin(
             card.id,
             card.definition.name,
@@ -4831,6 +4857,15 @@ impl GameState {
         if card.bought_back {
             let owner = card.owner;
             self.players[owner].hand.push(card);
+            return Ok(events);
+        }
+        // CR 715 — an adventure spell goes to exile (not the graveyard) on
+        // resolution, marked so its creature half can be cast from exile.
+        if card.adventuring {
+            let mut card = card;
+            card.adventuring = false;
+            card.on_adventure = true;
+            self.exile.push(card);
             return Ok(events);
         }
         self.players[caster].send_to_graveyard(card);

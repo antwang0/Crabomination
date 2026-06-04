@@ -1047,6 +1047,130 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 715 — cast the instant/sorcery adventure half of a card from hand.
+    /// Pay the adventure cost; on resolution the card is exiled (with
+    /// `on_adventure` set) instead of going to the graveyard, so the creature
+    /// half can be cast from exile later via `cast_adventure_creature`.
+    pub(crate) fn cast_adventure(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let adv = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.has_adventure().cloned())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // An adventure spell is a noncreature spell — respect a Ranger-Captain
+        // of Eos style lock.
+        if self.players[p].cant_cast_noncreature_this_turn {
+            return Err(GameError::CantCastNoncreature);
+        }
+        let must_be_sorcery_speed = !adv.is_instant_speed() || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality_with_source(tgt, p, Some(card_id))?;
+        }
+        let mut cost = if adv.cost.has_x() {
+            adv.cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            adv.cost.clone()
+        };
+        apply_spell_cost_floor(self, &mut cost);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self.players[p].remove_from_hand(card_id).unwrap();
+        card.cast_from_hand = true;
+        card.adventuring = true;
+        let mut events = receipt.auto_events;
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            mana_spent,
+        );
+        Ok(events)
+    }
+
+    /// CR 715 — cast the creature half of a card that's in exile after going
+    /// on an adventure. Pays the card's regular mana cost.
+    pub(crate) fn cast_adventure_creature(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let pos = self
+            .exile
+            .iter()
+            .position(|c| c.id == card_id && c.on_adventure && c.owner == p)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let is_instant = self.exile[pos].definition.is_instant_speed();
+        let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality_with_source(tgt, p, Some(card_id))?;
+        }
+        let base = self.exile[pos].definition.cost.clone();
+        let mut cost = if base.has_x() {
+            base.with_x_value(x_value.unwrap_or(0))
+        } else {
+            base
+        };
+        apply_spell_cost_floor(self, &mut cost);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self.exile.remove(pos);
+        card.on_adventure = false;
+        card.adventuring = false;
+        card.cast_from_hand = false;
+        let mut events = receipt.auto_events;
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            mana_spent,
+        );
+        Ok(events)
+    }
+
     /// CR 702.103 — cast an enchantment-creature for its Bestow cost as an
     /// Aura targeting a creature (`target`). The resolving permanent enters
     /// attached and is an Aura (not a creature) while bestowed.
@@ -1541,14 +1665,28 @@ impl GameState {
         let card_id = card.id;
         self.spells_cast_this_turn += 1;
         self.players[p].spells_cast_this_turn += 1;
+        // CR 715 — when cast as its adventure half the card is an
+        // instant/sorcery spell, not a creature spell, so the spell-type
+        // tallies (Magecraft / Prowess) read the adventure's types.
+        let adv_types = card
+            .adventuring
+            .then(|| card.definition.adventure.as_ref().map(|a| &a.card_types))
+            .flatten();
+        let is_instant_or_sorcery = match adv_types {
+            Some(types) => {
+                types.contains(&CardType::Instant) || types.contains(&CardType::Sorcery)
+            }
+            None => {
+                card.definition.card_types.contains(&CardType::Instant)
+                    || card.definition.card_types.contains(&CardType::Sorcery)
+            }
+        };
         // Refine the spell-type tallies. Both gates default to 0 on
         // snapshot back-compat (player.rs `#[serde(default)]`).
-        if card.definition.card_types.contains(&CardType::Instant)
-            || card.definition.card_types.contains(&CardType::Sorcery)
-        {
+        if is_instant_or_sorcery {
             self.players[p].instants_or_sorceries_cast_this_turn += 1;
         }
-        if card.definition.is_creature() {
+        if !card.adventuring && card.definition.is_creature() {
             self.players[p].creatures_cast_this_turn += 1;
         }
         // Veil of Summer gate: note when a player casts a blue or black
@@ -1563,10 +1701,14 @@ impl GameState {
         }
         consume_first_spell_tax(self, p);
 
-        let on_cast_triggers = collect_self_cast_triggers(&card);
+        let on_cast_triggers = if card.adventuring {
+            Vec::new()
+        } else {
+            collect_self_cast_triggers(&card)
+        };
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
 
-        let was_creature_spell = card.definition.is_creature();
+        let was_creature_spell = !card.adventuring && card.definition.is_creature();
         // CR 702.40 — Storm: when this spell is cast, copy it for each spell
         // cast before it this turn. `spells_cast_this_turn` already includes
         // this spell (bumped above), so prior spells = count - 1. Capture the

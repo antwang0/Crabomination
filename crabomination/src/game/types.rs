@@ -94,6 +94,27 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 715 — cast the instant/sorcery "adventure" half of an Adventurer
+    /// card from hand. On resolution the card is exiled with permission to
+    /// cast the creature half later.
+    CastAdventure {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 715 — cast the creature half of a card that's in exile after going
+    /// on an adventure (its `on_adventure` flag is set).
+    CastAdventureCreature {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a modal-double-faced card via its **back face**. Mirrors
     /// `PlayLandBack` but for non-land back faces (creature/instant/
     /// sorcery). The card's `definition` is swapped to the back face's

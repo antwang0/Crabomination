@@ -2400,6 +2400,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,
+        adventure: None,
     };
 
     let mut g = two_player_game();

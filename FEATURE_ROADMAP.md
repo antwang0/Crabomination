@@ -183,7 +183,15 @@ not how Magic works" moments.
   `AttackTarget::Battle` (noted in `TODO.md`).
 - ⏳ **Sagas** (lore counters, chapter abilities, DFC sagas).
 - ⏳ **Split cards** (CR 709) + **Fuse**.
-- ⏳ **Adventure** (cast-the-spell-then-exile-to-cast-creature duality).
+- ✅ **Adventure** (CR 715) — `CardDefinition.adventure` + `CardInstance.
+  {adventuring,on_adventure}` + `GameAction::CastAdventure` /
+  `CastAdventureCreature`. The adventure half resolves down the spell path
+  (its own effect, instant/sorcery type for Prowess/Magecraft), then exiles
+  the card with permission to cast the creature half from exile. Ships
+  Bonecrusher Giant // Stomp, Brazen Borrower // Petty Theft, Murderous
+  Rider // Swift End, Foulmire Knight // Profane Insight, Order of Midnight
+  // Alter Fate, Rimrock Knight // Boulder Rush, Garenbrig Carver // Shield's
+  Might.
 - ⏳ **Classes / Rooms / Cases / Backgrounds** (enchantment subtypes with
   level/door mechanics).
 - ⏳ **Leveler cards** (level-up counters).
@@ -208,7 +216,7 @@ feature; sweep card-batch by card-batch.
   discard→exile→offer-cast in `discard_card`/`offer_madness_cast`, CR
   702.35), ✅ Escape (`Keyword::Escape(cost, n)` + `GameAction::CastEscape`,
   CR 702.139 — cast from graveyard for escape cost + exile N other gy cards;
-  instants/sorceries re-escape), ⏳ Adventure,
+  instants/sorceries re-escape), ✅ Adventure (CR 715, see Tier 3),
   ⏳ Soulbond, ⏳ Mutate, ⏳ Companion, ✅ Foretell
   (`CardDefinition.foretell_cost` + `GameAction::Foretell` /
   `CastForetold` — CR 702.143: pay {2} to exile face-down, cast from exile

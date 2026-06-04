@@ -784,7 +784,16 @@ impl GameState {
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
-                    R::HasCardType(ct) => card.definition.card_types.contains(ct),
+                    R::HasCardType(ct) => {
+                        // CR 715 — an adventuring card is its instant/sorcery
+                        // half while on the stack, so report the adventure types.
+                        if card.adventuring {
+                            card.definition.adventure.as_ref()
+                                .map(|a| a.card_types.contains(ct)).unwrap_or(false)
+                        } else {
+                            card.definition.card_types.contains(ct)
+                        }
+                    }
                     R::Multicolored => card.definition.cost.distinct_colors() >= 2,
                     R::Colorless => card.definition.cost.distinct_colors() == 0,
                     R::Monocolored => card.definition.cost.distinct_colors() == 1,
@@ -922,7 +931,16 @@ impl GameState {
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
-            R::HasCardType(ct) => card.definition.card_types.contains(ct),
+            R::HasCardType(ct) => {
+                        // CR 715 — an adventuring card is its instant/sorcery
+                        // half while on the stack, so report the adventure types.
+                        if card.adventuring {
+                            card.definition.adventure.as_ref()
+                                .map(|a| a.card_types.contains(ct)).unwrap_or(false)
+                        } else {
+                            card.definition.card_types.contains(ct)
+                        }
+                    }
             R::Multicolored => card.definition.cost.distinct_colors() >= 2,
             R::Colorless => card.definition.cost.distinct_colors() == 0,
             R::Monocolored => card.definition.cost.distinct_colors() == 1,

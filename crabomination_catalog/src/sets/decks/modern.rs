@@ -7,7 +7,7 @@
 //! supplement** section.
 
 use crate::card::{
-    ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword, LandType,
+    Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword, LandType,
     SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
@@ -342,6 +342,7 @@ pub fn behold_the_multiverse() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
         ]),
         foretell_cost: Some(cost(&[generic(1), u()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -360,6 +361,7 @@ pub fn demon_bolt() -> CardDefinition {
             amount: Value::Const(4),
         },
         foretell_cost: Some(cost(&[r()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -375,6 +377,7 @@ pub fn augury_raven() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         foretell_cost: Some(cost(&[generic(2), u()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -390,6 +393,7 @@ pub fn mistwalker() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         foretell_cost: Some(cost(&[u()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -408,6 +412,7 @@ pub fn ravenous_lindwurm() -> CardDefinition {
             amount: Value::Const(4),
         })],
         foretell_cost: Some(cost(&[generic(3), g()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -423,6 +428,7 @@ pub fn sarulfs_packmate() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) })],
         foretell_cost: Some(cost(&[generic(2), g()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -451,6 +457,7 @@ pub fn dwarven_reinforcements() -> CardDefinition {
             },
         },
         foretell_cost: Some(cost(&[generic(1), r()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -501,6 +508,7 @@ pub fn beskir_shieldmate() -> CardDefinition {
             },
         })],
         foretell_cost: Some(cost(&[w()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -885,6 +893,7 @@ pub fn doomskar_titan() -> CardDefinition {
             },
         )],
         foretell_cost: Some(cost(&[generic(2), r()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -1080,6 +1089,7 @@ pub fn ravenform() -> CardDefinition {
             },
         ]),
         foretell_cost: Some(cost(&[u()])),
+        adventure: None,
         ..Default::default()
     }
 }
@@ -15242,6 +15252,198 @@ pub fn bonecrusher_giant() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
+        // Adventure — Stomp {1}{R}: damage can't be prevented this turn; deal
+        // 2 damage to any target (CR 715).
+        adventure: Some(Box::new(Adventure {
+            name: "Stomp",
+            cost: cost(&[generic(1), r()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::Seq(vec![
+                Effect::DamageCantBePreventedThisTurn,
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Brazen Borrower — {1}{U}{U} Creature — Faerie Rogue 3/1, Flash, Flying.
+/// Adventure: Petty Theft {1}{U} Instant — return target nonland permanent
+/// you don't control to its owner's hand.
+pub fn brazen_borrower() -> CardDefinition {
+    CardDefinition {
+        name: "Brazen Borrower",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        adventure: Some(Box::new(Adventure {
+            name: "Petty Theft",
+            cost: cost(&[generic(1), u()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Murderous Rider — {1}{B}{B} Creature — Zombie Knight 2/3, Lifelink.
+/// Adventure: Swift End {1}{B}{B} Instant — destroy target creature or
+/// planeswalker; you lose 2 life.
+pub fn murderous_rider() -> CardDefinition {
+    CardDefinition {
+        name: "Murderous Rider",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        adventure: Some(Box::new(Adventure {
+            name: "Swift End",
+            cost: cost(&[generic(1), b(), b()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Foulmire Knight — {B} Creature — Zombie Knight 1/1, Deathtouch.
+/// Adventure: Profane Insight {2}{B} Instant — you draw a card and you lose
+/// 1 life.
+pub fn foulmire_knight() -> CardDefinition {
+    CardDefinition {
+        name: "Foulmire Knight",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        adventure: Some(Box::new(Adventure {
+            name: "Profane Insight",
+            cost: cost(&[generic(2), b()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        })),
+        ..Default::default()
+    }
+}
+
+/// Order of Midnight — {1}{B} Creature — Human Knight 2/2, Flying.
+/// Adventure: Alter Fate {1}{B} Sorcery — return target creature card from a
+/// graveyard to its owner's hand.
+pub fn order_of_midnight() -> CardDefinition {
+    CardDefinition {
+        name: "Order of Midnight",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        adventure: Some(Box::new(Adventure {
+            name: "Alter Fate",
+            cost: cost(&[generic(1), b()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::InGraveyard.and(SelectionRequirement::Creature),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Rimrock Knight — {1}{R} Creature — Dwarf Knight 3/1 that can't block.
+/// Adventure: Boulder Rush {R} Instant — target creature gets +2/+0 until
+/// end of turn.
+pub fn rimrock_knight() -> CardDefinition {
+    CardDefinition {
+        name: "Rimrock Knight",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        adventure: Some(Box::new(Adventure {
+            name: "Boulder Rush",
+            cost: cost(&[r()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Garenbrig Carver — {2}{G} Creature — Giant Warrior 3/2.
+/// Adventure: Shield's Might {1}{G} Sorcery — target creature gets +2/+2
+/// until end of turn.
+pub fn garenbrig_carver() -> CardDefinition {
+    CardDefinition {
+        name: "Garenbrig Carver",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        adventure: Some(Box::new(Adventure {
+            name: "Shield's Might",
+            cost: cost(&[generic(1), g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        })),
         ..Default::default()
     }
 }

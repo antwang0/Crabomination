@@ -887,6 +887,35 @@ pub struct CardDefinition {
     /// (`GameAction::CastForetell`). Defaults to `None`.
     #[serde(default)]
     pub foretell_cost: Option<crate::mana::ManaCost>,
+    /// CR 715 — Adventure. When `Some`, this creature card also has an
+    /// instant/sorcery "adventure" half that can be cast instead
+    /// (`GameAction::CastAdventure`). On resolution the card is exiled
+    /// (rather than going to the graveyard) with permission to cast the
+    /// creature half from exile later (`GameAction::CastAdventureCreature`).
+    /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub adventure: Option<Box<Adventure>>,
+}
+
+/// CR 715 — the instant/sorcery "adventure" half of an Adventurer card. The
+/// creature half lives on the parent [`CardDefinition`]; this struct holds
+/// only what the adventure spell needs to be cast and resolved.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct Adventure {
+    #[serde(with = "crate::static_str_serde")]
+    pub name: &'static str,
+    pub cost: ManaCost,
+    /// Instant or Sorcery (governs cast timing).
+    pub card_types: Vec<CardType>,
+    pub effect: crate::effect::Effect,
+}
+
+impl Adventure {
+    /// True if the adventure half can be cast at instant speed.
+    pub fn is_instant_speed(&self) -> bool {
+        self.card_types.contains(&CardType::Instant)
+    }
 }
 
 /// CR 707 — "enters as a copy of [filter] permanent" spec, stored on
@@ -1164,6 +1193,10 @@ impl CardDefinition {
     pub fn has_bestow(&self) -> Option<&ManaCost> {
         self.bestow.as_ref()
     }
+    /// CR 715 — the adventure half, if this card has Adventure.
+    pub fn has_adventure(&self) -> Option<&Adventure> {
+        self.adventure.as_deref()
+    }
     /// CR 702.27 — the Buyback mana cost, if this card has Buyback.
     pub fn has_buyback(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
@@ -1383,6 +1416,16 @@ pub struct CardInstance {
     /// and any "as long as ~ is monstrous" state. Round-trips through
     /// `CardInstanceWire` with `#[serde(default)]`.
     pub monstrous: bool,
+    /// CR 715 — true while this card is on the stack as its adventure
+    /// (instant/sorcery) half. The resolver runs `definition.adventure`'s
+    /// effect instead of the creature body and exiles the card (setting
+    /// `on_adventure`) instead of sending it to the graveyard.
+    pub adventuring: bool,
+    /// CR 715 — true while this card sits in exile after going on an
+    /// adventure, available to be cast as its creature half from exile
+    /// (`GameAction::CastAdventureCreature`). Cleared once the creature is
+    /// cast (or the card otherwise changes zones).
+    pub on_adventure: bool,
 }
 
 impl CardInstance {
@@ -1435,6 +1478,8 @@ impl CardInstance {
             named_card: None,
             goaded_by: Vec::new(),
             monstrous: false,
+            adventuring: false,
+            on_adventure: false,
         }
     }
 
@@ -1630,6 +1675,12 @@ struct CardInstanceWire {
     /// as `false`.
     #[serde(default)]
     monstrous: bool,
+    /// CR 715 Adventure flags. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    adventuring: bool,
+    #[serde(default)]
+    on_adventure: bool,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1672,6 +1723,8 @@ impl serde::Serialize for CardInstance {
             named_card: self.named_card.clone(),
             goaded_by: self.goaded_by.clone(),
             monstrous: self.monstrous,
+            adventuring: self.adventuring,
+            on_adventure: self.on_adventure,
         };
         wire.serialize(ser)
     }
@@ -1714,6 +1767,8 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.named_card = wire.named_card;
         c.goaded_by = wire.goaded_by;
         c.monstrous = wire.monstrous;
+        c.adventuring = wire.adventuring;
+        c.on_adventure = wire.on_adventure;
         Ok(c)
     }
 }

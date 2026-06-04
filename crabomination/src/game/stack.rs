@@ -398,9 +398,13 @@ impl GameState {
             } => {
                 let card = *card;
                 let card_id = card.id;
-                let is_noncreature = !card.definition.is_creature();
+                // CR 715 — while on an adventure the card is its instant/
+                // sorcery half, so it resolves down the spell path (and is
+                // exiled, not put onto the battlefield) regardless of its
+                // creature card type.
+                let is_noncreature = card.adventuring || !card.definition.is_creature();
 
-                if card.definition.is_permanent() {
+                if card.definition.is_permanent() && !card.adventuring {
                     // Collect ETB triggers before moving card into battlefield.
                     // `mut` so the enters-as-copy path can swap in the
                     // copied object's ETB triggers (CR 707.5).

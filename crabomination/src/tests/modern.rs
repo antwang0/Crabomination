@@ -23688,3 +23688,110 @@ fn world_rule_keeps_only_the_newest_world_permanent() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == old),
         "older World goes to its owner's graveyard");
 }
+
+// ── Adventure (CR 715) ───────────────────────────────────────────────────────
+
+/// Stomp (Bonecrusher Giant's adventure) deals 2 damage and exiles the card,
+/// which can then be cast as the creature half from exile.
+#[test]
+fn adventure_bonecrusher_stomp_then_cast_creature() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_stone()); // 0/8, survives 2
+    let id = g.add_card_to_hand(0, catalog::bonecrusher_giant());
+    // Cast the Stomp half ({1}{R}).
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(wall)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Stomp");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wall).unwrap().damage, 2, "Stomp deals 2");
+    // The card now sits in exile, adventuring complete.
+    assert!(g.exile.iter().any(|c| c.id == id && c.on_adventure), "exiled on adventure");
+    // Cast the creature half from exile for {2}{R}.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastAdventureCreature {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bonecrusher Giant");
+    drain_stack(&mut g);
+    let giant = g.battlefield_find(id).expect("Giant on battlefield");
+    assert_eq!((giant.power(), giant.toughness()), (4, 3));
+    assert!(!giant.on_adventure && !giant.adventuring, "flags cleared once on battlefield");
+}
+
+/// Petty Theft (Brazen Borrower) returns an opponent's nonland permanent to
+/// hand; the card is then castable as the 3/1 flier from exile.
+#[test]
+fn adventure_brazen_borrower_petty_theft_bounces() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::brazen_borrower());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Petty Theft");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bear back in owner's hand");
+    assert!(g.exile.iter().any(|c| c.id == id && c.on_adventure), "Borrower exiled on adventure");
+}
+
+/// Swift End (Murderous Rider) destroys a creature and costs 2 life.
+#[test]
+fn adventure_murderous_rider_swift_end() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::murderous_rider());
+    let life = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Swift End");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(g.players[0].life, life - 2, "lose 2 life");
+}
+
+/// Profane Insight (Foulmire Knight) is an instant/sorcery cast, so it ticks
+/// a Prowess counter on a creature you control.
+#[test]
+fn adventure_counts_as_noncreature_spell_for_prowess() {
+    let mut g = two_player_game();
+    let prowler = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());
+    let lib_id = g.next_id();
+    g.players[0].library.push(CardInstance::new(lib_id, catalog::grizzly_bears(), 0));
+    let id = g.add_card_to_hand(0, catalog::foulmire_knight());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Profane Insight");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "Profane Insight: lose 1 life");
+    let sw = g.battlefield_find(prowler).expect("swiftspear");
+    assert_eq!(sw.power(), 2, "prowess fired on the adventure spell");
+}
+
+/// Alter Fate (Order of Midnight) returns a creature card from a graveyard
+/// to its owner's hand.
+#[test]
+fn adventure_order_of_midnight_alter_fate_reanimates() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::order_of_midnight());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Alter Fate");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature back in hand");
+}
