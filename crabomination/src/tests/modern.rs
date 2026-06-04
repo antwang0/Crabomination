@@ -2594,6 +2594,60 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn massacre_wurm_etb_shrinks_and_death_drains() {
+    let mut g = two_player_game();
+    let x = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies to -2/-2
+    let wurm = g.add_card_to_hand(0, catalog::massacre_wurm());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(3);
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Massacre Wurm castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(x).is_none(), "the 2/2 died to -2/-2");
+    assert_eq!(g.players[1].life, opp - 2, "opponent loses 2 when its creature dies");
+}
+
+#[test]
+fn archon_of_cruelty_etb_drains_opponent_and_rewards_you() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // sac fodder
+    g.add_card_to_hand(1, catalog::island()); // discard fodder
+    g.add_card_to_library(0, catalog::island()); // draw fodder
+    let archon = g.add_card_to_hand(0, catalog::archon_of_cruelty());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    let you = g.players[0].life;
+    let opp = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: archon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Archon castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 3, "opponent loses 3");
+    assert_eq!(g.players[0].life, you + 3, "you gain 3");
+}
+
+#[test]
+fn rampaging_ferocidon_pings_on_creature_etb_and_stops_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rampaging_ferocidon());
+    // Lifegain is shut off for every player.
+    assert!(g.player_cannot_gain_life_now(0), "your lifegain prevented");
+    assert!(g.player_cannot_gain_life_now(1), "opponent's lifegain prevented too");
+    // Another creature entering (cast by you) pings you (its controller).
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let you = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you - 1, "Ferocidon pings the entering creature's controller");
+}
+
+#[test]
 fn rotting_regisaur_discards_at_upkeep() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::rotting_regisaur());

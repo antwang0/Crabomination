@@ -5320,3 +5320,121 @@ pub fn primeval_titan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Archon of Cruelty — {6}{B}{B} Creature — Archon 6/6, Flying. "Whenever Archon
+/// of Cruelty enters or attacks, target opponent sacrifices a creature or
+/// planeswalker, loses 3 life, and discards a card. You draw a card and gain 3
+/// life." (MH2; the target-opponent clause uses `EachOpponent` — faithful in
+/// 1v1, fans out in multiplayer.)
+pub fn archon_of_cruelty() -> CardDefinition {
+    let body = || Effect::Seq(vec![
+        Effect::Sacrifice {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+        },
+        Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(3) },
+        Effect::DiscardChosen {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Any,
+        },
+        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+    ]);
+    CardDefinition {
+        name: "Archon of Cruelty",
+        cost: cost(&[generic(6), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Archon], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: body(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: body(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rampaging Ferocidon — {2}{R} Creature — Dinosaur 3/3, Menace. "Players can't
+/// gain life. Whenever another creature enters, Rampaging Ferocidon deals 1
+/// damage to that creature's controller." (XLN)
+pub fn rampaging_ferocidon() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Rampaging Ferocidon",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![StaticAbility {
+            description: "Players can't gain life.",
+            effect: StaticEffect::PlayerCannotGainLife {
+                target: crate::effect::PlayerStaticTarget::EachPlayer,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Massacre Wurm — {3}{B}{B}{B} Creature — Phyrexian Wurm 6/5. "When Massacre
+/// Wurm enters, creatures your opponents control get -2/-2 until end of turn.
+/// Whenever a creature an opponent controls dies, that player loses 2 life." (NPH)
+pub fn massacre_wurm() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Massacre Wurm",
+        cost: cost(&[generic(3), b(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(2),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
