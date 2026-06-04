@@ -168,6 +168,82 @@ fn blitz_ardent_elementalist_etb_returns_instant() {
     );
 }
 
+// ── Spell-matters aggro ──────────────────────────────────────────────────────
+
+/// Firebrand Archer pings each opponent when you cast a noncreature spell.
+#[test]
+fn firebrand_archer_pings_on_noncreature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::firebrand_archer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    // 3 from Bolt + 1 from Firebrand Archer.
+    assert_eq!(g.players[1].life, 20 - 3 - 1, "Archer pinged on the noncreature cast");
+}
+
+/// Thermo-Alchemist taps for 1 to each opponent and untaps on instant cast.
+#[test]
+fn thermo_alchemist_pings_and_untaps_on_instant() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::thermo_alchemist());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+    .expect("tap for damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "pinged opponent for 1");
+    assert!(g.battlefield_find(id).unwrap().tapped, "tapped after activation");
+    // Casting an instant untaps it (magecraft).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(id).unwrap().tapped, "untapped on instant cast");
+}
+
+/// Abbot of Keral Keep exiles the top card of your library on ETB and lets you
+/// play it.
+#[test]
+fn abbot_of_keral_keep_exiles_top_and_grants_play() {
+    let mut g = two_player_game();
+    let top = g.add_card_to_library(0, catalog::shock());
+    let id = g.add_card_to_hand(0, catalog::abbot_of_keral_keep());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Abbot");
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == top).expect("top card exiled");
+    assert!(exiled.may_play_until.is_some(), "exiled card is playable");
+}
+
+/// Eidolon of the Great Revel burns the caster of a cheap spell, not an
+/// expensive one.
+#[test]
+fn eidolon_burns_on_cheap_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::eidolon_of_the_great_revel());
+    // Player 1 casts a MV-1 spell → takes 2.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast cheap spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "caster of a MV<=3 spell took 2 from Eidolon");
+}
+
 // ── Spectacle (CR 702.111) ───────────────────────────────────────────────────
 
 /// Skewer the Critics can be cast for its Spectacle cost only after an

@@ -640,6 +640,112 @@ pub fn light_up_the_stage() -> CardDefinition {
     }
 }
 
+// ── Spell-matters aggro ──────────────────────────────────────────────────────
+
+/// Firebrand Archer — {1}{R} 1/2 Human Wizard. Whenever you cast a noncreature
+/// spell, deal 1 damage to each opponent.
+pub fn firebrand_archer() -> CardDefinition {
+    use crate::effect::shortcut::{cast_is_noncreature, each_opponent};
+    CardDefinition {
+        name: "Firebrand Archer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_noncreature()),
+            effect: Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thermo-Alchemist — {1}{R} 0/3 Human Shaman Defender. {T}: deal 1 to each
+/// opponent. Whenever you cast an instant or sorcery, untap it.
+pub fn thermo_alchemist() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::{each_opponent, magecraft_self_untap};
+    CardDefinition {
+        name: "Thermo-Alchemist",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![magecraft_self_untap()],
+        ..Default::default()
+    }
+}
+
+/// Abbot of Keral Keep — {1}{R} 2/1 Human Wizard. Prowess. ETB exile the top
+/// card of your library; you may play it this turn.
+pub fn abbot_of_keral_keep() -> CardDefinition {
+    use crate::effect::shortcut::prowess_trigger;
+    CardDefinition {
+        name: "Abbot of Keral Keep",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                },
+            },
+            prowess_trigger(),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Eidolon of the Great Revel — {R}{R} 1/4 Enchantment Creature — Spirit.
+/// Whenever a player casts a spell with mana value 3 or less, deal 2 damage to
+/// that player.
+pub fn eidolon_of_the_great_revel() -> CardDefinition {
+    CardDefinition {
+        name: "Eidolon of the Great Revel",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::ManaValueAtMost(3),
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 
