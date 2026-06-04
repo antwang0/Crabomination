@@ -11,9 +11,9 @@ use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
 /// Anger of the Gods — {1}{R}{R} Sorcery. Deals 3 damage to each creature.
 /// If a creature would die this turn, exile it instead.
 ///
-/// Approximation: the "exile if would die" replacement is omitted (no
-/// generic SBA-replacement primitive yet). Damage to each creature is
-/// wired via `ForEach + DealDamage`.
+/// Installs the "exile if would die this turn" death replacement on every
+/// creature first, then deals the 3 damage — so creatures it kills are
+/// exiled rather than buried (`Effect::ExileIfWouldDieThisTurn`).
 pub fn anger_of_the_gods() -> CardDefinition {
     CardDefinition {
         name: "Anger of the Gods",
@@ -23,13 +23,18 @@ pub fn anger_of_the_gods() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::DealDamage {
-                to: Selector::TriggerSource,
-                amount: Value::Const(3),
-            }),
-        },
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(3),
+                }),
+            },
+        ]),
         triggered_abilities: vec![],
         ..Default::default()
     }
@@ -413,18 +418,19 @@ pub fn windfall() -> CardDefinition {
 /// Blasphemous Act — {8}{R} Sorcery, "this spell costs {1} less to cast for
 /// each creature on the battlefield." Deals 13 damage to each creature.
 ///
-/// Cost-reduction by creature-count is approximated as a flat {4}{R} cost
-/// (a typical board state has 4–5 creatures across both players). The
-/// damage half is wired faithfully via `ForEach + DealDamage`.
+/// The cost reduction rides the card-intrinsic Affinity hook
+/// (`affinity_filter: Creature`) so it really shrinks by {1} per creature
+/// on the battlefield; the damage half is `ForEach + DealDamage`.
 pub fn blasphemous_act() -> CardDefinition {
     CardDefinition {
         name: "Blasphemous Act",
-        cost: cost(&[generic(4), r()]),
+        cost: cost(&[generic(8), r()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
+        affinity_filter: Some(SelectionRequirement::Creature),
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
             body: Box::new(Effect::DealDamage {

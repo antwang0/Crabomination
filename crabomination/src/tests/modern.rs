@@ -1873,6 +1873,13 @@ fn anger_of_the_gods_burns_each_creature() {
     for cid in [b0, b1, lion] {
         assert!(!g.battlefield.iter().any(|c| c.id == cid));
     }
+    // "If a creature would die this turn, exile it instead": the burned
+    // creatures land in exile, not their owners' graveyards.
+    for cid in [b0, b1, lion] {
+        assert!(g.exile.iter().any(|c| c.id == cid), "creature exiled, not buried");
+    }
+    assert!(g.players[0].graveyard.iter().all(|c| c.id != b0 && c.id != lion),
+        "no Anger victims in graveyard");
 }
 
 #[test]
@@ -1911,8 +1918,12 @@ fn sweltering_suns_burns_each_creature_and_has_cycling() {
 #[test]
 fn blasphemous_act_kills_each_creature() {
     let mut g = two_player_game();
+    // {8}{R} base, but "costs {1} less per creature on the battlefield":
+    // with four creatures out it costs {4}{R} (Affinity hook).
     let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let act = g.add_card_to_hand(0, catalog::blasphemous_act());
     g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -1923,7 +1934,7 @@ fn blasphemous_act_kills_each_creature() {
         mode: None,
         x_value: None,
     })
-    .expect("Blasphemous Act castable for {4}{R}");
+    .expect("Blasphemous Act castable for {4}{R} with four creatures out");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == dragon));
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
@@ -15546,10 +15557,10 @@ fn trinisphere_is_a_three_mana_artifact() {
 }
 
 #[test]
-fn magma_spray_exiles_a_low_toughness_creature_via_if_branch() {
+fn magma_spray_exiles_a_creature_it_kills() {
     use crate::game::types::Target;
     let mut g = two_player_game();
-    // 2-toughness creature: hits exile branch.
+    // 2-toughness creature dies to the 2 damage → exiled by the rider.
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let ms = g.add_card_to_hand(0, catalog::magma_spray());
     g.players[0].mana_pool.add(Color::Red, 1);

@@ -6264,11 +6264,11 @@ pub fn rout() -> CardDefinition {
     }
 }
 
-/// Plague Wind — {8}{B}{B} Sorcery. Destroy all creatures you don't
+/// Plague Wind — {7}{B}{B} Sorcery. Destroy all creatures you don't
 /// control. They can't be regenerated.
 ///
-/// Premium one-sided sweeper for ten mana. The regeneration rider
-/// collapses (no observable regeneration site in the engine).
+/// Premium one-sided sweeper; `DestroyNoRegen` honors the can't-be-
+/// regenerated rider.
 pub fn plague_wind() -> CardDefinition {
     CardDefinition {
         name: "Plague Wind",
@@ -8519,34 +8519,24 @@ pub fn goblin_rabblemaster() -> CardDefinition {
 /// Magma Spray — {R} Instant. Magma Spray deals 2 damage to target
 /// creature. If that creature would die this turn, exile it instead.
 ///
-/// Approximation: the "if it would die, exile instead" rider uses the
-/// same `Effect::If { cond: ValueAtMost(ToughnessOf(Target), 2), then:
-/// Exile, else_: DealDamage 2 }` pattern as Lava Coil. When the target's
-/// toughness ≤ 2 (the lethal case), the engine routes directly to exile;
-/// otherwise just deals 2 damage. The prior-damage-on-creature edge
-/// case isn't captured (no general damage-replacement-with-exile
-/// primitive).
+/// Installs the "exile if would die this turn" death replacement on the
+/// target, then deals 2 damage — faithful to the printed rider
+/// (`Effect::ExileIfWouldDieThisTurn`), and correctly accounts for prior
+/// marked damage / -1/-1 counters that combine with the 2.
 pub fn magma_spray() -> CardDefinition {
-    use crate::effect::Predicate;
     CardDefinition {
         name: "Magma Spray",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::If {
-            cond: Predicate::ValueAtMost(
-                Value::ToughnessOf(Box::new(target_filtered(
-                    SelectionRequirement::Creature,
-                ))),
-                Value::Const(2),
-            ),
-            then: Box::new(Effect::Exile {
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
                 what: target_filtered(SelectionRequirement::Creature),
-            }),
-            else_: Box::new(Effect::DealDamage {
+            },
+            Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: Value::Const(2),
-            }),
-        },
+            },
+        ]),
         ..Default::default()
     }
 }
