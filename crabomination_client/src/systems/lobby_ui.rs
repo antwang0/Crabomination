@@ -83,25 +83,25 @@ struct LobbyCreateFormat(MatchFormat);
 /// Connect to the queued lobby server and install the net session, then greet
 /// the server and ask for the lobby list. Bounces back to the menu on failure.
 pub fn connect_to_lobby_server(world: &mut World) {
-    let addr = world
+    let req = world
         .get_resource_mut::<PendingLobbyServer>()
         .and_then(|mut r| r.0.take());
-    let Some(addr) = addr else {
+    let Some(req) = req else {
         eprintln!("lobby: no server address queued");
         return;
     };
 
-    match connect(&addr) {
+    match connect(&req.addr) {
         Ok((outbox, inbox, conn)) => {
-            outbox.submit_msg(ClientMsg::JoinMatch { name: "client".into() });
+            outbox.submit_msg(ClientMsg::JoinMatch { name: req.name.clone() });
             outbox.submit_msg(ClientMsg::ListLobbies);
             world.insert_resource(outbox);
             world.insert_resource(inbox);
             world.insert_resource(conn);
-            eprintln!("lobby: connected to {addr}");
+            eprintln!("lobby: connected to {} as \"{}\"", req.addr, req.name);
         }
         Err(e) => {
-            eprintln!("lobby: connect {addr} failed: {e}");
+            eprintln!("lobby: connect {} failed: {e}", req.addr);
             if let Some(mut ns) = world.get_resource_mut::<NextState<AppState>>() {
                 ns.set(AppState::Menu);
             }
@@ -326,10 +326,16 @@ fn rebuild_lobby_list(
                     } else {
                         String::new()
                     };
+                    // Prefer the host's name; fall back to the lobby's own name.
+                    let title = if info.host_name.is_empty() {
+                        info.name.clone()
+                    } else {
+                        format!("{}'s lobby", info.host_name)
+                    };
                     row.spawn((
                         Text::new(format!(
                             "{}  [{}]  {}/{}{}",
-                            info.name,
+                            title,
                             info.format.label(),
                             occupied,
                             info.capacity,
@@ -370,17 +376,22 @@ fn update_lobby_status(lobby: Res<LobbyState>, mut q: Query<&mut Text, With<Lobb
     } else if let Some((info, _slot)) = &lobby.joined {
         let occupied = info.players + info.bots;
         let bot_note = if info.bots > 0 {
-            format!(", {} bot", info.bots)
+            format!(" + {} bot", info.bots)
         } else {
             String::new()
         };
+        let who = if info.member_names.is_empty() {
+            String::new()
+        } else {
+            format!(" — {}", info.member_names.join(", "))
+        };
         format!(
-            "In lobby \"{}\" [{}] — waiting ({}/{}{})…",
-            info.name,
+            "In lobby [{}] — waiting ({}/{}{}){}…",
             info.format.label(),
             occupied,
             info.capacity,
             bot_note,
+            who,
         )
     } else {
         format!("{} open lobb{}", lobby.lobbies.len(), if lobby.lobbies.len() == 1 { "y" } else { "ies" })

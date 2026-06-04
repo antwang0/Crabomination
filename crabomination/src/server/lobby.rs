@@ -19,14 +19,20 @@
 //!   to [`run_match`].
 
 use std::collections::{HashMap, HashSet};
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use crate::game::GameState;
 use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg};
 
-use super::{run_match, RandomBot, SeatChannel, SeatOccupant};
+use super::{run_match, MatchOutcome, RandomBot, SeatChannel, SeatOccupant};
+
+/// Callback invoked when a lobby-started match finishes, with its gamemode,
+/// wall-clock duration, and outcome. Lets the server binary fold lobby matches
+/// into its rolling match stats / logs — lobby mode is the default, so without
+/// this the server would have no per-match observability at all.
+pub type MatchEndHook = Arc<dyn Fn(LobbyFormat, Duration, MatchOutcome) + Send + Sync>;
 
 /// Identifier the driver assigns to each connection so the [`LobbyManager`]
 /// can reason about membership without touching the channels themselves.
@@ -44,10 +50,11 @@ pub fn build_state(format: LobbyFormat) -> GameState {
     }
 }
 
-/// One seat in a lobby: a human connection or a bot.
-#[derive(Clone, Copy)]
+/// One seat in a lobby: a human connection (with its display name, captured
+/// when seated) or a bot.
+#[derive(Clone)]
 enum Slot {
-    Human(ConnId),
+    Human { conn: ConnId, name: String },
     Bot,
 }
 
@@ -69,7 +76,7 @@ impl Lobby {
         self.state.players.len()
     }
     fn human_count(&self) -> usize {
-        self.seats.iter().filter(|s| matches!(s, Slot::Human(_))).count()
+        self.seats.iter().filter(|s| matches!(s, Slot::Human { .. })).count()
     }
     fn bot_count(&self) -> usize {
         self.seats.iter().filter(|s| matches!(s, Slot::Bot)).count()
@@ -79,16 +86,30 @@ impl Lobby {
         self.seats
             .iter()
             .filter_map(|s| match s {
-                Slot::Human(c) => Some(*c),
+                Slot::Human { conn, .. } => Some(*conn),
+                Slot::Bot => None,
+            })
+            .collect()
+    }
+    /// The human members' display names, in seat order.
+    fn member_names(&self) -> Vec<String> {
+        self.seats
+            .iter()
+            .filter_map(|s| match s {
+                Slot::Human { name, .. } => Some(name.clone()),
                 Slot::Bot => None,
             })
             .collect()
     }
     fn info(&self) -> LobbyInfo {
+        let member_names = self.member_names();
+        let host_name = member_names.first().cloned().unwrap_or_default();
         LobbyInfo {
             id: self.id,
             name: self.name.clone(),
             format: self.format,
+            host_name,
+            member_names,
             players: self.human_count(),
             bots: self.bot_count(),
             capacity: self.capacity(),
@@ -102,10 +123,11 @@ pub enum SeatSpec {
     Bot,
 }
 
-/// A filled lobby ready to become a match: the pre-built state plus its seats
-/// in order. The driver maps each `Human` seat back to its channel and each
-/// `Bot` seat to a fresh `RandomBot`.
+/// A filled lobby ready to become a match: the gamemode, pre-built state, and
+/// seats in order. The driver maps each `Human` seat back to its channel and
+/// each `Bot` seat to a fresh `RandomBot`.
 pub struct StartMatch {
+    pub format: LobbyFormat,
     pub state: GameState,
     pub seats: Vec<SeatSpec>,
 }
@@ -132,6 +154,9 @@ pub struct LobbyManager {
     conns: HashSet<ConnId>,
     /// Connection → the lobby id it currently sits in. Absent ⇒ browsing.
     conn_lobby: HashMap<ConnId, u64>,
+    /// Connection → display name (from `JoinMatch`), captured into a seat's
+    /// `Slot::Human` when the connection creates or joins a lobby.
+    conn_name: HashMap<ConnId, String>,
     next_id: u64,
 }
 
@@ -144,16 +169,34 @@ impl LobbyManager {
     /// lobby list.
     pub fn register(&mut self, conn: ConnId) -> LobbyOutcome {
         self.conns.insert(conn);
+        self.conn_name.entry(conn).or_insert_with(|| "Player".to_string());
         let mut out = LobbyOutcome::default();
         out.send(conn, self.lobby_list_msg());
         out
+    }
+
+    /// Display name for `conn`, defaulting to "Player".
+    fn name_of(&self, conn: ConnId) -> String {
+        self.conn_name.get(&conn).cloned().unwrap_or_else(|| "Player".to_string())
     }
 
     /// Apply one client message from `conn`. Non-lobby messages (game actions
     /// while still browsing, etc.) are ignored.
     pub fn handle(&mut self, conn: ConnId, msg: ClientMsg) -> LobbyOutcome {
         match msg {
-            ClientMsg::JoinMatch { .. } | ClientMsg::ListLobbies => {
+            ClientMsg::JoinMatch { name } => {
+                // Remember the announced name (used when this connection later
+                // takes a seat); a connection already seated keeps the name it
+                // was seated with.
+                let clean = name.trim();
+                if !clean.is_empty() {
+                    self.conn_name.insert(conn, clean.chars().take(24).collect());
+                }
+                let mut out = LobbyOutcome::default();
+                out.send(conn, self.lobby_list_msg());
+                out
+            }
+            ClientMsg::ListLobbies => {
                 let mut out = LobbyOutcome::default();
                 out.send(conn, self.lobby_list_msg());
                 out
@@ -173,6 +216,7 @@ impl LobbyManager {
     pub fn disconnect(&mut self, conn: ConnId) -> LobbyOutcome {
         let mut out = self.remove_from_lobby(conn, false);
         self.conns.remove(&conn);
+        self.conn_name.remove(&conn);
         self.push_browser_list(&mut out);
         out
     }
@@ -191,7 +235,7 @@ impl LobbyManager {
             id,
             name,
             format,
-            seats: vec![Slot::Human(conn)],
+            seats: vec![Slot::Human { conn, name: self.name_of(conn) }],
             state: build_state(format),
         };
         let info = lobby.info();
@@ -267,7 +311,9 @@ impl LobbyManager {
             out.send(conn, ServerMsg::LobbyError { message: "lobby is full".into() });
             return out;
         }
-        lobby.seats.push(Slot::Human(conn));
+        let name = self.name_of(conn);
+        let lobby = self.lobbies.iter_mut().find(|l| l.id == lobby_id).unwrap();
+        lobby.seats.push(Slot::Human { conn, name });
         let slot = lobby.seats.len() - 1;
         let info = lobby.info();
         self.conn_lobby.insert(conn, lobby_id);
@@ -311,11 +357,11 @@ impl LobbyManager {
             .seats
             .iter()
             .map(|s| match s {
-                Slot::Human(c) => SeatSpec::Human(*c),
+                Slot::Human { conn, .. } => SeatSpec::Human(*conn),
                 Slot::Bot => SeatSpec::Bot,
             })
             .collect();
-        out.start = Some(StartMatch { state: lobby.state, seats });
+        out.start = Some(StartMatch { format: lobby.format, state: lobby.state, seats });
     }
 
     /// Remove `conn` from whatever lobby it's in. Notifies the remaining human
@@ -326,7 +372,9 @@ impl LobbyManager {
         let mut out = LobbyOutcome::default();
         let Some(lobby_id) = self.conn_lobby.remove(&conn) else { return out };
         let Some(idx) = self.lobbies.iter().position(|l| l.id == lobby_id) else { return out };
-        self.lobbies[idx].seats.retain(|s| !matches!(s, Slot::Human(c) if *c == conn));
+        self.lobbies[idx]
+            .seats
+            .retain(|s| !matches!(s, Slot::Human { conn: c, .. } if *c == conn));
         if self.lobbies[idx].human_count() == 0 {
             self.lobbies.remove(idx);
         } else {
@@ -377,7 +425,12 @@ impl LobbyManager {
 /// `new_conns` is the stream of freshly-accepted connections (the accept loop
 /// assigns each a [`ConnId`]). The loop polls non-blockingly and sleeps briefly
 /// between passes; it returns when `new_conns` closes and no connections remain.
-pub fn serve_lobbies<G: Send + 'static>(new_conns: mpsc::Receiver<(ConnId, SeatChannel, G)>) {
+/// `on_match_end` is invoked when a lobby-started match finishes (for stats /
+/// logging) — pass `Arc::new(|_, _, _| {})` to ignore it.
+pub fn serve_lobbies<G: Send + 'static>(
+    new_conns: mpsc::Receiver<(ConnId, SeatChannel, G)>,
+    on_match_end: MatchEndHook,
+) {
     let mut mgr = LobbyManager::new();
     let mut channels: HashMap<ConnId, (SeatChannel, G)> = HashMap::new();
     let mut accepting = true;
@@ -387,9 +440,10 @@ pub fn serve_lobbies<G: Send + 'static>(new_conns: mpsc::Receiver<(ConnId, SeatC
         loop {
             match new_conns.try_recv() {
                 Ok((id, ch, guard)) => {
+                    eprintln!("lobby: conn {} connected ({} online)", id.0, channels.len() + 1);
                     let outcome = mgr.register(id);
                     channels.insert(id, (ch, guard));
-                    apply(&mut channels, outcome);
+                    apply(&mut channels, outcome, &on_match_end);
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
@@ -407,7 +461,7 @@ pub fn serve_lobbies<G: Send + 'static>(new_conns: mpsc::Receiver<(ConnId, SeatC
                 match recv {
                     Some(Ok(msg)) => {
                         let outcome = mgr.handle(id, msg);
-                        apply(&mut channels, outcome);
+                        apply(&mut channels, outcome, &on_match_end);
                         // `apply` may have moved this connection into a match.
                         if !channels.contains_key(&id) {
                             break;
@@ -416,8 +470,9 @@ pub fn serve_lobbies<G: Send + 'static>(new_conns: mpsc::Receiver<(ConnId, SeatC
                     Some(Err(mpsc::TryRecvError::Empty)) => break,
                     Some(Err(mpsc::TryRecvError::Disconnected)) | None => {
                         channels.remove(&id); // drops the guard → frees the slot
+                        eprintln!("lobby: conn {} disconnected ({} online)", id.0, channels.len());
                         let outcome = mgr.disconnect(id);
-                        apply(&mut channels, outcome);
+                        apply(&mut channels, outcome, &on_match_end);
                         break;
                     }
                 }
@@ -436,6 +491,7 @@ pub fn serve_lobbies<G: Send + 'static>(new_conns: mpsc::Receiver<(ConnId, SeatC
 fn apply<G: Send + 'static>(
     channels: &mut HashMap<ConnId, (SeatChannel, G)>,
     outcome: LobbyOutcome,
+    on_match_end: &MatchEndHook,
 ) {
     for (id, msg) in outcome.sends {
         if let Some((ch, _)) = channels.get(&id) {
@@ -446,17 +502,20 @@ fn apply<G: Send + 'static>(
         let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(start.seats.len());
         let mut guards: Vec<G> = Vec::new();
         let mut all_present = true;
+        let (mut humans, mut bots) = (0usize, 0usize);
         for seat in &start.seats {
             match seat {
                 SeatSpec::Human(id) => match channels.remove(id) {
                     Some((ch, guard)) => {
                         occupants.push(SeatOccupant::Human(ch));
                         guards.push(guard);
+                        humans += 1;
                     }
                     None => all_present = false,
                 },
                 SeatSpec::Bot => {
                     occupants.push(SeatOccupant::Bot(Box::new(RandomBot::new())));
+                    bots += 1;
                 }
             }
         }
@@ -464,11 +523,16 @@ fn apply<G: Send + 'static>(
         // that vanished between fill and spawn aborts the start (their seat
         // would just disconnect immediately otherwise).
         if all_present && occupants.len() == start.seats.len() {
+            let format = start.format;
+            let hook = Arc::clone(on_match_end);
+            eprintln!("lobby: starting {} match ({humans} human, {bots} bot)", format.label());
             thread::spawn(move || {
                 // Hold the per-connection guards for the match's lifetime so a
                 // connection cap acquired at accept time isn't released early.
                 let _guards = guards;
-                run_match(start.state, occupants);
+                let started = Instant::now();
+                let outcome = run_match(start.state, occupants);
+                hook(format, started.elapsed(), outcome);
             });
         }
     }
@@ -609,6 +673,36 @@ mod tests {
     }
 
     #[test]
+    fn lobby_info_carries_host_and_member_names() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        m.register(ConnId(2));
+        // Names announced via JoinMatch are captured when seated.
+        m.handle(ConnId(1), ClientMsg::JoinMatch { name: "Alice".into() });
+        m.handle(ConnId(2), ClientMsg::JoinMatch { name: "Bob".into() });
+
+        let out = m.handle(ConnId(1), ClientMsg::CreateLobby {
+            name: "g".into(),
+            format: LobbyFormat::Commander, // 4 seats: won't fill on join
+        });
+        let info = out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.clone()),
+            _ => None,
+        }).unwrap();
+        assert_eq!(info.host_name, "Alice");
+        assert_eq!(info.member_names, vec!["Alice".to_string()]);
+
+        let lobby_id = info.id;
+        let out = m.handle(ConnId(2), ClientMsg::JoinLobby { lobby_id });
+        let info = out.sends.iter().find_map(|(c, msg)| match msg {
+            ServerMsg::LobbyJoined { lobby, .. } if *c == ConnId(2) => Some(lobby.clone()),
+            _ => None,
+        }).unwrap();
+        assert_eq!(info.host_name, "Alice", "host stays the creator");
+        assert_eq!(info.member_names, vec!["Alice".to_string(), "Bob".to_string()]);
+    }
+
+    #[test]
     fn join_missing_or_full_lobby_errors() {
         let mut m = LobbyManager::new();
         m.register(ConnId(1));
@@ -668,7 +762,7 @@ mod tests {
     #[test]
     fn serve_lobbies_drives_create_join_to_match_start() {
         let (new_tx, new_rx) = mpsc::channel();
-        let driver = thread::spawn(move || serve_lobbies(new_rx));
+        let driver = thread::spawn(move || serve_lobbies(new_rx, Arc::new(|_, _, _| {})));
 
         // Two connections, each a (server SeatChannel, client ClientChannel).
         let (s1, c1) = seat_pair();

@@ -30,8 +30,9 @@ use std::time::{Duration, Instant};
 use crabomination::cube::build_cube_state;
 use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
+use crabomination::net::LobbyFormat;
 use crabomination::server::{
-    run_match, serve_lobbies, tcp_seat, ConnId, RandomBot, SeatOccupant,
+    run_match, serve_lobbies, tcp_seat, ConnId, MatchOutcome, RandomBot, SeatOccupant,
 };
 
 /// Format-builder enum that captures the environment configuration once at
@@ -74,6 +75,16 @@ impl Format {
             Self::Cube => "cube",
             Self::Sos => "sos",
             Self::Commander => "commander",
+        }
+    }
+    /// Map a wire `LobbyFormat` onto the local stats bucket. Modern (the
+    /// client label for the demo decklists) folds into `Demo`.
+    fn from_lobby(f: LobbyFormat) -> Self {
+        match f {
+            LobbyFormat::Modern => Self::Demo,
+            LobbyFormat::Cube => Self::Cube,
+            LobbyFormat::Sos => Self::Sos,
+            LobbyFormat::Commander => Self::Commander,
         }
     }
 }
@@ -1006,7 +1017,31 @@ fn accept_with_deadline(
 /// connection, so the connection cap stays held for the lobby + match.
 fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
     let (conn_tx, conn_rx) = mpsc::channel::<(ConnId, _, SlotGuard)>();
-    thread::spawn(move || serve_lobbies(conn_rx));
+    // Fold each lobby-started match into the rolling stats + log a summary,
+    // so lobby mode (the default) is as observable as the legacy pair mode.
+    let on_match_end: crabomination::server::lobby::MatchEndHook =
+        Arc::new(|format: LobbyFormat, duration, outcome: MatchOutcome| {
+            let bin_format = Format::from_lobby(format);
+            let snapshot = {
+                let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
+                s.record_pair(duration, bin_format);
+                s.observe_turns(outcome.final_turn);
+                s.observe_winner(outcome.winner);
+                if let Some(Some(w)) = outcome.winner {
+                    s.observe_win_life_delta(w, &outcome.final_life_totals);
+                    s.observe_win_kind(w, &outcome.final_life_totals);
+                }
+                *s
+            };
+            eprintln!(
+                "lobby match ended (format={}, duration={}, turns={}) — {}",
+                bin_format.label(),
+                format_duration(duration),
+                outcome.final_turn,
+                format_match_stats(&snapshot),
+            );
+        });
+    thread::spawn(move || serve_lobbies(conn_rx, on_match_end));
 
     let mut next_id: u64 = 0;
     loop {

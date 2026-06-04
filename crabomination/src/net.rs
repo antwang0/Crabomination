@@ -86,6 +86,13 @@ pub struct LobbyInfo {
     pub id: u64,
     pub name: String,
     pub format: LobbyFormat,
+    /// Display name of the lobby's host (seat 0). Empty for a lobby with no
+    /// human members (shouldn't normally be advertised).
+    #[serde(default)]
+    pub host_name: String,
+    /// Display names of the seated human players, in seat order.
+    #[serde(default)]
+    pub member_names: Vec<String>,
     /// Human players currently seated.
     pub players: usize,
     /// Bot seats currently added. `players + bots` is the number of filled

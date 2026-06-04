@@ -56,11 +56,17 @@ pub enum AppState {
     InGame,
 }
 
-/// Address of the lobby server the user chose to connect to. Set by the menu's
-/// "Join LAN" action and consumed by `lobby_ui::connect_to_lobby_server` on
-/// entry to [`AppState::Lobby`].
+/// The lobby server the user chose to connect to, plus the display name to
+/// announce. Set by the menu's "Join LAN" action and consumed by
+/// `lobby_ui::connect_to_lobby_server` on entry to [`AppState::Lobby`].
 #[derive(Resource, Default)]
-pub struct PendingLobbyServer(pub Option<String>);
+pub struct PendingLobbyServer(pub Option<LobbyConnect>);
+
+/// A queued lobby connection request.
+pub struct LobbyConnect {
+    pub addr: String,
+    pub name: String,
+}
 
 /// Set by the menu when the player picks "Draft"; read by the draft
 /// plugin to choose which card pool the booster packs sample from.
@@ -188,12 +194,14 @@ impl MatchFormat {
 enum FocusedField {
     #[default]
     None,
+    PlayerName,
     HostPort,
     JoinAddr,
 }
 
 #[derive(Resource)]
 struct MenuFields {
+    player_name: String,
     host_port: String,
     join_addr: String,
     focused: FocusedField,
@@ -203,6 +211,9 @@ struct MenuFields {
 impl Default for MenuFields {
     fn default() -> Self {
         Self {
+            // Display name shown to other players in lobbies. Seeded from the
+            // OS username when available so it's meaningful out of the box.
+            player_name: default_player_name(),
             // Default to the same port the standalone `crabomination_server`
             // binary uses, so a remote client can run the standalone server
             // on the same port and these defaults work out-of-the-box.
@@ -212,6 +223,23 @@ impl Default for MenuFields {
             focused: FocusedField::None,
             format: MatchFormat::default(),
         }
+    }
+}
+
+/// Maximum length of a player's display name (clamped on input and trimmed
+/// before it's sent to the lobby server).
+const MAX_PLAYER_NAME_LEN: usize = 20;
+
+/// Seed the player name from the OS username, falling back to "Player".
+fn default_player_name() -> String {
+    let raw = std::env::var("USERNAME")
+        .or_else(|_| std::env::var("USER"))
+        .unwrap_or_default();
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        "Player".to_string()
+    } else {
+        trimmed.chars().take(MAX_PLAYER_NAME_LEN).collect()
     }
 }
 
@@ -403,6 +431,18 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     AuditCardsButton,
                 );
 
+                // Display name (shown to other players in lobbies).
+                p.spawn(Node {
+                    flex_direction: FlexDirection::Column,
+                    align_items: AlignItems::Stretch,
+                    row_gap: Val::Px(6.0),
+                    width: Val::Px(280.0),
+                    ..default()
+                })
+                .with_children(|name| {
+                    field(name, &tf, "Name:", FocusedField::PlayerName);
+                });
+
                 // Host LAN
                 p.spawn(Node {
                     flex_direction: FlexDirection::Column,
@@ -577,11 +617,13 @@ fn handle_text_input(
     }
     let mut next_focused = fields.focused;
     let mut buf = match fields.focused {
+        FocusedField::PlayerName => fields.player_name.clone(),
         FocusedField::HostPort => fields.host_port.clone(),
         FocusedField::JoinAddr => fields.join_addr.clone(),
         FocusedField::None => return,
     };
     let max_len = match fields.focused {
+        FocusedField::PlayerName => MAX_PLAYER_NAME_LEN,
         FocusedField::HostPort => 5,
         FocusedField::JoinAddr => 80,
         FocusedField::None => return,
@@ -615,6 +657,7 @@ fn handle_text_input(
     }
     if changed {
         match fields.focused {
+            FocusedField::PlayerName => fields.player_name = buf,
             FocusedField::HostPort => fields.host_port = buf,
             FocusedField::JoinAddr => fields.join_addr = buf,
             FocusedField::None => {}
@@ -625,6 +668,10 @@ fn handle_text_input(
 
 fn accepts_char(field: FocusedField, ch: char) -> bool {
     match field {
+        // Letters, digits, spaces, and a few name-safe punctuation marks.
+        FocusedField::PlayerName => {
+            ch.is_ascii_alphanumeric() || matches!(ch, ' ' | '-' | '_' | '.')
+        }
         FocusedField::HostPort => ch.is_ascii_digit(),
         FocusedField::JoinAddr => {
             ch.is_ascii_alphanumeric() || matches!(ch, '.' | ':' | '-' | '_')
@@ -642,6 +689,7 @@ fn refresh_field_text(
     }
     for (which, mut t) in &mut q {
         let value = match which.0 {
+            FocusedField::PlayerName => &fields.player_name,
             FocusedField::HostPort => &fields.host_port,
             FocusedField::JoinAddr => &fields.join_addr,
             FocusedField::None => continue,
@@ -743,9 +791,21 @@ fn handle_action_buttons(
             // Connect, then browse lobbies on the server (which picks the
             // gamemode per lobby). The actual connect happens on entry to
             // `AppState::Lobby`.
-            lobby_server.0 = Some(addr);
+            let name = sanitize_name(&fields.player_name);
+            lobby_server.0 = Some(LobbyConnect { addr, name });
             next_state.set(AppState::Lobby);
         }
+    }
+}
+
+/// Trim a display name and fall back to "Player" when it's blank, so the
+/// server never receives an empty name.
+fn sanitize_name(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        "Player".to_string()
+    } else {
+        trimmed.to_string()
     }
 }
 
