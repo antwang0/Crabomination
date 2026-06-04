@@ -1378,3 +1378,20 @@ pub fn victim_of_night() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Trumpet Blast — {1}{R} Instant. "Attacking creatures get +2/+0 until end
+/// of turn." (various)
+pub fn trumpet_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Trumpet Blast",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(SelectionRequirement::IsAttacking),
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}

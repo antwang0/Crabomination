@@ -786,3 +786,64 @@ pub fn prey_upon() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Inspired Charge — {2}{W}{W} Sorcery. "Creatures you control get +2/+1
+/// until end of turn." (M14)
+pub fn inspired_charge() -> CardDefinition {
+    CardDefinition {
+        name: "Inspired Charge",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(2),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Servo Exhibition — {1}{W} Sorcery. "Create two 1/1 colorless Servo
+/// artifact creature tokens." (KLD)
+pub fn servo_exhibition() -> CardDefinition {
+    CardDefinition {
+        name: "Servo Exhibition",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: crate::card::TokenDefinition {
+                name: "Servo".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Artifact, CardType::Creature],
+                colors: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![crate::card::CreatureType::Servo],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Fire Ambush — {1}{R} Sorcery. "Fire Ambush deals 3 damage to any target."
+/// (M19)
+pub fn fire_ambush() -> CardDefinition {
+    CardDefinition {
+        name: "Fire Ambush",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}

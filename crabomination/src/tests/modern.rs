@@ -15475,6 +15475,62 @@ fn elvish_archdruid_lord_and_mana() {
     assert_eq!(g.players[0].mana_pool.total(), 2, "two green from two Elves");
 }
 
+/// Inspired Charge gives your creatures +2/+1 until end of turn.
+#[test]
+fn inspired_charge_team_pump() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::inspired_charge());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (4, 3), "+2/+1 this turn");
+}
+
+/// Servo Exhibition makes two 1/1 Servo tokens.
+#[test]
+fn servo_exhibition_makes_two_servos() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::servo_exhibition());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.name == "Servo").count(), 2, "two Servo tokens");
+}
+
+/// Fire Ambush deals 3 to any target.
+#[test]
+fn fire_ambush_deals_three() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let life = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::fire_ambush());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, life - 3, "3 damage to the player");
+}
+
+/// Trumpet Blast pumps attacking creatures +2/+0.
+#[test]
+fn trumpet_blast_pumps_attackers() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    let id = g.add_card_to_hand(0, catalog::trumpet_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert_eq!(g.battlefield_find(attacker).unwrap().power(), 4, "attacker +2/+0");
+}
+
 /// Dusk Legion Zealot draws a card and loses 1 life on ETB.
 #[test]
 fn dusk_legion_zealot_etb_draws_and_loses_life() {
