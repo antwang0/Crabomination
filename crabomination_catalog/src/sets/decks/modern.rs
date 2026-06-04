@@ -746,6 +746,149 @@ pub fn eidolon_of_the_great_revel() -> CardDefinition {
     }
 }
 
+// ── Rituals & impulse draw ───────────────────────────────────────────────────
+
+/// Pyretic Ritual — {1}{R} Instant. Add {R}{R}{R}.
+pub fn pyretic_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Pyretic Ritual",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: crate::effect::shortcut::add_mana(vec![Color::Red, Color::Red, Color::Red]),
+        ..Default::default()
+    }
+}
+
+/// Seething Song — {2}{R} Instant. Add {R}{R}{R}{R}{R}.
+pub fn seething_song() -> CardDefinition {
+    CardDefinition {
+        name: "Seething Song",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: crate::effect::shortcut::add_mana(vec![
+            Color::Red, Color::Red, Color::Red, Color::Red, Color::Red,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Reckless Impulse — {1}{R} Sorcery. Exile the top two cards of your library;
+/// until the end of your next turn, you may play them.
+pub fn reckless_impulse() -> CardDefinition {
+    CardDefinition {
+        name: "Reckless Impulse",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Wrenn's Resolve — {1}{R} Sorcery. Exile the top two cards of your library;
+/// until the end of your next turn, you may play them.
+pub fn wrenns_resolve() -> CardDefinition {
+    CardDefinition {
+        name: "Wrenn's Resolve",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Play with Fire — {R} Instant. Deal 2 damage to any target; if a player is
+/// dealt damage this way, scry 1. (Scry is unconditional here.)
+pub fn play_with_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Play with Fire",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Electrostatic Field — {1}{R} 0/4 Wall Defender. Whenever you cast an instant
+/// or sorcery, deal 1 damage to each opponent.
+pub fn electrostatic_field() -> CardDefinition {
+    use crate::effect::shortcut::{each_opponent, magecraft};
+    CardDefinition {
+        name: "Electrostatic Field",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: each_opponent(),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kessig Flamebreather — {1}{R} 1/3. Whenever you cast an instant or sorcery,
+/// deal 1 damage to each opponent.
+pub fn kessig_flamebreather() -> CardDefinition {
+    use crate::effect::shortcut::{each_opponent, magecraft};
+    CardDefinition {
+        name: "Kessig Flamebreather",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: each_opponent(),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Doomskar Titan — {3}{R} 4/4 Giant Warrior. Boast {1}{R}: creatures you
+/// control get +1/+0 until end of turn. Foretell {2}{R}.
+pub fn doomskar_titan() -> CardDefinition {
+    use crate::effect::shortcut::boast;
+    CardDefinition {
+        name: "Doomskar Titan",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![boast(
+            cost(&[generic(1), r()]),
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        )],
+        foretell_cost: Some(cost(&[generic(2), r()])),
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 

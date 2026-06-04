@@ -168,6 +168,106 @@ fn blitz_ardent_elementalist_etb_returns_instant() {
     );
 }
 
+// ── Rituals & impulse draw ───────────────────────────────────────────────────
+
+/// Pyretic Ritual nets +1 red mana ({1}{R} in, {R}{R}{R} out).
+#[test]
+fn pyretic_ritual_adds_three_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pyretic_ritual());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].mana_pool.total(), 3, "RRR added");
+}
+
+/// Seething Song adds {R}{R}{R}{R}{R}.
+#[test]
+fn seething_song_adds_five_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::seething_song());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].mana_pool.total(), 5, "RRRRR added");
+}
+
+/// Reckless Impulse exiles the top two cards and lets you play them.
+#[test]
+fn reckless_impulse_exiles_top_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::shock());
+    let b = g.add_card_to_library(0, catalog::shock());
+    let id = g.add_card_to_hand(0, catalog::reckless_impulse());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    let exiled = g.exile.iter().filter(|c| (c.id == a || c.id == b) && c.may_play_until.is_some()).count();
+    assert_eq!(exiled, 2, "both top cards exiled and playable");
+}
+
+/// Wrenn's Resolve exiles the top two cards and lets you play them.
+#[test]
+fn wrenns_resolve_exiles_top_two() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::shock());
+    let b = g.add_card_to_library(0, catalog::shock());
+    let id = g.add_card_to_hand(0, catalog::wrenns_resolve());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    let exiled = g.exile.iter().filter(|c| (c.id == a || c.id == b) && c.may_play_until.is_some()).count();
+    assert_eq!(exiled, 2, "both top cards exiled and playable");
+}
+
+/// Kessig Flamebreather pings each opponent on instant/sorcery cast.
+#[test]
+fn kessig_flamebreather_pings_on_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kessig_flamebreather());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.players[1].life, 20 - 3 - 1, "Bolt + Flamebreather ping");
+}
+
+/// Play with Fire deals 2 to a player.
+#[test]
+fn play_with_fire_deals_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::play_with_fire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, 18, "dealt 2");
+}
+
+/// Electrostatic Field pings each opponent on instant/sorcery cast.
+#[test]
+fn electrostatic_field_pings_on_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::electrostatic_field());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.players[1].life, 20 - 3 - 1, "Bolt + Field ping");
+}
+
+/// Doomskar Titan's Boast pumps your team after it attacks.
+#[test]
+fn doomskar_titan_boast_pumps_team() {
+    let mut g = two_player_game();
+    let titan = g.add_card_to_battlefield(0, catalog::doomskar_titan());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(titan).unwrap().attacked_this_turn = true;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: titan, ability_index: 0, target: None, x_value: None })
+    .expect("boast");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 3, "bear pumped +1/+0");
+}
+
 // ── Spell-matters aggro ──────────────────────────────────────────────────────
 
 /// Firebrand Archer pings each opponent when you cast a noncreature spell.
