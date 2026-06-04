@@ -2594,6 +2594,39 @@ fn might_of_old_krosa_scales_with_whose_turn() {
 }
 
 #[test]
+fn apostles_blessing_grants_protection_to_your_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ab = g.add_card_to_hand(0, catalog::apostles_blessing());
+    g.players[0].mana_pool.add(Color::White, 1); // {W/P}
+    g.players[0].mana_pool.add_colorless(1); // {1}
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: ab, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Protection(Color::Blue)));
+}
+
+#[test]
+fn brave_the_elements_protects_all_your_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bte = g.add_card_to_hand(0, catalog::brave_the_elements());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bte, target: None,
+        additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Protection(Color::Red)),
+            "all your creatures protected from red");
+    }
+}
+
+#[test]
 fn ledger_shredder_connives_on_second_spell_only() {
     let mut g = two_player_game();
     let shredder = g.add_card_to_battlefield(0, catalog::ledger_shredder());

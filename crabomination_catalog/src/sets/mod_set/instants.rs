@@ -1261,3 +1261,43 @@ pub fn mother_of_runes() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Brave the Elements — {W} Instant. "Creatures you control gain protection
+/// from the color of your choice until end of turn." (M12)
+pub fn brave_the_elements() -> CardDefinition {
+    CardDefinition {
+        name: "Brave the Elements",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Apostle's Blessing — {1}{W/P} Instant. "Target artifact or creature you
+/// control gains protection from artifacts or from the color of your choice
+/// until end of turn." (Only the color-choice mode is modeled; the
+/// "protection from artifacts" alternative isn't a single-keyword grant yet.)
+pub fn apostles_blessing() -> CardDefinition {
+    use crate::mana::ManaSymbol;
+    CardDefinition {
+        name: "Apostle's Blessing",
+        cost: ManaCost {
+            symbols: vec![ManaSymbol::Generic(1), ManaSymbol::Phyrexian(Color::White)],
+        },
+        card_types: vec![CardType::Instant],
+        effect: Effect::GrantProtectionFromChosenColor {
+            what: target_filtered(
+                (SelectionRequirement::Artifact.or(SelectionRequirement::Creature))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
