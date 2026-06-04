@@ -40,6 +40,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `StaticEffect` that diminishes only a chosen creature type among opponents
   (the existing `DiminishCreaturesExceptChosenType` is the inverse). Dropped
   this run to avoid an inaccurate flat anthem.
+- **"Can't be blocked except by …" restrictions.** Several aggro cards want a
+  per-attacker block gate by blocker characteristic — Steel Leaf Champion
+  (power ≤ 2), Goblin Piledriver / Soldier of the Pantheon (color), Signal
+  Pest (flying/artifact). Needs a `Keyword::CantBeBlockedExceptBy(filter)`
+  read in `can_block_attacker_computed`. (Shipped these cards' simpler riders;
+  these three were skipped to avoid an unfaithful body.)
+- **Choose-color-on-ETB mana rocks.** Coldsteel Heart / Star Compass enter,
+  choose a color, then tap for it. Needs an ETB `Decision::ChooseColor` that
+  stamps a fixed color onto the tap ability (today only the fixed-color
+  Diamonds and the rainbow `tap_add_any_color` exist).
+- **Unleash bot nuance.** `optional_trigger_beneficial` accepts the Unleash
+  +1/+1 counter as pure upside, but the counter disables blocking
+  (`Keyword::CantBlock`). A defensive bot should weigh board state before
+  taking it.
 
 - **Adventure / Plot client modals** (CR 715 / 702.170). Engine + bot +
   affordance hints (`adventurable_hand` / `plottable_hand`) ship, but a
