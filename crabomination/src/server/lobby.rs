@@ -26,7 +26,7 @@ use std::time::Duration;
 use crate::game::GameState;
 use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg};
 
-use super::{run_match, SeatChannel, SeatOccupant};
+use super::{run_match, RandomBot, SeatChannel, SeatOccupant};
 
 /// Identifier the driver assigns to each connection so the [`LobbyManager`]
 /// can reason about membership without touching the channels themselves.
@@ -44,13 +44,21 @@ pub fn build_state(format: LobbyFormat) -> GameState {
     }
 }
 
+/// One seat in a lobby: a human connection or a bot.
+#[derive(Clone, Copy)]
+enum Slot {
+    Human(ConnId),
+    Bot,
+}
+
 /// One open lobby. Holds the pre-built state that will become the match.
 struct Lobby {
     id: u64,
     name: String,
     format: LobbyFormat,
-    /// Members in seat order (the creator is seat 0).
-    members: Vec<ConnId>,
+    /// Seats in order (the creator is seat 0). A mix of human connections and
+    /// bots; the match starts when `seats.len() == capacity`.
+    seats: Vec<Slot>,
     /// Pre-built game state; `capacity == state.players.len()`. Moved into
     /// the match when the lobby fills.
     state: GameState,
@@ -60,22 +68,46 @@ impl Lobby {
     fn capacity(&self) -> usize {
         self.state.players.len()
     }
+    fn human_count(&self) -> usize {
+        self.seats.iter().filter(|s| matches!(s, Slot::Human(_))).count()
+    }
+    fn bot_count(&self) -> usize {
+        self.seats.iter().filter(|s| matches!(s, Slot::Bot)).count()
+    }
+    /// The human connections seated here, in seat order.
+    fn members(&self) -> Vec<ConnId> {
+        self.seats
+            .iter()
+            .filter_map(|s| match s {
+                Slot::Human(c) => Some(*c),
+                Slot::Bot => None,
+            })
+            .collect()
+    }
     fn info(&self) -> LobbyInfo {
         LobbyInfo {
             id: self.id,
             name: self.name.clone(),
             format: self.format,
-            players: self.members.len(),
+            players: self.human_count(),
+            bots: self.bot_count(),
             capacity: self.capacity(),
         }
     }
 }
 
-/// A filled lobby ready to become a match: the pre-built state plus the member
-/// connection ids in seat order. The driver maps the ids back to channels.
+/// A seat in a filled lobby, ready to become a match occupant.
+pub enum SeatSpec {
+    Human(ConnId),
+    Bot,
+}
+
+/// A filled lobby ready to become a match: the pre-built state plus its seats
+/// in order. The driver maps each `Human` seat back to its channel and each
+/// `Bot` seat to a fresh `RandomBot`.
 pub struct StartMatch {
     pub state: GameState,
-    pub members: Vec<ConnId>,
+    pub seats: Vec<SeatSpec>,
 }
 
 /// Result of applying one command: messages to deliver, plus an optional match
@@ -128,6 +160,8 @@ impl LobbyManager {
             }
             ClientMsg::CreateLobby { name, format } => self.create(conn, name, format),
             ClientMsg::JoinLobby { lobby_id } => self.join(conn, lobby_id),
+            ClientMsg::AddBotToLobby => self.add_bot(conn),
+            ClientMsg::RemoveBotFromLobby => self.remove_bot(conn),
             ClientMsg::LeaveLobby => self.leave(conn),
             // Browsing connections aren't in a match; ignore game traffic.
             ClientMsg::SubmitAction(_) | ClientMsg::Debug(_) => LobbyOutcome::default(),
@@ -157,17 +191,61 @@ impl LobbyManager {
             id,
             name,
             format,
-            members: vec![conn],
+            seats: vec![Slot::Human(conn)],
             state: build_state(format),
         };
         let info = lobby.info();
-        // A 1-seat gamemode would start instantly; none exist today, but guard
-        // anyway so an exotic format can't strand the creator forever.
         self.lobbies.push(lobby);
         self.conn_lobby.insert(conn, id);
         out.send(conn, ServerMsg::LobbyJoined { lobby: info, your_slot: 0 });
+        // A 1-seat gamemode would start instantly; none exist today, but the
+        // check guards against an exotic format stranding the creator.
         self.maybe_start(id, &mut out);
         self.push_browser_list(&mut out);
+        out
+    }
+
+    /// Add a bot seat to the lobby `conn` is in. Fills a seat (and may start
+    /// the match); no-ops with an error if not in a lobby or already full.
+    fn add_bot(&mut self, conn: ConnId) -> LobbyOutcome {
+        let mut out = LobbyOutcome::default();
+        let Some(&lobby_id) = self.conn_lobby.get(&conn) else {
+            out.send(conn, ServerMsg::LobbyError { message: "not in a lobby".into() });
+            return out;
+        };
+        let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == lobby_id) else {
+            return out;
+        };
+        if lobby.seats.len() >= lobby.capacity() {
+            out.send(conn, ServerMsg::LobbyError { message: "lobby is full".into() });
+            return out;
+        }
+        lobby.seats.push(Slot::Bot);
+        let info = lobby.info();
+        for m in lobby.members() {
+            out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
+        }
+        self.maybe_start(lobby_id, &mut out);
+        self.push_browser_list(&mut out);
+        out
+    }
+
+    /// Remove the most-recently-added bot seat from the lobby `conn` is in.
+    fn remove_bot(&mut self, conn: ConnId) -> LobbyOutcome {
+        let mut out = LobbyOutcome::default();
+        let Some(&lobby_id) = self.conn_lobby.get(&conn) else { return out };
+        let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == lobby_id) else {
+            return out;
+        };
+        // Drop the last bot slot, if any.
+        if let Some(pos) = lobby.seats.iter().rposition(|s| matches!(s, Slot::Bot)) {
+            lobby.seats.remove(pos);
+            let info = lobby.info();
+            for m in lobby.members() {
+                out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
+            }
+            self.push_browser_list(&mut out);
+        }
         out
     }
 
@@ -185,17 +263,17 @@ impl LobbyManager {
             });
             return out;
         };
-        if lobby.members.len() >= lobby.capacity() {
+        if lobby.seats.len() >= lobby.capacity() {
             out.send(conn, ServerMsg::LobbyError { message: "lobby is full".into() });
             return out;
         }
-        lobby.members.push(conn);
-        let slot = lobby.members.len() - 1;
+        lobby.seats.push(Slot::Human(conn));
+        let slot = lobby.seats.len() - 1;
         let info = lobby.info();
         self.conn_lobby.insert(conn, lobby_id);
         out.send(conn, ServerMsg::LobbyJoined { lobby: info.clone(), your_slot: slot });
-        // Tell the seats already waiting that the roster grew.
-        for &m in self.lobby_members(lobby_id) {
+        // Tell the human seats already waiting that the roster grew.
+        for m in self.lobby_members(lobby_id) {
             if m != conn {
                 out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
             }
@@ -215,50 +293,57 @@ impl LobbyManager {
         out
     }
 
-    /// If `lobby_id` is now at capacity, pull it out and emit a `StartMatch`.
+    /// If `lobby_id` is now at capacity (humans + bots), pull it out and emit
+    /// a `StartMatch` carrying the seats in order.
     fn maybe_start(&mut self, lobby_id: u64, out: &mut LobbyOutcome) {
         let Some(idx) = self.lobbies.iter().position(|l| l.id == lobby_id) else { return };
-        if self.lobbies[idx].members.len() < self.lobbies[idx].capacity() {
+        if self.lobbies[idx].seats.len() < self.lobbies[idx].capacity() {
             return;
         }
         let lobby = self.lobbies.remove(idx);
-        for m in &lobby.members {
-            self.conn_lobby.remove(m);
+        for m in lobby.members() {
+            self.conn_lobby.remove(&m);
             // The members are leaving the lobby system for a match; the driver
             // moves their channels into the match, so drop them from browsing.
-            self.conns.remove(m);
+            self.conns.remove(&m);
         }
-        out.start = Some(StartMatch {
-            state: lobby.state,
-            members: lobby.members,
-        });
+        let seats = lobby
+            .seats
+            .iter()
+            .map(|s| match s {
+                Slot::Human(c) => SeatSpec::Human(*c),
+                Slot::Bot => SeatSpec::Bot,
+            })
+            .collect();
+        out.start = Some(StartMatch { state: lobby.state, seats });
     }
 
-    /// Remove `conn` from whatever lobby it's in. Notifies the remaining
-    /// members (or drops an empty lobby). `_notify_leaver` is reserved for a
-    /// future "you were kicked" message.
+    /// Remove `conn` from whatever lobby it's in. Notifies the remaining human
+    /// members, or drops the lobby entirely once no humans are left (a
+    /// bot-only lobby can't start). `_notify_leaver` is reserved for a future
+    /// "you were kicked" message.
     fn remove_from_lobby(&mut self, conn: ConnId, _notify_leaver: bool) -> LobbyOutcome {
         let mut out = LobbyOutcome::default();
         let Some(lobby_id) = self.conn_lobby.remove(&conn) else { return out };
         let Some(idx) = self.lobbies.iter().position(|l| l.id == lobby_id) else { return out };
-        self.lobbies[idx].members.retain(|&m| m != conn);
-        if self.lobbies[idx].members.is_empty() {
+        self.lobbies[idx].seats.retain(|s| !matches!(s, Slot::Human(c) if *c == conn));
+        if self.lobbies[idx].human_count() == 0 {
             self.lobbies.remove(idx);
         } else {
             let info = self.lobbies[idx].info();
-            for &m in &self.lobbies[idx].members {
+            for m in self.lobbies[idx].members() {
                 out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
             }
         }
         out
     }
 
-    fn lobby_members(&self, lobby_id: u64) -> &[ConnId] {
+    fn lobby_members(&self, lobby_id: u64) -> Vec<ConnId> {
         self.lobbies
             .iter()
             .find(|l| l.id == lobby_id)
-            .map(|l| l.members.as_slice())
-            .unwrap_or(&[])
+            .map(|l| l.members())
+            .unwrap_or_default()
     }
 
     fn lobby_list_msg(&self) -> ServerMsg {
@@ -358,18 +443,27 @@ fn apply<G: Send + 'static>(
         }
     }
     if let Some(start) = outcome.start {
-        let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(start.members.len());
-        let mut guards: Vec<G> = Vec::with_capacity(start.members.len());
-        for id in &start.members {
-            if let Some((ch, guard)) = channels.remove(id) {
-                occupants.push(SeatOccupant::Human(ch));
-                guards.push(guard);
+        let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(start.seats.len());
+        let mut guards: Vec<G> = Vec::new();
+        let mut all_present = true;
+        for seat in &start.seats {
+            match seat {
+                SeatSpec::Human(id) => match channels.remove(id) {
+                    Some((ch, guard)) => {
+                        occupants.push(SeatOccupant::Human(ch));
+                        guards.push(guard);
+                    }
+                    None => all_present = false,
+                },
+                SeatSpec::Bot => {
+                    occupants.push(SeatOccupant::Bot(Box::new(RandomBot::new())));
+                }
             }
         }
-        // Only start if every member's channel was still present; a member
-        // that vanished between fill and spawn aborts the start (their seats
+        // Only start if every human seat's channel was still present; a member
+        // that vanished between fill and spawn aborts the start (their seat
         // would just disconnect immediately otherwise).
-        if occupants.len() == start.members.len() {
+        if all_present && occupants.len() == start.seats.len() {
             thread::spawn(move || {
                 // Hold the per-connection guards for the match's lifetime so a
                 // connection cap acquired at accept time isn't released early.
@@ -434,12 +528,84 @@ mod tests {
         // Seat 2 joins → lobby is full → a match starts with both members.
         let out = m.handle(ConnId(2), ClientMsg::JoinLobby { lobby_id });
         let start = out.start.expect("filling the lobby starts the match");
-        assert_eq!(start.members, vec![ConnId(1), ConnId(2)]);
+        assert_eq!(start.seats.len(), 2);
+        assert!(matches!(start.seats[0], SeatSpec::Human(ConnId(1))));
+        assert!(matches!(start.seats[1], SeatSpec::Human(ConnId(2))));
         assert_eq!(start.state.players.len(), 2);
         // The lobby is gone afterward, and both members left the browsing set.
         assert!(m.lobbies.is_empty());
         assert!(!m.conn_lobby.contains_key(&ConnId(1)));
         assert!(!m.conn_lobby.contains_key(&ConnId(2)));
+    }
+
+    #[test]
+    fn adding_a_bot_fills_a_two_seat_lobby_and_starts_human_vs_bot() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        let out = m.handle(ConnId(1), ClientMsg::CreateLobby {
+            name: "vs bot".into(),
+            format: LobbyFormat::Modern,
+        });
+        let info = out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.clone()),
+            _ => None,
+        }).unwrap();
+        assert_eq!(info.players, 1);
+        assert_eq!(info.bots, 0);
+
+        // Adding one bot fills the 2-seat Modern lobby → match starts.
+        let out = m.handle(ConnId(1), ClientMsg::AddBotToLobby);
+        let start = out.start.expect("a bot filling the lobby starts the match");
+        assert_eq!(start.seats.len(), 2);
+        assert!(matches!(start.seats[0], SeatSpec::Human(ConnId(1))));
+        assert!(matches!(start.seats[1], SeatSpec::Bot));
+        assert!(m.lobbies.is_empty());
+    }
+
+    #[test]
+    fn add_then_remove_bot_in_a_four_seat_lobby_tracks_counts() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        let out = m.handle(ConnId(1), ClientMsg::CreateLobby {
+            name: "edh".into(),
+            format: LobbyFormat::Commander, // 4 seats
+        });
+        let id = out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.id),
+            _ => None,
+        }).unwrap();
+
+        // Add two bots (1 human + 2 bots = 3/4, not yet full).
+        let out = m.handle(ConnId(1), ClientMsg::AddBotToLobby);
+        assert!(out.start.is_none());
+        let out = m.handle(ConnId(1), ClientMsg::AddBotToLobby);
+        assert!(out.start.is_none());
+        let info = out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyUpdated { lobby } => Some(lobby.clone()),
+            _ => None,
+        }).unwrap();
+        assert_eq!((info.players, info.bots), (1, 2));
+
+        // Remove one bot → back to 1 human + 1 bot.
+        let out = m.handle(ConnId(1), ClientMsg::RemoveBotFromLobby);
+        let info = out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyUpdated { lobby } => Some(lobby.clone()),
+            _ => None,
+        }).unwrap();
+        assert_eq!((info.players, info.bots), (1, 1));
+
+        // Still has a human, so it survives; lobby remains open.
+        let _ = id;
+        assert_eq!(m.lobbies.len(), 1);
+    }
+
+    #[test]
+    fn add_bot_while_browsing_errors() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        let out = m.handle(ConnId(1), ClientMsg::AddBotToLobby);
+        assert!(out.sends.iter().any(|(_, msg)| matches!(msg, ServerMsg::LobbyError { .. })));
+        assert!(out.start.is_none());
     }
 
     #[test]

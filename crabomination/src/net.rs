@@ -33,6 +33,13 @@ pub enum ClientMsg {
     /// Lobby: join the open lobby with this id. Fills a seat; when the lobby
     /// reaches capacity the server starts the match for everyone in it.
     JoinLobby { lobby_id: u64 },
+    /// Lobby: add a bot (RandomBot) to fill one seat of the lobby you're in.
+    /// If that fills the lobby, the match starts immediately. Ignored if
+    /// you're not in a lobby or it's already full.
+    AddBotToLobby,
+    /// Lobby: remove the most recently added bot seat from the lobby you're
+    /// in. No-op if there are no bot seats.
+    RemoveBotFromLobby,
     /// Lobby: leave the lobby you're currently in and return to browsing.
     LeaveLobby,
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
@@ -79,8 +86,12 @@ pub struct LobbyInfo {
     pub id: u64,
     pub name: String,
     pub format: LobbyFormat,
-    /// Seats currently filled.
+    /// Human players currently seated.
     pub players: usize,
+    /// Bot seats currently added. `players + bots` is the number of filled
+    /// seats; the match starts when that reaches `capacity`.
+    #[serde(default)]
+    pub bots: usize,
     /// Seats required to start the match.
     pub capacity: usize,
 }

@@ -31,6 +31,7 @@ impl Plugin for LobbyUiPlugin {
                     rebuild_lobby_list,
                     update_lobby_status,
                     update_format_label,
+                    update_bot_controls_visibility,
                     handle_lobby_buttons,
                     watch_match_start,
                 )
@@ -65,6 +66,13 @@ struct LobbyRefreshButton;
 struct LobbyBackButton;
 #[derive(Component)]
 struct LobbyStatusText;
+/// Row holding the Add/Remove Bot buttons; shown only while seated in a lobby.
+#[derive(Component)]
+struct LobbyBotControls;
+#[derive(Component)]
+struct LobbyAddBotButton;
+#[derive(Component)]
+struct LobbyRemoveBotButton;
 
 /// The gamemode the Create button will use; cycled by the format button.
 #[derive(Resource, Default)]
@@ -198,6 +206,29 @@ fn spawn_lobby_browser(
                         });
                 });
 
+                // Bot controls — only shown while seated in a lobby (toggled
+                // by `update_bot_controls_visibility`).
+                p.spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        column_gap: Val::Px(10.0),
+                        align_items: AlignItems::Center,
+                        display: Display::None,
+                        ..default()
+                    },
+                    LobbyBotControls,
+                ))
+                .with_children(|row| {
+                    button(row, &tf, theme::BUTTON_INFO_BG, LobbyAddBotButton)
+                        .with_children(|b| {
+                            b.spawn((Text::new("Add Bot"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
+                        });
+                    button(row, &tf, theme::BUTTON_NEUTRAL_BG, LobbyRemoveBotButton)
+                        .with_children(|b| {
+                            b.spawn((Text::new("Remove Bot"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
+                        });
+                });
+
                 // Footer: [Refresh] [Back].
                 p.spawn(Node {
                     flex_direction: FlexDirection::Row,
@@ -289,18 +320,25 @@ fn rebuild_lobby_list(
                     LobbyListRow,
                 ))
                 .with_children(|row| {
+                    let occupied = info.players + info.bots;
+                    let bot_note = if info.bots > 0 {
+                        format!(" ({} bot{})", info.bots, if info.bots == 1 { "" } else { "s" })
+                    } else {
+                        String::new()
+                    };
                     row.spawn((
                         Text::new(format!(
-                            "{}  [{}]  {}/{}",
+                            "{}  [{}]  {}/{}{}",
                             info.name,
                             info.format.label(),
-                            info.players,
+                            occupied,
                             info.capacity,
+                            bot_note,
                         )),
                         tf(13.0),
                         TextColor(theme::TEXT_PRIMARY),
                     ));
-                    let full = info.players >= info.capacity;
+                    let full = occupied >= info.capacity;
                     if !joined && !full {
                         row.spawn((
                             Node {
@@ -330,12 +368,19 @@ fn update_lobby_status(lobby: Res<LobbyState>, mut q: Query<&mut Text, With<Lobb
     let msg = if let Some(err) = &lobby.last_error {
         format!("⚠ {err}")
     } else if let Some((info, _slot)) = &lobby.joined {
+        let occupied = info.players + info.bots;
+        let bot_note = if info.bots > 0 {
+            format!(", {} bot", info.bots)
+        } else {
+            String::new()
+        };
         format!(
-            "In lobby \"{}\" [{}] — waiting for players ({}/{})…",
+            "In lobby \"{}\" [{}] — waiting ({}/{}{})…",
             info.name,
             info.format.label(),
-            info.players,
+            occupied,
             info.capacity,
+            bot_note,
         )
     } else {
         format!("{} open lobb{}", lobby.lobbies.len(), if lobby.lobbies.len() == 1 { "y" } else { "ies" })
@@ -355,6 +400,21 @@ fn update_format_label(
     }
 }
 
+/// Show the Add/Remove Bot row only while seated in a lobby (you can only add
+/// bots to a lobby you're in).
+fn update_bot_controls_visibility(
+    lobby: Res<LobbyState>,
+    mut q: Query<&mut Node, With<LobbyBotControls>>,
+) {
+    if !lobby.is_changed() {
+        return;
+    }
+    let visible = lobby.joined.is_some();
+    if let Ok(mut node) = q.single_mut() {
+        node.display = if visible { Display::Flex } else { Display::None };
+    }
+}
+
 // ── Input ───────────────────────────────────────────────────────────────────────
 
 #[allow(clippy::too_many_arguments)]
@@ -369,10 +429,22 @@ fn handle_lobby_buttons(
     create_q: Query<&Interaction, (Changed<Interaction>, With<LobbyCreateButton>)>,
     refresh_q: Query<&Interaction, (Changed<Interaction>, With<LobbyRefreshButton>)>,
     back_q: Query<&Interaction, (Changed<Interaction>, With<LobbyBackButton>)>,
+    add_bot_q: Query<&Interaction, (Changed<Interaction>, With<LobbyAddBotButton>)>,
+    remove_bot_q: Query<&Interaction, (Changed<Interaction>, With<LobbyRemoveBotButton>)>,
     join_q: Query<(&Interaction, &LobbyRowJoinButton), Changed<Interaction>>,
 ) {
     if fmt_q.iter().any(|i| *i == Interaction::Pressed) {
         create_format.0 = create_format.0.next();
+    }
+    if add_bot_q.iter().any(|i| *i == Interaction::Pressed)
+        && let Some(o) = &outbox
+    {
+        o.submit_msg(ClientMsg::AddBotToLobby);
+    }
+    if remove_bot_q.iter().any(|i| *i == Interaction::Pressed)
+        && let Some(o) = &outbox
+    {
+        o.submit_msg(ClientMsg::RemoveBotFromLobby);
     }
     if create_q.iter().any(|i| *i == Interaction::Pressed)
         && let Some(o) = &outbox

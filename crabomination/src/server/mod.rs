@@ -560,6 +560,8 @@ fn run_match_inner(
             ClientMsg::ListLobbies
             | ClientMsg::CreateLobby { .. }
             | ClientMsg::JoinLobby { .. }
+            | ClientMsg::AddBotToLobby
+            | ClientMsg::RemoveBotFromLobby
             | ClientMsg::LeaveLobby => {}
         }
     }
