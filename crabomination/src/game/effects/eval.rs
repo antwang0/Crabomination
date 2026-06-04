@@ -325,6 +325,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].lost_life_this_turn),
+            Predicate::PlayerLifeAtMost { who, life } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.effective_life(p) <= *life),
             Predicate::SourceAttackedThisTurn => ctx
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))

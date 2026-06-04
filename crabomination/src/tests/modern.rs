@@ -168,6 +168,52 @@ fn blitz_ardent_elementalist_etb_returns_instant() {
     );
 }
 
+// ── Utility creatures ────────────────────────────────────────────────────────
+
+/// Paradise Druid taps for one mana of any color and has hexproof.
+#[test]
+fn paradise_druid_taps_for_any_color() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::paradise_druid());
+    g.clear_sickness(id);
+    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Hexproof));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+}
+
+/// Merfolk Trickster taps an opponent's creature on ETB.
+#[test]
+fn merfolk_trickster_taps_opponent_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::merfolk_trickster());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, id);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "opponent's creature tapped");
+}
+
+/// Vampire Lacerator's upkeep drain stops once an opponent is low.
+#[test]
+fn vampire_lacerator_drain_turns_off_at_low_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vampire_lacerator());
+    // Opponent healthy → controller loses 1 at their upkeep.
+    let before = g.players[0].life;
+    g.fire_step_triggers(crate::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before - 1, "drains while opponent is healthy");
+    // Opponent at 10 → drain turns off.
+    g.players[1].life = 10;
+    let mid = g.players[0].life;
+    g.fire_step_triggers(crate::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, mid, "no drain once an opponent has <=10 life");
+}
+
 // ── Removal & combat tricks ──────────────────────────────────────────────────
 
 /// Ulcerate destroys a creature and costs you 3 life.

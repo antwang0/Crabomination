@@ -934,6 +934,83 @@ pub fn aspect_of_hydra() -> CardDefinition {
     }
 }
 
+// ── Utility creatures ────────────────────────────────────────────────────────
+
+/// Paradise Druid — {1}{G} 0/2 Elf Druid with Hexproof. {T}: Add one mana of
+/// any color.
+pub fn paradise_druid() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Paradise Druid",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        keywords: vec![Keyword::Hexproof],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Merfolk Trickster — {U}{U} 2/2 Merfolk Wizard with Flash. ETB tap target
+/// creature an opponent controls. (The "loses all abilities" rider is dropped.)
+pub fn merfolk_trickster() -> CardDefinition {
+    CardDefinition {
+        name: "Merfolk Trickster",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Vampire Lacerator — {B} 2/1 Vampire. At the beginning of your upkeep, you
+/// lose 1 life unless an opponent has 10 or less life.
+pub fn vampire_lacerator() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire Lacerator",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::PlayerLifeAtMost { who: PlayerRef::EachOpponent, life: 10 },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // (Shock already exists as `catalog::shock` from the Portal set; we don't
 // duplicate it here.)
 

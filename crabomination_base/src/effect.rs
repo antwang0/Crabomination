@@ -465,6 +465,10 @@ pub enum Predicate {
     /// direct life loss). Backed by `Player.lost_life_this_turn`. Powers
     /// Spectacle (CR 702.111) — pair with `who: EachOpponent`.
     PlayerLostLifeThisTurn { who: PlayerRef },
+    /// True if any player matched by `who` has an effective life total at most
+    /// `life`. Powers "unless an opponent has N or less life" gates (Vampire
+    /// Lacerator).
+    PlayerLifeAtMost { who: PlayerRef, life: i32 },
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
