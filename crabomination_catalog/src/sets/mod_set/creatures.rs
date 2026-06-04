@@ -6576,3 +6576,62 @@ pub fn ninja_of_the_deep_hours() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Green beaters ────────────────────────────────────────────────────────────
+
+/// Kalonian Tusker — {G}{G} Creature — Beast 3/3 (vanilla). (M14)
+pub fn kalonian_tusker() -> CardDefinition {
+    CardDefinition {
+        name: "Kalonian Tusker",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Leatherback Baloth — {G}{G}{G} Creature — Beast 4/4 (vanilla). (ZEN)
+pub fn leatherback_baloth() -> CardDefinition {
+    CardDefinition {
+        name: "Leatherback Baloth",
+        cost: cost(&[g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
+/// Garruk's Companion — {1}{G} Creature — Beast 3/2 with Trample. (M11)
+pub fn garruks_companion() -> CardDefinition {
+    CardDefinition {
+        name: "Garruk's Companion",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// River Boa — {1}{G} Creature — Snake 2/1 with Islandwalk and "{1}:
+/// Regenerate this creature." (The printed regen cost is {G}; modeled with
+/// the engine's generic `Keyword::Regenerate`.) (VIS)
+pub fn river_boa() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "River Boa",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Landwalk(LandType::Island), Keyword::Regenerate(1)],
+        ..Default::default()
+    }
+}

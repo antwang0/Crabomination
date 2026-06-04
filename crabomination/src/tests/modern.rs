@@ -2839,6 +2839,24 @@ fn goldmeadow_harrier_taps_target_creature() {
 }
 
 #[test]
+fn green_beaters_have_expected_stats_and_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let tusker = g.add_card_to_battlefield(0, catalog::kalonian_tusker());
+    let baloth = g.add_card_to_battlefield(0, catalog::leatherback_baloth());
+    let comp = g.add_card_to_battlefield(0, catalog::garruks_companion());
+    let boa = g.add_card_to_battlefield(0, catalog::river_boa());
+    let ct = g.computed_permanent(tusker).unwrap();
+    assert_eq!((ct.power, ct.toughness), (3, 3));
+    let cb = g.computed_permanent(baloth).unwrap();
+    assert_eq!((cb.power, cb.toughness), (4, 4));
+    assert!(g.computed_permanent(comp).unwrap().keywords.contains(&Keyword::Trample));
+    let cboa = g.computed_permanent(boa).unwrap();
+    assert!(cboa.keywords.contains(&Keyword::Landwalk(crate::card::LandType::Island)));
+    assert!(cboa.keywords.iter().any(|k| matches!(k, Keyword::Regenerate(_))));
+}
+
+#[test]
 fn faerie_seer_flies_and_scries_on_entry() {
     use crate::card::Keyword;
     let mut g = two_player_game();
