@@ -636,6 +636,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(teferi_time_raveler);
         v.push(dovins_veto);
         v.push(razortide_bridge);
+        v.push(floodfarm_verge);
         // ── modern_decks-16 ──
         v.push(spell_queller);
     }
@@ -842,6 +843,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(marauding_mako);
         v.push(mistvault_bridge);
         v.push(glimpse_the_unthinkable);
+        v.push(gloomlake_verge);
+        v.push(clearwater_pathway);
         v.push(crabomination);
         v.push(cruel_somnophage);
         // ── modern_decks-14 (UB cross-pool) ──
@@ -1625,6 +1628,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(lush_portico);
         v.push(torsten_founder_of_benalia);
         v.push(horizon_canopy);
+        v.push(hushwood_verge);
+        v.push(branchloft_pathway);
         v.push(growing_ranks);
         // ── modern_decks (cascade): Enlisted Wurm (GW cascade) ──
         v.push(enlisted_wurm);
@@ -1647,6 +1652,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-16 ──
         v.push(bloodbraid_elf);
         v.push(thornspire_verge);
+        v.push(cragcrown_pathway);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(gaeas_skyfolk);

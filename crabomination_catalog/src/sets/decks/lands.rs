@@ -120,6 +120,30 @@ pub fn darkbore_pathway() -> CardDefinition {
     )
 }
 
+/// Branchloft Pathway // Boulderloft Pathway — G/W MDFC.
+pub fn branchloft_pathway() -> CardDefinition {
+    pathway(
+        "Branchloft Pathway", LandType::Forest, Color::Green,
+        "Boulderloft Pathway", LandType::Plains, Color::White,
+    )
+}
+
+/// Clearwater Pathway // Murkwater Pathway — U/B MDFC.
+pub fn clearwater_pathway() -> CardDefinition {
+    pathway(
+        "Clearwater Pathway", LandType::Island, Color::Blue,
+        "Murkwater Pathway", LandType::Swamp, Color::Black,
+    )
+}
+
+/// Cragcrown Pathway // Timbercrown Pathway — R/G MDFC.
+pub fn cragcrown_pathway() -> CardDefinition {
+    pathway(
+        "Cragcrown Pathway", LandType::Mountain, Color::Red,
+        "Timbercrown Pathway", LandType::Forest, Color::Green,
+    )
+}
+
 // ── Shocklands ───────────────────────────────────────────────────────────────
 //
 // Real Oracle: "As this enters the battlefield, you may pay 2 life. If you

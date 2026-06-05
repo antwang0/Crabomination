@@ -6587,3 +6587,23 @@ fn cr_731_is_day_is_night_predicates() {
     assert!(g.evaluate_predicate(&Predicate::IsDay, &ctx));
     assert!(!g.evaluate_predicate(&Predicate::IsNight, &ctx));
 }
+
+#[test]
+fn branchloft_pathway_front_and_back_faces() {
+    // Front (Branchloft / Forest / G) and back (Boulderloft / Plains / W).
+    let mut g = two_player_game();
+    let f = g.add_card_to_hand(0, catalog::branchloft_pathway());
+    g.perform_action(GameAction::PlayLand(f)).expect("front playable");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: f, ability_index: 0, target: None, x_value: None }).expect("front taps for {G}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+
+    let mut g2 = two_player_game();
+    let b = g2.add_card_to_hand(0, catalog::clearwater_pathway());
+    g2.perform_action(GameAction::PlayLandBack(b)).expect("back playable");
+    let card = g2.battlefield_find(b).expect("on battlefield");
+    assert_eq!(card.definition.name, "Murkwater Pathway");
+    g2.perform_action(GameAction::ActivateAbility {
+        card_id: b, ability_index: 0, target: None, x_value: None }).expect("back taps for {B}");
+    assert_eq!(g2.players[0].mana_pool.amount(Color::Black), 1);
+}

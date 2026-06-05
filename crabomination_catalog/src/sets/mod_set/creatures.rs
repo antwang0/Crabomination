@@ -4558,14 +4558,9 @@ pub fn guardian_scalelord() -> CardDefinition {
 
 // ── Growing Ranks ──────────────────────────────────────────────────────────
 
-/// Growing Ranks — {2}{G}{W} Enchantment. At the beginning of your
-/// upkeep, create a 3/3 green Centaur creature token.
-///
-/// Approximation of "populate" — simplified to producing a fixed 3/3
-/// Centaur token each upkeep instead of copying an existing token.
+/// Growing Ranks — {2}{G}{W} Enchantment. At the beginning of your upkeep,
+/// populate (CR 701.32 — `Effect::Populate`).
 pub fn growing_ranks() -> CardDefinition {
-    use crate::card::TokenDefinition;
-    use crate::mana::Color;
     CardDefinition {
         name: "Growing Ranks",
         cost: cost(&[generic(2), g(), w()]),
@@ -4575,27 +4570,7 @@ pub fn growing_ranks() -> CardDefinition {
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::YourControl,
             ),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: TokenDefinition {
-                    name: "Centaur".into(),
-                    power: 3,
-                    toughness: 3,
-                    keywords: vec![],
-                    card_types: vec![CardType::Creature],
-                    colors: vec![Color::Green],
-                    supertypes: vec![],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Centaur],
-                        ..Default::default()
-                    },
-                    activated_abilities: vec![],
-                    triggered_abilities: vec![],
-                
-                    static_abilities: vec![],
-                },
-            },
+            effect: Effect::Populate { who: PlayerRef::You },
         }],
         ..Default::default()
     }

@@ -17543,22 +17543,27 @@ fn exotic_orchard_taps_for_any_color() {
 // ── Master of Death ─────────────────────────────────────────────────────────
 
 #[test]
-fn growing_ranks_creates_centaur_token_on_upkeep() {
+fn growing_ranks_populates_a_token_on_upkeep() {
+    // Growing Ranks populates (CR 701.32): copies a creature token you control.
+    use crate::card::{CardDefinition, CardType, CreatureType, Subtypes};
     use crate::game::types::TurnStep;
     let mut g = two_player_game();
-    let _ranks = g.add_card_to_battlefield(0, catalog::growing_ranks());
-    let bf_before = g.battlefield.len();
+    g.add_card_to_battlefield(0, catalog::growing_ranks());
+    let tok = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Centaur",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Centaur], ..Default::default() },
+        power: 3, toughness: 3, ..Default::default()
+    });
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
     g.active_player_idx = 0;
     g.step = TurnStep::Upkeep;
     g.priority.player_with_priority = 0;
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert!(g.battlefield.len() > bf_before, "Centaur token should be created");
-    let tok = g.battlefield.iter().find(|c|
-        c.is_token && c.definition.name == "Centaur"
-    ).expect("Centaur token should exist on the battlefield");
-    assert_eq!(tok.power(), 3, "Centaur token should be 3/3");
-    assert_eq!(tok.toughness(), 3, "Centaur token should be 3/3");
+    let centaurs = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Centaur").count();
+    assert_eq!(centaurs, 2, "populate copied the Centaur token");
 }
 
 #[test]
@@ -26207,3 +26212,25 @@ fn coldsteel_heart_enters_tapped_and_taps_for_chosen_color() {
     }).expect("tap for the chosen color");
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
 }
+
+#[test]
+fn floodfarm_verge_blue_gated_on_plains_or_island() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::floodfarm_verge());
+    // White is unconditional.
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, x_value: None })
+        .expect("white");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::White) > 0);
+    // Blue needs a Plains or Island.
+    g.battlefield_find_mut(v).unwrap().tapped = false;
+    assert!(g
+        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .is_err());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .expect("blue now allowed");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Blue) > 0);
+}
+

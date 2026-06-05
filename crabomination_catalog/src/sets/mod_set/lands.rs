@@ -344,3 +344,21 @@ pub fn wastewood_verge() -> CardDefinition {
         "Wastewood Verge", Color::Black, Color::Green, LandType::Swamp, LandType::Forest,
     )
 }
+
+pub fn floodfarm_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Floodfarm Verge", Color::White, Color::Blue, LandType::Plains, LandType::Island,
+    )
+}
+
+pub fn gloomlake_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Gloomlake Verge", Color::Blue, Color::Black, LandType::Island, LandType::Swamp,
+    )
+}
+
+pub fn hushwood_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Hushwood Verge", Color::Green, Color::White, LandType::Forest, LandType::Plains,
+    )
+}
