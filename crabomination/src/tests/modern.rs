@@ -16283,6 +16283,49 @@ fn rough_tumble_right_hits_only_fliers() {
 }
 
 #[test]
+fn pure_left_destroys_multicolored_only() {
+    // Pure (left) destroys a multicolored permanent but spares a mono one.
+    let mut g = two_player_game();
+    let gold = g.add_card_to_battlefield(1, catalog::watchwolf()); // GW multicolored
+    let mono = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pure_simple());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(gold)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pure castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gold).is_none(), "multicolored destroyed");
+    assert!(g.battlefield_find(mono).is_some(), "mono untouched");
+}
+
+#[test]
+fn spite_left_counters_noncreature_only() {
+    // Spite (left) counters a noncreature spell on the stack.
+    let mut g = two_player_game();
+    // Opponent casts a noncreature spell (Lightning Bolt) at us.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt cast");
+    // We respond with Spite (counters the noncreature spell).
+    let id = g.add_card_to_hand(0, catalog::spite_malice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spite castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered to graveyard");
+    assert_eq!(g.players[0].life, 20, "Bolt never resolved");
+}
+
+#[test]
 fn dead_gone_left_kills_right_bounces() {
     // Dead (left) deals 2 to a 2/2; Gone (right) bounces an opponent's creature.
     let mut g = two_player_game();

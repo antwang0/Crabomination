@@ -974,6 +974,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(glimpse_the_unthinkable);
         v.push(far_away);
         v.push(consign_oblivion);
+        v.push(spite_malice);
         v.push(profit_loss);
         v.push(gloomlake_verge);
         v.push(dimir_signet);
@@ -1313,6 +1314,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cut_ribbons,
         toil_trouble,
         dead_gone,
+        pure_simple,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
         // ── modern_decks: red utility creatures ──

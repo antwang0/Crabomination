@@ -13249,6 +13249,71 @@ pub fn ready_willing() -> CardDefinition {
     }
 }
 
+/// Pure // Simple — {1}{R}{G} // {1}{G}{W} Sorcery split (CR 709, no Fuse).
+/// Pure (left) destroys target multicolored permanent; Simple (right) destroys
+/// all Auras and Equipment.
+pub fn pure_simple() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EnchantmentSubtype};
+    CardDefinition {
+        name: "Pure // Simple",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::Multicolored),
+            ),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), g(), w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                            .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                    ),
+                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Spite // Malice — {3}{U} // {3}{B} Instant split (CR 709, no Fuse). Spite
+/// (left) counters target noncreature spell; Malice (right) destroys target
+/// nonblack creature (it can't be regenerated).
+pub fn spite_malice() -> CardDefinition {
+    CardDefinition {
+        name: "Spite // Malice",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
+            ),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::DestroyNoRegen {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasColor(Color::Black).negate()),
+                    ),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
 /// Frontline Devastator — {3}{R} 3/3 Zombie Minotaur Warrior. Afflict 2
 /// (CR 702.131 — becomes blocked → defending player loses 2 life).
 /// {1}{R}: +1/+0 until end of turn.
