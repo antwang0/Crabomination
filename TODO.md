@@ -10,8 +10,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 - **Card primitives deferred this run (claude/modern_decks).** Real cards
   skipped for lack of a primitive — each is a small, reusable addition:
-  - **"Doesn't untap during its controller's next untap step"** (a frozen-EOT
-    flag, the Frost/Dungeon-Geists effect) — Wall of Frost, Frost Titan.
+  - **"Whenever this blocks a creature, [affect that creature]"** — a Blocks
+    trigger that binds the *blocked attacker* as the effect target (the
+    "doesn't untap" half is already covered by a Stun counter) — Wall of Frost.
   - **Rearrange-top-N** (look at top N, reorder, all stay on top — distinct
     from Scry which can bottom) — Spire Owl, Index.
   - **Protection-from-each-color as one keyword/state** (Metalcraft-gated
