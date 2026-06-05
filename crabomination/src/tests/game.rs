@@ -3851,6 +3851,14 @@ fn chancellor_of_the_tangle_adds_green_on_first_main() {
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
     g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Keep)).unwrap();
 
+    // Revealing from the opening hand does NOT move the card — it stays in
+    // hand (CR 103.5 / the card's own text). Regression for the "revealed
+    // Chancellor disappears from hand" report.
+    assert!(
+        g.players[0].hand.iter().any(|c| c.definition.name == "Chancellor of the Tangle"),
+        "Chancellor of the Tangle must remain in hand after the opening-hand reveal",
+    );
+
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0,
         "no mana yet — the trigger fires on the main step");
 
