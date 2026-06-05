@@ -12629,6 +12629,156 @@ pub fn wear_tear() -> CardDefinition {
     }
 }
 
+/// Fire // Ice — {1}{R} // {1}{U} Instant split (CR 709, no Fuse). Fire (left)
+/// deals 2 damage divided among one or two targets; Ice (right) taps target
+/// permanent and draws a card.
+pub fn fire_ice() -> CardDefinition {
+    CardDefinition {
+        name: "Fire // Ice",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(2),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 2,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            },
+            fuse: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Far // Away — {1}{U} // {2}{B} Instant split with Fuse (CR 709 / 702.102).
+/// Far (left) returns target creature to its owner's hand; Away (right) makes
+/// target player sacrifice a creature.
+pub fn far_away() -> CardDefinition {
+    CardDefinition {
+        name: "Far // Away",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Sacrifice {
+                    who: Selector::Target(0),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            fuse: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Assault // Battery — {R} // {3}{G} Sorcery split (CR 709, no Fuse). Assault
+/// (left) deals 2 damage to any target; Battery (right) makes a 3/3 green
+/// Elephant.
+pub fn assault_battery() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Assault // Battery",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Elephant".into(),
+                        power: 3,
+                        toughness: 3,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Elephant],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+            fuse: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Stand // Deliver — {W} // {2}{U} Instant split (CR 709, no Fuse). Stand
+/// (left) prevents the next 2 damage to target creature this turn; Deliver
+/// (right) returns target permanent to its owner's hand.
+pub fn stand_deliver() -> CardDefinition {
+    CardDefinition {
+        name: "Stand // Deliver",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventNextDamage {
+            target: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Move {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+            },
+            fuse: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Wax // Wane — {G} // {W} Instant split (CR 709, no Fuse). Wax (left) gives
+/// target creature +2/+2 until end of turn; Wane (right) destroys target
+/// enchantment.
+pub fn wax_wane() -> CardDefinition {
+    CardDefinition {
+        name: "Wax // Wane",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[w()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Enchantment),
+                },
+            },
+            fuse: false,
+        })),
+        ..Default::default()
+    }
+}
+
 /// Wall of Blossoms — {1}{G} Creature 0/4 Plant Wall. Defender. When this
 /// enters, draw a card.
 pub fn wall_of_blossoms() -> CardDefinition {

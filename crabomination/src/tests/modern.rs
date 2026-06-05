@@ -16126,6 +16126,121 @@ fn wear_tear_destroys_target_artifact() {
 }
 
 #[test]
+fn fire_ice_left_deals_two_divided() {
+    // Fire (left half): 2 damage to the opponent.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fire_ice());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fire castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, before - 2, "Fire dealt 2");
+}
+
+#[test]
+fn fire_ice_right_taps_and_draws() {
+    // Ice (right half): tap target permanent and draw a card.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fire_ice());
+    let cid = g.next_id();
+    g.players[0].add_to_library_top(cid, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ice castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Ice tapped the bear");
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card (cast -1, draw +1)");
+}
+
+#[test]
+fn assault_battery_right_makes_elephant() {
+    // Battery (right half): create a 3/3 green Elephant.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::assault_battery());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Battery castable");
+    drain_stack(&mut g);
+
+    let eleph = g.battlefield.iter().find(|c| c.definition.name == "Elephant").expect("Elephant token");
+    assert_eq!((eleph.power(), eleph.toughness()), (3, 3), "3/3 Elephant");
+    assert_eq!(eleph.controller, 0);
+}
+
+#[test]
+fn far_away_fused_bounces_and_sacrifices() {
+    // Fused: Far bounces our target creature; Away makes the opponent sac one.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::far_away());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None, x_value: None,
+    }).expect("fused cast");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(mine).is_none(), "Far bounced our creature");
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "bounced creature in hand");
+    assert!(g.battlefield_find(theirs).is_none(), "Away forced opponent to sacrifice");
+}
+
+#[test]
+fn wax_wane_left_pumps_creature() {
+    // Wax (left half): +2/+2 until end of turn.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wax_wane());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wax castable");
+    drain_stack(&mut g);
+
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (4, 4), "Wax pumped to 4/4");
+}
+
+#[test]
+fn stand_deliver_right_bounces_permanent() {
+    // Deliver (right half): return target permanent to its owner's hand.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::stand_deliver());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Deliver castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "Deliver bounced the bear");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced to owner's hand");
+}
+
+#[test]
 fn stillmoon_cavalier_grants_flying_eot() {
     let mut g = two_player_game();
     let cav = g.add_card_to_battlefield(0, catalog::stillmoon_cavalier());

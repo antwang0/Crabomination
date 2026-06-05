@@ -735,6 +735,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Blue) {
         v.push(teferi_time_raveler);
         v.push(dovins_veto);
+        v.push(stand_deliver);
         v.push(razortide_bridge);
         v.push(floodfarm_verge);
         v.push(hengegate_pathway);
@@ -935,6 +936,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Red) {
         v.push(stormchaser_mage);
         v.push(talisman_of_creativity);
+        v.push(fire_ice);
         v.push(silverbluff_bridge);
         v.push(thundering_falls);
         // ── SOS Prismari (U/R) ──
@@ -967,6 +969,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(marauding_mako);
         v.push(mistvault_bridge);
         v.push(glimpse_the_unthinkable);
+        v.push(far_away);
         v.push(gloomlake_verge);
         v.push(dimir_signet);
         v.push(clearwater_pathway);
@@ -1595,6 +1598,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(ghor_clan_rampager);
         v.push(slagwoods_bridge);
         v.push(elegant_parlor);
+        v.push(assault_battery);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(stormchaser_mage);
@@ -1866,6 +1870,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(thornglint_bridge);
         v.push(lush_portico);
         v.push(torsten_founder_of_benalia);
+        v.push(wax_wane);
         v.push(horizon_canopy);
         v.push(hushwood_verge);
         v.push(talisman_of_unity);
