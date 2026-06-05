@@ -1215,3 +1215,89 @@ pub fn universal_automaton() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Affinity-for-artifacts vanilla body: costs {1} less per artifact you control.
+fn affinity_body(name: &'static str, mv: u32, ct: crate::card::CreatureType, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(mv)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
+        power: p,
+        toughness: t,
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        ..Default::default()
+    }
+}
+
+/// Frogmite — {4} Artifact Creature — Frog 2/2. Affinity for artifacts.
+pub fn frogmite() -> CardDefinition {
+    affinity_body("Frogmite", 4, crate::card::CreatureType::Frog, 2, 2)
+}
+
+/// Myr Enforcer — {7} Artifact Creature — Myr 4/4. Affinity for artifacts.
+pub fn myr_enforcer() -> CardDefinition {
+    affinity_body("Myr Enforcer", 7, crate::card::CreatureType::Myr, 4, 4)
+}
+
+/// Court Homunculus — {W} Artifact Creature — Homunculus 1/1. Gets +1/+1 as
+/// long as you control another artifact.
+pub fn court_homunculus() -> CardDefinition {
+    use crate::card::{CreatureType, StaticAbility};
+    use crate::effect::{Predicate, StaticEffect, Value};
+    use crate::mana::w;
+    CardDefinition {
+        name: "Court Homunculus",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Homunculus], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control another artifact, this creature gets +1/+1.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 1,
+                keyword: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chief of the Foundry — {3} Artifact Creature — Construct 2/3. Other artifact
+/// creatures you control get +1/+1.
+pub fn chief_of_the_foundry() -> CardDefinition {
+    use crate::card::{CreatureType, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Chief of the Foundry",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other artifact creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}

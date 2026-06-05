@@ -22638,6 +22638,40 @@ fn hangarback_walker_makes_thopters_when_it_dies() {
 }
 
 #[test]
+fn frogmite_affinity_reduces_cost_per_artifact() {
+    let mut g = two_player_game();
+    // Three artifacts → Frogmite costs {4} - 3 = {1}.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    let id = g.add_card_to_hand(0, catalog::frogmite());
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Frogmite cast for {{1}} via Affinity");
+}
+
+#[test]
+fn chief_of_the_foundry_buffs_other_artifact_creatures() {
+    let mut g = two_player_game();
+    let chief = g.add_card_to_battlefield(0, catalog::chief_of_the_foundry());
+    let myr = g.add_card_to_battlefield(0, catalog::ornithopter()); // 0/2 artifact creature
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == myr).map(|c| (c.power, c.toughness)), Some((1, 3)),
+        "other artifact creature gets +1/+1");
+    // The Chief doesn't buff itself.
+    assert_eq!(cp.iter().find(|c| c.id == chief).map(|c| (c.power, c.toughness)), Some((2, 3)));
+}
+
+#[test]
+fn court_homunculus_grows_with_another_artifact() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::court_homunculus());
+    // Alone: 1/1.
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "+1/+1 with another artifact");
+}
+
+#[test]
 fn cathodion_adds_three_colorless_when_it_dies() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::cathodion());

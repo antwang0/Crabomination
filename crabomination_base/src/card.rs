@@ -106,6 +106,8 @@ pub enum CreatureType {
     Drone,
     // Artifact creature subtype (Bottle Gnomes).
     Gnome,
+    // Artifact creature subtype (Court Homunculus, Fblthp).
+    Homunculus,
 }
 
 /// Land subtypes (basic land types + others).

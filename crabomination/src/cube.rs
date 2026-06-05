@@ -228,6 +228,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         cathodion,
         bottle_gnomes,
         universal_automaton,
+        frogmite,
+        myr_enforcer,
+        chief_of_the_foundry,
         sol_ring,
         ornithopter,
         ornithopter_of_paradise,
@@ -372,6 +375,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         palace_sentinels,
         knight_of_the_white_orchid,
         adanto_vanguard,
+        court_homunculus,
         // ── claude/modern_decks: white value/keyword bodies ──
         kor_skyfisher,
         whitemane_lion,
