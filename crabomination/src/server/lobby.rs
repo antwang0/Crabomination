@@ -267,9 +267,8 @@ impl LobbyManager {
         self.lobbies.push(lobby);
         self.conn_lobby.insert(conn, id);
         self.notify_members(id, &mut out);
-        // A 1-seat gamemode would start instantly; none exist today, but the
-        // check guards against an exotic format stranding the creator.
-        self.maybe_start(id, &mut out);
+        // No auto-start: a lobby only begins when the host explicitly starts it
+        // (`StartLobby`), even once it's full.
         self.push_browser_list(&mut out);
         out
     }
@@ -309,7 +308,6 @@ impl LobbyManager {
         }
         lobby.seats.push(Slot::Bot);
         self.notify_members(lobby_id, &mut out);
-        self.maybe_start(lobby_id, &mut out);
         self.push_browser_list(&mut out);
         out
     }
@@ -378,7 +376,6 @@ impl LobbyManager {
         self.conn_lobby.insert(conn, lobby_id);
         // Tell the new member and everyone already waiting their current slot.
         self.notify_members(lobby_id, &mut out);
-        self.maybe_start(lobby_id, &mut out);
         self.push_browser_list(&mut out);
         out
     }
@@ -681,7 +678,7 @@ mod tests {
     }
 
     #[test]
-    fn create_then_join_fills_and_starts_a_two_seat_match() {
+    fn create_join_then_host_starts_a_two_seat_match() {
         let mut m = LobbyManager::new();
         m.register(ConnId(1));
         m.register(ConnId(2));
@@ -709,9 +706,12 @@ mod tests {
         assert!(out.sends.iter().any(|(c, msg)| *c == ConnId(2)
             && matches!(msg, ServerMsg::LobbyList { lobbies } if lobbies.len() == 1)));
 
-        // Seat 2 joins → lobby is full → a match starts with both members.
+        // Seat 2 joins → lobby is full but does NOT auto-start.
         let out = m.handle(ConnId(2), ClientMsg::JoinLobby { lobby_id });
-        let start = out.start.expect("filling the lobby starts the match");
+        assert!(out.start.is_none(), "a full lobby waits for the host to start");
+        // The host explicitly starts → the match begins with both members.
+        let out = m.handle(ConnId(1), ClientMsg::StartLobby);
+        let start = out.start.expect("the host starting begins the match");
         assert_eq!(start.seats.len(), 2);
         assert!(matches!(start.seats[0], SeatSpec::Human(ConnId(1))));
         assert!(matches!(start.seats[1], SeatSpec::Human(ConnId(2))));
@@ -723,7 +723,7 @@ mod tests {
     }
 
     #[test]
-    fn adding_a_bot_fills_a_two_seat_lobby_and_starts_human_vs_bot() {
+    fn full_lobby_does_not_auto_start_until_the_host_starts() {
         let mut m = LobbyManager::new();
         m.register(ConnId(1));
         let out = m.handle(ConnId(1), ClientMsg::CreateLobby {
@@ -734,12 +734,16 @@ mod tests {
             ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.clone()),
             _ => None,
         }).unwrap();
-        assert_eq!(info.players, 1);
-        assert_eq!(info.bots, 0);
+        assert_eq!((info.players, info.bots), (1, 0));
 
-        // Adding one bot fills the 2-seat Modern lobby → match starts.
+        // Adding a bot fills the 2-seat lobby but does NOT start it.
         let out = m.handle(ConnId(1), ClientMsg::AddBotToLobby);
-        let start = out.start.expect("a bot filling the lobby starts the match");
+        assert!(out.start.is_none(), "filling the lobby must not auto-start it");
+        assert_eq!(m.lobbies.len(), 1, "the lobby is still open, full, waiting");
+
+        // The host starts → the (human + bot) match begins.
+        let out = m.handle(ConnId(1), ClientMsg::StartLobby);
+        let start = out.start.expect("the host starting begins the match");
         assert_eq!(start.seats.len(), 2);
         assert!(matches!(start.seats[0], SeatSpec::Human(ConnId(1))));
         assert!(matches!(start.seats[1], SeatSpec::Bot));
@@ -952,8 +956,11 @@ mod tests {
         // Client 1 created a Modern lobby — wait for its id via LobbyJoined.
         let lobby_id = id;
 
-        // Client 2 joins; the lobby fills and the match starts.
+        // Client 2 joins; the lobby is now full but waits for the host.
         c2.tx.send(ClientMsg::JoinLobby { lobby_id }).unwrap();
+        // Once the host sees the joiner, it starts the match.
+        await_player_count(&c1, 2);
+        c1.tx.send(ClientMsg::StartLobby).unwrap();
 
         assert!(
             recv_match_started(&c1),
@@ -969,6 +976,23 @@ mod tests {
         drop(c2);
         drop(new_tx);
         let _ = driver.join();
+    }
+
+    /// Drain `c` until it observes a `LobbyJoined` showing at least `players`
+    /// human seats.
+    fn await_player_count(c: &ClientChannel, players: usize) {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while Instant::now() < deadline {
+            for m in drain(&c.rx) {
+                if let ServerMsg::LobbyJoined { lobby, .. } = m
+                    && lobby.players >= players
+                {
+                    return;
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        panic!("never observed {players} players in the lobby");
     }
 
     /// Send `CreateLobby` once the first `LobbyList` arrives, then return the
@@ -1022,9 +1046,10 @@ mod tests {
         let (s1, c1) = seat_pair();
         new_tx.send((ConnId(1), s1, ())).unwrap();
 
-        // Create a Modern (2-seat) lobby, then add a bot to start the match.
+        // Create a Modern (2-seat) lobby, add a bot, then start the match.
         let _ = await_lobby_then_create(&c1);
         c1.tx.send(ClientMsg::AddBotToLobby).unwrap();
+        c1.tx.send(ClientMsg::StartLobby).unwrap();
 
         // Collect the resume token and confirm we entered the match (without
         // discarding either — they arrive in the same burst).
