@@ -18485,3 +18485,53 @@ pub fn power_depot() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Virtue of Loyalty // Ardenvale Fealty — {3}{W}{W} Enchantment // {1}{W}
+/// Instant — Adventure (CR 715). Adventure: create a 2/2 white Knight with
+/// vigilance. Enchantment: at the beginning of your end step, put a +1/+1
+/// counter on each creature you control, then untap those creatures.
+pub fn virtue_of_loyalty() -> CardDefinition {
+    use crate::card::{Adventure, CounterType, TokenDefinition};
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Virtue of Loyalty",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        adventure: Some(Box::new(Adventure {
+            name: "Ardenvale Fealty",
+            cost: cost(&[generic(1), w()]),
+            card_types: vec![CardType::Instant],
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Knight".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    keywords: vec![Keyword::Vigilance],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Knight], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+        })),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::TriggerSource,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Untap { what: Selector::TriggerSource, up_to: None },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -20,7 +20,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Lion Sash | 🟡 | {1}{W} Equipment Cat 1/1; `{W}: exile target gy card, +1/+1 counter if it was a permanent`; equipped creature scales +1/+1 per +1/+1 counter on Lion Sash (`EquipScale.count_self_counters`). Reconfigure approximated as Equip {2} (the "not a creature while attached" rider dropped). Test: `lion_sash_exiles_permanent_card_grows_and_scales_equipped`. || Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
-| Virtue of Loyalty | ⏳ | Adventure + enchantment side. Needs Adventure cost-mode primitive. |
 
 ### Blue
 
@@ -107,7 +106,7 @@ are listed in `DECK_FEATURES.md`.
 | Feature | Status | Cards depending on it |
 |---|---|---|
 | Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus now ships via `EquipBonus.scale` (`EquipScale { filter, per_power, per_toughness }`) — Nettlecyst (living weapon + "+1/+1 per artifact/enchantment you control") ✅. Lion Sash (counter-on-self scaled bonus + Reconfigure), Sword of Body and Mind, Helm of the Host still need counter-scaled / triggered equip bonuses. |
-| Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |
+| Adventure (cost-mode duality) | ✅ | CR 715 — `CardDefinition.adventure` + `GameAction::CastAdventure`/`CastAdventureCreature`. Virtue of Loyalty (enchantment // instant) ships on it alongside the creature adventures. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
 | Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm`, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich's attack trigger. Cast-from-top-of-library mid-resolution (Mind's Desire) and energy-gated free cast-from-exile (Amped Raptor) are still ⏳. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |

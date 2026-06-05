@@ -27069,3 +27069,40 @@ fn power_depot_enters_tapped_and_fixes_mana() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana of a chosen color");
 }
+
+#[test]
+fn virtue_of_loyalty_adventure_makes_knight_then_enchantment_buffs() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    // Adventure side: cast Ardenvale Fealty → 2/2 vigilant Knight + exile card.
+    let id = g.add_card_to_hand(0, catalog::virtue_of_loyalty());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastAdventure {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ardenvale Fealty");
+    drain_stack(&mut g);
+    let (knight_id, knight_vigilant) = {
+        let knight = g.battlefield.iter().find(|c| c.definition.name == "Knight" && c.controller == 0)
+            .expect("Knight token minted");
+        (knight.id, knight.has_keyword(&Keyword::Vigilance))
+    };
+    assert!(knight_vigilant);
+    assert!(g.exile.iter().any(|c| c.id == id), "adventure card exiled, castable later");
+
+    // Enchantment side: cast it from exile, then end step buffs/untaps creatures.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastAdventureCreature {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Virtue of Loyalty enchantment");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "enchantment resolves onto battlefield");
+    g.battlefield_find_mut(knight_id).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let k = g.battlefield_find(knight_id).unwrap();
+    assert_eq!(k.counter_count(CounterType::PlusOnePlusOne), 1, "end step grows each creature");
+    assert!(!k.tapped, "end step untaps those creatures");
+}

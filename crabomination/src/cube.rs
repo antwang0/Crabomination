@@ -355,6 +355,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         shorikai_genesis_engine,
         // ── modern_decks: graveyard-hate equipment (counter-scaled) ──
         lion_sash,
+        // ── modern_decks: Adventure enchantment (anthem + token) ──
+        virtue_of_loyalty,
         // ── claude/modern_decks: Extort (CR 702.99) ──
         syndic_of_tithes,
         // ── claude/modern_decks: white value/keyword bodies ──
