@@ -26541,3 +26541,60 @@ fn trenchpost_mills_one_per_locus_you_control() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].library.len(), lib_before - 3, "milled one card per Locus controlled");
 }
+
+#[test]
+fn ouroboroid_counters_each_creature_by_its_own_power_at_combat() {
+    let mut g = two_player_game();
+    let ouro = g.add_card_to_battlefield(0, catalog::ouroboroid()); // 1/3
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    // X = Ouroboroid's power (1) → one counter on each of your creatures.
+    assert_eq!(g.battlefield_find(ouro).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn railway_brawler_counters_new_creatures_by_power() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::railway_brawler());
+    // Cast a 2/2 so it routes through the stack and fires the ETB event.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bears castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "+1/+1 counters equal to the new creature's power");
+}
+
+#[test]
+fn profts_eidetic_memory_etb_draws_and_grants_no_max_hand() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_battlefield(0, catalog::profts_eidetic_memory());
+    let hand_before = g.players[0].hand.len();
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draws one");
+    assert!(g.players[0].no_maximum_hand_size, "no maximum hand size");
+}
+
+#[test]
+fn profts_eidetic_memory_combat_counters_scale_with_draws() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::profts_eidetic_memory());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    // Draw three cards this turn (so X = 3 - 1 = 2).
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].cards_drawn_this_turn = 3;
+    let _ = id;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "X = cards drawn this turn minus one");
+}

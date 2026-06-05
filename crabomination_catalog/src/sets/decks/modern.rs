@@ -17612,3 +17612,100 @@ pub fn broodspinner() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ouroboroid — {2}{G}{G} 1/3. At the beginning of combat on your turn, put X
+/// +1/+1 counters on each creature you control, where X is this creature's
+/// power.
+pub fn ouroboroid() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "Ouroboroid",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer),
+            // X (= this creature's power) is evaluated once against `This`,
+            // then applied to each of your creatures.
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Railway Brawler — {3}{G}{G} 5/5 Reach, Trample. Whenever another creature
+/// you control enters, put X +1/+1 counters on it, where X is its power.
+/// Plot {3}{G}.
+pub fn railway_brawler() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Railway Brawler",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        plot_cost: Some(cost(&[generic(3), g()])),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Proft's Eidetic Memory — {1}{U} Enchantment. ETB draw a card; you have no
+/// maximum hand size. At the beginning of combat on your turn, if you've drawn
+/// more than one card this turn, put X +1/+1 counters on target creature you
+/// control, where X is the number of cards you've drawn this turn minus one.
+pub fn profts_eidetic_memory() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::etb;
+    use crate::game::TurnStep;
+    CardDefinition {
+        name: "Proft's Eidetic Memory",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::SetNoMaxHandSize { who: Selector::You },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::ActivePlayer)
+                    .with_filter(Predicate::ValueAtLeast(
+                        Value::CardsDrawnThisTurn(PlayerRef::You),
+                        Value::Const(2),
+                    )),
+                effect: Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Diff(
+                        Box::new(Value::CardsDrawnThisTurn(PlayerRef::You)),
+                        Box::new(Value::Const(1)),
+                    ),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+

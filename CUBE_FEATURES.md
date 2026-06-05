@@ -34,7 +34,6 @@ work is listed below.
 | Mirrorform | ⏳ | Aura + clone target. |
 | Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
-| Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
 | Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
 | Concealing Curtains | ⏳ | DFC into Revealing Eye creature. |
@@ -64,8 +63,6 @@ work is listed below.
 | Baloth Prime | ⏳ | TBD. |
 | Icetill Explorer | ⏳ | TBD. |
 | Mightform Harmonizer | ⏳ | TBD. |
-| Ouroboroid | ⏳ | TBD. |
-| Railway Brawler | ⏳ | Train (vehicle-like). |
 | Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |

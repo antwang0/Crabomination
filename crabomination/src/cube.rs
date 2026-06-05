@@ -650,6 +650,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: draw-matters +1/+1 payoff ──
+        profts_eidetic_memory,
         // ── claude/modern_decks: flash flyer ──
         spectral_sailor,
         thieving_magpie,
@@ -1453,6 +1455,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: begin-combat counter scaling + Plot ──
+        ouroboroid,
+        railway_brawler,
         // ── claude/modern_decks: deathtouch body ──
         gnarlwood_dryad,
         gladecover_scout,
