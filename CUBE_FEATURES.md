@@ -60,7 +60,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
 | Baloth Prime | ⏳ | TBD. |

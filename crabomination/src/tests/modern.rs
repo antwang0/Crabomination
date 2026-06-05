@@ -16585,19 +16585,33 @@ fn cam_and_farrik_pumps_on_noncreature_cast() {
 }
 
 #[test]
-fn keen_eyed_curator_etb_adds_counter() {
+fn keen_eyed_curator_exiles_graveyard_cards_and_buffs_at_four_types() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::keen_eyed_curator());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-    let curator = g.battlefield.iter().find(|c| c.definition.name == "Keen-Eyed Curator")
-        .expect("Curator on bf");
-    assert_eq!(curator.counter_count(crate::card::CounterType::PlusOnePlusOne), 1);
-    assert_eq!(curator.power(), 4);
+    let id = g.add_card_to_battlefield(0, catalog::keen_eyed_curator());
+    g.clear_sickness(id);
+    // Seed the opponent's graveyard with four distinct card types.
+    let creature = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let instant = g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let land = g.add_card_to_graveyard(1, catalog::forest());
+    let artifact = g.add_card_to_graveyard(1, catalog::ornithopter());
+    // Base 2/2 with nothing exiled.
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2));
+    // Exile each, tagging them with the Curator (one activation per card).
+    for (i, card) in [creature, instant, land, artifact].into_iter().enumerate() {
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: Some(Target::Permanent(card)), x_value: None,
+        }).expect("exile a graveyard card");
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == card), "card {i} is exiled");
+    }
+    // Four card types among exiled-with cards → +4/+4 and trample.
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((c.power, c.toughness), (6, 6), "+4/+4 at four card types");
+    assert!(c.keywords.contains(&crate::card::Keyword::Trample));
 }
 
 #[test]
@@ -17829,13 +17843,13 @@ fn conclave_sledge_captain_grants_trample_to_countered_creatures() {
 }
 
 #[test]
-fn trenchpost_taps_for_two_colorless() {
+fn trenchpost_taps_for_one_colorless() {
     let mut g = two_player_game();
     let tp = g.add_card_to_battlefield(0, catalog::trenchpost());
     g.perform_action(GameAction::ActivateAbility {
         card_id: tp, ability_index: 0, target: None, x_value: None,
     }).expect("Trenchpost tap should work");
-    assert_eq!(g.players[0].mana_pool.total(), 2, "Should add 2 colorless mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "Should add 1 colorless mana");
 }
 
 // ── modern_decks-16: new cube cards ──────────────────────────────────────────

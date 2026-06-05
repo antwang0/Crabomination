@@ -13180,26 +13180,42 @@ pub fn sinkhole() -> CardDefinition {
     }
 }
 
-/// Keen-Eyed Curator — {2}{G}, 3/3 Elf Druid.
-/// ETB: +1/+1 counter on self + graveyard hate approximation.
+/// Keen-Eyed Curator — {G}{G} 2/2 Elf Druid. `{1}: Exile target card from a
+/// graveyard.` As long as four+ card types are among cards exiled with it,
+/// it gets +4/+4 and has trample.
 pub fn keen_eyed_curator() -> CardDefinition {
-    use crate::card::CounterType;
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Keen-Eyed Curator",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[g(), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::ExileTaggedWithSource {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::InGraveyard,
+                },
+            },
+            ..Default::default()
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "As long as there are four or more card types among cards exiled with this creature, it gets +4/+4 and has trample.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::DistinctCardTypesExiledWith,
+                    Value::Const(4),
+                ),
+                power: 4,
+                toughness: 4,
+                keyword: Some(Keyword::Trample),
             },
         }],
         ..Default::default()

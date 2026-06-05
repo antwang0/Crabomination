@@ -2069,6 +2069,29 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTaggedWithSource { what } => {
+                let source = ctx.source;
+                for ent in self.resolve_selector(what, ctx) {
+                    let cid = match ent {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => c,
+                        _ => continue,
+                    };
+                    // Route battlefield exits through the LTB path; anything
+                    // in another zone (the common graveyard-hate case) just
+                    // relocates via `move_card_to`.
+                    if self.battlefield.iter().any(|c| c.id == cid) {
+                        self.remove_from_battlefield_to_exile(cid);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    } else {
+                        self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    }
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_with = source;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileAnyNumberFromGraveyards { filter } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 // Gather every graveyard card matching `filter`, across all

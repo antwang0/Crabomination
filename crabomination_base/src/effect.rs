@@ -358,6 +358,11 @@ pub enum Value {
     /// Backs Broodspinner's "create that many Insects equal to the number of
     /// card types among cards in your graveyard" payoff.
     DistinctTypesInGraveyard { who: PlayerRef },
+    /// Number of distinct card types among the cards in exile stamped
+    /// `exiled_with = source` (the resolving source). Backs Keen-Eyed
+    /// Curator's "four or more card types among cards exiled with this
+    /// creature" threshold.
+    DistinctCardTypesExiledWith,
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"
@@ -1459,6 +1464,11 @@ pub enum Effect {
     /// Dust, Spreading Plague-style name sweeps. `what` resolves the
     /// anchor permanent (slot 0); its printed name keys the sweep.
     ExileSameNameAsTarget { what: Selector },
+    /// Exile target card(s) and stamp each with `exiled_with = source`, the
+    /// permanent association read by counting effects like
+    /// `Value::DistinctCardTypesExiledWith`. Keen-Eyed Curator's
+    /// "{1}: Exile target card from a graveyard."
+    ExileTaggedWithSource { what: Selector },
     /// "Exile any number of target cards from graveyards." The controller
     /// picks a subset (via `Decision::ChooseCards`) of every graveyard card
     /// matching `filter`; chosen cards move to exile. AutoDecider exiles
@@ -2412,6 +2422,7 @@ impl Effect {
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
             | Effect::ExileSameNameAsTarget { what }
+            | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
@@ -2594,6 +2605,7 @@ impl Effect {
             | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
             | Effect::ExileSameNameAsTarget { what }
+            | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }

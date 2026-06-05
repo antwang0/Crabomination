@@ -1461,6 +1461,12 @@ pub struct CardInstance {
     /// battlefield the engine returns this card to `ExileLink::return_to`.
     /// `None` for ordinary (permanent) exile.
     pub exiled_by: Option<ExileLink>,
+    /// CR 720-style "exiled with [a permanent]": a permanent tag stamped on a
+    /// card in exile that some source put there and keeps caring about (e.g.
+    /// Keen-Eyed Curator's "card types among cards exiled with this
+    /// creature"). Unlike `exiled_by`, the card never returns — this is a
+    /// pure association used by counting effects. `None` for ordinary exile.
+    pub exiled_with: Option<CardId>,
     /// Until-end-of-turn flashback granted to this card while it sits in a
     /// graveyard — "target instant/sorcery card in your graveyard gains
     /// flashback until end of turn; the flashback cost equals its mana
@@ -1561,6 +1567,7 @@ impl CardInstance {
             attacked_this_turn: false,
             must_block: None,
             exiled_by: None,
+            exiled_with: None,
             granted_flashback_eot: None,
             granted_alt_cast_cost_eot: None,
             named_card: None,
