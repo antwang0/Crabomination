@@ -1284,7 +1284,33 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
         })
         .collect();
     let total_incoming: i32 = attacker_info.iter().map(|(_, p, _, _, _)| *p).sum();
-    let life_threatened = state.players[seat].life <= total_incoming;
+    // Infect (CR 702.90) / Toxic (CR 702.180) make poison the lethal clock,
+    // not life: a player with 10+ poison counters loses (CR 104.3d). The bot
+    // must chump an infect/toxic attacker to avoid a poison-out even at a
+    // healthy life total. Infect deals its power as poison; Toxic N adds N on
+    // top of normal combat damage.
+    let incoming_poison: u32 = state
+        .attacking()
+        .iter()
+        .filter(|atk| state.defender_for(atk.target) == Some(seat))
+        .filter_map(|atk| state.battlefield.iter().find(|c| c.id == atk.attacker))
+        .map(|a| {
+            let mut p = 0u32;
+            if a.has_keyword(&Keyword::Infect) {
+                p += a.power().max(0) as u32;
+            }
+            p += a
+                .definition
+                .keywords
+                .iter()
+                .filter_map(|k| if let Keyword::Toxic(n) = k { Some(*n) } else { None })
+                .sum::<u32>();
+            p
+        })
+        .sum();
+    let poison_threatened =
+        incoming_poison > 0 && state.players[seat].poison_counters + incoming_poison >= 10;
+    let life_threatened = state.players[seat].life <= total_incoming || poison_threatened;
 
     let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = state
         .battlefield
@@ -2247,6 +2273,29 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert!(!blocks.iter().any(|(b, _)| *b == bear),
             "power-2 blocker can't be assigned to Steel Leaf Champion");
+    }
+
+    /// CR 702.90 / 104.3d — the bot chumps an infect attacker that would
+    /// reach 10 poison even at a healthy life total (poison, not life, is the
+    /// lethal clock).
+    #[test]
+    fn bot_chumps_infect_attacker_to_avoid_poison_out() {
+        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let infect = CardDefinition {
+            name: "Plague Beast", card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(), power: 9, toughness: 9,
+            keywords: vec![Keyword::Infect], ..Default::default()
+        };
+        let atk = g.add_card_to_battlefield(0, infect);
+        let chump = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        // Healthy life (20) but already 1 poison → 9 incoming poison = 10 → lethal.
+        g.players[1].poison_counters = 1;
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(blocks.iter().any(|(b, _)| *b == chump),
+            "bot chumps the infect attacker to avoid a poison-out");
     }
 
     /// Color-choice mana abilities (Ornithopter of Paradise's `{T}: Add one

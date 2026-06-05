@@ -296,6 +296,12 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub legal_blockers: Vec<CardId>,
+    /// CR 702.69 — permanents put into a graveyard from the battlefield this
+    /// turn (any controller). Drives the client's Gravestorm-count badge, the
+    /// graveyard-storm analog of the per-player `spells_cast_this_turn` Storm
+    /// hint. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub permanents_to_graveyard_this_turn: u32,
 }
 
 /// A projected combat-damage summary, computed from the currently
