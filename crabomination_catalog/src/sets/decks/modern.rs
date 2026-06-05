@@ -17311,3 +17311,146 @@ pub fn hordeling_outburst() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: cube maybeboard additions ─────────────────────────────────
+
+/// Bloodbraid Challenger — {3}{R}{G} 4/3 Elf Berserker. Cascade, Haste,
+/// Escape—{3}{R}{G}, Exile three other cards from your graveyard.
+pub fn bloodbraid_challenger() -> CardDefinition {
+    use crate::effect::shortcut::cascade;
+    CardDefinition {
+        name: "Bloodbraid Challenger",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste, Keyword::Escape(cost(&[generic(3), r(), g()]), 3)],
+        triggered_abilities: vec![cascade(5)],
+        ..Default::default()
+    }
+}
+
+/// Legion Extruder — {1}{R} Artifact. ETB deals 2 damage to any target.
+/// `{2}, {T}, Sacrifice another artifact: Create a 3/3 colorless Golem.`
+pub fn legion_extruder() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::{etb, target_any};
+    let golem = TokenDefinition {
+        name: "Golem".to_string(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Legion Extruder",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::DealDamage { to: target_any(), amount: Value::Const(2) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: golem },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragonback Assault — {3}{G}{U}{R} Enchantment. ETB deals 3 damage to each
+/// creature and each planeswalker. Landfall — whenever a land you control
+/// enters, create a 4/4 red Dragon with flying.
+pub fn dragonback_assault() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::etb;
+    let dragon = TokenDefinition {
+        name: "Dragon".to_string(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dragonback Assault",
+        cost: cost(&[generic(3), g(), u(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(3) }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: dragon },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The tri-color "Landscape" cycle: `{T}: Add {C}`; `{T}, Sacrifice: search a
+/// basic of one of three types onto the battlefield tapped`; Cycling for three
+/// colored pips. Mirrors the canonical Khans/MOM landscape lands.
+fn landscape(name: &'static str, types: [LandType; 3], cyc: [Color; 3]) -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let basic_filter = SelectionRequirement::IsBasicLand.and(
+        SelectionRequirement::HasLandType(types[0])
+            .or(SelectionRequirement::HasLandType(types[1]))
+            .or(SelectionRequirement::HasLandType(types[2])),
+    );
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        keywords: vec![Keyword::Cycling(cost(&[
+            ManaSymbol::Colored(cyc[0]),
+            ManaSymbol::Colored(cyc[1]),
+            ManaSymbol::Colored(cyc[2]),
+        ]))],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: basic_filter,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+pub fn twisted_landscape() -> CardDefinition {
+    landscape("Twisted Landscape", [LandType::Swamp, LandType::Mountain, LandType::Forest],
+        [Color::Black, Color::Red, Color::Green])
+}
+pub fn sheltering_landscape() -> CardDefinition {
+    landscape("Sheltering Landscape", [LandType::Mountain, LandType::Forest, LandType::Plains],
+        [Color::Red, Color::Green, Color::White])
+}
+pub fn bountiful_landscape() -> CardDefinition {
+    landscape("Bountiful Landscape", [LandType::Forest, LandType::Island, LandType::Mountain],
+        [Color::Green, Color::Blue, Color::Red])
+}

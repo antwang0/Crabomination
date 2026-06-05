@@ -26298,3 +26298,114 @@ fn signets_pay_one_and_tap_for_their_two_colors() {
         assert_eq!(g.players[0].mana_pool.colorless_amount(), 0, "spent the {{1}}");
     }
 }
+
+// ── modern_decks: cube maybeboard additions ─────────────────────────────────
+
+#[test]
+fn bloodbraid_challenger_has_haste_and_cascades() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2 nonland
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_hand(0, catalog::bloodbraid_challenger());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {3}{R}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Challenger resolves");
+    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&crate::card::Keyword::Haste),
+        "has haste");
+    assert!(g.battlefield.iter().any(|c| c.id == bears), "cascade casts the MV-2 card free");
+}
+
+#[test]
+fn legion_extruder_etb_pings_and_makes_golems() {
+    let mut g = two_player_game();
+    let scrap = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let id = g.add_card_to_hand(0, catalog::legion_extruder());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 2, "ETB dealt 2 to the opponent");
+    // {2}, {T}, Sacrifice another artifact (the Ornithopter): make a 3/3 Golem.
+    g.players[0].mana_pool.add_colorless(2);
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("golem ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(scrap).is_none(), "sacrificed the other artifact");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Golem" && c.controller == 0),
+        "minted a Golem token");
+}
+
+#[test]
+fn dragonback_assault_sweeps_then_makes_dragons_on_landfall() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies to 3
+    let id = g.add_card_to_hand(0, catalog::dragonback_assault());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "ETB 3 damage killed the 2/2");
+    // Landfall: play a land → 4/4 Dragon.
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("land drop");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Dragon" && c.controller == 0),
+        "landfall minted a Dragon");
+}
+
+#[test]
+fn landscape_cycle_taps_for_colorless_and_fetches_a_basic() {
+    type LandscapeCase = (fn() -> crate::card::CardDefinition, &'static str);
+    let cases: [LandscapeCase; 3] = [
+        (catalog::twisted_landscape, "Swamp"),
+        (catalog::sheltering_landscape, "Plains"),
+        (catalog::bountiful_landscape, "Island"),
+    ];
+    for (factory, fetch_name) in cases {
+        let mut g = two_player_game();
+        // A basic of one of the three searchable types in the library.
+        let basic = match fetch_name {
+            "Swamp" => catalog::swamp(),
+            "Plains" => catalog::plains(),
+            _ => catalog::island(),
+        };
+        let target_basic = g.add_card_to_library(0, basic);
+        let land = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(land);
+        // Ability 0: {T}: Add {C}.
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land, ability_index: 0, target: None, x_value: None,
+        }).expect("taps for {C}");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "colorless produced");
+        // Ability 1: {T}, Sac: search a basic onto the battlefield tapped.
+        g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+            DecisionAnswer::Search(Some(target_basic)),
+        ]));
+        let land2 = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(land2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: land2, ability_index: 1, target: None, x_value: None,
+        }).expect("sac-fetch");
+        drain_stack(&mut g);
+        assert!(g.battlefield.iter().any(|c| c.id == target_basic && c.tapped),
+            "fetched basic enters tapped");
+        assert!(g.battlefield_find(land2).is_none(), "the Landscape sacrificed itself");
+    }
+}

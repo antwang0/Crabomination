@@ -1669,6 +1669,13 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(talisman_of_impulse);
         v.push(gruul_signet);
         v.push(cragcrown_pathway);
+        // ── modern_decks: cube maybeboard additions ──
+        v.push(bloodbraid_challenger);
+        v.push(legion_extruder);
+        v.push(dragonback_assault);
+        v.push(twisted_landscape);
+        v.push(sheltering_landscape);
+        v.push(bountiful_landscape);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(gaeas_skyfolk);

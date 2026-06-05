@@ -55,7 +55,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Amped Raptor | 🟡 | 2/1 Dinosaur; ETB now grants real energy ({E}{E}) via `Effect::AddEnergy` (energy system shipped in `sets::kld`). The exile-then-pay-energy-to-cast-free clause is still omitted (no energy-gated free-cast-from-exile path). |
-| Legion Extruder | ⏳ | Equip-ish artifact. |
 
 ### Green
 
@@ -92,7 +91,6 @@ work is listed below.
 | Shorikai, Genesis Engine | ⏳ | Vehicle-walker hybrid; loots on activate. |
 | Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
 | Carnage Interpreter | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{B}{R} Vampire 4/3 with Trample. ETB makes each opponent discard a random card. (Synthesised body; the real Oracle has more text.) Test: `carnage_interpreter_etb_makes_each_opp_discard`. |
-| Bloodbraid Challenger | ⏳ | Cascade. The `Effect::Cascade`/`shortcut::cascade(mv)` primitive now exists (Bloodbraid Elf, Apex Devastator); stats are in the Scryfall cache, so this is ready to wire. |
 | Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
 | Torsten, Founder of Benalia | 🟡 | 7/7 Legendary Human Soldier. ETB searches 3 basic lands to battlefield tapped. |
 | Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
@@ -109,7 +107,6 @@ work is listed below.
 | Dakkon, Shadow Slayer | 🟡 | WUB Legendary Planeswalker. +1: Surveil 2. -3: Exile target creature. -6: emblem (`Effect::CreateEmblem`, approximated as "draw a card at your upkeep"). Body fully wired; only the emblem's exact text is an approximation. |
 | Urza, Chief Artificer | ⏳ | Planeswalker / commander. |
 | Geyadrone Dihada | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 3-loyalty Planeswalker. **+1**: Each opp loses 1 + you draw 1 (the "if you have less life than an opp, reset loyalty" rider drops — no loyalty-set primitive). **-3**: Threaten — `GainControl(EOT) + Untap + GrantKeyword(Haste, EOT)`. **-7**: Each opp loses half their life rounded up (`Effect::LoseHalfLife`, faithful); card stays 🟡 only for the +1 loyalty-reset rider. Tests: `geyadrone_dihada_plus_one_drains_each_opponent_for_one`, `geyadrone_dihada_minus_three_steals_creature`, `geyadrone_dihada_minus_seven_halves_opponent_life`. |
-| Dragonback Assault | ⏳ | TBD. |
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |
 | Fangkeeper's Familiar | ⏳ | TBD. |
@@ -124,9 +121,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Twisted Landscape | ⏳ | Tri-color landcycle. |
-| Sheltering Landscape | ⏳ | Tri-color landcycle. |
-| Bountiful Landscape | ⏳ | Tri-color landcycle. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
 | Talon Gates of Madara | ⏳ | TBD. |
 | Trenchpost | 🟡 | Locus Land. {T}: Add {C}{C}. Locus-count scaling omitted. |
