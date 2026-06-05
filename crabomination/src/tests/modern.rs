@@ -27106,3 +27106,20 @@ fn virtue_of_loyalty_adventure_makes_knight_then_enchantment_buffs() {
     assert_eq!(k.counter_count(CounterType::PlusOnePlusOne), 1, "end step grows each creature");
     assert!(!k.tapped, "end step untaps those creatures");
 }
+
+#[test]
+fn minds_desire_storm_exiles_top_cards_with_free_play() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.active_player_idx = 0;
+    // Cast a prior spell so Storm copies Mind's Desire once (2 resolutions).
+    let m = g.add_card_to_hand(0, catalog::memnite());
+    cast(&mut g, m);
+    let id = g.add_card_to_hand(0, catalog::minds_desire());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, id);
+    // Two cards exiled (original + one Storm copy), each playable for free.
+    let free = g.exile.iter().filter(|c| c.may_play_until.is_some()).count();
+    assert_eq!(free, 2, "Storm exiles top N cards with may-play-free, got {free}");
+}

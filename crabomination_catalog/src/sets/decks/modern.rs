@@ -18535,3 +18535,23 @@ pub fn virtue_of_loyalty() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mind's Desire — {4}{U}{U} Sorcery. Storm (CR 702.40). Exile the top card of
+/// your library; until end of turn you may play it without paying its mana
+/// cost. (The pre-exile library shuffle is omitted — with Storm copying, this
+/// exiles the top N cards across the copies.)
+pub fn minds_desire() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Mind's Desire",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            duration: MayPlayDuration::EndOfThisTurn,
+        },
+        ..Default::default()
+    }
+}

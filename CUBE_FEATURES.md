@@ -30,7 +30,7 @@ work is listed below.
 | Consult the Star Charts | 🟡 | {1}{U} Instant, Kicker {1}{U}; look at top X (X = lands you control) via `LookPickToHand { count: CountOf(lands), rest_to_graveyard: false }`, put one into hand, rest to bottom. The kicked "put two" needs a take-N look effect and is dropped. Test: `consult_the_star_charts_digs_x_equal_to_lands`. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
-| Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |
+| Mind's Desire | 🟡 | {4}{U}{U} Sorcery, Storm; `Effect::ExileTopAndGrantMayPlay { duration: EndOfThisTurn }` exiles the top card per Storm copy and grants free play (cast via `cast_from_zone_without_paying`). The pre-exile shuffle is omitted. Test: `minds_desire_storm_exiles_top_cards_with_free_play`. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
 | Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
@@ -108,7 +108,7 @@ are listed in `DECK_FEATURES.md`.
 | Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus now ships via `EquipBonus.scale` (`EquipScale { filter, per_power, per_toughness }`) — Nettlecyst (living weapon + "+1/+1 per artifact/enchantment you control") ✅. Lion Sash (counter-on-self scaled bonus + Reconfigure), Sword of Body and Mind, Helm of the Host still need counter-scaled / triggered equip bonuses. |
 | Adventure (cost-mode duality) | ✅ | CR 715 — `CardDefinition.adventure` + `GameAction::CastAdventure`/`CastAdventureCreature`. Virtue of Loyalty (enchantment // instant) ships on it alongside the creature adventures. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
-| Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm`, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich's attack trigger. Cast-from-top-of-library mid-resolution (Mind's Desire) and energy-gated free cast-from-exile (Amped Raptor) are still ⏳. |
+| Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (Amped Raptor) is still ⏳. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
 | Soulbond | ⏳ | Deadeye Navigator. |
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
