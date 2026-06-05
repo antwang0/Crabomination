@@ -26807,3 +26807,47 @@ fn korvold_enters_sacrifices_and_grows_with_draw() {
     // -1 cast (Korvold), +1 draw = net same hand size.
     assert_eq!(g.players[0].hand.len(), hand_before, "sacrifice payoff drew a card");
 }
+
+#[test]
+fn maelstrom_nexus_gives_first_spell_cascade() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::maelstrom_nexus());
+    // Top of library: a cheaper nonland (Memnite, MV 0) for the cascade.
+    let memnite = g.add_card_to_library(0, catalog::memnite());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    // First spell of the turn — a 2-MV creature — gains cascade.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bears castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == memnite),
+        "first spell cascades into the cheaper Memnite");
+}
+
+#[test]
+fn maelstrom_nexus_only_first_spell_each_turn() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::maelstrom_nexus());
+    let memnite = g.add_card_to_library(0, catalog::memnite());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    // Burn the "first spell" on a cheap spell with nothing to cascade-bottom.
+    let first = g.add_card_to_hand(0, catalog::memnite());
+    cast(&mut g, first);
+    // Second spell this turn: no cascade.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bears castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].library.iter().any(|c| c.id == memnite),
+        "second spell does not cascade; library Memnite untouched");
+}

@@ -18096,3 +18096,22 @@ pub fn urza_chief_artificer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Maelstrom Nexus — {W}{U}{B}{R}{G} Enchantment. The first spell you cast
+/// each turn has cascade (CR 702.85).
+pub fn maelstrom_nexus() -> CardDefinition {
+    CardDefinition {
+        name: "Maelstrom Nexus",
+        cost: cost(&[w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(1) },
+            ),
+            // Cascade off the just-cast spell's mana value (CR 702.85: exile
+            // until a nonland card with lesser MV).
+            effect: Effect::Cascade { max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)) },
+        }],
+        ..Default::default()
+    }
+}

@@ -94,7 +94,6 @@ work is listed below.
 | Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
 | Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |
 | Leyline of the Guildpact | ⏳ | "Your permanents are all colors." Needs is-all-colors primitive. |
-| Maelstrom Nexus | ⏳ | Cascade-on-first-spell static. Needs first-spell-of-turn tracking + a static that injects a cascade trigger; the `Effect::Cascade` primitive now exists (used by Bloodbraid Elf / Apex Devastator), so this is "wire the static + the per-turn gate". |
 
 ### Lands
 
