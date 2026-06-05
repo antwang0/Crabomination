@@ -503,6 +503,10 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
+    /// CR 702.139 — Revolt: a permanent left the battlefield under `who`'s
+    /// control this turn. Backed by
+    /// `Player.permanent_left_battlefield_this_turn`.
+    RevoltActive { who: PlayerRef },
     /// True if the effect's source permanent is currently saddled (CR
     /// 702.171). Backed by `CardInstance.saddled`; gates "whenever this
     /// attacks while saddled" triggers on Mounts.
@@ -4013,6 +4017,18 @@ pub mod shortcut {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect,
         }
+    }
+    /// Revolt (CR 702.139): "When this enters, if a permanent left the
+    /// battlefield under your control this turn, `body`." An ETB trigger
+    /// gated on `Predicate::RevoltActive { You }`. Models "enters with a
+    /// +1/+1 counter if Revolt" as an ETB add-counter (the counter lands
+    /// just after the creature enters rather than as a true ETB replacement).
+    pub fn revolt_etb(body: Effect) -> TriggeredAbility {
+        etb(Effect::If {
+            cond: Predicate::RevoltActive { who: PlayerRef::You },
+            then: Box::new(body),
+            else_: Box::new(Effect::Noop),
+        })
     }
     /// CR 702.171 — "Whenever this Mount attacks while saddled, [effect]."
     /// The `SourceSaddled` filter gates the trigger on the Mount's saddled

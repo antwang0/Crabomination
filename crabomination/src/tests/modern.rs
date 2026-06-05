@@ -28415,6 +28415,31 @@ fn sram_draws_on_equipment_cast() {
     assert_eq!(g.players[0].library.len(), lib - 1, "Sram draws when you cast an Equipment");
 }
 
+#[test]
+fn narnam_renegade_revolt_enters_bigger_after_a_permanent_left() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // No revolt yet → enters as a plain 1/2.
+    let plain = g.add_card_to_hand(0, catalog::narnam_renegade());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 0;
+    cast(&mut g, plain);
+    drain_stack(&mut g);
+    let n1 = g.battlefield.iter().find(|c| c.definition.name == "Narnam Renegade").unwrap();
+    assert_eq!(n1.counter_count(CounterType::PlusOnePlusOne), 0, "no Revolt → no counter");
+    // Sacrifice a permanent → Revolt active for the rest of the turn.
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(fodder);
+    assert!(g.players[0].permanent_left_battlefield_this_turn);
+    let revolt = g.add_card_to_hand(0, catalog::narnam_renegade());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, revolt);
+    drain_stack(&mut g);
+    let n2 = g.battlefield.iter().filter(|c| c.definition.name == "Narnam Renegade")
+        .max_by_key(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap();
+    assert_eq!(n2.counter_count(CounterType::PlusOnePlusOne), 1, "Revolt → +1/+1 counter");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

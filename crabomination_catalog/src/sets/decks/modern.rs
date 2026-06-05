@@ -12000,6 +12000,53 @@ pub fn grim_haruspex() -> CardDefinition {
     }
 }
 
+/// Narnam Renegade — {G} 1/2 Elf Warrior, Deathtouch. Revolt — enters with a
+/// +1/+1 counter if a permanent left the battlefield under your control this
+/// turn. (AER)
+pub fn narnam_renegade() -> CardDefinition {
+    CardDefinition {
+        name: "Narnam Renegade",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Greenwheel Liberator — {2}{G} 1/1 Human Warrior. Revolt — enters with two
+/// +1/+1 counters if a permanent left the battlefield under your control this
+/// turn. (AER)
+pub fn greenwheel_liberator() -> CardDefinition {
+    CardDefinition {
+        name: "Greenwheel Liberator",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Inventor's Apprentice — {R} 1/2 Human Artificer. Gets +1/+1 as long as you
 /// control an artifact. (KLD)
 pub fn inventors_apprentice() -> CardDefinition {

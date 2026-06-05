@@ -975,6 +975,9 @@ impl GameState {
         // powers Witherbloom "if a creature died under your control this
         // turn" end-step payoffs (Essenceknit Scholar).
         self.players[p].creatures_died_this_turn = 0;
+        // Reset the Revolt (CR 702.139) "permanent left the battlefield under
+        // your control this turn" flag for the active player.
+        self.players[p].permanent_left_battlefield_this_turn = false;
         // Reset the "cards exiled this turn" tally; powers Strixhaven
         // "if one or more cards were put into exile this turn" payoffs
         // (Ennis the Debate Moderator) per turn.
@@ -1780,6 +1783,11 @@ impl GameState {
                 self.permanents_to_graveyard_this_turn =
                     self.permanents_to_graveyard_this_turn.saturating_add(1);
             }
+            // CR 702.139 — Revolt: a permanent left the battlefield under its
+            // controller this turn.
+            if card.controller < self.players.len() {
+                self.players[card.controller].permanent_left_battlefield_this_turn = true;
+            }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.return_linked_exiles(id, &mut events);
@@ -1796,6 +1804,10 @@ impl GameState {
                 crate::card::Zone::Battlefield,
                 crate::card::Zone::Exile,
             );
+            // CR 702.139 — Revolt: a permanent left the battlefield this turn.
+            if card.controller < self.players.len() {
+                self.players[card.controller].permanent_left_battlefield_this_turn = true;
+            }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.return_linked_exiles(id, &mut events);

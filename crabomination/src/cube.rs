@@ -1630,6 +1630,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: +1/+1-counter green creatures ──
         avatar_of_the_resolute,
         pelt_collector,
+        // ── Revolt (CR 702.139) ──
+        narnam_renegade,
+        greenwheel_liberator,
         // ── Embalm (CR 702.88) ──
         honored_hydra,
         timeless_witness,
