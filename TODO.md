@@ -8,6 +8,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Parity attack/block gate.** Sab-Sunen, Luxa Embodied's "can't attack or
+  block unless it has an even number of counters on it" needs a new keyword
+  (e.g. `CanAttackOnlyIfCountersEven`) honored in `declare_attackers` /
+  `legal_attackers` / `declare_blockers` + the bot's legality gate. The parity
+  *value* check already ships (`Predicate::ValueIsOdd`); only the combat
+  restriction is missing.
+- **`LookPickToHand` take-N.** Consult the Star Charts wants "look at top X
+  (= lands you control), put **one** into hand (**two** if kicked), rest to
+  bottom random." `LookPickToHand { rest_to_graveyard: false }` already bottoms
+  the rest, but only takes one — add a `take: Value` param for the kicked
+  two-card mode.
 - **Offspring / Warp / Miracle alt-cast keywords.** Three "cast-mode" keywords
   surfaced this run and were dropped on their cards: Offspring {N} (Thundertrap
   Trainer — pay extra to mint a token copy on ETB), Warp (Mightform Harmonizer,
