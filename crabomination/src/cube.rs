@@ -698,6 +698,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         into_the_roil,
         aether_figment,
         glint_nest_crane,
+        cloud_of_faeries,
         merfolk_looter,
         think_twice,
         forbidden_alchemy,

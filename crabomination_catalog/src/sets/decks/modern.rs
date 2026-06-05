@@ -4108,6 +4108,28 @@ pub fn dragonmaster_outcast() -> CardDefinition {
     }
 }
 
+/// Cloud of Faeries — {1}{U} Creature — Faerie 1/1. Flying. When it enters,
+/// untap up to two lands. Cycling {2}.
+pub fn cloud_of_faeries() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Cloud of Faeries",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Faerie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Cycling(cost(&[generic(2)]))],
+        triggered_abilities: vec![etb(Effect::Untap {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ),
+            up_to: Some(Value::Const(2)),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Languish — {2}{B}{B} Sorcery. All creatures get -2/-2 until end of turn.
 ///
 /// Modal sweeper: shrink everyone by -2/-2 EOT, killing X/2-and-below

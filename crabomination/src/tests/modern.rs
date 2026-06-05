@@ -8938,6 +8938,20 @@ fn disfigure_kills_a_two_two_via_minus_two_minus_two() {
 }
 
 #[test]
+fn cloud_of_faeries_untaps_two_lands_on_etb() {
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(0, catalog::island());
+    let l2 = g.add_card_to_battlefield(0, catalog::island());
+    let l3 = g.add_card_to_battlefield(0, catalog::island());
+    for l in [l1, l2, l3] { g.battlefield_find_mut(l).unwrap().tapped = true; }
+    let id = g.add_card_to_battlefield(0, catalog::cloud_of_faeries());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let untapped = [l1, l2, l3].iter().filter(|l| !g.battlefield_find(**l).unwrap().tapped).count();
+    assert_eq!(untapped, 2, "untaps up to two lands");
+}
+
+#[test]
 fn vampire_hexmage_sacrifices_to_strip_counters() {
     use crate::card::CounterType;
     let mut g = two_player_game();
