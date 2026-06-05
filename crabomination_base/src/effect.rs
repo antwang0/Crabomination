@@ -4093,6 +4093,20 @@ pub mod shortcut {
     /// target, and each `granted` keyword is granted until end of turn
     /// (idempotent when the target is the source — it already prints them).
     pub fn backup(n: i32, granted: Vec<Keyword>) -> TriggeredAbility {
+        backup_with(n, granted, vec![])
+    }
+
+    /// Backup N (CR 702.164) that also grants the source's *triggered*
+    /// abilities to a backed-up other creature until end of turn. Keyword
+    /// grants are idempotent on the source, but trigger grants are gated on
+    /// the target being another creature (else the source would double-fire
+    /// its own printed trigger when it targets itself). Bola Slinger
+    /// (granted "whenever this attacks, tap target opponent permanent").
+    pub fn backup_with(
+        n: i32,
+        granted: Vec<Keyword>,
+        triggers: Vec<TriggeredAbility>,
+    ) -> TriggeredAbility {
         use crate::card::CounterType;
         let target = || Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature };
         let mut steps = vec![Effect::AddCounter {
@@ -4105,6 +4119,20 @@ pub mod shortcut {
                 what: target(),
                 keyword: kw,
                 duration: Duration::EndOfTurn,
+            });
+        }
+        for t in triggers {
+            steps.push(Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::OtherThanSource,
+                },
+                then: Box::new(Effect::GrantTriggeredAbility {
+                    what: target(),
+                    trigger: Box::new(t),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
             });
         }
         TriggeredAbility {

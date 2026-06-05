@@ -366,6 +366,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         virtue_of_loyalty,
         // ── claude/modern_decks: Extort (CR 702.99) ──
         syndic_of_tithes,
+        // ── Backup that grants a triggered ability (CR 702.164) ──
+        bola_slinger,
         // ── claude/modern_decks: white value/keyword bodies ──
         kor_skyfisher,
         whitemane_lion,

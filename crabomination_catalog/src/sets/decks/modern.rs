@@ -15019,6 +15019,39 @@ pub fn conclave_sledge_captain() -> CardDefinition {
     }
 }
 
+/// Bola Slinger — {3}{W} Creature — Human Soldier 2/2. Backup 1 (CR 702.164),
+/// granting its attack trigger to a backed-up creature: whenever it attacks,
+/// tap target artifact or creature an opponent controls.
+pub fn bola_slinger() -> CardDefinition {
+    use crate::effect::shortcut::{backup_with, target_filtered};
+    let attack_tap = || TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+    };
+    CardDefinition {
+        name: "Bola Slinger",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            backup_with(1, vec![], vec![attack_tap()]),
+            attack_tap(),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Kari Zev, Skyship Raider — {1}{R} Legendary Creature — Human Pirate 1/3.
 /// First strike, menace. Whenever Kari Zev attacks, create Ragavan, a
 /// legendary 2/1 red Monkey creature token. Ragavan is tapped and attacking.

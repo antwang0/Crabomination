@@ -26854,6 +26854,33 @@ fn backup_conclave_sledge_captain_counters_and_grants_trample() {
 }
 
 #[test]
+fn backup_bola_slinger_grants_attack_trigger() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // tap target
+    let id = g.add_card_to_hand(0, catalog::bola_slinger());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    // Backup ETB targets the bear; the on-attack tap auto-targets the enemy.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    cast(&mut g, id);
+    // The bear now carries the granted "on attack, tap target opp permanent".
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack with backed-up bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(enemy).unwrap().tapped,
+        "granted attack trigger taps an opponent's permanent");
+}
+
+#[test]
 fn backup_death_greeters_champion_self_counter() {
     use crate::card::{CounterType, Keyword};
     use crate::decision::{DecisionAnswer, ScriptedDecider};

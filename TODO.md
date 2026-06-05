@@ -545,13 +545,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Bushwhacker (ETB-kicked). Tests in `tests/modern` + `tests/stx/part_01`.
   Remaining: client opt-in affordance + a bot heuristic to kick.
 
-- 🟡 **CR 702.164 — Backup** (claude/modern_decks). `shortcut::backup(n,
-  keywords)` wires the ETB-target-a-creature trigger: N +1/+1 counters on the
-  target, plus each listed keyword granted until end of turn (idempotent when
-  the target is the source). Cards: Conclave Sledge-Captain (Backup 1 ×3),
-  Death-Greeter's Champion (Dash + Backup 1). Tests: `backup_*`. Remaining:
-  granting the source's *triggered* abilities (not just keywords) to a
-  backed-up other creature.
+- ✅ **CR 702.164 — Backup** (claude/modern_decks). `shortcut::backup(n,
+  keywords)` and `backup_with(n, keywords, triggers)` wire the
+  ETB-target-a-creature trigger: N +1/+1 counters on the target, plus each
+  listed keyword (idempotent on the source) and each listed *triggered*
+  ability (gated on the target being another creature so the source doesn't
+  double-fire its own printed trigger) granted until end of turn via
+  `Effect::GrantTriggeredAbility`. Cards: Conclave Sledge-Captain, Death-
+  Greeter's Champion, Bola Slinger (granted on-attack tap). Tests: `backup_*`.
 
 - 🟡 **CR 303 — Auras** (claude/modern_decks). "Enchanted permanent" is now a
   queryable state: `SelectionRequirement::IsEnchanted` scans for an enchantment
