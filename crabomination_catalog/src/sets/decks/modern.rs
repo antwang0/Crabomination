@@ -11950,28 +11950,23 @@ pub fn severed_legion() -> CardDefinition {
 
 // ── modern_decks batch 103: cube expansion cards ─────────────────────────────
 
-/// Death-Greeter's Champion — {1}{R} Creature — Human Warrior. 2/2 with
-/// Haste. "When this creature attacks, target opponent loses 1 life."
-///
-/// Synthesised body for the ⏳ cube row. Aggressive R two-drop with a
-/// faux-poke trigger.
+/// Death-Greeter's Champion — {2}{R} Creature — Human Warrior 2/1. Dash {3}{R},
+/// Backup 1 (grants Double strike), Double strike.
 pub fn death_greeters_champion() -> CardDefinition {
-    use crate::effect::shortcut::{lose_life, on_attack};
+    use crate::effect::shortcut::{backup, dash};
     CardDefinition {
         name: "Death-Greeter's Champion",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![on_attack(lose_life(
-            1,
-            crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
-        ))],
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike],
+        alternative_cost: Some(dash(cost(&[generic(3), r()]))),
+        triggered_abilities: vec![backup(1, vec![Keyword::DoubleStrike])],
         ..Default::default()
     }
 }
@@ -14985,13 +14980,13 @@ pub fn sulfuric_vortex() -> CardDefinition {
     }
 }
 
-/// Conclave Sledge-Captain — {5}{G} Creature — Elephant Soldier 6/6.
-/// "Trample / Creatures you control with +1/+1 counters on them have
-/// trample. / When Conclave Sledge-Captain enters, put a +1/+1 counter
-/// on each creature you control."
+/// Conclave Sledge-Captain — {5}{G} Creature — Elephant Soldier 4/4. Trample,
+/// Backup 1 ×3 (each grants Trample to the backed-up creature; the printed
+/// combat-damage trigger isn't re-granted to the backed-up creature). Whenever
+/// it deals combat damage to a player, put that many +1/+1 counters on it.
 pub fn conclave_sledge_captain() -> CardDefinition {
-    use crate::card::{CounterType, StaticAbility};
-    use crate::effect::StaticEffect;
+    use crate::card::CounterType;
+    use crate::effect::shortcut::backup;
     CardDefinition {
         name: "Conclave Sledge-Captain",
         cost: cost(&[generic(5), g()]),
@@ -15000,30 +14995,22 @@ pub fn conclave_sledge_captain() -> CardDefinition {
             creature_types: vec![CreatureType::Elephant, CreatureType::Soldier],
             ..Default::default()
         },
-        power: 6,
-        toughness: 6,
+        power: 4,
+        toughness: 4,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            body: Box::new(Effect::AddCounter {
-                what: Selector::TriggerSource,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            }),
-        })],
-        static_abilities: vec![StaticAbility {
-            description: "Creatures you control with +1/+1 counters have trample.",
-            effect: StaticEffect::GrantKeyword {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
-                ),
-                keyword: Keyword::Trample,
+        triggered_abilities: vec![
+            backup(1, vec![Keyword::Trample]),
+            backup(1, vec![Keyword::Trample]),
+            backup(1, vec![Keyword::Trample]),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::TriggerEventAmount,
+                },
             },
-        }],
+        ],
         ..Default::default()
     }
 }

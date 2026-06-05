@@ -178,12 +178,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   with the tally each turn. A real consumer card (Thundertrap Trainer's dropped
   discount rider) has a synthesized catalog body, so the exact amount should
   be re-checked against the Scryfall cache.
-- **Squad / Backup / Bargain keywords.** Squad (CR 702.157) needs "pay an
+- **Squad / Bargain keywords.** Squad (CR 702.157) needs "pay an
   additional cost any number of times" tracking + copy-of-self tokens (the
-  `CreateTokenCopyOf` half exists). Backup N (CR 702.164) is ETB +N/+N on a
-  target plus a keyword-grant-if-another rider. Bargain (CR 702.176) is an
+  `CreateTokenCopyOf` half exists). Bargain (CR 702.176) is an
   optional sacrifice-as-additional-cost (shares the unbuilt Casualty cost-mode
-  primitive).
+  primitive). Backup N (CR 702.164) is ✅ via `shortcut::backup(n, keywords)`
+  (ETB +N/+N counters on target + EOT keyword grant; Conclave Sledge-Captain,
+  Death-Greeter's Champion). Remaining: granting *triggered* abilities (not
+  just keywords) to the backed-up creature.
 - **Mobilize / Myriad / Enlist — ✅ DONE.** `Effect::CreateTokenAttacking`
   carries an `AttackingTokenCleanup` (None / SacrificeAtEndOfCombat /
   ExileAtEndOfCombat); `GameState.attacking_token_cleanup` +
@@ -519,6 +521,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Asunder, Bloodchief's Thirst, Burst Lightning, Into the Roil, Goblin
   Bushwhacker (ETB-kicked). Tests in `tests/modern` + `tests/stx/part_01`.
   Remaining: client opt-in affordance + a bot heuristic to kick.
+
+- 🟡 **CR 702.164 — Backup** (claude/modern_decks). `shortcut::backup(n,
+  keywords)` wires the ETB-target-a-creature trigger: N +1/+1 counters on the
+  target, plus each listed keyword granted until end of turn (idempotent when
+  the target is the source). Cards: Conclave Sledge-Captain (Backup 1 ×3),
+  Death-Greeter's Champion (Dash + Backup 1). Tests: `backup_*`. Remaining:
+  granting the source's *triggered* abilities (not just keywords) to a
+  backed-up other creature.
 
 - ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
   batch 142 — audit against `MagicCompRules_20260417.txt` lines

@@ -16139,25 +16139,6 @@ fn goblin_rabblemaster_attack_creates_a_goblin_token() {
 // ── modern_decks batch 103: new cube-expansion card tests ───────────────────
 
 #[test]
-fn death_greeters_champion_drains_opp_on_attack() {
-    use crate::card::Keyword;
-    use crate::game::types::{AttackTarget, TurnStep};
-    let mut g = two_player_game();
-    let attacker = g.add_card_to_battlefield(0, catalog::death_greeters_champion());
-    g.clear_sickness(attacker);
-    let life1_before = g.players[1].life;
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker, target: AttackTarget::Player(1),
-    }])).expect("attacker declared");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life1_before - 1, "opp loses 1 life on attack");
-    // Haste keyword check.
-    let champ = catalog::death_greeters_champion();
-    assert!(champ.keywords.contains(&Keyword::Haste));
-}
-
-#[test]
 fn glaring_fleshraker_etb_pings_target() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::glaring_fleshraker());
@@ -17775,41 +17756,6 @@ fn messenger_falcons_hybrid_pip_payable_with_blue() {
     }).expect("Messenger Falcons castable for {2}{U}{W} via the hybrid pip");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Messenger Falcons"));
-}
-
-#[test]
-fn conclave_sledge_captain_etb_puts_counters_on_each_creature() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::conclave_sledge_captain());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(5);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Conclave Sledge-Captain castable");
-    drain_stack(&mut g);
-
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert!(bear_card.counter_count(crate::card::CounterType::PlusOnePlusOne) >= 1,
-            "Bear should get a +1/+1 counter from ETB");
-}
-
-#[test]
-fn conclave_sledge_captain_grants_trample_to_countered_creatures() {
-    use crate::card::{CounterType, Keyword};
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::conclave_sledge_captain());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // Without a counter the bear has no trample.
-    let c = g.compute_battlefield();
-    assert!(!c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Trample));
-    // Give it a +1/+1 counter → the static grants trample.
-    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
-        .add_counters(CounterType::PlusOnePlusOne, 1);
-    let c = g.compute_battlefield();
-    assert!(c.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Trample),
-        "countered creature gains trample from Conclave Sledge-Captain");
 }
 
 #[test]
@@ -26850,4 +26796,46 @@ fn maelstrom_nexus_only_first_spell_each_turn() {
     drain_stack(&mut g);
     assert!(g.players[0].library.iter().any(|c| c.id == memnite),
         "second spell does not cascade; library Memnite untouched");
+}
+
+#[test]
+fn backup_conclave_sledge_captain_counters_and_grants_trample() {
+    use crate::card::{CounterType, Keyword};
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // A separate creature for backup to target (and gain Trample).
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::conclave_sledge_captain());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    // Three Backup-1 ETB triggers each pick the bear.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Target(Target::Permanent(bear)),
+        DecisionAnswer::Target(Target::Permanent(bear)),
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    cast(&mut g, id);
+    let b = g.battlefield_find(bear).expect("bear on bf");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 3, "three Backup-1 counters");
+    let cp = g.compute_battlefield();
+    assert!(cp.iter().find(|c| c.id == bear).unwrap().keywords.contains(&Keyword::Trample),
+        "backed-up creature gains Trample until end of turn");
+}
+
+#[test]
+fn backup_death_greeters_champion_self_counter() {
+    use crate::card::{CounterType, Keyword};
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::death_greeters_champion());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // Backup targets itself → +1/+1 counter, already double strike.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Target(Target::Permanent(id)),
+    ]));
+    cast(&mut g, id);
+    let c = g.battlefield_find(id).expect("champion on bf");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "self backup counter");
+    assert!(c.has_keyword(&Keyword::DoubleStrike));
 }

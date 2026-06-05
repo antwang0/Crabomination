@@ -4072,6 +4072,33 @@ pub mod shortcut {
         }
     }
 
+    /// Backup N shortcut (CR 702.164): "When this creature enters, put N
+    /// +1/+1 counters on target creature. If that's another creature, it
+    /// gains the granted keywords until end of turn." An `EntersBattlefield /
+    /// SelfSource` trigger targeting a creature: the counters land on the
+    /// target, and each `granted` keyword is granted until end of turn
+    /// (idempotent when the target is the source — it already prints them).
+    pub fn backup(n: i32, granted: Vec<Keyword>) -> TriggeredAbility {
+        use crate::card::CounterType;
+        let target = || Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature };
+        let mut steps = vec![Effect::AddCounter {
+            what: target(),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(n),
+        }];
+        for kw in granted {
+            steps.push(Effect::GrantKeyword {
+                what: target(),
+                keyword: kw,
+                duration: Duration::EndOfTurn,
+            });
+        }
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(steps),
+        }
+    }
+
     /// Evolve shortcut (CR 702.100): "Whenever a creature enters the
     /// battlefield under your control, if that creature has greater power
     /// or toughness than this creature, put a +1/+1 counter on this
