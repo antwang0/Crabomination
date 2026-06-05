@@ -362,6 +362,16 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.effective_life(p) <= *life),
+            Predicate::PlayerHasMostLife { who } => {
+                let max_life = (0..self.players.len())
+                    .filter(|&p| !self.players[p].eliminated)
+                    .map(|p| self.effective_life(p))
+                    .max()
+                    .unwrap_or(i32::MIN);
+                self.resolve_players(who, ctx)
+                    .into_iter()
+                    .any(|p| self.effective_life(p) >= max_life)
+            }
             Predicate::SourceAttackedThisTurn => ctx
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))

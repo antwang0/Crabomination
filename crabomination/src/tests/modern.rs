@@ -27994,3 +27994,46 @@ fn bloodrock_cyclops_must_attack() {
     assert!(g.declare_attackers(vec![]).is_err(),
         "Bloodrock Cyclops must be declared as an attacker");
 }
+
+// ── Dethrone (CR 702.105) primitive ──────────────────────────────────────────
+
+/// Dethrone (via `shortcut::dethrone()`, granted for the test) grows a creature
+/// only when it attacks the player with the most life.
+#[test]
+fn dethrone_grows_when_attacking_highest_life_player() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.granted_triggers_eot.insert(bear, vec![crate::effect::shortcut::dethrone()]);
+    g.players[1].life = 30; // the defender has the most life
+    g.players[0].life = 20;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Dethrone fires against the highest-life player");
+}
+
+/// Dethrone does nothing when the attacked player is not the highest-life one.
+#[test]
+fn dethrone_silent_when_attacking_lower_life_player() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.granted_triggers_eot.insert(bear, vec![crate::effect::shortcut::dethrone()]);
+    g.players[1].life = 10; // the defender has the LEAST life
+    g.players[0].life = 30;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "Dethrone is silent against a non-highest-life player");
+}

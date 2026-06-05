@@ -574,6 +574,16 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   lands on it. Fizzles with no legal target. Cards: Goblin Banneret, Hammer
   Dropper. Tests: `mentor_*`, `goblin_banneret_pump_ability`.
 
+- ✅ **CR 702.105 — Dethrone (primitive)** (claude/modern_decks).
+  `shortcut::dethrone()` — an `Attacks / SelfSource` trigger gated on the new
+  general `Predicate::PlayerHasMostLife { who: DefendingPlayer }` (true when the
+  player has the most life, or is tied for it, among non-eliminated players);
+  the +1/+1 counter lands on `This`. The shortcut is forward-looking (no simple
+  Dethrone *creature* exists — the printed ones are complex, e.g. Marchesa),
+  mirroring the `melee`/`myriad` ready-but-uncarded pattern. Tests grant the
+  trigger to validate both polarity cases: `dethrone_grows_when_attacking_
+  highest_life_player`, `dethrone_silent_when_attacking_lower_life_player`.
+
 - ✅ **CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift carded**
   (claude/modern_decks). The `shortcut::afflict`, `provoke`, and `soulshift`
   primitives already existed but had no catalog card or test; each now ships a

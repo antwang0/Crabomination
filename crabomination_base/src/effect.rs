@@ -491,6 +491,11 @@ pub enum Predicate {
     /// `life`. Powers "unless an opponent has N or less life" gates (Vampire
     /// Lacerator).
     PlayerLifeAtMost { who: PlayerRef, life: i32 },
+    /// True if any player matched by `who` has the most life, or is tied for
+    /// the most, among all (non-eliminated) players. Powers Dethrone (CR
+    /// 702.105 — "attacks the player with the most life or tied for most
+    /// life"); pair with `who: DefendingPlayer` on an `Attacks` trigger.
+    PlayerHasMostLife { who: PlayerRef },
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
@@ -5396,6 +5401,24 @@ pub mod shortcut {
                         .and(SelectionRequirement::OtherThanSource)
                         .and(SelectionRequirement::PowerLessThanSource),
                 },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }
+    }
+
+    /// Dethrone (CR 702.105): "Whenever this creature attacks the player with
+    /// the most life or tied for most life, put a +1/+1 counter on it." An
+    /// `Attacks / SelfSource` trigger gated on `PlayerHasMostLife` for the
+    /// defending player; the counter lands on `This`.
+    pub fn dethrone() -> TriggeredAbility {
+        use crate::card::CounterType;
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayer },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
