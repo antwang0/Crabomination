@@ -880,6 +880,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: ETB reanimator with a lifelink counter ──
         metamorphosis_fanatic,
+        // ── modern_decks: artifacts-matter Esper commander ──
+        urza_chief_artificer,
         // ── claude/modern_decks: Extort (CR 702.99) ──
         basilica_screecher,
         tithe_drinker,

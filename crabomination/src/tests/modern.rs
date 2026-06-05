@@ -26711,3 +26711,27 @@ fn kestia_draws_when_an_enchantment_creature_attacks() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "attack draws a card");
 }
+
+#[test]
+fn urza_chief_artificer_grants_menace_and_makes_scaling_construct() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let urza = g.add_card_to_battlefield(0, catalog::urza_chief_artificer());
+    let _ = urza;
+    // An artifact creature you control gains menace.
+    let memnite = g.add_card_to_battlefield(0, catalog::memnite()); // 1/1 artifact creature
+    let cp = g.compute_battlefield();
+    assert!(cp.iter().find(|c| c.id == memnite).unwrap().keywords.contains(&Keyword::Menace),
+        "artifact creatures you control have menace");
+    // End step → a Construct sized by artifacts you control (Urza is not an
+    // artifact; Memnite + the Construct itself + ... count artifacts).
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    let construct = g.battlefield.iter().find(|c| c.definition.name == "Construct" && c.controller == 0)
+        .expect("a Construct token was created");
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == construct.id).unwrap();
+    // Artifacts you control: Memnite + the Construct = 2 → 2/2.
+    assert_eq!((c.power, c.toughness), (2, 2), "Construct sized by artifacts controlled");
+}

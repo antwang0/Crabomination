@@ -18030,3 +18030,61 @@ pub fn kestia_the_cultivator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Urza, Chief Artificer — {3}{W}{U}{B} Legendary 4/5 Human Artificer. Affinity
+/// for artifact creatures. Artifact creatures you control have menace. At your
+/// end step, create a 0/0 Construct that gets +1/+1 for each artifact you
+/// control.
+pub fn urza_chief_artificer() -> CardDefinition {
+    use crate::card::{StaticAbility, Supertype, TokenDefinition};
+    use crate::effect::StaticEffect;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Urza, Chief Artificer",
+        cost: cost(&[generic(3), w(), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        affinity_filter: Some(SelectionRequirement::Artifact.and(SelectionRequirement::Creature)),
+        static_abilities: vec![StaticAbility {
+            description: "Artifact creatures you control have menace.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::Creature)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Menace,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Construct".into(),
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+                    power: 0,
+                    toughness: 0,
+                    static_abilities: vec![StaticAbility {
+                        description: "This creature gets +1/+1 for each artifact you control.",
+                        effect: StaticEffect::PumpSelfByControlledPermanents {
+                            filter: SelectionRequirement::Artifact,
+                            per_power: 1,
+                            per_toughness: 1,
+                        },
+                    }],
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -88,7 +88,6 @@ work is listed below.
 | Sab-Sunen, Luxa Embodied | ⏳ | TBD. |
 | Kestia, the Cultivator | 🟡 | {1}{G}{W}{U} 4/4; Bestow + enchanted +4/+4. Attack-draw narrowed to Kestia's own attack (no "is enchanted" predicate). |
 | Dakkon, Shadow Slayer | 🟡 | WUB Legendary Planeswalker. +1: Surveil 2. -3: Exile target creature. -6: emblem (`Effect::CreateEmblem`, approximated as "draw a card at your upkeep"). Body fully wired; only the emblem's exact text is an approximation. |
-| Urza, Chief Artificer | ⏳ | Planeswalker / commander. |
 | Geyadrone Dihada | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 3-loyalty Planeswalker. **+1**: Each opp loses 1 + you draw 1 (the "if you have less life than an opp, reset loyalty" rider drops — no loyalty-set primitive). **-3**: Threaten — `GainControl(EOT) + Untap + GrantKeyword(Haste, EOT)`. **-7**: Each opp loses half their life rounded up (`Effect::LoseHalfLife`, faithful); card stays 🟡 only for the +1 loyalty-reset rider. Tests: `geyadrone_dihada_plus_one_drains_each_opponent_for_one`, `geyadrone_dihada_minus_three_steals_creature`, `geyadrone_dihada_minus_seven_halves_opponent_life`. |
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |
