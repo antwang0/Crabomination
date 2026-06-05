@@ -35,11 +35,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   combat-damage steal + leaves-game transfer) but needs Venture into the
   Dungeon / the Undercity (CR 701.49) for its payoff — implement the dungeon
   zone first, then the Initiative is a thin wrapper over the monarch pattern.
-- **Client HUD for monarch / day-night / city's blessing.** `PlayerView`
-  carries `is_monarch` + `has_city_blessing` and `ClientView` carries
-  `day_night`; the Bevy HUD still needs a crown badge, a day/night indicator,
-  and a "blessed" pip. (Client can't be compiled in this sandbox — wayland
-  dev libs absent — so it wasn't touched this run.)
+- **Client HUD for monarch / day-night / city's blessing — ✅ DONE.** The
+  viewer's stat-chip row (`game_ui/player_stats.rs`) now spawns a crown chip
+  (`👑`, CR 724) when the viewer is monarch, a `✦ blessed` chip (CR 700.6)
+  when they have the city's blessing, and a `☀ day` / `☾ night` chip (CR 731)
+  whenever the global day/night designation is set. Remaining: surface
+  monarch on *opponents'* rows too (the chip row only renders the viewer
+  today) and a board-center day/night ambient cue.
 - **Energy-pay-to-cast-from-exile** (Amped Raptor's omitted clause): a "may
   play this exiled card this turn by paying {E} instead of its mana cost"
   permission. Would also serve other energy-impulse cards.

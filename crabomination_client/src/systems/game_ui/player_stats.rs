@@ -49,6 +49,14 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // orange so prowess / Storm / magecraft players can read the count
         // building before they cast the payoff.
         StatChipKind::Storm => (Color::srgba(0.36, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Monarch (CR 724) — a regal gold crown badge.
+        StatChipKind::Monarch => (Color::srgba(0.42, 0.34, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // City's blessing (CR 702.131 / 700.6) — an ascendant violet.
+        StatChipKind::Blessing => (Color::srgba(0.28, 0.18, 0.40, 1.0), theme::TEXT_PRIMARY),
+        // Day (CR 731) — a warm daylight amber.
+        StatChipKind::Day => (Color::srgba(0.42, 0.34, 0.14, 1.0), theme::TEXT_PRIMARY),
+        // Night (CR 731) — a cool dusk indigo.
+        StatChipKind::Night => (Color::srgba(0.14, 0.16, 0.30, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -65,6 +73,10 @@ pub(super) enum StatChipKind {
     Energy,
     DrawCap,
     Storm,
+    Monarch,
+    Blessing,
+    Day,
+    Night,
 }
 
 /// Whether to surface the "spells cast this turn" chip. Shown once a
@@ -431,6 +443,20 @@ pub fn update_player_stats_chips(
                 .collect::<Vec<_>>()
                 .join(" ");
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
+        }
+        // CR 724 monarch — crown badge on the current monarch's row.
+        if p.is_monarch {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, "👑".to_string());
+        }
+        // CR 700.6 city's blessing — surfaced once the viewer is blessed.
+        if p.has_city_blessing {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Blessing, "✦ blessed".to_string());
+        }
+        // CR 731 day/night — a global designation; show it whenever set.
+        match cv.day_night {
+            Some(true) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Day, "☀ day".to_string()),
+            Some(false) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Night, "☾ night".to_string()),
+            None => {}
         }
     });
 }

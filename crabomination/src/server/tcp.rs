@@ -50,13 +50,26 @@ const KEEPALIVE_IDLE: Duration = Duration::from_secs(60);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(15);
 const KEEPALIVE_RETRIES: u32 = 4;
 
+/// Read the keepalive idle time from `CRAB_KEEPALIVE_IDLE_SECS`, falling back
+/// to [`KEEPALIVE_IDLE`] when unset, zero, or unparseable. Lets operators tune
+/// dead-peer detection (a LAN match wants a tighter idle than the ~2-minute
+/// WAN default) without a recompile. Mirrors the server's
+/// `pairing_timeout_from_env` pattern.
+fn keepalive_idle_from_env() -> Duration {
+    match std::env::var("CRAB_KEEPALIVE_IDLE_SECS").ok().and_then(|s| s.parse::<u64>().ok()) {
+        Some(secs) if secs > 0 => Duration::from_secs(secs),
+        _ => KEEPALIVE_IDLE,
+    }
+}
+
 /// Enable OS-level TCP keepalive with aggressive defaults so dead peers are
 /// detected within ~2 minutes instead of indefinitely. Best-effort: individual
 /// `with_*` fields are silently unsupported on some platforms, so we apply
-/// them through `socket2` which handles that portably.
+/// them through `socket2` which handles that portably. The idle time is
+/// env-tunable via `CRAB_KEEPALIVE_IDLE_SECS`.
 fn enable_keepalive(stream: &TcpStream) -> io::Result<()> {
     let ka = TcpKeepalive::new()
-        .with_time(KEEPALIVE_IDLE)
+        .with_time(keepalive_idle_from_env())
         .with_interval(KEEPALIVE_INTERVAL)
         .with_retries(KEEPALIVE_RETRIES);
     SockRef::from(stream).set_tcp_keepalive(&ka)
@@ -331,6 +344,49 @@ mod tests {
     use crate::net::{ClientMsg, ServerMsg};
 
     use super::*;
+
+    // Serializes the env-touching keepalive tests in this module.
+    static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn with_keepalive_env<R>(value: Option<&str>, f: impl FnOnce() -> R) -> R {
+        let _g = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let key = "CRAB_KEEPALIVE_IDLE_SECS";
+        let prev = std::env::var(key).ok();
+        // SAFETY: ENV_LOCK serializes every env-touching test here.
+        unsafe {
+            match value {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
+        }
+        let out = f();
+        unsafe {
+            match prev {
+                Some(v) => std::env::set_var(key, v),
+                None => std::env::remove_var(key),
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn keepalive_idle_defaults_when_unset() {
+        assert_eq!(with_keepalive_env(None, keepalive_idle_from_env), KEEPALIVE_IDLE);
+    }
+
+    #[test]
+    fn keepalive_idle_parses_valid_seconds() {
+        assert_eq!(
+            with_keepalive_env(Some("30"), keepalive_idle_from_env),
+            Duration::from_secs(30)
+        );
+    }
+
+    #[test]
+    fn keepalive_idle_rejects_zero_and_garbage() {
+        assert_eq!(with_keepalive_env(Some("0"), keepalive_idle_from_env), KEEPALIVE_IDLE);
+        assert_eq!(with_keepalive_env(Some("nope"), keepalive_idle_from_env), KEEPALIVE_IDLE);
+    }
 
     /// Write a single frame to an in-memory `Cursor<Vec<u8>>`-style stream and
     /// read it back, verifying the wire format roundtrips.
