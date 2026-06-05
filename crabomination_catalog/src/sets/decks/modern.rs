@@ -17502,3 +17502,43 @@ pub fn fangkeepers_familiar() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Broodspinner — {B}{G} 2/3 Spider. Reach. ETB surveil 2. `{4}{B}{G}, {T},
+/// Sacrifice this creature: Create a number of 1/1 black-green Insect tokens
+/// with flying equal to the number of card types in your graveyard.`
+pub fn broodspinner() -> CardDefinition {
+    use crate::card::{ActivatedAbility, TokenDefinition};
+    use crate::effect::shortcut::etb;
+    let insect = TokenDefinition {
+        name: "Insect".to_string(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black, Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Broodspinner",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(4), b(), g()]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::DistinctTypesInGraveyard { who: PlayerRef::You },
+                definition: insect,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

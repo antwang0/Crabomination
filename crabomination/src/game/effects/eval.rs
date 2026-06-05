@@ -248,6 +248,17 @@ impl GameState {
                 }
                 seen.len() as i32
             }
+            Value::DistinctTypesInGraveyard { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return 0; };
+                let mut seen: std::collections::HashSet<CardType> =
+                    std::collections::HashSet::new();
+                for card in &self.players[p].graveyard {
+                    for t in &card.definition.card_types {
+                        seen.insert(t.clone());
+                    }
+                }
+                seen.len() as i32
+            }
             Value::CardsDrawnThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].cards_drawn_this_turn as i32)

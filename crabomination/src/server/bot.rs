@@ -1584,7 +1584,8 @@ fn effect_uses_x(eff: &Effect) -> bool {
             Value::NonNeg(inner) => value_uses_x(inner),
             Value::CountOf(_) | Value::PowerOf(_) | Value::ToughnessOf(_)
             | Value::CountersOn { .. } | Value::ManaValueOf(_)
-            | Value::DistinctTypesInTopOfLibrary { .. } => false,
+            | Value::DistinctTypesInTopOfLibrary { .. }
+            | Value::DistinctTypesInGraveyard { .. } => false,
             _ => false,
         }
     }

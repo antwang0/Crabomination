@@ -26455,3 +26455,24 @@ fn fangkeepers_familiar_mode_zero_gains_life_and_surveils() {
     assert_eq!(g.players[0].life, life + 3, "mode 0 gained 3 life");
     assert!(g.battlefield.iter().any(|c| c.id == id), "the Snake resolves");
 }
+
+#[test]
+fn broodspinner_etb_surveils_and_sac_makes_insects_per_gy_type() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::broodspinner());
+    g.clear_sickness(id);
+    // Seed the graveyard with three distinct card types: creature, instant, land.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("sac for Insects");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "Broodspinner sacrificed itself");
+    let insects = g.battlefield.iter().filter(|c| c.definition.name == "Insect" && c.controller == 0).count();
+    assert_eq!(insects, 3, "one Insect per distinct gy card type (creature/instant/land)");
+}

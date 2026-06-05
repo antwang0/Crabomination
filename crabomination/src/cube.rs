@@ -1729,6 +1729,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(talisman_of_resilience);
         v.push(golgari_signet);
         v.push(wastewood_verge);
+        v.push(broodspinner);
     }
     if pair_contains(pair, Color::Blue) {
         // ── SOS Quandrix (G/U) ──

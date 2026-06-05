@@ -354,6 +354,10 @@ pub enum Value {
     /// "reveal the top 10, take up to one of each card type" is
     /// approximated as "draw N where N = distinct types in those 10".
     DistinctTypesInTopOfLibrary { who: PlayerRef, count: Box<Value> },
+    /// Number of distinct card types among the cards in `who`'s graveyard.
+    /// Backs Broodspinner's "create that many Insects equal to the number of
+    /// card types among cards in your graveyard" payoff.
+    DistinctTypesInGraveyard { who: PlayerRef },
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"
