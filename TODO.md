@@ -8,20 +8,30 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Skullclamp / death-trigger-via-equip.** Skullclamp's "whenever equipped
-  creature dies, draw two" needs the equipped creature's *granted* triggered
-  abilities (`EquipBonus.triggered_abilities`) to dispatch on non-combat events.
-  Today they only fire off the combat `DealsCombatDamageToPlayer` hook (Sword
-  cycle). Chain `EquipBonus.triggered_abilities` (and the Soulbond-granted
-  triggers) into the general `dispatch_triggers_for_events` walk so any granted
-  trigger shape fires; then ship Skullclamp.
+- **Embalm/Eternalize token color + cost overrides.** `sets::akh` tokens ride
+  `CreateTokenCopyOf` and gain a Zombie type (+4/4 for Eternalize), but the
+  copy keeps the original's color and printed mana cost rather than becoming
+  "white/black with no mana cost." Add `token_color: Option<Color>` +
+  `strip_cost: bool` to `Effect::CreateTokenCopyOf` to make it faithful.
+- **More AKH/HOU Embalm cards.** Vizier of Many Faces (embalm clone — needs the
+  embalm-copy-any-creature path), Aven Wind Guide (token-anthem static),
+  Heart-Piercer Manticore (ETB sac→ping). The existing `fanatic_of_rhonas`
+  (decks::modern) is missing its real Eternalize {2}{G}{G} — upgrade it.
+- **Earthshaker Khenra's "≤ its power" filter is fixed at 2.** The ETB
+  can't-block uses `PowerAtMost(2)` (the printed power); the eternalized 4/4
+  token still reads 2. A source-relative `PowerAtMostSource` requirement would
+  make it exact.
+
+- **Equip-granted triggers — general dispatch.** Skullclamp ✅ (the equipped
+  creature's `CreatureDied` equip-grant is now collected on the death path in
+  `resolve_stack`). Still ⏳: chaining `EquipBonus.triggered_abilities` (and
+  Soulbond-granted triggers) into the general `dispatch_triggers_for_events`
+  walk so *any* equip-granted trigger shape (ETB, attacks, draws, …) fires —
+  today only `DealsCombatDamageToPlayer` (combat.rs) and `CreatureDied`
+  (death path) are covered.
 - **Ghost Quarter's basic-land search rider** is dropped (the destroyed land's
   controller may fetch a basic). Needs last-known-controller resolution after
   the land leaves; pairs with a `PlayerRef::ControllerOf(last-known)` lookup.
-- **Star Compass** ("{T}: Add one mana of any color a basic land you control
-  could produce") isn't carded yet — needs a board-derived color-set payload
-  (similar to `AnyColorOpponentCouldProduce`, but reading the controller's own
-  basic-land types).
 
 - **Soulbond pairing is auto-resolved (CR 702.95).** `apply_soulbond_pairing`
   pairs with the lowest-CardId eligible partner instead of prompting the
@@ -37,11 +47,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Dethrone cards are complex (Marchesa, the Black Rose — needs "other creatures
   you control have dethrone" trigger-grant-to-filter + die-return recursion).
   Ship one when those primitives land.
-- **Reconfigure unattach (CR 702.151).** `Keyword::Reconfigure` attaches via the
-  equip path and strips Creature-ness while attached (Lion Sash). The
-  "Reconfigure: unattach this (and it becomes a creature again)" mode has no
-  action yet — add a `GameAction::Reconfigure { equipment, target: Option<CardId> }`
-  (or extend Equip) where `None` detaches, paying the reconfigure cost.
+- **Reconfigure unattach (CR 702.151) — ✅ engine.** `GameAction::Reconfigure
+  { equipment, target: Option<CardId> }` attaches (`Some`) or detaches (`None`)
+  for the reconfigure cost; unattach restores creature-ness. Remaining: a
+  client UI affordance to trigger the unattach (the `E`-key equip flow only
+  attaches today).
 - **Warp / Miracle alt-cast keywords.** Two "cast-mode" keywords still dropped
   on their cards: Warp (Mightform Harmonizer, Pinnacle Emissary — cast cheaply,
   exile at end step, recast later — a Suspend/Plot-adjacent exile-and-recast),
@@ -620,6 +630,23 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   on block), Crested Craghorn (Provoke — untap + must-block), Hundred-Talon Kami
   (Soulshift 4 — return an MV≤4 Spirit on death). Tests: `afflict_*`,
   `provoke_*`, `soulshift_*`.
+
+- ✅ **CR 702.68 / 702.69 / 702.70 — Frenzy / Gravestorm / Poisonous**
+  (claude/modern_decks). Poisonous N is a new `shortcut::poisonous`
+  (`DealsCombatDamageToPlayer / SelfSource` → `AddPoison` on the damaged
+  player). Gravestorm is a new `Keyword::Gravestorm` mirroring Storm's
+  self-copy, counting a new `GameState.permanents_to_graveyard_this_turn`
+  tally (bumped in `remove_from_battlefield_to_graveyard`, reset at Cleanup).
+  Frenzy reuses the existing `shortcut::frenzy`. Cards: Marsh Viper
+  (Poisonous 2), Ominous Harvest (Gravestorm), Frenzy Sliver (Frenzy 1).
+  Tests: `poisonous_marsh_viper_*`, `gravestorm_ominous_harvest_*`,
+  `frenzy_sliver_*`.
+
+- ✅ **CR 702.66 — "Spells you cast have delve" static** (claude/modern_decks).
+  `StaticEffect::SpellsYouCastHaveDelve` + `controller_grants_spells_delve`
+  let the cast path accept a delve-cards list on any spell, not just ones
+  printed with `Keyword::Delve`. Completes Teval, Arbiter of Virtue (now ✅).
+  Test: `teval_grants_spells_delve`.
 
 - 🟡 **CR 303 — Auras** (claude/modern_decks). "Enchanted permanent" is now a
   queryable state: `SelectionRequirement::IsEnchanted` scans for an enchantment

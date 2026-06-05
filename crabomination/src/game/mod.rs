@@ -57,6 +57,9 @@ mod tests_energy;
 #[cfg(test)]
 #[path = "../tests/ktk.rs"]
 mod tests_ktk;
+#[cfg(test)]
+#[path = "../tests/akh.rs"]
+mod tests_akh;
 pub mod types;
 
 #[cfg(test)]
@@ -224,6 +227,11 @@ pub struct GameState {
     pub(crate) skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// CR 702.69 — count of permanents put into a graveyard from the
+    /// battlefield this turn (any controller, any type). Drives Gravestorm
+    /// copy counts; reset at each turn's untap step.
+    #[serde(default)]
+    pub permanents_to_graveyard_this_turn: u32,
     /// Delayed triggered abilities registered by resolved spells/abilities
     /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
     /// dispatcher when the matching event occurs.
@@ -540,6 +548,7 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
@@ -618,6 +627,7 @@ impl GameState {
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            permanents_to_graveyard_this_turn: 0,
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
@@ -1465,6 +1475,21 @@ impl GameState {
                     .count() as u32
             })
             .sum()
+    }
+
+    /// CR 702.66 — true if player `seat` controls a permanent granting
+    /// "spells you cast have delve" (Teval, Arbiter of Virtue). Lets the
+    /// cast path accept a delve-cards list on any spell, not just those
+    /// printed with `Keyword::Delve`.
+    pub fn controller_grants_spells_delve(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::SpellsYouCastHaveDelve))
+        })
     }
 
     /// True if `seat` cannot gain life *right now*, per CR 119.7. ORs:
@@ -2713,6 +2738,9 @@ impl GameState {
             GameAction::SubmitDecision(_) => unreachable!(),
             GameAction::Cycle { card_id } => self.cycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
+            GameAction::Reconfigure { equipment, target } => {
+                self.reconfigure(equipment, target)
+            }
             GameAction::Crew { vehicle, crew_creatures } => self.crew(vehicle, &crew_creatures),
             GameAction::Saddle { mount, creatures } => self.saddle(mount, &creatures),
             GameAction::Ninjutsu { ninja, returning } => self.ninjutsu(ninja, returning),
@@ -3048,6 +3076,71 @@ impl GameState {
             attachment: equipment,
             attached_to: Some(target),
         }])
+    }
+
+    /// CR 702.151 — Reconfigure. Pay the reconfigure cost to attach the
+    /// Equipment-creature to a creature you control (`Some`), or to unattach
+    /// it (`None`). Attach reuses the equip-legality checks; unattach simply
+    /// clears the link, restoring its creature-ness (the layer-4
+    /// "not a creature while attached" strip keys on `attached_to`).
+    /// Sorcery-speed only (CR 702.151c).
+    fn reconfigure(
+        &mut self,
+        equipment: crate::card::CardId,
+        target: Option<crate::card::CardId>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let pos = self
+            .battlefield
+            .iter()
+            .position(|c| c.id == equipment)
+            .ok_or(GameError::CardNotOnBattlefield(equipment))?;
+        if self.battlefield[pos].controller != p {
+            return Err(GameError::NotYourPriority);
+        }
+        let cost = self.battlefield[pos]
+            .definition
+            .has_reconfigure()
+            .cloned()
+            .ok_or(GameError::NotEquipment(equipment))?;
+        match target {
+            Some(t) => {
+                // Attach: target must be a creature you control (and not the
+                // Equipment itself), honoring protection (CR 702.16f).
+                let target_ok = t != equipment
+                    && self.computed_permanent(t).is_some_and(|c| {
+                        c.controller == p
+                            && c.card_types.contains(&crate::card::CardType::Creature)
+                    });
+                if !target_ok {
+                    return Err(GameError::InvalidTarget);
+                }
+                if self.is_protected_from(equipment, t) {
+                    return Err(GameError::TargetHasProtection(t));
+                }
+                self.players[p].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+                self.battlefield[pos].attached_to = Some(t);
+                Ok(vec![GameEvent::AttachmentMoved {
+                    attachment: equipment,
+                    attached_to: Some(t),
+                }])
+            }
+            None => {
+                // Unattach: only meaningful if currently attached.
+                if self.battlefield[pos].attached_to.is_none() {
+                    return Err(GameError::InvalidTarget);
+                }
+                self.players[p].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+                self.battlefield[pos].attached_to = None;
+                Ok(vec![GameEvent::AttachmentMoved {
+                    attachment: equipment,
+                    attached_to: None,
+                }])
+            }
+        }
     }
 
     /// CR 702.122 — Crew a Vehicle. Taps the listed creatures (each an
@@ -5315,6 +5408,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // UncounterableCreaturesOfChosenType — read at cast time by
             // `caster_grants_uncounterable_with_x`; no layer effect.
             | StaticEffect::UncounterableCreaturesOfChosenType
+            // SpellsYouCastHaveDelve (Teval) — read at cast time by
+            // `controller_grants_spells_delve`; no layer effect.
+            | StaticEffect::SpellsYouCastHaveDelve
             // EtbTriggerTax — read at ETB trigger push time by
             // `apply_etb_trigger_tax` (Strict Proctor); no layer effect.
             | StaticEffect::EtbTriggerTax { .. }

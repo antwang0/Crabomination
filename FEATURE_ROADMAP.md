@@ -24,7 +24,10 @@ read of the code and should be re-verified before picking up an item.
   Annihilator, Banding, Equip, Fortify, Morph, Megamorph, Prowess, Ward,
   Changeling, Storm, Rebound, Crew, Exert, Shadow, Horsemanship, Intimidate,
   Skulk, Fear, Unblockable, Soulbond (CR 702.95 — auto-pairing on ETB, shared
-  P/T / keyword / granted-ability bonus), plus uncounterable riders.
+  P/T / keyword / granted-ability bonus), Embalm (CR 702.88) / Eternalize
+  (CR 702.91) (graveyard exile-self token copy; `sets::akh`), Reconfigure
+  (CR 702.151 — attach + unattach via `GameAction::Reconfigure`), plus
+  uncounterable riders.
 - **Costs/mana:** colored / generic / colorless / hybrid / mono-hybrid /
   Phyrexian / snow / X symbols; Convoke/Delve generic reduction; Commander
   tax; alternative (pitch) costs.
@@ -335,7 +338,9 @@ feature; sweep card-batch by card-batch.
   ⏳ Impending, ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
   `GameAction::Ninjutsu` — declare-blockers special action that returns an
   unblocked attacker and swaps the ninja in tapped + attacking; Fallen
-  Shinobi), ⏳ Embalm/Eternalize.
+  Shinobi), ✅ Embalm (CR 702.88) / Eternalize (CR 702.91) —
+  `shortcut::embalm` / `eternalize` ride the from-graveyard exile-self
+  activation + `CreateTokenCopyOf` (Zombie type, 4/4 for Eternalize); `sets::akh`.
 - **Counter / +1+1 matters:** ✅ Proliferate (`Effect::Proliferate` —
   reducer-wired + tested in `tests::classic`), ✅ Bolster
   (`shortcut::bolster` — CR 701.21, +N/+N on the controller's

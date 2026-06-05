@@ -41,6 +41,7 @@ mod game {
 pub mod sets;
 
 // Re-export everything so callers use `catalog::some_card()`.
+pub use sets::akh::*;
 pub use sets::all::*;
 pub use sets::ap::*;
 pub use sets::arn::*;

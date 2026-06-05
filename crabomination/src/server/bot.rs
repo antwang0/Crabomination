@@ -646,6 +646,7 @@ fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::mana::ColorSet
         ManaPayload::AnyOneColor(_)
         | ManaPayload::AnyColors(_)
         | ManaPayload::AnyColorOpponentCouldProduce
+        | ManaPayload::AnyColorYouCouldProduce
         | ManaPayload::DevotionOfChosenColor => *set = crate::mana::ColorSet::all(),
         ManaPayload::Colorless(_) => {}
         // Could produce any single color the rock was set to — treat as
@@ -1075,7 +1076,38 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Recur value from the graveyard (Embalm CR 702.88 / Eternalize CR 702.91
+    // and any "Exile this from your graveyard: …" ability) when there's spare
+    // mana and nothing better to do. Dry-run-gated so cost / sorcery timing
+    // bottom out in `would_accept`.
+    if let Some(action) = pick_graveyard_recursion(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Find an affordable graveyard-activated ability whose cost exiles the source
+/// (Embalm / Eternalize, Stone Docent-style recursion). Returns the activation
+/// for the first such card the bot can pay for.
+fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction> {
+    for card in state.players[seat].graveyard.iter() {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if !(ab.from_graveyard && ab.exile_self_cost) {
+                continue;
+            }
+            let action = GameAction::ActivateAbility {
+                card_id: card.id,
+                ability_index: idx,
+                target: None,
+                x_value: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
+    None
 }
 
 /// Find a beneficial energy-only activated ability the bot can pay for: an
@@ -1861,6 +1893,26 @@ mod tests {
         // With too little energy the bot leaves it alone.
         g.players[0].energy = 1;
         assert!(pick_energy_payoff(&g, 0).is_none(), "won't activate without enough energy");
+    }
+
+    /// The bot recurs a creature from the graveyard via Embalm when it can
+    /// afford the cost.
+    #[test]
+    fn bot_embalms_from_graveyard_with_spare_mana() {
+        use crate::TurnStep;
+        let mut g = two_player_game();
+        let cat = g.add_card_to_graveyard(0, catalog::sacred_cat());
+        g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_graveyard_recursion(&g, 0).expect("bot should Embalm Sacred Cat");
+        match action {
+            GameAction::ActivateAbility { card_id, .. } => assert_eq!(card_id, cat),
+            _ => panic!("expected an activate-ability action"),
+        }
+        // With no mana it leaves the card alone.
+        g.players[0].mana_pool.empty();
+        assert!(pick_graveyard_recursion(&g, 0).is_none(), "won't Embalm without mana");
     }
 
     /// The bot also recognises the real-cost energy form

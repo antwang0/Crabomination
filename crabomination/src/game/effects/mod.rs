@@ -1805,21 +1805,24 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
-                    ManaPayload::AnyColorOpponentCouldProduce => {
-                        // Fellwar Stone — scan opponents' battlefield for
-                        // basic-typed lands, build the legal-color set from
-                        // those land types. Falls back to colorless if no
-                        // opponent controls a basic-typed land (so the
+                    ManaPayload::AnyColorOpponentCouldProduce
+                    | ManaPayload::AnyColorYouCouldProduce => {
+                        // Fellwar Stone (opponent) / Star Compass (self) —
+                        // scan the relevant side's battlefield for basic-typed
+                        // lands and build the legal-color set from those land
+                        // types. Falls back to colorless if none (so the
                         // activation produces *something* — matches the
                         // engine's "never silently no-op" convention for
                         // mana abilities).
                         use crate::card::LandType;
+                        let own_side =
+                            matches!(pool, ManaPayload::AnyColorYouCouldProduce);
                         let mut legal: Vec<Color> = Vec::new();
                         let push_unique = |c: Color, v: &mut Vec<Color>| {
                             if !v.contains(&c) { v.push(c); }
                         };
                         for opp in self.battlefield.iter()
-                            .filter(|c| c.controller != p)
+                            .filter(|c| (c.controller == p) == own_side)
                         {
                             for lt in &opp.definition.subtypes.land_types {
                                 match lt {
@@ -3136,10 +3139,19 @@ impl GameState {
                         _ => None,
                     });
                 let Some(src_id) = source_id else { return Ok(()); };
+                // Source def: battlefield first, then graveyard / exile so an
+                // Embalm/Eternalize copy (CR 702.88/702.91) can be minted off
+                // the card after it's been exiled as the activation cost.
                 let source_def = self
                     .battlefield
                     .iter()
                     .find(|c| c.id == src_id)
+                    .or_else(|| self.exile.iter().find(|c| c.id == src_id))
+                    .or_else(|| {
+                        self.players
+                            .iter()
+                            .find_map(|pl| pl.graveyard.iter().find(|c| c.id == src_id))
+                    })
                     .map(|c| (*c.definition).clone());
                 let Some(mut def) = source_def else { return Ok(()); };
                 // Apply extra creature types & P/T override.

@@ -208,6 +208,11 @@ pub enum StaticEffect {
     /// `chosen_creature_type == None` falls back to "unrestricted" so
     /// legacy test fixtures that bypass the ETB still work.
     UncounterableCreaturesOfChosenType,
+    /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
+    /// Read at cast time by `controller_grants_spells_delve`: a delve-cards
+    /// list is accepted on any spell whose controller has this static, not
+    /// just spells printed with `Keyword::Delve`.
+    SpellsYouCastHaveDelve,
     /// "Instant and sorcery spells you cast have Affinity for [filter]"
     /// (CR 702.40). The static grants every IS spell the controller casts
     /// an Affinity-style discount of {1} per battlefield permanent matching

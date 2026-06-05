@@ -76,7 +76,6 @@ work is listed below.
 | Dakkon, Shadow Slayer | 🟡 | WUB Legendary Planeswalker. +1: Surveil 2. -3: Exile target creature. -6: emblem (`Effect::CreateEmblem`, approximated as "draw a card at your upkeep"). Body fully wired; only the emblem's exact text is an approximation. |
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |
-| Teval, Arbiter of Virtue | 🟡 | {2}{B}{G}{U} 6/6 Spirit Dragon, flying + lifelink + "lose life equal to each cast spell's mana value". The "spells you cast have delve" static grant is engine-wide ⏳ and dropped. Test: `teval_loses_life_equal_to_cast_spell_mana_value`. |
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
 | Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
 | Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |

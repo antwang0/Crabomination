@@ -236,13 +236,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         ornithopter_of_paradise,
         mind_stone,
         coldsteel_heart,
-        // fellwar_stone is 🟡 — "matches opponent's lands" restriction
-        // collapses to plain `AnyOneColor` (so it's strictly Fellwar-
-        // equivalent against rainbow lands and slightly stronger against
-        // mono-color pools). Activated for the cube pool — the body's
-        // 2-mana mana rock + tap-for-any payoff still pays out in real
-        // games and is the gameplay-relevant attribute.
+        // fellwar_stone / star_compass read the relevant side's basic-land
+        // types via `AnyColorOpponentCouldProduce` / `AnyColorYouCouldProduce`.
         fellwar_stone,
+        star_compass,
         millstone,
         aether_spellbomb,
         nihil_spellbomb,
@@ -320,6 +317,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks-17 ──
         lightning_greaves,
         stonecoil_serpent,
+        // ── equip-granted dies trigger (CR 702.6e) ──
+        skullclamp,
         // ── modern_decks: living weapon + board-scaled equip bonus ──
         nettlecyst,
         // ── modern_decks: begin-combat token-copy equipment ──
@@ -408,6 +407,21 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         syndic_of_tithes,
         // ── Backup that grants a triggered ability (CR 702.164) ──
         bola_slinger,
+        // ── Embalm / Eternalize (CR 702.88 / 702.91) ──
+        sacred_cat,
+        adorned_pouncer,
+        unwavering_initiate,
+        steadfast_sentinel,
+        sunscourge_champion,
+        oketras_attendant,
+        anointer_priest,
+        angel_of_sanctions,
+        // ── Exert (CR 702.137) ──
+        tah_crop_elite,
+        glory_bound_initiate,
+        // ── flash O-Ring + combat removal ──
+        cast_out,
+        gideons_reproach,
         // ── white value/aggro bodies ──
         palace_sentinels,
         knight_of_the_white_orchid,
@@ -720,6 +734,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Embalm / Eternalize (CR 702.88 / 702.91) ──
+        aven_initiate,
+        proven_combatant,
+        tah_crop_skirmisher,
+        sinuous_striker,
+        champion_of_wits,
         // ── Soulbond (CR 702.95) ──
         wingcrafter,
         deadeye_navigator,
@@ -954,8 +974,14 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Eternalize (CR 702.91) ──
+        dreamstealer,
         // ── Afflict (CR 702.130) ──
         khenra_eternal,
+        // ── Frenzy (CR 702.68) ──
+        frenzy_sliver,
+        // ── Gravestorm (CR 702.69) ──
+        ominous_harvest,
         // ── Fabricate (CR 702.122) ──
         weaponcraft_enthusiast,
         // ── combat-damage value body ──
@@ -1251,6 +1277,13 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Eternalize (CR 702.91) ──
+        earthshaker_khenra,
+        // ── aggressive red bodies + burn ──
+        bloodrage_brawler,
+        nimble_blade_khenra,
+        defiant_khenra,
+        open_fire,
         // ── Soulbond (CR 702.95) ──
         hanweir_lancer,
         // ── Mentor (CR 702.134) ──
@@ -1570,6 +1603,16 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Poisonous (CR 702.70) ──
+        marsh_viper,
+        // ── Embalm (CR 702.88) ──
+        honored_hydra,
+        timeless_witness,
+        // ── AKH green bodies (Exert, Flash, ramp, big cycler) ──
+        hooded_brawler,
+        greater_sandwurm,
+        pouncing_cheetah,
+        naga_vitalist,
         // ── Soulbond (CR 702.95) ──
         wolfir_silverheart,
         nightshade_peddler,

@@ -792,6 +792,12 @@ pub enum ManaPayload {
     /// Fellwar Stone — `{T}: Add one mana of any color an opponent's
     /// land could produce.`
     AnyColorOpponentCouldProduce,
+    /// Add one mana of any color a basic land *you* control could produce —
+    /// the controller-side mirror of `AnyColorOpponentCouldProduce`. The
+    /// legal-color set is the union of basic-land types under the
+    /// controller's own permanents. Falls back to colorless if none.
+    /// Star Compass.
+    AnyColorYouCouldProduce,
     /// Player chooses a color, then adds mana of that color equal to their
     /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
     DevotionOfChosenColor,

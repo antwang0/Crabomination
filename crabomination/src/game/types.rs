@@ -296,6 +296,12 @@ pub enum GameAction {
     /// Pays the `Keyword::Equip(cost)` mana cost, then attaches the
     /// Equipment, conferring its `equipped_bonus` via the layer system.
     Equip { equipment: CardId, target: CardId },
+    /// CR 702.151 — Reconfigure an Equipment-creature. Sorcery-speed only.
+    /// With `target: Some(c)`, pay the reconfigure cost and attach to a
+    /// creature you control (it stops being a creature while attached).
+    /// With `target: None`, pay the cost to unattach it (it becomes a
+    /// creature again). Lion Sash.
+    Reconfigure { equipment: CardId, target: Option<CardId> },
     /// CR 702.122 — Crew a Vehicle. Taps each creature in `crew_creatures`
     /// (each must be an untapped creature the activator controls, other than
     /// the Vehicle); their total power must meet or exceed the Vehicle's

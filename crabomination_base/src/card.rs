@@ -49,6 +49,7 @@ pub enum CreatureType {
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith,
     Drake, Griffin, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
+    Jackal,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
@@ -412,6 +413,10 @@ pub enum Keyword {
     Ward(WardCost),
     Changeling,
     Storm,
+    /// CR 702.69 — "When you cast this spell, copy it for each permanent put
+    /// into a graveyard from the battlefield this turn." A self-cast copy
+    /// rider mirroring Storm but counting `permanents_to_graveyard_this_turn`.
+    Gravestorm,
     Inspired,
     /// CR 707 — "This spell can't be copied." Carried by the spell card
     /// (Choreographed Sparks); `Effect::CopySpell` skips a stack spell whose

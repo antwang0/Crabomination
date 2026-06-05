@@ -176,7 +176,8 @@ impl Effect {
                     ManaPayload::Colors(_)
                     | ManaPayload::DevotionOfChosenColor
                     | ManaPayload::ChosenColorOfSource
-                    | ManaPayload::AnyColorOpponentCouldProduce => false,
+                    | ManaPayload::AnyColorOpponentCouldProduce
+                    | ManaPayload::AnyColorYouCouldProduce => false,
                 }
             }
             Effect::Destroy { what }
