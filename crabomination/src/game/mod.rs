@@ -1740,6 +1740,23 @@ impl GameState {
                 });
             }
         }
+        // CR 702.151c — a Reconfigure Equipment isn't a creature while it's
+        // attached to a creature. Strip the Creature card type at layer 4
+        // (the +1/+1 it confers still scales off its own counters; its equip
+        // bonus and exile ability are unaffected). Lion Sash.
+        for card in &self.battlefield {
+            if card.attached_to.is_some() && card.definition.has_reconfigure().is_some() {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(vec![card.id]),
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::RemoveCardType(crate::card::CardType::Creature),
+                });
+            }
+        }
         // "Attacking creatures you control have <keyword>" (Blade Historian).
         // Resolved here because `affects()` can't see combat state — we read
         // the live `attacking` list and scope the grant to the source's own

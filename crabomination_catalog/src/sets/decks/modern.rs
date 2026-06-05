@@ -18379,8 +18379,7 @@ pub fn helm_of_the_host() -> CardDefinition {
 /// Lion Sash — {1}{W} Artifact Creature — Equipment Cat 1/1. `{W}: Exile target
 /// card from a graveyard. If it was a permanent card, put a +1/+1 counter on
 /// Lion Sash.` Equipped creature gets +1/+1 for each +1/+1 counter on Lion
-/// Sash. Reconfigure {2} (approximated as Equip {2}; the "isn't a creature
-/// while attached" rider is dropped).
+/// Sash. Reconfigure {2} (CR 702.151 — isn't a creature while attached).
 pub fn lion_sash() -> CardDefinition {
     use crate::card::{ActivatedAbility, ArtifactSubtype, CounterType, EquipBonus, EquipScale};
     use crate::effect::shortcut::target_filtered;
@@ -18395,7 +18394,7 @@ pub fn lion_sash() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        keywords: vec![Keyword::Reconfigure(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             power: 0,
             toughness: 0,

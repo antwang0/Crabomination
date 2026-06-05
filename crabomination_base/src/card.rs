@@ -394,6 +394,13 @@ pub enum Keyword {
     Annihilator(u32),
     Banding,
     Equip(crate::mana::ManaCost),
+    /// CR 702.151 — Reconfigure [cost]. An Equipment-creature attaches to a
+    /// creature you control (or unattaches) for this cost at sorcery speed,
+    /// and isn't a creature while attached. Attach reuses the Equip path
+    /// (`has_equip` returns this cost); the "isn't a creature while attached"
+    /// rider is a layer-4 `RemoveCardType(Creature)` in `compute_battlefield`.
+    /// Lion Sash.
+    Reconfigure(crate::mana::ManaCost),
     Fortify(crate::mana::ManaCost),
     Morph(crate::mana::ManaCost),
     Megamorph(crate::mana::ManaCost),
@@ -1333,8 +1340,16 @@ impl CardDefinition {
         })
     }
     pub fn has_equip(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| match kw {
+            Keyword::Equip(cost) | Keyword::Reconfigure(cost) => Some(cost),
+            _ => None,
+        })
+    }
+
+    /// The Reconfigure cost (CR 702.151), if this card has the keyword.
+    pub fn has_reconfigure(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
-            if let Keyword::Equip(cost) = kw { Some(cost) } else { None }
+            if let Keyword::Reconfigure(cost) = kw { Some(cost) } else { None }
         })
     }
 }

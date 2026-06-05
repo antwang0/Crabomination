@@ -27032,12 +27032,22 @@ fn lion_sash_exiles_permanent_card_grows_and_scales_equipped() {
     // Card exiled, Lion Sash grew a +1/+1 counter (now 2/2).
     assert!(g.exile.iter().any(|c| c.id == gy), "target card exiled");
     assert_eq!(g.battlefield_find(sash).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
-    // Attach to a creature → it gets +1/+1 per +1/+1 counter on Lion Sash.
+    // Reconfigure onto a creature via the Equip path (Reconfigure reuses it).
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.battlefield_find_mut(sash).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: sash, target: bear })
+        .expect("Reconfigure attaches via the equip path");
     let cp = g.compute_battlefield();
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (3, 3), "equipped scales by Lion Sash's counter");
+    // CR 702.151c — Lion Sash isn't a creature while attached.
+    let s = cp.iter().find(|c| c.id == sash).unwrap();
+    assert!(!s.card_types.contains(&crate::card::CardType::Creature),
+        "Reconfigure Equipment isn't a creature while attached");
+    assert!(s.card_types.contains(&crate::card::CardType::Artifact), "still an artifact");
 }
 
 #[test]

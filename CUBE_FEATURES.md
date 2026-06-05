@@ -19,7 +19,7 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Lion Sash | 🟡 | {1}{W} Equipment Cat 1/1; `{W}: exile target gy card, +1/+1 counter if it was a permanent`; equipped creature scales +1/+1 per +1/+1 counter on Lion Sash (`EquipScale.count_self_counters`). Reconfigure approximated as Equip {2} (the "not a creature while attached" rider dropped). Test: `lion_sash_exiles_permanent_card_grows_and_scales_equipped`. || Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
+| Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 
 ### Blue
 
@@ -102,7 +102,7 @@ are listed in `DECK_FEATURES.md`.
 
 | Feature | Status | Cards depending on it |
 |---|---|---|
-| Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus ships via `EquipBonus.scale` — Nettlecyst ✅. Equipment-granted triggered abilities ship via `EquipBonus.triggered_abilities` (CR 702.6e; `DealsCombatDamageToPlayer` SelfSource fires off the equipped creature, damaged player bound to `Target(0)`) — Sword of Body and Mind ✅. Remaining: Lion Sash's counter-on-self scaled bonus + Reconfigure, Helm of the Host's continuous copy. |
+| Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus ships via `EquipBonus.scale` — Nettlecyst ✅. Equipment-granted triggered abilities ship via `EquipBonus.triggered_abilities` (CR 702.6e; `DealsCombatDamageToPlayer` SelfSource fires off the equipped creature, damaged player bound to `Target(0)`) — Sword of Body and Mind ✅. Lion Sash ✅ (counter-on-self scaled bonus + Reconfigure CR 702.151 — `Keyword::Reconfigure` reuses the equip path and strips Creature-ness while attached). Remaining: Helm of the Host's continuous copy; Reconfigure *unattach* mode. |
 | Adventure (cost-mode duality) | ✅ | CR 715 — `CardDefinition.adventure` + `GameAction::CastAdventure`/`CastAdventureCreature`. Virtue of Loyalty (enchantment // instant) ships on it alongside the creature adventures. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
 | Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (Amped Raptor) is still ⏳. |

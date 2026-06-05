@@ -8,6 +8,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Reconfigure unattach (CR 702.151).** `Keyword::Reconfigure` attaches via the
+  equip path and strips Creature-ness while attached (Lion Sash). The
+  "Reconfigure: unattach this (and it becomes a creature again)" mode has no
+  action yet — add a `GameAction::Reconfigure { equipment, target: Option<CardId> }`
+  (or extend Equip) where `None` detaches, paying the reconfigure cost.
 - **Offspring / Warp / Miracle alt-cast keywords.** Three "cast-mode" keywords
   surfaced this run and were dropped on their cards: Offspring {N} (Thundertrap
   Trainer — pay extra to mint a token copy on ETB), Warp (Mightform Harmonizer,
@@ -2566,7 +2571,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (EquipBonus) flows +P/+T and keyword grants onto the equipped creature
   via the layer system. Cards: Bonesplitter, Shuko, Lavaspur Boots,
   Lightning Greaves. Lock-in: `cr_702_6_equip_attaches_at_sorcery_speed
-  _to_your_creature`).
+  _to_your_creature`. **Reconfigure** (CR 702.151) ships via
+  `Keyword::Reconfigure(cost)` — `has_equip` returns the cost so attach
+  reuses the equip path, and a layer-4 `RemoveCardType(Creature)` strips
+  creature-ness while attached (Lion Sash); equipment-granted triggered
+  abilities ship via `EquipBonus.triggered_abilities`, CR 702.6e, Sword of
+  Body and Mind. Remaining: Reconfigure unattach mode.).
   (f) **301.6** Fortification — ⏳ (subtype declared, no Fortify
   primitive; no Fortification card in the catalog).
   (g) **301.7/7a-b** Vehicle / Crew — ✅ (push claude/modern_decks:
