@@ -3303,6 +3303,8 @@ pub fn silverquill_scrivener_b30() -> CardDefinition {
                 count: Value::Const(3),
                 rest_to_graveyard: false,
                 pick_filter: None,
+            
+                take: None,
             },
         }],
         ..Default::default()

@@ -2103,6 +2103,8 @@ pub fn flow_state() -> CardDefinition {
                 count: Value::Const(3),
                 rest_to_graveyard: false,
                 pick_filter: None,
+            
+                take: None,
             }),
         },
         triggered_abilities: vec![],

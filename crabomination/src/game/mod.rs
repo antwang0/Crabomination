@@ -2606,6 +2606,9 @@ impl GameState {
                         .battlefield
                         .iter()
                         .any(|p| p.controller == seat && self.evaluate_requirement_on_card(req, p, seat)),
+                    Keyword::CantAttackOrBlockUnlessEvenCounters => {
+                        c.counters.values().sum::<u32>() % 2 == 0
+                    }
                     _ => true,
                 })
             })
@@ -3088,6 +3091,11 @@ impl GameState {
         if blocker_cp.keywords.contains(&Keyword::CantBlock) {
             return false;
         }
+        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+            && blocker.counters.values().sum::<u32>() % 2 != 0
+        {
+            return false;
+        }
         self.attacking.iter().any(|atk| {
             let attacker = self.battlefield.iter().find(|c| c.id == atk.attacker);
             let atk_cp = computed.iter().find(|c| c.id == atk.attacker);
@@ -3113,6 +3121,11 @@ impl GameState {
             return false;
         };
         if blocker_cp.keywords.contains(&Keyword::CantBlock) {
+            return false;
+        }
+        if blocker_cp.keywords.contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+            && blocker.counters.values().sum::<u32>() % 2 != 0
+        {
             return false;
         }
         let atk_cp = computed.iter().find(|c| c.id == attacker_id);
@@ -4954,7 +4967,7 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible, take } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
@@ -4963,24 +4976,38 @@ impl GameState {
                     None => true,
                     Some(v) => v.contains(id),
                 };
-                // Default (AutoDecider returns None / out-of-set): take the
-                // first *eligible* revealed card. When nothing is eligible
-                // (Satyr Wayfinder revealing no land), take nothing.
-                let pick = chosen_id
-                    .filter(|id| revealed.contains(id) && is_eligible(id))
-                    .or_else(|| revealed.iter().copied().find(|id| is_eligible(id)));
+                // The decision picks the first card; for take>1 (Consult the
+                // Star Charts kicked) the rest auto-fill from the remaining
+                // eligible revealed cards. AutoDecider / empty pick takes the
+                // first eligible.
+                let mut picks: Vec<CardId> = Vec::with_capacity(take);
+                if let Some(id) = *chosen_id
+                    && revealed.contains(&id)
+                    && is_eligible(&id)
+                {
+                    picks.push(id);
+                }
+                for id in revealed.iter().copied() {
+                    if picks.len() >= take {
+                        break;
+                    }
+                    if is_eligible(&id) && !picks.contains(&id) {
+                        picks.push(id);
+                    }
+                }
                 let mut events = vec![];
-                if let Some(pick) = pick
-                    && let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
-                    let card = self.players[player].library.remove(pos);
-                    self.players[player].hand.push(card);
-                    events.push(GameEvent::CardDrawn { player, card_id: pick });
+                for &pick in &picks {
+                    if let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
+                        let card = self.players[player].library.remove(pos);
+                        self.players[player].hand.push(card);
+                        events.push(GameEvent::CardDrawn { player, card_id: pick });
+                    }
                 }
                 // Move the rest of the revealed set to the bottom of the
                 // library (or graveyard). They're still at the top of the
-                // library after the pick was removed.
+                // library after the picks were removed.
                 for rid in &revealed {
-                    if Some(*rid) == pick {
+                    if picks.contains(rid) {
                         continue;
                     }
                     if let Some(pos) = self.players[player].library.iter().position(|c| c.id == *rid) {

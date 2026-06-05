@@ -645,6 +645,8 @@ pub fn curate() -> CardDefinition {
             count: Value::Const(4),
             rest_to_graveyard: false,
             pick_filter: None,
+        
+            take: None,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

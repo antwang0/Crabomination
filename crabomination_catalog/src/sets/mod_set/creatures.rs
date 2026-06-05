@@ -1912,6 +1912,8 @@ pub fn augur_of_bolas() -> CardDefinition {
                 count: Value::Const(3),
                 rest_to_graveyard: false,
                 pick_filter: None,
+            
+                take: None,
             },
         }],
         ..Default::default()
@@ -2176,6 +2178,8 @@ pub fn sea_gate_oracle() -> CardDefinition {
                 count: Value::Const(2),
                 rest_to_graveyard: false,
                 pick_filter: None,
+            
+                take: None,
             },
         }],
         ..Default::default()

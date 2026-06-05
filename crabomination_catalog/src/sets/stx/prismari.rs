@@ -362,6 +362,8 @@ pub fn creative_outburst() -> CardDefinition {
                 count: Value::Const(5),
                 rest_to_graveyard: false,
                 pick_filter: None,
+            
+                take: None,
             },
         ]),
         ..Default::default()

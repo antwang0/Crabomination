@@ -1684,6 +1684,8 @@ pub fn adventurous_impulse() -> CardDefinition {
             pick_filter: Some(
                 SelectionRequirement::Creature.or(SelectionRequirement::Land),
             ),
+        
+            take: None,
         },
         triggered_abilities: vec![],
         ..Default::default()

@@ -1132,6 +1132,8 @@ pub fn quandrix_quickener() -> CardDefinition {
                 count: Value::Const(3),
                 rest_to_graveyard: false,
                 pick_filter: None,
+            
+                take: None,
             },
             Effect::Untap {
                 what: target_filtered(

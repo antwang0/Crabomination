@@ -5,6 +5,12 @@ use crate::decision::{Decision, DecisionAnswer};
 use crate::effect::Effect;
 use crate::mana::{Color, ManaError};
 
+/// serde default for `ImpulsePending.take` (back-compat: a snapshot without
+/// the field takes one card).
+pub(crate) fn one() -> usize {
+    1
+}
+
 // ── Turn step sequence ────────────────────────────────────────────────────────
 
 // `TurnStep` now lives in `crabomination_base` (below the card catalog in the
@@ -533,6 +539,10 @@ pub enum PendingEffectState {
         /// may be empty when nothing matched the filter).
         #[serde(default)]
         eligible: Option<Vec<CardId>>,
+        /// Number of cards to put into hand (default 1). The decision picks
+        /// the first; any remainder auto-fills from the eligible revealed set.
+        #[serde(default = "crate::game::types::one")]
+        take: usize,
     },
     /// Suspended on a `SearchLibrary` pick for `Effect::PayLifeLookTake`
     /// (Plunge into Darkness mode 1): the chosen card goes to hand and the

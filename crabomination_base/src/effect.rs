@@ -1398,6 +1398,11 @@ pub enum Effect {
         rest_to_graveyard: bool,
         #[serde(default)]
         pick_filter: Option<SelectionRequirement>,
+        /// How many cards to put into hand (default 1). When >1 the controller
+        /// picks the first via the decision and the rest auto-fill from the
+        /// remaining eligible revealed cards. Consult the Star Charts kicked.
+        #[serde(default)]
+        take: Option<Value>,
     },
     /// "Reveal the top `count` cards of your library. For each card type, you
     /// may put a card of that type from among them into your hand. Put the

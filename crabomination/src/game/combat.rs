@@ -150,6 +150,14 @@ impl GameState {
                     return Err(GameError::CannotAttack(id));
                 }
             }
+            // "Can't attack unless it has an even number of counters on it"
+            // (Sab-Sunen). Zero is even. Sum every counter kind on the card.
+            if computed_kw(id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+                && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
+                && c.counters.values().sum::<u32>() % 2 != 0
+            {
+                return Err(GameError::CannotAttack(id));
+            }
             // Filter by *controller*, not *owner* — a creature you've
             // stolen (Threaten / Mind Control) attacks for you, even
             // though its `owner` field still points at the original
@@ -403,6 +411,14 @@ impl GameState {
             // creature can't block this turn", Postmortem Professor's
             // static restriction) take effect immediately.
             if kws_of(blocker_id).contains(&Keyword::CantBlock) {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
+            // "Can't block unless it has an even number of counters on it"
+            // (Sab-Sunen). Zero is even; reject an odd total counter count.
+            if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
+                && blocker.counters.values().sum::<u32>() % 2 != 0
+            {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 

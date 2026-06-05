@@ -472,6 +472,11 @@ pub enum Keyword {
     /// creature's own controller. Lovestruck Beast ("can't attack unless you
     /// control a 1/1 creature").
     CanAttackOnlyIfYouControl(Box<SelectionRequirement>),
+    /// "This creature can't attack or block unless it has an even number of
+    /// counters on it." (Zero is even.) Enforced in `declare_attackers` and
+    /// `declare_blockers` (and the bot/legal-attacker gates) by reading the
+    /// total counter count on the creature. Sab-Sunen, Luxa Embodied.
+    CantAttackOrBlockUnlessEvenCounters,
     /// CR 702.49 — Ninjutsu [cost]. A special action usable during the
     /// declare-blockers step: pay the cost and return an unblocked attacker
     /// you control to hand, then put this card from your hand onto the

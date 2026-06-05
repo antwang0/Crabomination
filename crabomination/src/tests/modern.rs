@@ -26952,6 +26952,29 @@ fn sab_sunen_draws_two_on_odd_counter_main_phase() {
 }
 
 #[test]
+fn sab_sunen_cant_attack_with_odd_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sab_sunen_luxa_embodied());
+    g.clear_sickness(id);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    // Zero counters is even → may attack.
+    assert!(g.legal_attackers(0).contains(&id), "even (zero) counters → can attack");
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }])
+        .expect("even-counter Sab-Sunen attacks");
+    // One counter is odd → can't attack.
+    g.attacking.clear();
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    assert!(!g.legal_attackers(0).contains(&id), "odd counters → not a legal attacker");
+    let err = g
+        .declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }])
+        .unwrap_err();
+    assert!(matches!(err, GameError::CannotAttack(x) if x == id));
+}
+
+#[test]
 fn nettlecyst_living_weapon_scales_germ_by_artifacts_and_enchantments() {
     let mut g = two_player_game();
     // An extra artifact + a (non-Aura) enchantment already on the battlefield.
@@ -27049,6 +27072,29 @@ fn consult_the_star_charts_digs_x_equal_to_lands() {
     cast(&mut g, id);
     assert!(g.players[0].hand.iter().any(|c| c.id == want),
         "picks the chosen card from the top three into hand");
+}
+
+#[test]
+fn consult_the_star_charts_kicked_takes_two() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let want = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(want))]));
+    let id = g.add_card_to_hand(0, catalog::consult_the_star_charts());
+    let hand0 = g.players[0].hand.len();
+    // Pay base {1}{U} + kicker {1}{U} = {2}{U}{U}.
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 2,
+        "kicked Consult puts two cards into hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == want), "chosen card is one of the two");
 }
 
 #[test]

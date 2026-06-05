@@ -3680,10 +3680,14 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter, take } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let take = take
+                    .as_ref()
+                    .map(|v| self.evaluate_value(v, ctx).max(1) as usize)
+                    .unwrap_or(1);
                 let top_ids: Vec<crate::card::CardId> =
                     self.players[p].library.iter().take(n).map(|c| c.id).collect();
                 if top_ids.is_empty() {
@@ -3719,6 +3723,7 @@ impl GameState {
                     revealed: top_ids,
                     rest_to_graveyard: *rest_to_graveyard,
                     eligible,
+                    take,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));

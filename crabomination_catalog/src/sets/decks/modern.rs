@@ -2745,6 +2745,8 @@ pub fn satyr_wayfinder() -> CardDefinition {
                 count: Value::Const(4),
                 rest_to_graveyard: true,
                 pick_filter: Some(SelectionRequirement::Land),
+            
+                take: None,
             },
         }],
         ..Default::default()
@@ -5347,6 +5349,8 @@ pub fn anticipate() -> CardDefinition {
             count: Value::Const(3),
             rest_to_graveyard: false,
             pick_filter: None,
+        
+            take: None,
         },
         ..Default::default()
     }
@@ -7788,6 +7792,8 @@ pub fn forbidden_alchemy() -> CardDefinition {
             count: Value::Const(4),
             rest_to_graveyard: true,
             pick_filter: None,
+        
+            take: None,
         },
         ..Default::default()
     }
@@ -8513,6 +8519,8 @@ pub fn glint_nest_crane() -> CardDefinition {
             count: Value::Const(4),
             rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Artifact),
+        
+            take: None,
         })],
         ..Default::default()
     }
@@ -9811,6 +9819,8 @@ pub fn strategic_planning() -> CardDefinition {
             count: Value::Const(3),
             rest_to_graveyard: true,
             pick_filter: None,
+        
+            take: None,
         },
         ..Default::default()
     }
@@ -17166,6 +17176,8 @@ pub fn impulse() -> CardDefinition {
             count: Value::Const(4),
             rest_to_graveyard: false,
             pick_filter: None,
+        
+            take: None,
         },
         ..Default::default()
     }
@@ -18238,10 +18250,9 @@ pub fn teval_arbiter_of_virtue() -> CardDefinition {
 }
 
 /// Sab-Sunen, Luxa Embodied — {3}{G}{U} Legendary 6/6 God. Reach, trample,
-/// indestructible. At your precombat main phase, put a +1/+1 counter on it,
-/// then draw two cards if it has an odd number of counters. (The "can't attack
-/// or block unless it has an even number of counters" restriction needs a
-/// parity attack-gate primitive and is dropped.)
+/// indestructible. Can't attack or block unless it has an even number of
+/// counters on it. At your precombat main phase, put a +1/+1 counter on it,
+/// then draw two cards if it has an odd number of counters.
 pub fn sab_sunen_luxa_embodied() -> CardDefinition {
     use crate::card::{CounterType, Supertype};
     use crate::game::types::TurnStep;
@@ -18256,7 +18267,12 @@ pub fn sab_sunen_luxa_embodied() -> CardDefinition {
         },
         power: 6,
         toughness: 6,
-        keywords: vec![Keyword::Reach, Keyword::Trample, Keyword::Indestructible],
+        keywords: vec![
+            Keyword::Reach,
+            Keyword::Trample,
+            Keyword::Indestructible,
+            Keyword::CantAttackOrBlockUnlessEvenCounters,
+        ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
             effect: Effect::Seq(vec![
@@ -18441,22 +18457,27 @@ pub fn leyline_of_the_guildpact() -> CardDefinition {
 }
 
 /// Consult the Star Charts — {1}{U} Instant. Kicker {1}{U}. Look at the top X
-/// cards of your library (X = lands you control), put one into your hand, and
-/// the rest on the bottom in a random order. (The kicked "put two instead"
-/// rider needs a take-N look effect and is dropped — kicked == unkicked here.)
+/// cards of your library (X = lands you control), put one (two if kicked) into
+/// your hand, and the rest on the bottom in a random order.
 pub fn consult_the_star_charts() -> CardDefinition {
+    let look = |take: i32| Effect::LookPickToHand {
+        who: PlayerRef::You,
+        count: Value::CountOf(Box::new(Selector::EachPermanent(
+            SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+        ))),
+        rest_to_graveyard: false,
+        pick_filter: None,
+        take: Some(Value::Const(take)),
+    };
     CardDefinition {
         name: "Consult the Star Charts",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Kicker(cost(&[generic(1), u()]))],
-        effect: Effect::LookPickToHand {
-            who: PlayerRef::You,
-            count: Value::CountOf(Box::new(Selector::EachPermanent(
-                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-            ))),
-            rest_to_graveyard: false,
-            pick_filter: None,
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(look(2)),
+            else_: Box::new(look(1)),
         },
         ..Default::default()
     }

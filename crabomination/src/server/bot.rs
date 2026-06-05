@@ -201,6 +201,9 @@ impl Bot for RandomBot {
                                                             )
                                                     })
                                                 }
+                                                Keyword::CantAttackOrBlockUnlessEvenCounters => {
+                                                    c.counters.values().sum::<u32>() % 2 == 0
+                                                }
                                                 _ => true,
                                             })
                                     })
