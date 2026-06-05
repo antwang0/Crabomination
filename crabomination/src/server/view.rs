@@ -497,9 +497,19 @@ fn project_static_ability_labels(card: &CardInstance) -> Vec<String> {
 /// `trigger_event_label`; the effect body uses the existing
 /// `ability_effect_label`.
 fn project_triggered_ability_labels(card: &CardInstance) -> Vec<String> {
+    // Printed triggers plus any an Equipment grants to the creature it's
+    // attached to (CR 702.6e — `EquipBonus.triggered_abilities`, the Sword
+    // cycle's combat-damage riders), so the tooltip shows the full set.
+    let granted = card
+        .definition
+        .equipped_bonus
+        .as_ref()
+        .map(|b| b.triggered_abilities.as_slice())
+        .unwrap_or(&[]);
     card.definition
         .triggered_abilities
         .iter()
+        .chain(granted)
         .map(|t| {
             let evt = trigger_event_label(&t.event);
             let eff = ability_effect_label(&t.effect);
@@ -1365,6 +1375,19 @@ mod tests {
             "static_ability_labels should mention Inkling: {:?}",
             perm.static_ability_labels,
         );
+    }
+
+    #[test]
+    fn permanent_view_surfaces_equipment_granted_triggers() {
+        // Sword of Body and Mind grants a combat-damage trigger via
+        // EquipBonus.triggered_abilities — the view must surface it.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::sword_of_body_and_mind());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(perm.triggered_ability_labels.iter().any(|s| s.starts_with("Combat dmg")),
+            "equipment-granted combat trigger should appear: {:?}",
+            perm.triggered_ability_labels);
     }
 
     #[test]
