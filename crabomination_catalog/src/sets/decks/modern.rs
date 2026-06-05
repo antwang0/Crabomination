@@ -5343,6 +5343,93 @@ pub fn werebear() -> CardDefinition {
     }
 }
 
+/// Thornweald Archer — {1}{G} Creature — Elf Archer 2/1. Reach, deathtouch.
+pub fn thornweald_archer() -> CardDefinition {
+    CardDefinition {
+        name: "Thornweald Archer",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Reach, Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Wild Nacatl — {G} Creature — Cat 1/1. Gets +1/+1 while you control a
+/// Mountain, and +1/+1 while you control a Plains.
+pub fn wild_nacatl() -> CardDefinition {
+    use crate::card::{LandType, StaticAbility};
+    use crate::effect::StaticEffect;
+    let controls = |lt: LandType| Predicate::SelectorCountAtLeast {
+        sel: Selector::EachPermanent(
+            SelectionRequirement::HasLandType(lt).and(SelectionRequirement::ControlledByYou),
+        ),
+        n: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Wild Nacatl",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "As long as you control a Mountain, this creature gets +1/+1.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: controls(LandType::Mountain), power: 1, toughness: 1, keyword: None,
+                },
+            },
+            StaticAbility {
+                description: "As long as you control a Plains, this creature gets +1/+1.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: controls(LandType::Plains), power: 1, toughness: 1, keyword: None,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Skyshroud Elite — {G} Creature — Elf Warrior 1/1. Gets +1/+2 as long as an
+/// opponent controls a nonbasic land.
+pub fn skyshroud_elite() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Skyshroud Elite",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "As long as an opponent controls a nonbasic land, this creature gets +1/+2.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::IsNonbasicLand
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 2,
+                keyword: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Viridian Emissary — {1}{G} Creature — Phyrexian Elf Scout 2/1. When it dies,
 /// you may search your library for a basic land, put it onto the battlefield
 /// tapped, then shuffle.

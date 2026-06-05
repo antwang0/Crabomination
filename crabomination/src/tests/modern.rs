@@ -9781,6 +9781,39 @@ fn sakura_tribe_elder_sacrifices_for_a_basic() {
 }
 
 #[test]
+fn thornweald_archer_has_reach_and_deathtouch() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::thornweald_archer());
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert!(c.keywords.contains(&crate::card::Keyword::Reach));
+    assert!(c.keywords.contains(&crate::card::Keyword::Deathtouch));
+}
+
+#[test]
+fn wild_nacatl_grows_with_mountain_and_plains() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::wild_nacatl());
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    g.add_card_to_battlefield(0, catalog::mountain());
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "+1/+1 with a Mountain");
+    g.add_card_to_battlefield(0, catalog::plains());
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((3, 3)),
+        "+1/+1 more with a Plains");
+}
+
+#[test]
+fn skyshroud_elite_grows_against_nonbasic_lands() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::skyshroud_elite());
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    // Opponent's nonbasic land → +1/+2.
+    g.add_card_to_battlefield(1, catalog::wasteland());
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((2, 3)));
+}
+
+#[test]
 fn werebear_threshold_pumps_at_seven_graveyard_cards() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::werebear());
