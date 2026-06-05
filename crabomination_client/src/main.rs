@@ -547,6 +547,10 @@ fn main() {
         )
         .init_resource::<systems::game_over::AutoRematchState>()
         .init_resource::<systems::game_over::ActiveMatchKind>()
+        // Defensive: the game-over systems read this as a required resource
+        // every InGame frame. `start_net_session_from_menu` (re)sets it, but
+        // init it too so no entry path can leave it missing.
+        .init_resource::<systems::game_over::ActiveMatchFormat>()
         .init_resource::<systems::camera_zoom::CameraZoom>()
         .add_systems(
             Update,

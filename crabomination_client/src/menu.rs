@@ -815,13 +815,10 @@ fn sanitize_name(raw: &str) -> String {
 /// back to a local Modern bot match if no choice was queued (e.g. tests
 /// bypass the menu).
 pub fn start_net_session_from_menu(world: &mut World) {
-    // Lobby flow: the net session was already installed when we connected to
-    // the lobby server, and the match is already running server-side — just
-    // consume it. Re-running setup here would clobber the live connection with
-    // a fresh local-bot match.
-    if world.contains_resource::<NetOutbox>() {
-        return;
-    }
+    // On the lobby path the net session is already installed (we connected to
+    // the lobby server) and the match is running server-side; below we still
+    // set up the in-game meta resources but skip re-spawning a session.
+    let already_connected = world.contains_resource::<NetOutbox>();
 
     // Clear the play-by-play log so a new session (including an audit run)
     // doesn't show scrollback from the previous game.
@@ -838,12 +835,24 @@ pub fn start_net_session_from_menu(world: &mut World) {
     // (a) launch an equivalent rematch without revisiting the menu,
     // and (b) decide whether to show the auto-rematch counter
     // (Spectate Bot vs Bot only — Human vs Bot would be jarring).
+    //
+    // These must be inserted even on the lobby path (already_connected): the
+    // in-game game-over systems read `ActiveMatchFormat` as a required
+    // resource every frame, so skipping them used to crash the moment a lobby
+    // match started.
     world.insert_resource(crate::systems::game_over::ActiveMatchFormat(format));
     let kind = match &mode {
         NetMode::SpectateBots => crate::systems::game_over::ActiveMatchKind::SpectateBotVsBot,
         _ => crate::systems::game_over::ActiveMatchKind::HumanVsBot,
     };
     world.insert_resource(kind);
+
+    // Lobby flow: the net session was already installed when we connected to
+    // the lobby server, and the match is already running server-side — just
+    // consume it. Re-running the spawn below would clobber the live connection.
+    if already_connected {
+        return;
+    }
 
     match mode {
         NetMode::LocalBot => spawn_inprocess_bot(world, format),
@@ -1097,6 +1106,38 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
             log.push("View-only inspection (no full snapshot in this file)");
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::systems::game_over::ActiveMatchFormat;
+
+    /// Regression: on the lobby path the net session is already installed
+    /// (`NetOutbox` present), so `start_net_session_from_menu` skips re-spawning
+    /// — but it must STILL insert `ActiveMatchFormat`, which the in-game
+    /// game-over systems read as a required resource every frame. Skipping it
+    /// used to crash the instant a lobby match started (e.g. on "Add Bot").
+    #[test]
+    fn lobby_path_still_inserts_active_match_format() {
+        let mut world = World::new();
+        // Simulate the lobby flow: a live connection is already installed.
+        let (tx, _rx) = std::sync::mpsc::channel();
+        world.insert_resource(NetOutbox::new(tx));
+
+        start_net_session_from_menu(&mut world);
+
+        assert!(
+            world.contains_resource::<ActiveMatchFormat>(),
+            "ActiveMatchFormat must be present on the lobby path or the \
+             game-over systems panic on the first in-game frame",
+        );
+        assert!(
+            world.contains_resource::<crate::systems::game_over::ActiveMatchKind>(),
+        );
+        // The live session must be left untouched (not clobbered by a respawn).
+        assert!(world.contains_resource::<NetOutbox>());
     }
 }
 
