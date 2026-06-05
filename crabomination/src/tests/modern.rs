@@ -26675,3 +26675,39 @@ fn static_prison_exiles_and_gives_energy() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == prey), "exiled card returns when Static Prison leaves");
 }
+
+#[test]
+fn shorikai_draws_two_discards_one_and_makes_a_pilot() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::shorikai_genesis_engine());
+    g.clear_sickness(id);
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_hand(0, catalog::forest()); // a card to discard
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Shorikai activates");
+    drain_stack(&mut g);
+    // Net hand: +2 draw, -1 discard = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw two, discard one");
+    let pilots = g.battlefield.iter().filter(|c| c.definition.name == "Pilot" && c.controller == 0).count();
+    assert_eq!(pilots, 1, "mints a Pilot token");
+}
+
+#[test]
+fn kestia_draws_when_an_enchantment_creature_attacks() {
+    let mut g = two_player_game();
+    let kestia = g.add_card_to_battlefield(0, catalog::kestia_the_cultivator());
+    g.clear_sickness(kestia);
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    // Kestia (an enchantment creature you control) attacks → draw a card.
+    g.declare_attackers(vec![Attack { attacker: kestia, target: AttackTarget::Player(1) }])
+        .expect("Kestia attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "attack draws a card");
+}

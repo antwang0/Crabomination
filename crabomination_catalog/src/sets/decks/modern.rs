@@ -17962,3 +17962,71 @@ pub fn springleaf_parade() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Shorikai, Genesis Engine — {2}{W}{U} Legendary Artifact — Vehicle 8/8.
+/// `{1}, {T}: Draw two cards, then discard a card. Create a 1/1 colorless
+/// Pilot creature token.` Crew 8. (The Pilot's "crews as though power 2
+/// greater" rider is dropped.)
+pub fn shorikai_genesis_engine() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype, Supertype, TokenDefinition};
+    CardDefinition {
+        name: "Shorikai, Genesis Engine",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Crew(8)],
+        power: 8,
+        toughness: 8,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Pilot".into(),
+                        power: 1,
+                        toughness: 1,
+                        card_types: vec![CardType::Creature],
+                        subtypes: Subtypes { creature_types: vec![CreatureType::Pilot], ..Default::default() },
+                        ..Default::default()
+                    },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kestia, the Cultivator — {1}{G}{W}{U} Legendary Enchantment Creature 4/4.
+/// Bestow {3}{G}{W}{U}; enchanted creature gets +4/+4. The printed "whenever an
+/// enchanted creature or enchantment creature you control attacks, draw" is
+/// narrowed to Kestia's own attack (SelfSource) — no "is enchanted" predicate
+/// and the board-wide attack scope isn't reliable yet.
+pub fn kestia_the_cultivator() -> CardDefinition {
+    use crate::card::{EquipBonus, Supertype};
+    CardDefinition {
+        name: "Kestia, the Cultivator",
+        cost: cost(&[generic(1), g(), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Nymph], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        bestow: Some(cost(&[generic(3), g(), w(), u()])),
+        equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, keywords: vec![] }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}

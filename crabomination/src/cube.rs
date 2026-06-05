@@ -342,8 +342,9 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
-        // ── modern_decks: energy O-Ring ──
+        // ── modern_decks: energy O-Ring + card-advantage vehicle ──
         static_prison,
+        shorikai_genesis_engine,
         // ── claude/modern_decks: Extort (CR 702.99) ──
         syndic_of_tithes,
         // ── claude/modern_decks: white value/keyword bodies ──
@@ -1469,6 +1470,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         icetill_explorer,
         mightform_harmonizer,
         springleaf_parade,
+        kestia_the_cultivator,
         // ── claude/modern_decks: deathtouch body ──
         gnarlwood_dryad,
         gladecover_scout,
