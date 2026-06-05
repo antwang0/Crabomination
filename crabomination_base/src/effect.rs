@@ -665,6 +665,12 @@ pub enum Predicate {
     /// Exalted reminder ("Whenever a creature you control attacks
     /// alone, that creature gets +1/+1 until end of turn").
     AttackingAlone,
+    /// True when at least `n` creatures are attacking this combat. Powers
+    /// the Battalion ability word ("Whenever this creature and at least two
+    /// other creatures attack" → `n == 3`). Read from
+    /// `GameState.attacking.len() >= n`; `false` outside a combat with
+    /// declared attackers.
+    AttackingWithAtLeast(u32),
     /// CR 700.4-ish — **Delirium**: `who`'s graveyard holds cards of at
     /// least 4 distinct card types (the count of *types*, not cards). Backed
     /// by scanning the graveyard's `definition.card_types`. Used by Unholy
@@ -4081,6 +4087,17 @@ pub mod shortcut {
                 toughness: Value::Const(1),
                 duration: Duration::EndOfTurn,
             },
+        }
+    }
+
+    /// Battalion shortcut (ability word): "Whenever this creature and at
+    /// least two other creatures attack, `body`." An `Attacks / SelfSource`
+    /// trigger gated on `Predicate::AttackingWithAtLeast(3)`.
+    pub fn battalion(body: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                .with_filter(Predicate::AttackingWithAtLeast(3)),
+            effect: body,
         }
     }
 

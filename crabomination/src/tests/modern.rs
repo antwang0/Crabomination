@@ -28050,6 +28050,117 @@ fn gravestorm_ominous_harvest_copies_per_dead_permanent() {
     assert_eq!(g.players[1].life, life_before - 3, "original + 2 copies each lose 1");
 }
 
+#[test]
+fn knight_exemplar_buffs_and_protects_other_knights() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::knight_exemplar());
+    let pal = g.add_card_to_battlefield(0, catalog::silverblade_paladin()); // 2/2 Human Knight
+    let c = g.computed_permanent(pal).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "other Knight gets +1/+1");
+    assert!(g.computed_permanent(pal).unwrap().keywords.contains(&Keyword::Indestructible),
+        "other Knight gains indestructible");
+}
+
+#[test]
+fn archangel_of_thune_counters_each_creature_on_lifegain() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archangel_of_thune());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Gain life via Faithful Mending mode 2 (Draw 2 + GainLife 2).
+    let mending = g.add_card_to_hand(0, catalog::faithful_mending());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mending, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Faithful Mending castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "lifegain puts a +1/+1 counter on each creature you control");
+}
+
+#[test]
+fn wingmate_roc_raid_makes_token_and_gains_life_on_attack() {
+    let mut g = two_player_game();
+    // Attack first so Raid is on.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    // Now resolve the Roc's ETB with Raid satisfied → makes a Bird token.
+    g.step = TurnStep::PostCombatMain;
+    let roc = g.add_card_to_hand(0, catalog::wingmate_roc());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    cast(&mut g, roc);
+    drain_stack(&mut g);
+    let birds = g.battlefield.iter().filter(|c| c.definition.name == "Bird").count();
+    assert_eq!(birds, 1, "Raid creates a Bird token");
+}
+
+#[test]
+fn boros_elite_battalion_pumps_with_two_other_attackers() {
+    let mut g = two_player_game();
+    let elite = g.add_card_to_battlefield(0, catalog::boros_elite());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [elite, a, b] { g.clear_sickness(id); }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: elite, target: AttackTarget::Player(1) },
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("attack with three");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elite).unwrap().power(), 3, "Battalion pumps +2/+2 → 3 power");
+}
+
+#[test]
+fn boros_elite_battalion_silent_attacking_alone() {
+    let mut g = two_player_game();
+    let elite = g.add_card_to_battlefield(0, catalog::boros_elite());
+    g.clear_sickness(elite);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: elite, target: AttackTarget::Player(1),
+    }])).expect("attack alone");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elite).unwrap().power(), 1, "no Battalion when attacking alone");
+}
+
+#[test]
+fn brimaz_makes_attacking_cat_token() {
+    let mut g = two_player_game();
+    let brimaz = g.add_card_to_battlefield(0, catalog::brimaz_king_of_oreskos());
+    g.clear_sickness(brimaz);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: brimaz, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let cat = g.battlefield.iter().find(|c| c.definition.name == "Cat Soldier").expect("cat token");
+    assert!(g.attacking.iter().any(|a| a.attacker == cat.id), "Cat token enters attacking");
+}
+
+#[test]
+fn adeline_power_scales_with_creatures() {
+    let mut g = two_player_game();
+    let adeline = g.add_card_to_battlefield(0, catalog::adeline_resplendent_cathar());
+    // Adeline alone counts herself → power 1.
+    assert_eq!(g.computed_permanent(adeline).unwrap().power, 1, "power = 1 creature (herself)");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(adeline).unwrap().power, 3, "power = 3 creatures you control");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

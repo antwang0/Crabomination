@@ -387,6 +387,13 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: white value/aggro creatures ──
+        knight_exemplar,
+        archangel_of_thune,
+        wingmate_roc,
+        boros_elite,
+        brimaz_king_of_oreskos,
+        adeline_resplendent_cathar,
         // ── Soulshift (CR 702.46) ──
         hundred_talon_kami,
         // ── Soulbond (CR 702.95) ──

@@ -6820,6 +6820,197 @@ pub fn hero_of_bladehold() -> CardDefinition {
     }
 }
 
+fn white_token(name: &'static str, p: i32, t: i32, types: Vec<CreatureType>,
+    keywords: Vec<Keyword>) -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: name.into(),
+        power: p,
+        toughness: t,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        keywords,
+        ..Default::default()
+    }
+}
+
+/// Knight Exemplar — {1}{W}{W} 2/2 Human Knight, First strike. Other Knights
+/// you control get +1/+1 and have indestructible. (M11)
+pub fn knight_exemplar() -> CardDefinition {
+    let other_knights = || Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::HasCreatureType(CreatureType::Knight))
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Knight Exemplar",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Knights you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: other_knights(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Knights you control have indestructible.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: other_knights(),
+                    keyword: Keyword::Indestructible,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Archangel of Thune — {3}{W}{W} 3/4 Angel, Flying + Lifelink. Whenever you
+/// gain life, put a +1/+1 counter on each creature you control. (M14)
+pub fn archangel_of_thune() -> CardDefinition {
+    CardDefinition {
+        name: "Archangel of Thune",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wingmate Roc — {3}{W}{W} 3/4 Bird, Flying. Raid: ETB if you attacked this
+/// turn, create a 3/4 white Bird with flying. Whenever it attacks, gain 1
+/// life for each attacking creature. (KTK)
+pub fn wingmate_roc() -> CardDefinition {
+    CardDefinition {
+        name: "Wingmate Roc",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            crate::effect::shortcut::raid_etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: white_token("Bird", 3, 4, vec![CreatureType::Bird], vec![Keyword::Flying]),
+            }),
+            crate::effect::shortcut::on_attack(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::IsAttacking,
+                ))),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Boros Elite — {W} 1/1 Human Soldier. Battalion — whenever this and at
+/// least two other creatures attack, it gets +2/+2 until end of turn. (GTC)
+pub fn boros_elite() -> CardDefinition {
+    CardDefinition {
+        name: "Boros Elite",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::battalion(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: crate::effect::Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Brimaz, King of Oreskos — {1}{W}{W} 3/4 Legendary Cat Soldier, Vigilance.
+/// Whenever Brimaz attacks, create a 1/1 white Cat Soldier with vigilance
+/// that's attacking. (The "blocks → blocking token" half is dropped — no
+/// create-blocking-token primitive.) (BNG)
+pub fn brimaz_king_of_oreskos() -> CardDefinition {
+    CardDefinition {
+        name: "Brimaz, King of Oreskos",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: white_token("Cat Soldier", 1, 1,
+                vec![CreatureType::Cat, CreatureType::Soldier], vec![Keyword::Vigilance]),
+            cleanup: Default::default(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Adeline, Resplendent Cathar — {1}{W}{W} */4 Legendary Human Knight,
+/// Vigilance. Her power equals the number of creatures you control. Whenever
+/// she attacks, create a 1/1 white Human tapped and attacking (modeled per
+/// the active opponent; the per-opponent fan-out collapses to one). (MID)
+pub fn adeline_resplendent_cathar() -> CardDefinition {
+    CardDefinition {
+        name: "Adeline, Resplendent Cathar",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Adeline's power is equal to the number of creatures you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: white_token("Human", 1, 1, vec![CreatureType::Human], vec![]),
+            cleanup: Default::default(),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Mirran Crusader — {1}{W}{W} Creature — Human Knight 2/2 with Double strike,
 /// protection from black, and protection from green. (MBS)
 pub fn mirran_crusader() -> CardDefinition {
