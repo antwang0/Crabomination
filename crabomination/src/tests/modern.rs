@@ -26237,7 +26237,8 @@ fn floodfarm_verge_blue_gated_on_plains_or_island() {
 
 #[test]
 fn new_talismans_tap_for_colorless_and_their_two_colors() {
-    let cases: &[(fn() -> crate::card::CardDefinition, Color, Color)] = &[
+    type TwoColorCase = (fn() -> crate::card::CardDefinition, Color, Color);
+    let cases: &[TwoColorCase] = &[
         (catalog::talisman_of_hierarchy, Color::White, Color::Black),
         (catalog::talisman_of_indulgence, Color::Black, Color::Red),
         (catalog::talisman_of_resilience, Color::Black, Color::Green),
@@ -26271,7 +26272,8 @@ fn new_talismans_tap_for_colorless_and_their_two_colors() {
 
 #[test]
 fn signets_pay_one_and_tap_for_their_two_colors() {
-    let cases: &[(fn() -> crate::card::CardDefinition, Color, Color)] = &[
+    type TwoColorCase = (fn() -> crate::card::CardDefinition, Color, Color);
+    let cases: &[TwoColorCase] = &[
         (catalog::azorius_signet, Color::White, Color::Blue),
         (catalog::dimir_signet, Color::Blue, Color::Black),
         (catalog::rakdos_signet, Color::Black, Color::Red),

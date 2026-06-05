@@ -6622,7 +6622,8 @@ fn branchloft_pathway_front_and_back_faces() {
 fn pathway_cycle_faces_tap_for_their_colors() {
     // Spot-check the rest of the pathway cycle: front color via PlayLand,
     // back color via PlayLandBack.
-    let cases: &[(fn() -> crate::card::CardDefinition, Color, &str, Color)] = &[
+    type PathwayCase = (fn() -> crate::card::CardDefinition, Color, &'static str, Color);
+    let cases: &[PathwayCase] = &[
         (catalog::hengegate_pathway, Color::White, "Mistgate Pathway", Color::Blue),
         (catalog::riverglide_pathway, Color::Blue, "Lavaglide Pathway", Color::Red),
         (catalog::barkchannel_pathway, Color::Green, "Tidechannel Pathway", Color::Blue),

@@ -16,6 +16,19 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `oracle_cards` bulk and merges, preserving curated entries). Remaining card
   work: land monarch / Ascend / day-night payoff cards (the engine now
   supports all three) plus the long tail in `CUBE_FEATURES.md`.
+- **Energy abilities as real costs.** `{E}{E}{E}: +1/+1` payoffs (Longtusk
+  Cub, Bristling Hydra via `pay_energy_counter`) currently model the energy
+  as an `Effect::PayEnergy` paid *at resolution* with `energy_cost: 0`, so
+  they're technically activatable with no energy (the resolve no-ops). Now
+  that `ActivatedAbility.energy_cost` exists, convert these to a true cost
+  (gated up front), and teach the bot's `pick_energy_payoff` to recognise
+  `energy_cost`-bearing abilities (it matches `Effect::PayEnergy` today).
+
+- **Energy-pay-to-cast-from-exile (Amped Raptor).** Needs a `MayPlay
+  Permission` alt-cost slot ("cast without paying mana cost by paying {E}{E}")
+  + a cast-from-exile path that substitutes the energy cost. Pairs with the
+  existing `ExileTopAndGrantMayPlay` primitive.
+
 - **Additional combat phase — main-phase variant (CR 505.1b).** The
   combat-phase loop ships (`Effect::AdditionalCombatPhase` +
   `GameState.additional_combat_phases`; Hellkite Charger-style combat-only
@@ -42,9 +55,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   whenever the global day/night designation is set. Remaining: surface
   monarch on *opponents'* rows too (the chip row only renders the viewer
   today) and a board-center day/night ambient cue.
-- **Energy-pay-to-cast-from-exile** (Amped Raptor's omitted clause): a "may
-  play this exiled card this turn by paying {E} instead of its mana cost"
-  permission. Would also serve other energy-impulse cards.
 
 - **Block-restriction follow-ups (CR 509.1b).** The `CantBeBlockedExceptBy`
   filter matcher (`blocker_matches_block_filter`) covers type/color/keyword/
