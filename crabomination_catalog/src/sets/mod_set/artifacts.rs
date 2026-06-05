@@ -684,6 +684,20 @@ pub fn fellwar_stone() -> CardDefinition {
     }
 }
 
+/// Star Compass — {2} Artifact. Enters tapped. "{T}: Add one mana of any color
+/// that a basic land you control could produce" — the controller-side mirror
+/// of Fellwar Stone via `ManaPayload::AnyColorYouCouldProduce`.
+pub fn star_compass() -> CardDefinition {
+    CardDefinition {
+        name: "Star Compass",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![enters_tapped_trigger()],
+        activated_abilities: vec![tap_for(ManaPayload::AnyColorYouCouldProduce)],
+        ..Default::default()
+    }
+}
+
 // ── Monument to Endurance ──────────────────────────────────────────────────
 
 /// Monument to Endurance — {3} Artifact. {2}, {T}: Target creature gets

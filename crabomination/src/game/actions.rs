@@ -355,7 +355,8 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         ManaPayload::AnyOneColor(_)
         | ManaPayload::AnyColors(_)
         | ManaPayload::DevotionOfChosenColor
-        | ManaPayload::AnyColorOpponentCouldProduce => true,
+        | ManaPayload::AnyColorOpponentCouldProduce
+        | ManaPayload::AnyColorYouCouldProduce => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
         ManaPayload::OfColors(cs, _) => cs.len() > 1,
         ManaPayload::OfColor(_, _)
@@ -623,7 +624,8 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             ManaPayload::Colors(cs) => cs.contains(&color),
             ManaPayload::AnyOneColor(_)
             | ManaPayload::AnyColors(_)
-            | ManaPayload::AnyColorOpponentCouldProduce => true,
+            | ManaPayload::AnyColorOpponentCouldProduce
+            | ManaPayload::AnyColorYouCouldProduce => true,
             // Devotion-scaled: it can make `color`, but only the controller
             // should choose to tap it (devotion may be 0). Not auto-tapped.
             ManaPayload::DevotionOfChosenColor => false,

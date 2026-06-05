@@ -14452,6 +14452,39 @@ fn fellwar_stone_unions_colors_across_multiple_opp_lands() {
         "Exactly one of Blue/Green gained 1");
 }
 
+/// Star Compass taps for a color one of the controller's own basic lands
+/// could produce (mirror of Fellwar Stone).
+#[test]
+fn star_compass_taps_for_your_basic_land_color() {
+    let mut g = two_player_game();
+    let compass = g.add_card_to_battlefield(0, catalog::star_compass());
+    g.battlefield_find_mut(compass).unwrap().summoning_sick = false;
+    // You control a Mountain → Red is the only legal color.
+    g.add_card_to_battlefield(0, catalog::mountain());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: compass, ability_index: 0, target: None, x_value: None })
+    .expect("Star Compass mana ability resolves");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.amount(Color::Red), 1, "produced red from your Mountain");
+    assert_eq!(pool.total(), 1);
+}
+
+/// Star Compass falls back to colorless when you control no basic-typed land.
+#[test]
+fn star_compass_falls_back_to_colorless() {
+    let mut g = two_player_game();
+    let compass = g.add_card_to_battlefield(0, catalog::star_compass());
+    g.battlefield_find_mut(compass).unwrap().summoning_sick = false;
+    // Opp's Island shouldn't count — only the controller's own lands do.
+    g.add_card_to_battlefield(1, catalog::island());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: compass, ability_index: 0, target: None, x_value: None })
+    .expect("Star Compass activates with no basic land you control");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.total(), 1);
+    assert_eq!(pool.amount(Color::Blue), 0, "opp's Island doesn't feed Star Compass");
+}
+
 /// Grim Lavamancer's `{R}, {T}, Exile two cards from your gy:` deals
 /// 2 damage to any target. Push (batch 114): the exile-two cost is
 /// now wired faithfully via the extended `exile_other_filter:

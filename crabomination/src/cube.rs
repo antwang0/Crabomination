@@ -236,13 +236,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         ornithopter_of_paradise,
         mind_stone,
         coldsteel_heart,
-        // fellwar_stone is 🟡 — "matches opponent's lands" restriction
-        // collapses to plain `AnyOneColor` (so it's strictly Fellwar-
-        // equivalent against rainbow lands and slightly stronger against
-        // mono-color pools). Activated for the cube pool — the body's
-        // 2-mana mana rock + tap-for-any payoff still pays out in real
-        // games and is the gameplay-relevant attribute.
+        // fellwar_stone / star_compass read the relevant side's basic-land
+        // types via `AnyColorOpponentCouldProduce` / `AnyColorYouCouldProduce`.
         fellwar_stone,
+        star_compass,
         millstone,
         aether_spellbomb,
         nihil_spellbomb,
