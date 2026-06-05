@@ -8938,6 +8938,47 @@ fn disfigure_kills_a_two_two_via_minus_two_minus_two() {
 }
 
 #[test]
+fn palace_sentinels_makes_you_monarch() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::palace_sentinels());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.monarch, Some(0), "ETB makes you the monarch");
+}
+
+#[test]
+fn knight_of_the_white_orchid_ramps_when_behind_on_lands() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Opponent controls more lands than you (you: 0, opp: 1).
+    g.add_card_to_battlefield(1, catalog::island());
+    let plains = g.add_card_to_library(0, catalog::plains());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(plains)),
+    ]));
+    let id = g.add_card_to_battlefield(0, catalog::knight_of_the_white_orchid());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == plains), "tutored a Plains to the battlefield");
+}
+
+#[test]
+fn adanto_vanguard_gets_plus_two_zero_while_attacking() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::adanto_vanguard());
+    g.clear_sickness(id);
+    // Not attacking: base 1/1.
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((3, 1)),
+        "+2/+0 while attacking");
+}
+
+#[test]
 fn cloud_of_faeries_untaps_two_lands_on_etb() {
     let mut g = two_player_game();
     let l1 = g.add_card_to_battlefield(0, catalog::island());

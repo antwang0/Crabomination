@@ -8615,6 +8615,99 @@ pub fn wee_dragonauts() -> CardDefinition {
     }
 }
 
+/// Palace Sentinels — {3}{W} Creature — Human Soldier 2/4. When it enters, you
+/// become the monarch (CR 724).
+pub fn palace_sentinels() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Palace Sentinels",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::BecomeMonarch { who: PlayerRef::You })],
+        ..Default::default()
+    }
+}
+
+/// Knight of the White Orchid — {W}{W} Creature — Human Knight 2/2. First
+/// strike. When it enters, if an opponent controls more lands than you, you
+/// may search your library for a Plains and put it onto the battlefield.
+pub fn knight_of_the_white_orchid() -> CardDefinition {
+    use crate::card::LandType;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Knight of the White Orchid",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::OpponentControlsMoreLandsThanYou,
+            then: Box::new(Effect::MayDo {
+                description: "Search for a Plains".into(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land
+                        .and(SelectionRequirement::HasLandType(LandType::Plains)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Adanto Vanguard — {1}{W} Creature — Vampire Soldier 1/1. As long as it's
+/// attacking, it gets +2/+0. "Pay 4 life: gains indestructible until EOT."
+pub fn adanto_vanguard() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Adanto Vanguard",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is attacking, it gets +2/+0.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsAttacking,
+                },
+                power: 2,
+                toughness: 0,
+                keyword: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 4,
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Selfless Spirit — {1}{W} Creature — Spirit, 2/1, Flying. "Sacrifice
 /// this: creatures you control gain indestructible until end of turn."
 pub fn selfless_spirit() -> CardDefinition {

@@ -368,6 +368,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         syndic_of_tithes,
         // ── Backup that grants a triggered ability (CR 702.164) ──
         bola_slinger,
+        // ── white value/aggro bodies ──
+        palace_sentinels,
+        knight_of_the_white_orchid,
+        adanto_vanguard,
         // ── claude/modern_decks: white value/keyword bodies ──
         kor_skyfisher,
         whitemane_lion,
