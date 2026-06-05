@@ -11615,6 +11615,64 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
     }
 }
 
+/// Spikeshot Goblin — {2}{R} Creature — Goblin 1/2. `{R}, {T}: deals damage
+/// equal to its power to any target.`
+pub fn spikeshot_goblin() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Spikeshot Goblin",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[r()]),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zealous Conscripts — {4}{R} Creature — Human Warrior 3/3. Haste. When it
+/// enters, gain control of target permanent until end of turn, untap it, and
+/// it gains haste until end of turn.
+pub fn zealous_conscripts() -> CardDefinition {
+    use crate::effect::shortcut::{etb, target_filtered};
+    CardDefinition {
+        name: "Zealous Conscripts",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Permanent),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Master of Cruelties — {2}{B}{R} Legendary Creature — Demon. 1/4 First
 /// Strike, Deathtouch. "Master of Cruelties can attack only alone.
 /// Whenever Master of Cruelties attacks a player, that player's life

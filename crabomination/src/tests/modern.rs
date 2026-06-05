@@ -8938,6 +8938,34 @@ fn disfigure_kills_a_two_two_via_minus_two_minus_two() {
 }
 
 #[test]
+fn spikeshot_goblin_pings_for_its_power() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spikeshot_goblin());
+    g.clear_sickness(id);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(victim).unwrap().damage, 1, "deals damage equal to its power (1)");
+}
+
+#[test]
+fn zealous_conscripts_steals_and_untaps_a_permanent() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let enemy = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(enemy).unwrap().tapped = true;
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Target(Target::Permanent(enemy))]));
+    let id = g.add_card_to_battlefield(0, catalog::zealous_conscripts());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(enemy).unwrap().controller, 0, "gained control");
+    assert!(!g.battlefield_find(enemy).unwrap().tapped, "untapped the stolen permanent");
+}
+
+#[test]
 fn palace_sentinels_makes_you_monarch() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::palace_sentinels());
