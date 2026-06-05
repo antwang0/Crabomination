@@ -8938,6 +8938,16 @@ fn disfigure_kills_a_two_two_via_minus_two_minus_two() {
 }
 
 #[test]
+fn pia_nalaar_etb_makes_a_thopter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pia_nalaar());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Thopter" && c.controller == 0),
+        "ETB mints a 1/1 Thopter");
+}
+
+#[test]
 fn spikeshot_goblin_pings_for_its_power() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::spikeshot_goblin());

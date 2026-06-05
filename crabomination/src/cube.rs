@@ -1421,6 +1421,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         dragonmaster_outcast,
         spikeshot_goblin,
         zealous_conscripts,
+        pia_nalaar,
         monastery_swiftspear,
         // ── modern_decks-18 ──
         chain_lightning,

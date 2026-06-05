@@ -11702,6 +11702,63 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
     }
 }
 
+/// Pia Nalaar — {2}{R} Legendary Creature — Human Artificer 2/2. ETB creates a
+/// 1/1 Thopter (flying). `{1}{R}: target artifact creature gets +1/+0 EOT.`
+/// `{1}, Sacrifice an artifact: target creature can't block this turn.`
+pub fn pia_nalaar() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Supertype, TokenDefinition};
+    use crate::effect::shortcut::{etb, target_filtered};
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Pia Nalaar",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You, count: Value::Const(1), definition: thopter,
+        })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1), r()]),
+                effect: Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::Creature),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::CantBlock,
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Spikeshot Goblin — {2}{R} Creature — Goblin 1/2. `{R}, {T}: deals damage
 /// equal to its power to any target.`
 pub fn spikeshot_goblin() -> CardDefinition {
