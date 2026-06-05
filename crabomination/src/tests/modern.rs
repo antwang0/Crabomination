@@ -16294,18 +16294,29 @@ fn map_token_sacrifices_to_explore_a_creature() {
 }
 
 #[test]
-fn brightglass_gearhulk_etb_scries_and_draws() {
+fn brightglass_gearhulk_etb_fetches_two_low_mv_permanents() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    for _ in 0..5 {
+    // Two MV-0 artifact creatures (legal fetch targets) + chaff lands.
+    let m1 = g.add_card_to_library(0, catalog::memnite());
+    let m2 = g.add_card_to_library(0, catalog::memnite());
+    for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
     }
+    // Script both tutors (AutoDecider would decline each search).
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Search(Some(m1)),
+        DecisionAnswer::Search(Some(m2)),
+    ]));
     let id = g.add_card_to_hand(0, catalog::brightglass_gearhulk());
-    g.players[0].mana_pool.add_colorless(4);
-    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::White, 2);
     cast(&mut g, id);
-    // -1 cast + 1 draw = 0 net delta on hand.
-    assert_eq!(g.players[0].hand.len(), hand_before);
-    assert!(g.battlefield_find(id).is_some(), "Gearhulk on bf");
+    let r = g.battlefield_find(id).expect("Gearhulk on bf");
+    assert!(r.has_keyword(&Keyword::FirstStrike) && r.has_keyword(&Keyword::Trample));
+    let memnites = g.players[0].hand.iter().filter(|c| c.definition.name == "Memnite").count();
+    assert_eq!(memnites, 2, "ETB tutors up to two MV-≤1 permanents to hand");
 }
 
 #[test]
@@ -26773,4 +26784,26 @@ fn urza_chief_artificer_grants_menace_and_makes_scaling_construct() {
     let c = cp.iter().find(|c| c.id == construct.id).unwrap();
     // Artifacts you control: Memnite + the Construct = 2 → 2/2.
     assert_eq!((c.power, c.toughness), (2, 2), "Construct sized by artifacts controlled");
+}
+
+#[test]
+fn korvold_enters_sacrifices_and_grows_with_draw() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // A spare permanent for Korvold's ETB to sacrifice, plus a card to draw.
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::korvold_fae_cursed_king());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, id);
+    let korvold = g.battlefield_find(id).expect("Korvold on bf");
+    // ETB sacrifices the Forest → +1/+1 counter and a draw.
+    assert_eq!(korvold.counter_count(CounterType::PlusOnePlusOne), 1, "grows on sacrifice");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Forest"), "Forest sacrificed");
+    // -1 cast (Korvold), +1 draw = net same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "sacrifice payoff drew a card");
 }

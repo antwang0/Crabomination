@@ -882,6 +882,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         metamorphosis_fanatic,
         // ── modern_decks: artifacts-matter Esper commander ──
         urza_chief_artificer,
+        // ── modern_decks: Jund sacrifice payoff ──
+        korvold_fae_cursed_king,
         // ── claude/modern_decks: Extort (CR 702.99) ──
         basilica_screecher,
         tithe_drinker,

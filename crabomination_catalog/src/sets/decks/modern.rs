@@ -11189,18 +11189,16 @@ pub fn geyadrone_dihada() -> CardDefinition {
     }
 }
 
-/// Korvold, Fae-Cursed King — {2}{B}{R}{G} Legendary Creature — Dragon
-/// Noble. 4/4 Flying. "Whenever you sacrifice a permanent, put a +1/+1
-/// counter on this and draw a card."
-///
-/// Wired against the new `EventKind::PermanentSacrificed / YourControl`
-/// trigger (CR 701.16 — shipped alongside this card in batch 102).
-/// The engine's sacrifice resolver now emits a `PermanentSacrificed`
-/// event for every sacrifice regardless of card type, so Korvold's
-/// trigger catches Treasure-sac / Clue-sac / Food-sac / land-sac /
-/// creature-sac uniformly.
+/// Korvold, Fae-Cursed King — {2}{B}{R}{G} Legendary 4/4 Dragon Noble. Flying.
+/// Whenever Korvold enters or attacks, sacrifice another permanent. Whenever
+/// you sacrifice a permanent, put a +1/+1 counter on Korvold and draw a card.
 pub fn korvold_fae_cursed_king() -> CardDefinition {
     use crate::card::{CounterType, Supertype as Sup};
+    let sac_another = Effect::Sacrifice {
+        who: Selector::You,
+        count: Value::Const(1),
+        filter: SelectionRequirement::Permanent.and(SelectionRequirement::OtherThanSource),
+    };
     CardDefinition {
         name: "Korvold, Fae-Cursed King",
         cost: cost(&[generic(2), b(), r(), g()]),
@@ -11213,23 +11211,27 @@ pub fn korvold_fae_cursed_king() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::PermanentSacrificed,
-                EventScope::YourControl,
-            ),
-            effect: Effect::Seq(vec![
-                Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: sac_another.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: sac_another,
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl),
+                effect: Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            },
+        ],
         ..Default::default()
     }
 }
@@ -12679,16 +12681,24 @@ pub fn loot_the_pathfinder() -> CardDefinition {
     }
 }
 
-/// Brightglass Gearhulk — {4} Artifact Creature — Construct. 4/4.
-/// "When this creature enters, scry 2, then draw a card."
-///
-/// Synthesised body for the ⏳ cube row. A vanilla 4-mana colorless
-/// big-body cantripping artifact creature.
+/// Brightglass Gearhulk — {G}{G}{W}{W} Artifact Creature — Construct 4/4.
+/// First strike, trample. ETB: search for up to two artifact/creature/
+/// enchantment cards with mana value 1 or less, put them into your hand.
 pub fn brightglass_gearhulk() -> CardDefinition {
     use crate::effect::shortcut::etb;
+    let low_mv_permanent = SelectionRequirement::ManaValueAtMost(1).and(
+        SelectionRequirement::Artifact
+            .or(SelectionRequirement::Creature)
+            .or(SelectionRequirement::Enchantment),
+    );
+    let fetch = Effect::Search {
+        who: PlayerRef::You,
+        filter: low_mv_permanent,
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
     CardDefinition {
         name: "Brightglass Gearhulk",
-        cost: cost(&[generic(4)]),
+        cost: cost(&[g(), g(), w(), w()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Construct],
@@ -12696,16 +12706,9 @@ pub fn brightglass_gearhulk() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]))],
+        keywords: vec![Keyword::FirstStrike, Keyword::Trample],
+        // "Up to two" — two independent (optional) tutors to hand.
+        triggered_abilities: vec![etb(Effect::Seq(vec![fetch.clone(), fetch]))],
         ..Default::default()
     }
 }
