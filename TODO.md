@@ -530,6 +530,27 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   granting the source's *triggered* abilities (not just keywords) to a
   backed-up other creature.
 
+- 🟡 **CR 303 — Auras** (claude/modern_decks). "Enchanted permanent" is now a
+  queryable state: `SelectionRequirement::IsEnchanted` scans for an enchantment
+  whose `attached_to` points at the candidate (Equipment excluded). Drives
+  Kestia's board-wide "enchanted/enchantment creature attacks" trigger and the
+  `attachments` projection in `PermanentView`. An Aura's "when this leaves,
+  affect the enchanted creature" trigger reads the host via `AttachedTo` +
+  last-known-info (Parallax Dementia — destroy-on-leave). Tests: `kestia_*`,
+  `parallax_dementia_*`. Remaining: replacement-style Aura ETB (enters
+  attached to a chosen permanent under another rule), bestow type-switching
+  corner cases.
+
+- 🟡 **CR 603.10 — Last-Known Information** (claude/modern_decks). `Selector::
+  AttachedTo` now falls back to `died_card_snapshots` when its anchor just left
+  the battlefield, and `remove_to_graveyard_with_triggers` snapshots a leaving
+  permanent before removal so its "when this leaves" triggers resolve against
+  pre-removal state (Parallax Dementia's enchanted-creature reference). SBA
+  death snapshots (`died_card_snapshots`) already covered AnotherOfYours-scope
+  and DealtDamage-LKI; this extends the same cache to the LTB-trigger path.
+  Test: `parallax_dementia_destroys_enchanted_creature_when_it_leaves`.
+  Remaining: full LKI for mid-resolution stack sources (e.g. lifelink 702.15c).
+
 - ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
   batch 142 — audit against `MagicCompRules_20260417.txt` lines
   2922–2939). The "change a word on a card" primitive — Mind Bend,

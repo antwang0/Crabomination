@@ -134,6 +134,15 @@ read of the code and should be re-verified before picking up an item.
   **Exile-all-but-bottom-N** (`Effect::ExileLibraryExceptBottom` — Doomsday
   Excruciator). **Energy O-Ring drawback** (`Effect::PayEnergyOrElse` wired to
   Static Prison's "sacrifice unless you pay {E}").
+  **"Enchanted" state** (`SelectionRequirement::IsEnchanted`, CR 303 — Kestia's
+  board-wide enchanted-attacker trigger; surfaced in `PermanentView.attachments`
+  + client tooltip). **Backup N** (`shortcut::backup(n, keywords)`, CR 702.164 —
+  ETB +N/+N on target + EOT keyword grant; Conclave Sledge-Captain,
+  Death-Greeter's Champion). **First-spell cascade static** (Maelstrom Nexus via
+  `Effect::Cascade { max_mv: ManaValueOf(TriggerSource) }`). **Flurry**
+  (copy-your-second-spell-if-it-targets via `CopySpellMayChooseTargets` else
+  draw — Shiko and Narset). **Aura "when this leaves" → enchanted creature**
+  (`AttachedTo` last-known-info, CR 603.10 — Parallax Dementia's destroy-on-leave).
 
 ---
 
