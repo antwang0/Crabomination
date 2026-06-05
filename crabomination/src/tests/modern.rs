@@ -28161,6 +28161,107 @@ fn adeline_power_scales_with_creatures() {
     assert_eq!(g.computed_permanent(adeline).unwrap().power, 3, "power = 3 creatures you control");
 }
 
+#[test]
+fn pia_and_kiran_make_two_thopters_and_sac_for_damage() {
+    let mut g = two_player_game();
+    let pk = g.add_card_to_hand(0, catalog::pia_and_kiran_nalaar());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    cast(&mut g, pk);
+    drain_stack(&mut g);
+    let thopters: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Thopter").map(|c| c.id).collect();
+    assert_eq!(thopters.len(), 2, "ETB makes two Thopters");
+    // Sacrifice one Thopter to deal 2 to the opponent.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pk, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("activate sac-for-damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "sac an artifact deals 2 to any target");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count(), 1,
+        "one Thopter sacrificed");
+}
+
+#[test]
+fn zo_zu_punishes_land_drops() {
+    let mut g = two_player_game();
+    // Zo-Zu under P1; P0 (active) plays a land → P0 is punished as the
+    // land's controller.
+    g.add_card_to_battlefield(1, catalog::zo_zu_the_punisher());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "Zo-Zu deals 2 to the land's controller");
+}
+
+#[test]
+fn midnight_reaper_draws_and_pings_on_nontoken_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::midnight_reaper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    // Bolt our own bear so the damage→death path dispatches CreatureDied.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[0].life;
+    let lib = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "draw a card on nontoken death");
+    assert_eq!(g.players[0].life, life - 1, "1 damage to you on nontoken death");
+}
+
+#[test]
+fn midnight_reaper_silent_on_token_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::midnight_reaper());
+    // A token creature dying should not trigger Midnight Reaper.
+    let mut tok = catalog::grizzly_bears();
+    tok.name = "Bear Token";
+    let t = g.add_card_to_battlefield(0, tok);
+    g.battlefield_find_mut(t).unwrap().is_token = true;
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[0].life;
+    let lib = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(t)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt token");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "no ping on token death");
+    assert_eq!(g.players[0].library.len(), lib, "no draw on token death");
+}
+
+#[test]
+fn grim_haruspex_draws_on_other_nontoken_death() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let grim = g.add_card_to_battlefield(0, catalog::grim_haruspex());
+    assert!(g.battlefield_find(grim).unwrap().definition.keywords
+        .iter().any(|k| matches!(k, Keyword::Morph(_))), "has Morph");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let lib = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "draw when another nontoken creature dies");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

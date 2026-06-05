@@ -11876,6 +11876,130 @@ pub fn spikeshot_goblin() -> CardDefinition {
     }
 }
 
+/// Pia and Kiran Nalaar — {2}{R}{R} 2/2 Legendary Human Artificer. ETB create
+/// two 1/1 colorless Thopter artifact tokens with flying. `{2}{R}, Sacrifice
+/// an artifact: deal 2 damage to any target.` (ORI)
+pub fn pia_and_kiran_nalaar() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Supertype, TokenDefinition};
+    use crate::effect::shortcut::{etb, target_filtered};
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Pia and Kiran Nalaar",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You, count: Value::Const(2), definition: thopter,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zo-Zu the Punisher — {1}{R}{R} 2/2 Legendary Goblin Warrior. Whenever a
+/// land enters, Zo-Zu deals 2 damage to that land's controller. (CHK)
+pub fn zo_zu_the_punisher() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Zo-Zu the Punisher",
+        cost: cost(&[generic(1), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::AnyPlayer),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Midnight Reaper — {2}{B} 3/2 Zombie Knight. Whenever a nontoken creature
+/// you control dies, Midnight Reaper deals 1 damage to you and you draw a
+/// card. (GRN)
+pub fn midnight_reaper() -> CardDefinition {
+    CardDefinition {
+        name: "Midnight Reaper",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::You), amount: Value::Const(1) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grim Haruspex — {2}{B} 3/2 Human Wizard. Morph {B}. Whenever another
+/// nontoken creature you control dies, draw a card. (KTK)
+pub fn grim_haruspex() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Haruspex",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Morph(cost(&[b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Zealous Conscripts — {4}{R} Creature — Human Warrior 3/3. Haste. When it
 /// enters, gain control of target permanent until end of turn, untap it, and
 /// it gains haste until end of turn.

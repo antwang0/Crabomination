@@ -989,6 +989,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         frenzy_sliver,
         // ── Gravestorm (CR 702.69) ──
         ominous_harvest,
+        // ── modern_decks: black value creatures ──
+        midnight_reaper,
+        grim_haruspex,
         // ── Fabricate (CR 702.122) ──
         weaponcraft_enthusiast,
         // ── combat-damage value body ──
@@ -1284,6 +1287,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: red legends ──
+        pia_and_kiran_nalaar,
+        zo_zu_the_punisher,
         // ── Eternalize (CR 702.91) ──
         earthshaker_khenra,
         // ── aggressive red bodies + burn ──
