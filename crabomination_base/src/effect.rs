@@ -6302,6 +6302,40 @@ pub mod shortcut {
         })
     }
 
+    /// Embalm (CR 702.88) / Eternalize (CR 702.91) — the activated ability:
+    /// "[cost], Exile this card from your graveyard: Create a token that's a
+    /// copy of it, except it's a [white/black] Zombie [with no mana cost
+    /// / and 4/4]. Activate only as a sorcery." Both ride the
+    /// `from_graveyard` + `exile_self_cost` activation path; the token rides
+    /// `CreateTokenCopyOf` with a Zombie type added (color/cost overrides are
+    /// approximated — the copy keeps the original's color).
+    pub fn embalm(cost: crate::mana::ManaCost) -> ActivatedAbility {
+        embalm_like(cost, None)
+    }
+    pub fn eternalize(cost: crate::mana::ManaCost) -> ActivatedAbility {
+        embalm_like(cost, Some((4, 4)))
+    }
+    fn embalm_like(
+        cost: crate::mana::ManaCost,
+        override_pt: Option<(i32, i32)>,
+    ) -> ActivatedAbility {
+        ActivatedAbility {
+            mana_cost: cost,
+            sorcery_speed: true,
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: Selector::This,
+                extra_creature_types: vec![crate::card::CreatureType::Zombie],
+                override_pt,
+                non_legendary: false,
+            },
+            ..Default::default()
+        }
+    }
+
     /// Graft N (CR 702.57) — the trigger half: "Whenever another creature
     /// enters, you may move a +1/+1 counter from this creature onto it."
     /// Pair with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`.

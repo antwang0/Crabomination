@@ -407,6 +407,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         syndic_of_tithes,
         // ── Backup that grants a triggered ability (CR 702.164) ──
         bola_slinger,
+        // ── Embalm / Eternalize (CR 702.88 / 702.91) ──
+        sacred_cat,
+        adorned_pouncer,
+        unwavering_initiate,
+        steadfast_sentinel,
+        sunscourge_champion,
         // ── white value/aggro bodies ──
         palace_sentinels,
         knight_of_the_white_orchid,
@@ -719,6 +725,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Embalm / Eternalize (CR 702.88 / 702.91) ──
+        aven_initiate,
+        proven_combatant,
+        tah_crop_skirmisher,
         // ── Soulbond (CR 702.95) ──
         wingcrafter,
         deadeye_navigator,
@@ -953,6 +963,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Eternalize (CR 702.91) ──
+        dreamstealer,
         // ── Afflict (CR 702.130) ──
         khenra_eternal,
         // ── Fabricate (CR 702.122) ──
@@ -1569,6 +1581,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Embalm (CR 702.88) ──
+        honored_hydra,
+        timeless_witness,
         // ── Soulbond (CR 702.95) ──
         wolfir_silverheart,
         nightshade_peddler,

@@ -3139,10 +3139,19 @@ impl GameState {
                         _ => None,
                     });
                 let Some(src_id) = source_id else { return Ok(()); };
+                // Source def: battlefield first, then graveyard / exile so an
+                // Embalm/Eternalize copy (CR 702.88/702.91) can be minted off
+                // the card after it's been exiled as the activation cost.
                 let source_def = self
                     .battlefield
                     .iter()
                     .find(|c| c.id == src_id)
+                    .or_else(|| self.exile.iter().find(|c| c.id == src_id))
+                    .or_else(|| {
+                        self.players
+                            .iter()
+                            .find_map(|pl| pl.graveyard.iter().find(|c| c.id == src_id))
+                    })
                     .map(|c| (*c.definition).clone());
                 let Some(mut def) = source_def else { return Ok(()); };
                 // Apply extra creature types & P/T override.

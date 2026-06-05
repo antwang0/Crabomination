@@ -56,6 +56,9 @@ mod tests_energy;
 #[cfg(test)]
 #[path = "../tests/ktk.rs"]
 mod tests_ktk;
+#[cfg(test)]
+#[path = "../tests/akh.rs"]
+mod tests_akh;
 pub mod types;
 
 #[cfg(test)]

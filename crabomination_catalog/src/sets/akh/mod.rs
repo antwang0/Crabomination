@@ -1,0 +1,145 @@
+//! Amonkhet block (AKH / HOU) cards.
+//!
+//! Showcases Embalm (CR 702.88) and Eternalize (CR 702.91) via
+//! `shortcut::embalm` / `shortcut::eternalize`: exile the card from your
+//! graveyard for the listed cost to mint a token copy (a Zombie; 4/4 for
+//! Eternalize). The token-color override (white/black) is approximated — the
+//! copy keeps the original's color.
+
+use crate::card::{
+    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Subtypes,
+};
+use crate::effect::shortcut::{embalm, eternalize, etb, target_filtered};
+use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
+use crate::mana::{cost, b, g, generic, u, w};
+
+/// Body helper for a vanilla-ish Embalm/Eternalize creature: stats, creature
+/// types, optional keyword, plus the graveyard-activated token-copy ability.
+fn akh_body(
+    name: &'static str,
+    c: crate::mana::ManaCost,
+    types: Vec<CreatureType>,
+    p: i32,
+    t: i32,
+    keywords: Vec<Keyword>,
+    ability: crate::card::ActivatedAbility,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power: p,
+        toughness: t,
+        keywords,
+        activated_abilities: vec![ability],
+        ..Default::default()
+    }
+}
+
+/// Sacred Cat — {W} 1/1 Cat, Lifelink. Embalm {W}.
+pub fn sacred_cat() -> CardDefinition {
+    akh_body("Sacred Cat", cost(&[w()]), vec![CreatureType::Cat], 1, 1,
+        vec![Keyword::Lifelink], embalm(cost(&[w()])))
+}
+
+/// Adorned Pouncer — {1}{W} 1/1 Cat, Double strike. Eternalize {3}{W}{W}.
+pub fn adorned_pouncer() -> CardDefinition {
+    akh_body("Adorned Pouncer", cost(&[generic(1), w()]), vec![CreatureType::Cat], 1, 1,
+        vec![Keyword::DoubleStrike], eternalize(cost(&[generic(3), w(), w()])))
+}
+
+/// Unwavering Initiate — {2}{W} 3/2 Human Warrior, Vigilance. Embalm {4}{W}.
+pub fn unwavering_initiate() -> CardDefinition {
+    akh_body("Unwavering Initiate", cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Warrior], 3, 2,
+        vec![Keyword::Vigilance], embalm(cost(&[generic(4), w()])))
+}
+
+/// Steadfast Sentinel — {3}{W} 2/3 Human Cleric, Vigilance. Eternalize {4}{W}{W}.
+pub fn steadfast_sentinel() -> CardDefinition {
+    akh_body("Steadfast Sentinel", cost(&[generic(3), w()]),
+        vec![CreatureType::Human, CreatureType::Cleric], 2, 3,
+        vec![Keyword::Vigilance], eternalize(cost(&[generic(4), w(), w()])))
+}
+
+/// Aven Initiate — {3}{U} 3/2 Bird Warrior, Flying. Embalm {6}{U}.
+pub fn aven_initiate() -> CardDefinition {
+    akh_body("Aven Initiate", cost(&[generic(3), u()]),
+        vec![CreatureType::Bird, CreatureType::Warrior], 3, 2,
+        vec![Keyword::Flying], embalm(cost(&[generic(6), u()])))
+}
+
+/// Proven Combatant — {U} 1/1 Human Warrior. Eternalize {4}{U}{U}.
+pub fn proven_combatant() -> CardDefinition {
+    akh_body("Proven Combatant", cost(&[u()]),
+        vec![CreatureType::Human, CreatureType::Warrior], 1, 1,
+        vec![], eternalize(cost(&[generic(4), u(), u()])))
+}
+
+/// Tah-Crop Skirmisher — {1}{U} 2/1 Snake Warrior. Embalm {3}{U}.
+pub fn tah_crop_skirmisher() -> CardDefinition {
+    akh_body("Tah-Crop Skirmisher", cost(&[generic(1), u()]),
+        vec![CreatureType::Snake, CreatureType::Warrior], 2, 1,
+        vec![], embalm(cost(&[generic(3), u()])))
+}
+
+/// Honored Hydra — {5}{G} 6/6 Snake Hydra, Trample. Embalm {3}{G}{G}.
+pub fn honored_hydra() -> CardDefinition {
+    akh_body("Honored Hydra", cost(&[generic(5), g()]),
+        vec![CreatureType::Snake, CreatureType::Hydra], 6, 6,
+        vec![Keyword::Trample], embalm(cost(&[generic(3), g(), g()])))
+}
+
+/// Timeless Witness — {2}{G}{G} 2/1 Human Shaman. ETB: return target card from
+/// your graveyard to hand (Eternal Witness). Embalm {3}{G}{G}.
+pub fn timeless_witness() -> CardDefinition {
+    let mut c = akh_body("Timeless Witness", cost(&[generic(2), g(), g()]),
+        vec![CreatureType::Human, CreatureType::Shaman], 2, 1,
+        vec![], embalm(cost(&[generic(3), g(), g()])));
+    // ETB: return target card from your graveyard to hand (Eternal Witness).
+    c.triggered_abilities = vec![etb(Effect::Move {
+        what: target_filtered(SelectionRequirement::Player.negate()),
+        to: ZoneDest::Hand(PlayerRef::You),
+    })];
+    c
+}
+
+/// Sunscourge Champion — {2}{W} 2/3 Human Wizard. ETB: gain life equal to its
+/// power. Eternalize {3}{W}{W}.
+pub fn sunscourge_champion() -> CardDefinition {
+    let mut c = akh_body("Sunscourge Champion", cost(&[generic(2), w()]),
+        vec![CreatureType::Human, CreatureType::Wizard], 2, 3,
+        vec![], eternalize(cost(&[generic(3), w(), w()])));
+    c.triggered_abilities = vec![etb(Effect::GainLife {
+        who: Selector::You,
+        amount: Value::PowerOf(Box::new(Selector::This)),
+    })];
+    c
+}
+
+/// Dreamstealer — {2}{B} 1/2 Human Wizard, Menace. Eternalize {5}{B}{B}.
+/// (The combat-damage discard rider collapses — the body + Eternalize is the
+/// gameplay-relevant attribute.)
+pub fn dreamstealer() -> CardDefinition {
+    akh_body("Dreamstealer", cost(&[generic(2), b()]),
+        vec![CreatureType::Human, CreatureType::Wizard], 1, 2,
+        vec![Keyword::Menace], eternalize(cost(&[generic(5), b(), b()])))
+}
+
+/// Every AKH factory, for snapshot name→factory registration and the cube.
+pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
+    &[
+        sacred_cat,
+        adorned_pouncer,
+        unwavering_initiate,
+        steadfast_sentinel,
+        aven_initiate,
+        proven_combatant,
+        tah_crop_skirmisher,
+        honored_hydra,
+        timeless_witness,
+        sunscourge_champion,
+        dreamstealer,
+    ]
+}

@@ -335,7 +335,9 @@ feature; sweep card-batch by card-batch.
   ⏳ Impending, ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
   `GameAction::Ninjutsu` — declare-blockers special action that returns an
   unblocked attacker and swaps the ninja in tapped + attacking; Fallen
-  Shinobi), ⏳ Embalm/Eternalize.
+  Shinobi), ✅ Embalm (CR 702.88) / Eternalize (CR 702.91) —
+  `shortcut::embalm` / `eternalize` ride the from-graveyard exile-self
+  activation + `CreateTokenCopyOf` (Zombie type, 4/4 for Eternalize); `sets::akh`.
 - **Counter / +1+1 matters:** ✅ Proliferate (`Effect::Proliferate` —
   reducer-wired + tested in `tests::classic`), ✅ Bolster
   (`shortcut::bolster` — CR 701.21, +N/+N on the controller's
