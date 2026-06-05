@@ -25,7 +25,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Thundertrap Trainer | 🟡 | {1}{U} 1/2; ETB impulse the top four for noncreature/nonland cards (`RevealTopTakeMatchingToHand`). Offspring {4} dropped; "any number" is take-all-matching. |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |

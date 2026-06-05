@@ -13,13 +13,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   "Reconfigure: unattach this (and it becomes a creature again)" mode has no
   action yet — add a `GameAction::Reconfigure { equipment, target: Option<CardId> }`
   (or extend Equip) where `None` detaches, paying the reconfigure cost.
-- **Offspring / Warp / Miracle alt-cast keywords.** Three "cast-mode" keywords
-  surfaced this run and were dropped on their cards: Offspring {N} (Thundertrap
-  Trainer — pay extra to mint a token copy on ETB), Warp (Mightform Harmonizer,
-  Pinnacle Emissary — cast cheaply, exile at end step, recast later — a
-  Suspend/Plot-adjacent exile-and-recast), and Miracle as a real card-castable
-  cost (Metamorphosis Fanatic — only the Lorehold "granted miracle" effect
-  exists today, not a `CardDefinition.miracle_cost` field).
+- **Warp / Miracle alt-cast keywords.** Two "cast-mode" keywords still dropped
+  on their cards: Warp (Mightform Harmonizer, Pinnacle Emissary — cast cheaply,
+  exile at end step, recast later — a Suspend/Plot-adjacent exile-and-recast),
+  and Miracle as a real card-castable cost (Metamorphosis Fanatic — only the
+  Lorehold "granted miracle" effect exists today, not a
+  `CardDefinition.miracle_cost` field). **Offspring {N}** (CR 702.166) now ships
+  via `Keyword::Offspring(cost)` reusing the Kicker pipeline (`has_kicker`
+  returns the cost; `SpellWasKicked` gates an ETB 1/1 token-copy) — Thundertrap
+  Trainer.
 - **Card lookups now work offline.** `scripts/.scryfall_cache.json` has been
   expanded from 332 cards to the full Scryfall oracle set (~35.5k cards, every
   unique card keyed by name, with DFC/adventure front-face aliases), so the

@@ -575,6 +575,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Vanishing(n) => format!("Vanishing {n}"),
         K::Equip(cost) => format!("Equip {}", cost.summary()),
         K::Reconfigure(cost) => format!("Reconfigure {}", cost.summary()),
+        K::Offspring(cost) => format!("Offspring {}", cost.summary()),
         K::CantAttackOrBlockUnlessEvenCounters =>
             "Can't attack or block unless it has an even number of counters".into(),
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).

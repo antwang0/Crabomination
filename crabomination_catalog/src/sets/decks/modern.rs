@@ -13292,13 +13292,10 @@ pub fn amped_raptor() -> CardDefinition {
     }
 }
 
-/// Thundertrap Trainer — {1}{W} Creature — Human Soldier. 2/2. Flash.
-/// "When Thundertrap Trainer enters, tap target creature an opponent
-/// controls." (Synthesised body; ETB tap fully wired.)
-/// Thundertrap Trainer — {1}{U} 1/2. ETB: look at the top four cards, put any
-/// noncreature, nonland cards among them into your hand, rest on the bottom in
-/// a random order. (Offspring {4} is dropped — no Offspring primitive; "any
-/// number" is take-all-matching rather than "up to one".)
+/// Thundertrap Trainer — {1}{U} 1/2 Otter Wizard. Offspring {4} (CR 702.166).
+/// ETB: look at the top four cards, put any noncreature, nonland cards among
+/// them into your hand, rest on the bottom in a random order. ("any number" is
+/// take-all-matching rather than "up to one".)
 pub fn thundertrap_trainer() -> CardDefinition {
     use crate::effect::shortcut::etb;
     CardDefinition {
@@ -13311,11 +13308,26 @@ pub fn thundertrap_trainer() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::RevealTopTakeMatchingToHand {
-            who: PlayerRef::You,
-            count: Value::Const(4),
-            filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
-        })],
+        keywords: vec![Keyword::Offspring(cost(&[generic(4)]))],
+        triggered_abilities: vec![
+            // Offspring (CR 702.166): if its cost was paid, mint a 1/1 copy.
+            etb(Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    override_pt: Some((1, 1)),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+            etb(Effect::RevealTopTakeMatchingToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
+            }),
+        ],
         ..Default::default()
     }
 }

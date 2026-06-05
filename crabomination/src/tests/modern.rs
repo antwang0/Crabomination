@@ -16953,6 +16953,40 @@ fn thundertrap_trainer_etb_takes_noncreature_nonland_from_top_four() {
 }
 
 #[test]
+fn thundertrap_trainer_offspring_mints_one_one_copy() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::thundertrap_trainer());
+    // Base {1}{U} + Offspring {4} = {5}{U}.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast with Offspring paid");
+    drain_stack(&mut g);
+    let copy = g.battlefield.iter().find(|c| c.definition.name == "Thundertrap Trainer" && c.id != id);
+    let copy = copy.expect("Offspring mints a token copy");
+    let cp = g.compute_battlefield();
+    let tok = cp.iter().find(|c| c.id == copy.id).unwrap();
+    assert_eq!((tok.power, tok.toughness), (1, 1), "Offspring token is 1/1");
+}
+
+#[test]
+fn thundertrap_trainer_no_offspring_no_copy() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::thundertrap_trainer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id); // unkicked
+    let copies = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Thundertrap Trainer").count();
+    assert_eq!(copies, 1, "no Offspring paid → no token copy");
+}
+
+#[test]
 fn corpse_dance_reanimates_creature_from_graveyard() {
     let mut g = two_player_game();
     // Put a creature in P0's graveyard.

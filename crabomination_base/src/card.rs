@@ -481,6 +481,11 @@ pub enum Keyword {
     /// creature's own controller. Lovestruck Beast ("can't attack unless you
     /// control a 1/1 creature").
     CanAttackOnlyIfYouControl(Box<SelectionRequirement>),
+    /// CR 702.166 — Offspring [cost]. An optional additional cast cost; if
+    /// paid, the creature's ETB mints a 1/1 token copy of it. Reuses the
+    /// Kicker pipeline (`has_kicker` returns this cost, `SpellWasKicked` gates
+    /// the ETB token-copy). Thundertrap Trainer.
+    Offspring(crate::mana::ManaCost),
     /// "This creature can't attack or block unless it has an even number of
     /// counters on it." (Zero is even.) Enforced in `declare_attackers` and
     /// `declare_blockers` (and the bot/legal-attacker gates) by reading the
@@ -1331,8 +1336,19 @@ impl CardDefinition {
         })
     }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
+        // Offspring (CR 702.166) is an optional additional cast cost that
+        // reuses the Kicker pipeline (pay it → `SpellWasKicked` → ETB mints a
+        // 1/1 token copy). A card carries one or the other, not both.
+        self.keywords.iter().find_map(|kw| match kw {
+            Keyword::Kicker(cost) | Keyword::Offspring(cost) => Some(cost),
+            _ => None,
+        })
+    }
+
+    /// The Offspring cost (CR 702.166), if this card has the keyword.
+    pub fn has_offspring(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
-            if let Keyword::Kicker(cost) = kw { Some(cost) } else { None }
+            if let Keyword::Offspring(cost) = kw { Some(cost) } else { None }
         })
     }
     /// CR 702.35 — the Madness cost if this card has `Keyword::Madness`.
