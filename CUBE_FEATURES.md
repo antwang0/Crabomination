@@ -63,7 +63,7 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
-| Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
+| Sword of Body and Mind | 🟡 | {3} Equipment, Equip {2}; equipped creature gets +2/+2 and protection from green and from blue (via `EquipBonus.keywords`). The combat-damage "create a 2/2 Wolf + mill ten" trigger needs equipment-granted triggered abilities and is dropped. Test: `sword_of_body_and_mind_buffs_and_grants_double_protection`. |
 | Helm of the Host | 🟡 | {4} Legendary Equipment, Equip {5}; begin-combat trigger token-copies the equipped creature (`CreateTokenCopyOf { source: AttachedTo(This) }`) + grants haste. The "token isn't legendary" rider is dropped (copy keeps supertypes — faithful for non-legendary hosts). Test: `helm_of_the_host_copies_equipped_creature_with_haste`. || The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
 
 ### Multicolor

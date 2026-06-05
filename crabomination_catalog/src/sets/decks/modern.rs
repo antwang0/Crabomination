@@ -18555,3 +18555,28 @@ pub fn minds_desire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sword of Body and Mind — {3} Artifact — Equipment. Equipped creature gets
+/// +2/+2 and has protection from green and from blue. Equip {2}. (The "deals
+/// combat damage to a player → create a 2/2 Wolf and that player mills ten"
+/// trigger needs equipment-granted triggered abilities and is dropped.)
+pub fn sword_of_body_and_mind() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Sword of Body and Mind",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Protection(Color::Green), Keyword::Protection(Color::Blue)],
+            scale: None,
+        }),
+        ..Default::default()
+    }
+}

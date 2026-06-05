@@ -27123,3 +27123,17 @@ fn minds_desire_storm_exiles_top_cards_with_free_play() {
     let free = g.exile.iter().filter(|c| c.may_play_until.is_some()).count();
     assert_eq!(free, 2, "Storm exiles top N cards with may-play-free, got {free}");
 }
+
+#[test]
+fn sword_of_body_and_mind_buffs_and_grants_double_protection() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_body_and_mind());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(bear);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 4), "+2/+2 from Sword");
+    assert!(b.keywords.contains(&Keyword::Protection(Color::Green)));
+    assert!(b.keywords.contains(&Keyword::Protection(Color::Blue)));
+}
