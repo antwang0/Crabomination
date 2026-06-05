@@ -1366,6 +1366,31 @@ impl GameState {
             })
             .unwrap_or_default();
 
+        // Phase 1b: equipment-granted combat-damage triggers (CR 702.6e). Each
+        // Equipment attached to the attacker grants its `equipped_bonus.
+        // triggered_abilities` to the creature; a `DealsCombatDamageToPlayer`
+        // one fires here (the Sword cycle's "create a token / mill / draw"
+        // riders), bound to the attacker's controller.
+        if let Some(atk_ctrl) = attacker_controller {
+            for eq in &self.battlefield {
+                if eq.attached_to != Some(source) {
+                    continue;
+                }
+                let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                for t in &bonus.triggered_abilities {
+                    if t.event.kind == EventKind::DealsCombatDamageToPlayer
+                        && matches!(
+                            t.event.scope,
+                            crate::effect::EventScope::SelfSource
+                                | crate::effect::EventScope::AnyPlayer
+                        )
+                    {
+                        triggers.push((source, t.effect.clone(), atk_ctrl));
+                    }
+                }
+            }
+        }
+
         // Phase 1.5: walk all battlefield permanents for `YourControl`-scope
         // combat-damage triggers. This handles "whenever a creature you
         // control deals combat damage to a player" listeners (e.g.,

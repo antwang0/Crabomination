@@ -459,7 +459,7 @@ pub fn baleful_eidolon() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Deathtouch], scale: None }),
+            keywords: vec![Keyword::Deathtouch], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }

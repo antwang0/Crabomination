@@ -12230,7 +12230,7 @@ pub fn gift_of_orzhova() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Flying, Keyword::Lifelink], scale: None }),
+            keywords: vec![Keyword::Flying, Keyword::Lifelink], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }
@@ -12510,7 +12510,7 @@ pub fn rancor() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 0,
-            keywords: vec![Keyword::Trample], scale: None }),
+            keywords: vec![Keyword::Trample], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }
@@ -12613,7 +12613,7 @@ fn simple_aura(
                 filter: SelectionRequirement::Creature,
             },
         },
-        equipped_bonus: Some(crate::card::EquipBonus { power, toughness, keywords, scale: None }),
+        equipped_bonus: Some(crate::card::EquipBonus { power, toughness, keywords, scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }
@@ -14321,7 +14321,7 @@ pub fn lightning_greaves() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 0,
             toughness: 0,
-            keywords: vec![Keyword::Haste, Keyword::Shroud], scale: None }),
+            keywords: vec![Keyword::Haste, Keyword::Shroud], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }
@@ -14346,7 +14346,7 @@ pub fn bonesplitter() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 0,
-            keywords: vec![], scale: None }),
+            keywords: vec![], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }
@@ -14371,7 +14371,7 @@ pub fn shuko() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 0,
-            keywords: vec![], scale: None }),
+            keywords: vec![], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }
@@ -14395,7 +14395,7 @@ pub fn lavaspur_boots() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Haste], scale: None }),
+            keywords: vec![Keyword::Haste], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }
@@ -18019,7 +18019,7 @@ pub fn kestia_the_cultivator() -> CardDefinition {
         power: 4,
         toughness: 4,
         bestow: Some(cost(&[generic(3), g(), w(), u()])),
-        equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, keywords: vec![], scale: None }),
+        equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, keywords: vec![], scale: None, triggered_abilities: vec![] }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -18164,7 +18164,7 @@ pub fn parallax_dementia() -> CardDefinition {
             what: Selector::This,
             to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
         },
-        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 2, keywords: vec![], scale: None }),
+        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 2, keywords: vec![], scale: None, triggered_abilities: vec![] }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
             effect: Effect::DestroyNoRegen {
@@ -18328,8 +18328,7 @@ pub fn nettlecyst() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 1,
                 count_self_counters: None,
-            }),
-        }),
+            }), triggered_abilities: vec![] }),
         // Living weapon (CR 702.91): mint a Germ and attach on ETB.
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
@@ -18406,8 +18405,7 @@ pub fn lion_sash() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 1,
                 count_self_counters: Some(CounterType::PlusOnePlusOne),
-            }),
-        }),
+            }), triggered_abilities: vec![] }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             effect: Effect::Seq(vec![
@@ -18578,11 +18576,20 @@ pub fn minds_desire() -> CardDefinition {
 }
 
 /// Sword of Body and Mind — {3} Artifact — Equipment. Equipped creature gets
-/// +2/+2 and has protection from green and from blue. Equip {2}. (The "deals
-/// combat damage to a player → create a 2/2 Wolf and that player mills ten"
-/// trigger needs equipment-granted triggered abilities and is dropped.)
+/// +2/+2 and has protection from green and from blue. Whenever it deals combat
+/// damage to a player, you create a 2/2 green Wolf and that player mills ten.
+/// Equip {2}.
 pub fn sword_of_body_and_mind() -> CardDefinition {
-    use crate::card::{ArtifactSubtype, EquipBonus};
+    use crate::card::{ArtifactSubtype, EquipBonus, TokenDefinition};
+    let wolf = TokenDefinition {
+        name: "Wolf".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        ..Default::default()
+    };
     CardDefinition {
         name: "Sword of Body and Mind",
         cost: cost(&[generic(3)]),
@@ -18597,6 +18604,13 @@ pub fn sword_of_body_and_mind() -> CardDefinition {
             toughness: 2,
             keywords: vec![Keyword::Protection(Color::Green), Keyword::Protection(Color::Blue)],
             scale: None,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: wolf },
+                    Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(10) },
+                ]),
+            }],
         }),
         ..Default::default()
     }

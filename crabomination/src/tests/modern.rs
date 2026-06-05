@@ -27183,3 +27183,29 @@ fn sword_of_body_and_mind_buffs_and_grants_double_protection() {
     assert!(b.keywords.contains(&Keyword::Protection(Color::Green)));
     assert!(b.keywords.contains(&Keyword::Protection(Color::Blue)));
 }
+
+#[test]
+fn sword_of_body_and_mind_combat_damage_makes_wolf_and_mills() {
+    let mut g = two_player_game();
+    // Shadow → unblockable, so combat damage reaches the player.
+    let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_body_and_mind());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
+    for _ in 0..12 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let opp_gy = g.players[1].graveyard.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[1].graveyard.len() >= opp_gy + 10 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Wolf" && c.controller == 0),
+        "Sword mints a Wolf on combat damage");
+    assert!(g.players[1].graveyard.len() >= opp_gy + 10, "defender milled ten");
+}

@@ -26,7 +26,7 @@ pub fn hopeful_eidolon() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Lifelink], scale: None }),
+            keywords: vec![Keyword::Lifelink], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }

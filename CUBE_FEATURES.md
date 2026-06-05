@@ -62,7 +62,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
-| Sword of Body and Mind | 🟡 | {3} Equipment, Equip {2}; equipped creature gets +2/+2 and protection from green and from blue (via `EquipBonus.keywords`). The combat-damage "create a 2/2 Wolf + mill ten" trigger needs equipment-granted triggered abilities and is dropped. Test: `sword_of_body_and_mind_buffs_and_grants_double_protection`. |
 | Helm of the Host | 🟡 | {4} Legendary Equipment, Equip {5}; begin-combat trigger token-copies the equipped creature (`CreateTokenCopyOf { source: AttachedTo(This) }`) + grants haste. The "token isn't legendary" rider is dropped (copy keeps supertypes — faithful for non-legendary hosts). Test: `helm_of_the_host_copies_equipped_creature_with_haste`. || The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
 
 ### Multicolor
@@ -103,7 +102,7 @@ are listed in `DECK_FEATURES.md`.
 
 | Feature | Status | Cards depending on it |
 |---|---|---|
-| Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus now ships via `EquipBonus.scale` (`EquipScale { filter, per_power, per_toughness }`) — Nettlecyst (living weapon + "+1/+1 per artifact/enchantment you control") ✅. Lion Sash (counter-on-self scaled bonus + Reconfigure), Sword of Body and Mind, Helm of the Host still need counter-scaled / triggered equip bonuses. |
+| Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus ships via `EquipBonus.scale` — Nettlecyst ✅. Equipment-granted triggered abilities ship via `EquipBonus.triggered_abilities` (CR 702.6e; `DealsCombatDamageToPlayer` SelfSource fires off the equipped creature, damaged player bound to `Target(0)`) — Sword of Body and Mind ✅. Remaining: Lion Sash's counter-on-self scaled bonus + Reconfigure, Helm of the Host's continuous copy. |
 | Adventure (cost-mode duality) | ✅ | CR 715 — `CardDefinition.adventure` + `GameAction::CastAdventure`/`CastAdventureCreature`. Virtue of Loyalty (enchantment // instant) ships on it alongside the creature adventures. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
 | Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (Amped Raptor) is still ⏳. |

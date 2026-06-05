@@ -1251,7 +1251,7 @@ pub fn diviners_wand() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 1,
-            keywords: vec![Keyword::Flying], scale: None }),
+            keywords: vec![Keyword::Flying], scale: None, triggered_abilities: vec![] }),
         ..Default::default()
     }
 }

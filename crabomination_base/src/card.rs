@@ -1062,6 +1062,13 @@ pub struct EquipBonus {
     /// enchantment you control"). `None` for the common static-bonus case.
     #[serde(default)]
     pub scale: Option<EquipScale>,
+    /// Triggered abilities granted to the equipped creature (CR 702.6e). Each
+    /// fires as though printed on the equipped creature — `EventScope::
+    /// SelfSource` reads the creature, and a `DealsCombatDamageToPlayer` body
+    /// can refer to the damaged player via `PlayerRef::Target(0)`. The Sword
+    /// cycle's combat-damage triggers. Empty for the common static-bonus case.
+    #[serde(default)]
+    pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
 }
 
 /// Board-count scaling for an [`EquipBonus`] (CR 613 layer 7c). See
