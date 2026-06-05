@@ -22438,6 +22438,37 @@ fn hangarback_walker_makes_thopters_when_it_dies() {
 }
 
 #[test]
+fn cathodion_adds_three_colorless_when_it_dies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::cathodion());
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 3, "dies → add {{C}}{{C}}{{C}}");
+}
+
+#[test]
+fn bottle_gnomes_sacrifices_for_three_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::bottle_gnomes());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("sacrifice for life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "gained 3 life");
+    assert!(g.battlefield_find(id).is_none(), "sacrificed");
+}
+
+#[test]
+fn universal_automaton_is_every_creature_type() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::universal_automaton());
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert!(c.keywords.contains(&crate::card::Keyword::Changeling), "Changeling");
+}
+
+#[test]
 fn sea_gate_oracle_etb_draws_into_hand() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }

@@ -574,6 +574,9 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Fading(n) => format!("Fading {n}"),
         K::Vanishing(n) => format!("Vanishing {n}"),
         K::Equip(cost) => format!("Equip {}", cost.summary()),
+        K::Reconfigure(cost) => format!("Reconfigure {}", cost.summary()),
+        K::CantAttackOrBlockUnlessEvenCounters =>
+            "Can't attack or block unless it has an even number of counters".into(),
         // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
         K::Landwalk(lt) => format!("{lt:?}walk"),
         K::CanAttackOnlyIfDefenderControls(_) => "Conditional attacker".into(),
@@ -908,5 +911,16 @@ mod tests {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");
         }
+    }
+
+    #[test]
+    fn new_keywords_have_printed_labels_not_debug_shape() {
+        use crabomination::card::Keyword;
+        use crabomination::mana::ManaCost;
+        let recon = keyword_label(&Keyword::Reconfigure(ManaCost::default()));
+        assert!(recon.starts_with("Reconfigure"), "got {recon}");
+        let parity = keyword_label(&Keyword::CantAttackOrBlockUnlessEvenCounters);
+        assert!(parity.contains("even number of counters"), "got {parity}");
+        assert!(!parity.contains("CantAttack"), "no raw debug shape: {parity}");
     }
 }

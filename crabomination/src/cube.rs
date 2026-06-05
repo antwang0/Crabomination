@@ -225,6 +225,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── classic colorless core-set bodies (claude/modern_decks) ──
         obsianus_golem,
         yotian_soldier,
+        cathodion,
+        bottle_gnomes,
+        universal_automaton,
         sol_ring,
         ornithopter,
         ornithopter_of_paradise,

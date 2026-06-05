@@ -1163,3 +1163,55 @@ pub fn fountain_of_renewal() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cathodion — {3} Artifact Creature — Construct 3/3. When it dies, add {C}{C}{C}.
+pub fn cathodion() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Cathodion",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(3)) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bottle Gnomes — {3} Artifact Creature — Gnome 1/3. "Sacrifice this: gain 3 life."
+pub fn bottle_gnomes() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Bottle Gnomes",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gnome], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Universal Automaton — {1} Artifact Creature — Shapeshifter 1/1 with Changeling.
+pub fn universal_automaton() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Universal Automaton",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Changeling],
+        ..Default::default()
+    }
+}

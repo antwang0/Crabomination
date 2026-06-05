@@ -104,6 +104,8 @@ pub enum CreatureType {
     Army,
     // Edge-of-Eternities Drone artifact-creature token (Pinnacle Emissary).
     Drone,
+    // Artifact creature subtype (Bottle Gnomes).
+    Gnome,
 }
 
 /// Land subtypes (basic land types + others).
