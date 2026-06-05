@@ -66,8 +66,7 @@ work is listed below.
 |---|---|---|
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
-| Helm of the Host | ⏳ | Equipment that token-copies on attack. |
-| The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
+| Helm of the Host | 🟡 | {4} Legendary Equipment, Equip {5}; begin-combat trigger token-copies the equipped creature (`CreateTokenCopyOf { source: AttachedTo(This) }`) + grants haste. The "token isn't legendary" rider is dropped (copy keeps supertypes — faithful for non-legendary hosts). Test: `helm_of_the_host_copies_equipped_creature_with_haste`. || The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
 
 ### Multicolor
 

@@ -18321,3 +18321,41 @@ pub fn nettlecyst() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Helm of the Host — {4} Legendary Artifact — Equipment. At the beginning of
+/// combat on your turn, create a token copy of equipped creature with haste.
+/// Equip {5}. (The printed "the token isn't legendary" rider is dropped — the
+/// copy keeps the original's supertypes; faithful for non-legendary hosts.)
+pub fn helm_of_the_host() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, Supertype};
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Helm of the Host",
+        cost: cost(&[generic(4)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::AttachedTo(Box::new(Selector::This)),
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedToken,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

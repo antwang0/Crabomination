@@ -313,6 +313,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         stonecoil_serpent,
         // ── modern_decks: living weapon + board-scaled equip bonus ──
         nettlecyst,
+        // ── modern_decks: begin-combat token-copy equipment ──
+        helm_of_the_host,
         // ── Push XXIV (session 8) — colorless cube additions ──
         phyrexian_revoker,
         solemn_simulacrum,

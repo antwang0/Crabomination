@@ -26973,3 +26973,23 @@ fn nettlecyst_living_weapon_scales_germ_by_artifacts_and_enchantments() {
     assert_eq!((g_cp.power, g_cp.toughness), (3, 3),
         "Germ scales +1/+1 per artifact/enchantment you control");
 }
+
+#[test]
+fn helm_of_the_host_copies_equipped_creature_with_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let helm = g.add_card_to_battlefield(0, catalog::helm_of_the_host());
+    g.battlefield_find_mut(helm).unwrap().attached_to = Some(bear);
+    g.active_player_idx = 0;
+    let bears_before = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    // Begin combat → mint a hasty token copy of the equipped Bear.
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let bears_after = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears_after, bears_before + 1, "Helm mints a token copy of the equipped creature");
+    let token = g.battlefield.iter()
+        .find(|c| c.definition.name == "Grizzly Bears" && c.is_token)
+        .expect("token copy exists");
+    assert!(token.has_keyword(&Keyword::Haste), "the copy has haste");
+}
