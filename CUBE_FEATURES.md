@@ -57,7 +57,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
-| Mutable Explorer | ⏳ | Mutate primitive. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |
 

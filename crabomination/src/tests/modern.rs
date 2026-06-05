@@ -26894,3 +26894,22 @@ fn parallax_dementia_destroys_enchanted_creature_when_it_leaves() {
     assert!(g.battlefield_find(aura).is_none(), "aura sacrificed by Fading");
     assert!(g.battlefield_find(bear).is_none(), "enchanted creature destroyed when aura leaves");
 }
+
+#[test]
+fn mutable_explorer_makes_tapped_mutavault_token() {
+    use crate::card::{CardType, Keyword};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mutable_explorer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    // Explorer is a Changeling body.
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Changeling));
+    // ETB minted a tapped Mutavault land token.
+    let mv = g.battlefield.iter()
+        .find(|c| c.definition.name == "Mutavault" && c.controller == 0)
+        .expect("Mutavault token minted");
+    assert!(mv.definition.card_types.contains(&CardType::Land));
+    assert!(mv.tapped, "Mutavault token enters tapped");
+    assert!(mv.is_token);
+}

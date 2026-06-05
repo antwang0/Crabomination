@@ -1473,6 +1473,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: begin-combat counter scaling + Plot ──
         ouroboroid,
+        // ── modern_decks: Changeling + token Mutavault ──
+        mutable_explorer,
         railway_brawler,
         baloth_prime,
         icetill_explorer,

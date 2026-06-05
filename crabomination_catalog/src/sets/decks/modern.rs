@@ -18168,3 +18168,49 @@ pub fn parallax_dementia() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mutable Explorer — {2}{G} Creature — Shapeshifter 1/1. Changeling. When it
+/// enters, create a tapped Mutavault token ({T}: Add {C}; {1}: it becomes a
+/// 2/2 creature with all creature types until end of turn, still a land).
+pub fn mutable_explorer() -> CardDefinition {
+    use crate::card::{ActivatedAbility, TokenDefinition};
+    use crate::effect::shortcut::etb;
+    let animate = ActivatedAbility {
+        mana_cost: cost(&[generic(1)]),
+        effect: Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            creature_types: vec![],
+            keywords: vec![Keyword::Changeling],
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    let mutavault = TokenDefinition {
+        name: "Mutavault".into(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![super::super::tap_add_colorless(), animate],
+        // "Create a tapped Mutavault token" — enter tapped via a self-ETB tap.
+        triggered_abilities: vec![super::super::etb_tap()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mutable Explorer",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Changeling],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: mutavault,
+        })],
+        ..Default::default()
+    }
+}
