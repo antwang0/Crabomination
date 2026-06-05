@@ -1906,55 +1906,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Remaining ⏳: in-place copy (707.4), copied ETB triggers re-firing
   (707.5), MDFC-face copy (707.8), and static copy effects (707.2c).
 
-- ⏳ **CR 709 — Split Cards** (push claude/modern_decks batch 102
-  audit, claude/modern_decks branch — `MagicCompRules_20260417.txt`):
-  The split-card primitive — how a single physical card exposes two
-  castable halves with distinct names, costs, and rules text. Audit:
-  (a) **709.1** — ⏳ (no `Card
-  Definition.split_face: Option<Box<CardDefinition>>` primitive yet;
-  the engine has `back_face: Option<Box<BackFace>>` for MDFCs but
-  that's wired specifically for double-faced cards on the
-  battlefield-flip pipeline, not the cast-from-hand fork that split
-  cards need).
-  (b) **709.2** "Each split card is one card" (a player who drew a
-  split card has drawn one card) — n/a (cards are one entity in the
-  engine's `CardInstance` model; no double-counting to worry about).
-  (c) **709.3** — ⏳ (no `GameAction::CastSplitHalf { card_id, half:
-  Left|Right }` action; no cast-time fork on the spell-cast pipeline
-  that consults the chosen half before validating cost / targets).
-  (d) **709.3a-b** — ⏳ (no per-half target / cost / type-line resolution on
-  `StackItem::Spell`; both halves would share the on-stack item if
-  naively projected).
-  (e) **709.4** — ⏳ (Cathartic Reunion-style "split card has
-  both names" wouldn't work for `Predicate::SameNamedInZoneAtLeast`).
-  (f) **709.4b** "Mana value is from combined cost" (Fire//Ice has
-  MV 4) — ⏳ (the engine would naively read whichever half's cost is
-  stamped on the `CardDefinition.cost` field).
-  (g) **709.4d** —
-  ⏳ (no Fuse primitive — `Keyword::Fuse` doesn't exist).
-  Affected cards (none in catalog today; one approximation):
-  Wear // Tear (push 102 — single-spell approximation: ships as a
-  {1}{R} Sorcery that destroys an artifact OR enchantment, dropping
-  the split fork and the Fuse mode).
-  Tests: `wear_tear_destroys_target_artifact` (single-half
-  approximation only). No CR 709 enforcement tests exist.
-  Suggested wiring (when landed):
-  ```rust
-  pub struct CardDefinition {
-      ...
-      /// Left/right halves. When Some, the cast path forks on
-      /// `GameAction::CastSpell { mode: Some(0 | 1) }` and stamps
-      /// the chosen half's `cost` / `effect` / `target_filter`
-      /// onto the resulting StackItem::Spell.
-      pub split_halves: Option<(Box<CardDefinition>, Box<CardDefinition>)>,
-      /// True if Fuse is wired — both halves resolve in
-      /// fuse-cost order when `mode == Some(2)` is selected.
-      pub fuse: bool,
-  }
-  ```
-  Promote to 🟡 when the cast-time fork lands; promote to ✅ when
-  Wear // Tear ships at full fidelity (both halves castable, Fuse
-  mode wired, target filters per half).
+- ✅ **CR 709 — Split Cards** + **702.102 Fuse** + **702.127 Aftermath**
+  (claude/modern_decks): `CardDefinition.split: Option<Box<SplitCard{ right,
+  fuse, aftermath }>>` — the left half lives on the main definition (cast via
+  the normal `CastSpell` path); the right half is cast via
+  `GameAction::CastSplitRight`. Fuse casts both as one spell
+  (`CastSplitFused`, combined cost; left target rides `target`, right rides
+  `additional_targets[0]`, resolved in a second pass). Aftermath casts the
+  right half from the graveyard (`CastAftermath`) and exiles it on resolution;
+  aftermath halves are rejected from hand. `CardInstance.split_cast` marks the
+  half(s) on the stack. Bot + `splittable_right` affordance + client alt-cast
+  highlight wired. Ships ~23 split cards (Wear // Tear, Fire // Ice, Far //
+  Away, Spring // Mind, Cut // Ribbons, …). Remaining: a client half-picker
+  modal and multi-target fused halves (see "Split-card follow-ups" above).
+  Not modeled: 709.4b combined-MV in non-stack zones (the main definition's
+  cost is read), 709.4 dual-name predicates.
 
 - ✅ **CR 510 — Combat Damage Step** (push modern_decks batch 38; multi-
   blocker damage-split player prompt landed claude/modern_decks — audit
