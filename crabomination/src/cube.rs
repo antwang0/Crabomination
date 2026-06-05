@@ -602,6 +602,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(goldmire_bridge);
         v.push(mortify);
         v.push(silent_clearing);
+        v.push(talisman_of_hierarchy);
         v.push(brightclimb_pathway);
         v.push(bleachbone_verge);
         // ── modern_decks (aura): Gift of Orzhova ──
@@ -1401,6 +1402,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-16 ──
         v.push(kolaghans_command);
         v.push(blazemire_verge);
+        v.push(talisman_of_indulgence);
     }
     if pair_contains(pair, Color::Green) {
         v.push(ghor_clan_rampager);
@@ -1633,6 +1635,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(torsten_founder_of_benalia);
         v.push(horizon_canopy);
         v.push(hushwood_verge);
+        v.push(talisman_of_unity);
         v.push(branchloft_pathway);
         v.push(growing_ranks);
         // ── modern_decks (cascade): Enlisted Wurm (GW cascade) ──
@@ -1656,6 +1659,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-16 ──
         v.push(bloodbraid_elf);
         v.push(thornspire_verge);
+        v.push(talisman_of_impulse);
         v.push(cragcrown_pathway);
     }
     if pair_contains(pair, Color::Blue) {
@@ -1704,6 +1708,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(grim_flayer);
         v.push(grisly_salvage);
         v.push(nurturing_peatland);
+        v.push(talisman_of_resilience);
         v.push(wastewood_verge);
     }
     if pair_contains(pair, Color::Blue) {

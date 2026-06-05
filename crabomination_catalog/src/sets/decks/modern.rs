@@ -2995,6 +2995,31 @@ pub fn talisman_of_curiosity() -> CardDefinition {
     talisman_cycle("Talisman of Curiosity", Color::Green, Color::Blue)
 }
 
+/// Talisman of Hierarchy — {2} Artifact. WB mirror.
+pub fn talisman_of_hierarchy() -> CardDefinition {
+    talisman_cycle("Talisman of Hierarchy", Color::White, Color::Black)
+}
+
+/// Talisman of Indulgence — {2} Artifact. BR mirror.
+pub fn talisman_of_indulgence() -> CardDefinition {
+    talisman_cycle("Talisman of Indulgence", Color::Black, Color::Red)
+}
+
+/// Talisman of Resilience — {2} Artifact. BG mirror.
+pub fn talisman_of_resilience() -> CardDefinition {
+    talisman_cycle("Talisman of Resilience", Color::Black, Color::Green)
+}
+
+/// Talisman of Impulse — {2} Artifact. RG mirror.
+pub fn talisman_of_impulse() -> CardDefinition {
+    talisman_cycle("Talisman of Impulse", Color::Red, Color::Green)
+}
+
+/// Talisman of Unity — {2} Artifact. GW mirror.
+pub fn talisman_of_unity() -> CardDefinition {
+    talisman_cycle("Talisman of Unity", Color::Green, Color::White)
+}
+
 // ── Removal / interaction ────────────────────────────────────────────────────
 
 /// Innocent Blood — {B} Sorcery. Each player sacrifices a creature.

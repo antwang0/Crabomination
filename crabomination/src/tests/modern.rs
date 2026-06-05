@@ -26234,3 +26234,37 @@ fn floodfarm_verge_blue_gated_on_plains_or_island() {
     assert!(g.players[0].mana_pool.amount(Color::Blue) > 0);
 }
 
+
+#[test]
+fn new_talismans_tap_for_colorless_and_their_two_colors() {
+    let cases: &[(fn() -> crate::card::CardDefinition, Color, Color)] = &[
+        (catalog::talisman_of_hierarchy, Color::White, Color::Black),
+        (catalog::talisman_of_indulgence, Color::Black, Color::Red),
+        (catalog::talisman_of_resilience, Color::Black, Color::Green),
+        (catalog::talisman_of_impulse, Color::Red, Color::Green),
+        (catalog::talisman_of_unity, Color::Green, Color::White),
+    ];
+    for (factory, c1, c2) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(id);
+        // Colorless ability (index 0).
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, x_value: None }).expect("colorless");
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+        // First color (index 1, costs 1 life).
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        let life = g.players[0].life;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 1, target: None, x_value: None }).expect("c1");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(*c1), 1);
+        assert_eq!(g.players[0].life, life - 1);
+        // Second color (index 2).
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 2, target: None, x_value: None }).expect("c2");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(*c2), 1);
+    }
+}
