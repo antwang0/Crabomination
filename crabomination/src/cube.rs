@@ -603,6 +603,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mortify);
         v.push(silent_clearing);
         v.push(talisman_of_hierarchy);
+        v.push(orzhov_signet);
         v.push(brightclimb_pathway);
         v.push(bleachbone_verge);
         // ── modern_decks (aura): Gift of Orzhova ──
@@ -640,6 +641,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(razortide_bridge);
         v.push(floodfarm_verge);
         v.push(hengegate_pathway);
+        v.push(azorius_signet);
         // ── modern_decks-16 ──
         v.push(spell_queller);
     }
@@ -847,6 +849,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mistvault_bridge);
         v.push(glimpse_the_unthinkable);
         v.push(gloomlake_verge);
+        v.push(dimir_signet);
         v.push(clearwater_pathway);
         v.push(crabomination);
         v.push(cruel_somnophage);
@@ -1403,6 +1406,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(kolaghans_command);
         v.push(blazemire_verge);
         v.push(talisman_of_indulgence);
+        v.push(rakdos_signet);
     }
     if pair_contains(pair, Color::Green) {
         v.push(ghor_clan_rampager);
@@ -1417,6 +1421,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(fiery_islet);
         v.push(riverpyre_verge);
         v.push(riverglide_pathway);
+        v.push(izzet_signet);
         // ── SOS Prismari (U/R) ──
         v.push(stadium_tidalmage);
         v.push(vibrant_outburst);
@@ -1441,6 +1446,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-16 ──
         v.push(wear_tear);
         v.push(needleverge_pathway);
+        v.push(boros_signet);
     }
     v
 }
@@ -1636,6 +1642,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(horizon_canopy);
         v.push(hushwood_verge);
         v.push(talisman_of_unity);
+        v.push(selesnya_signet);
         v.push(branchloft_pathway);
         v.push(growing_ranks);
         // ── modern_decks (cascade): Enlisted Wurm (GW cascade) ──
@@ -1660,6 +1667,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(bloodbraid_elf);
         v.push(thornspire_verge);
         v.push(talisman_of_impulse);
+        v.push(gruul_signet);
         v.push(cragcrown_pathway);
     }
     if pair_contains(pair, Color::Blue) {
@@ -1668,6 +1676,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(tanglepool_bridge);
         v.push(hedge_maze);
         v.push(barkchannel_pathway);
+        v.push(simic_signet);
         // ── SOS Quandrix (G/U) ──
         v.push(pterafractyl);
         v.push(fractal_mascot);
@@ -1709,6 +1718,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(grisly_salvage);
         v.push(nurturing_peatland);
         v.push(talisman_of_resilience);
+        v.push(golgari_signet);
         v.push(wastewood_verge);
     }
     if pair_contains(pair, Color::Blue) {

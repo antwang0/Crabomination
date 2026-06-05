@@ -3020,6 +3020,34 @@ pub fn talisman_of_unity() -> CardDefinition {
     talisman_cycle("Talisman of Unity", Color::Green, Color::White)
 }
 
+/// Ravnica signet: {2} Artifact, `{1}, {T}: Add {c1}{c2}`.
+fn signet(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name,
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c1, c2]) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+pub fn azorius_signet() -> CardDefinition { signet("Azorius Signet", Color::White, Color::Blue) }
+pub fn dimir_signet() -> CardDefinition { signet("Dimir Signet", Color::Blue, Color::Black) }
+pub fn rakdos_signet() -> CardDefinition { signet("Rakdos Signet", Color::Black, Color::Red) }
+pub fn gruul_signet() -> CardDefinition { signet("Gruul Signet", Color::Red, Color::Green) }
+pub fn selesnya_signet() -> CardDefinition { signet("Selesnya Signet", Color::Green, Color::White) }
+pub fn orzhov_signet() -> CardDefinition { signet("Orzhov Signet", Color::White, Color::Black) }
+pub fn izzet_signet() -> CardDefinition { signet("Izzet Signet", Color::Blue, Color::Red) }
+pub fn golgari_signet() -> CardDefinition { signet("Golgari Signet", Color::Black, Color::Green) }
+pub fn boros_signet() -> CardDefinition { signet("Boros Signet", Color::Red, Color::White) }
+pub fn simic_signet() -> CardDefinition { signet("Simic Signet", Color::Green, Color::Blue) }
+
 // ── Removal / interaction ────────────────────────────────────────────────────
 
 /// Innocent Blood — {B} Sorcery. Each player sacrifices a creature.

@@ -26268,3 +26268,31 @@ fn new_talismans_tap_for_colorless_and_their_two_colors() {
         assert_eq!(g.players[0].mana_pool.amount(*c2), 1);
     }
 }
+
+#[test]
+fn signets_pay_one_and_tap_for_their_two_colors() {
+    let cases: &[(fn() -> crate::card::CardDefinition, Color, Color)] = &[
+        (catalog::azorius_signet, Color::White, Color::Blue),
+        (catalog::dimir_signet, Color::Blue, Color::Black),
+        (catalog::rakdos_signet, Color::Black, Color::Red),
+        (catalog::gruul_signet, Color::Red, Color::Green),
+        (catalog::selesnya_signet, Color::Green, Color::White),
+        (catalog::orzhov_signet, Color::White, Color::Black),
+        (catalog::izzet_signet, Color::Blue, Color::Red),
+        (catalog::golgari_signet, Color::Black, Color::Green),
+        (catalog::boros_signet, Color::Red, Color::White),
+        (catalog::simic_signet, Color::Green, Color::Blue),
+    ];
+    for (factory, c1, c2) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(id);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, x_value: None }).expect("signet activates");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(*c1), 1, "produced first color");
+        assert_eq!(g.players[0].mana_pool.amount(*c2), 1, "produced second color");
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 0, "spent the {{1}}");
+    }
+}
