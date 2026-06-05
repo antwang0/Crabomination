@@ -4008,6 +4008,106 @@ pub fn disfigure() -> CardDefinition {
     }
 }
 
+/// Vampire Hexmage — {B}{B} Creature — Vampire Shaman 2/1. First strike.
+/// "Sacrifice this creature: Remove all counters from target permanent."
+pub fn vampire_hexmage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Vampire Hexmage",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::RemoveAllCounters {
+                what: target_filtered(SelectionRequirement::Permanent),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Plagued Rusalka — {B} Creature — Spirit 1/1. "{B}, Sacrifice a creature:
+/// Target creature gets -1/-1 until end of turn."
+pub fn plagued_rusalka() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Plagued Rusalka",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            },
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragonmaster Outcast — {R} Creature — Human Shaman 1/1. At your upkeep, if
+/// you control six or more lands, create a 5/5 red Dragon with flying.
+pub fn dragonmaster_outcast() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::game::types::TurnStep;
+    let dragon = TokenDefinition {
+        name: "Dragon".into(),
+        power: 5,
+        toughness: 5,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Dragonmaster Outcast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(6),
+                },
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: dragon,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Languish — {2}{B}{B} Sorcery. All creatures get -2/-2 until end of turn.
 ///
 /// Modal sweeper: shrink everyone by -2/-2 EOT, killing X/2-and-below

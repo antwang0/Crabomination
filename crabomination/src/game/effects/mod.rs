@@ -2634,6 +2634,22 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveAllCounters { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        let kinds: Vec<(crate::card::CounterType, u32)> =
+                            c.counters.iter().map(|(k, v)| (*k, *v)).collect();
+                        c.counters.clear();
+                        for (kind, count) in kinds {
+                            events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: kind, count });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             // CR 122.1b — Add a keyword counter to `what`. The host gains
             // the named keyword while at least one counter of this kind
             // is present (applied as a layer-6 grant in

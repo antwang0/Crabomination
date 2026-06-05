@@ -1585,6 +1585,9 @@ pub enum Effect {
     LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
+    /// Remove every counter of every kind from `what` (CR 122.6 — Vampire
+    /// Hexmage's "remove all counters from target permanent").
+    RemoveAllCounters { what: Selector },
     /// CR 122.1b — Add a keyword counter to `what`. The host gains the
     /// named keyword while at least one counter of this kind is present
     /// (applied as a layer-6 grant in `compute_battlefield`). Removed
@@ -2482,6 +2485,7 @@ impl Effect {
             Effect::MoveCounter { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
+            Effect::RemoveAllCounters { what } => sel_has_target(what),
             Effect::Proliferate => false,
             Effect::GainControl { what, .. } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
@@ -2644,6 +2648,7 @@ impl Effect {
             | Effect::GainControl { what, .. } => sel_filter(what),
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
+            | Effect::RemoveAllCounters { what }
             | Effect::AddKeywordCounter { what, .. }
             | Effect::RemoveKeywordCounter { what, .. } => sel_filter(what),
             // CreateTokenCopyOf — the `source` is the targeted permanent to
@@ -3229,6 +3234,7 @@ impl Effect {
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }
+                Effect::RemoveAllCounters { what } => sel_find(what, slot),
                 Effect::AddKeywordCounter { what, .. }
                 | Effect::RemoveKeywordCounter { what, .. } => sel_find(what, slot),
                 Effect::BecomeBasicLand { what, .. }

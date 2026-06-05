@@ -8937,6 +8937,59 @@ fn disfigure_kills_a_two_two_via_minus_two_minus_two() {
         "Bear (2/2) should die to -2/-2");
 }
 
+#[test]
+fn vampire_hexmage_sacrifices_to_strip_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let hexmage = g.add_card_to_battlefield(0, catalog::vampire_hexmage());
+    // A target carrying counters of two kinds.
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(target).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.battlefield_find_mut(target).unwrap().add_counters(CounterType::Charge, 3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hexmage, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("sacrifice to remove counters");
+    drain_stack(&mut g);
+    let t = g.battlefield_find(target).unwrap();
+    assert_eq!(t.counters.values().sum::<u32>(), 0, "all counters removed");
+    assert!(g.battlefield_find(hexmage).is_none(), "Hexmage sacrificed");
+}
+
+#[test]
+fn plagued_rusalka_sacrifices_a_creature_to_shrink() {
+    let mut g = two_player_game();
+    let rusalka = g.add_card_to_battlefield(0, catalog::plagued_rusalka());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::elite_vanguard()); // 2/1
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rusalka, ability_index: 0, target: Some(Target::Permanent(victim)),
+        x_value: None,
+    }).expect("sac a creature for -1/-1");
+    drain_stack(&mut g);
+    // Fodder (or the Rusalka) sacrificed; the 2/1 victim shrinks to 1/0 and dies.
+    assert!(g.battlefield_find(fodder).is_none() || g.players[0].graveyard.iter().any(|c| c.id == fodder));
+    assert!(g.battlefield_find(victim).is_none(), "2/1 dies to -1/-1");
+}
+
+#[test]
+fn dragonmaster_outcast_makes_dragon_with_six_lands() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::dragonmaster_outcast());
+    // Five lands → no Dragon.
+    for _ in 0..5 { g.add_card_to_battlefield(0, catalog::forest()); }
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Dragon"), "no Dragon below 6 lands");
+    // Sixth land → Dragon.
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Dragon" && c.controller == 0),
+        "makes a 5/5 Dragon at six lands");
+}
+
 /// Languish: every creature gets -2/-2 EOT — sweeps 2/2s, leaves 4/4s alive.
 #[test]
 fn languish_sweeps_small_but_leaves_big_creatures() {

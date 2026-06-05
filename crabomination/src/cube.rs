@@ -999,6 +999,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         murder,
         go_for_the_throat,
         disfigure,
+        vampire_hexmage,
+        plagued_rusalka,
         languish,
         grasp_of_darkness,
         smother,
@@ -1407,6 +1409,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         arclight_phoenix,
         // ── modern_decks-17 ──
         young_pyromancer,
+        dragonmaster_outcast,
         monastery_swiftspear,
         // ── modern_decks-18 ──
         chain_lightning,
