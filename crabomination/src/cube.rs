@@ -227,6 +227,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         ornithopter,
         ornithopter_of_paradise,
         mind_stone,
+        coldsteel_heart,
         // fellwar_stone is 🟡 — "matches opponent's lands" restriction
         // collapses to plain `AnyOneColor` (so it's strictly Fellwar-
         // equivalent against rainbow lands and slightly stronger against
@@ -600,6 +601,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mourning_thrull);
         v.push(goldmire_bridge);
         v.push(mortify);
+        v.push(silent_clearing);
+        v.push(bleachbone_verge);
         // ── modern_decks (aura): Gift of Orzhova ──
         v.push(gift_of_orzhova);
         // ── modern_decks-14 (WB cross-pool removal) ──
@@ -1392,6 +1395,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(bedevil);
         // ── modern_decks-16 ──
         v.push(kolaghans_command);
+        v.push(blazemire_verge);
     }
     if pair_contains(pair, Color::Green) {
         v.push(ghor_clan_rampager);
@@ -1403,6 +1407,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(talisman_of_creativity);
         v.push(silverbluff_bridge);
         v.push(thundering_falls);
+        v.push(fiery_islet);
+        v.push(riverpyre_verge);
         // ── SOS Prismari (U/R) ──
         v.push(stadium_tidalmage);
         v.push(vibrant_outburst);
@@ -1640,6 +1646,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(omnath_locus_of_rage);
         // ── modern_decks-16 ──
         v.push(bloodbraid_elf);
+        v.push(thornspire_verge);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(gaeas_skyfolk);
@@ -1685,6 +1692,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-17 ──
         v.push(grim_flayer);
         v.push(grisly_salvage);
+        v.push(nurturing_peatland);
+        v.push(wastewood_verge);
     }
     if pair_contains(pair, Color::Blue) {
         // ── SOS Quandrix (G/U) ──

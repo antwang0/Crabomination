@@ -818,6 +818,11 @@ pub struct PermanentView {
     /// case. Populated by `project_permanent`.
     #[serde(default)]
     pub named_card: Option<String>,
+    /// The color chosen as this permanent entered (Coldsteel Heart-style mana
+    /// rocks). Lets the client badge "{T}: Add <color>". `None` for the common
+    /// case. Populated by `project_permanent`.
+    #[serde(default)]
+    pub chosen_color: Option<crate::mana::Color>,
 }
 
 impl PermanentView {

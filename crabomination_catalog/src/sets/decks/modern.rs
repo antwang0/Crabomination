@@ -2730,6 +2730,34 @@ pub fn satyr_wayfinder() -> CardDefinition {
     }
 }
 
+/// Coldsteel Heart — {2} Artifact. Enters tapped; as it enters, choose a
+/// color. `{T}: Add one mana of the chosen color.` Uses the instance-stamped
+/// `chosen_color` (`Effect::ChooseColorForSelf` + `ManaPayload::ChosenColorOfSource`).
+pub fn coldsteel_heart() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Coldsteel Heart",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ChooseColorForSelf,
+                Effect::Tap { what: Selector::This },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::ChosenColorOfSource,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Talisman of Progress — {2} Artifact. "{T}: Add {C}." "{T}: Add {W} or
 /// {U}. Talisman of Progress deals 1 damage to you."
 ///

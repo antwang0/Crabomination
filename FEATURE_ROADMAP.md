@@ -106,6 +106,15 @@ read of the code and should be re-verified before picking up an item.
   nonbasic-land filters the conjunctive walker can't flatten — Thalia, Heretic
   Cathar). Per-player **half-of-their-own** effects
   (`Effect::{MillHalf, DiscardHalf, SacrificeHalf}` — Lord Xander now faithful).
+  **Energy {E} payoffs** (CR 107.16): the `EventKind::EnergyGained` trigger
+  ("whenever you get one or more {E}" — Aetherborn Marauder) and
+  `Effect::PayEnergyOrElse` ("sacrifice/return unless you pay {E}…" — Lathnu
+  Hellion, Greenbelt Rampager). **Populate** (CR 701.32 — `Effect::Populate`).
+  **Choose-a-color mana rocks** (`Effect::ChooseColorForSelf` +
+  `ManaPayload::ChosenColorOfSource` + `CardInstance.chosen_color` — Coldsteel
+  Heart). **Horizon-land + verge-land helpers** (`horizon_land` completes the
+  six-card cycle; `verge_land` ships the conditional second-color mana ability
+  for the five enemy/allied verges).
 
 ---
 

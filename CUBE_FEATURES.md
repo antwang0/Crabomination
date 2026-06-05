@@ -124,11 +124,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Blazemire Verge | ⏳ | BR DFC verge. |
-| Thornspire Verge | ⏳ | RG verge. |
-| Bleachbone Verge | ⏳ | WB verge. |
-| Riverpyre Verge | ⏳ | UR verge. |
-| Wastewood Verge | ⏳ | BG verge. |
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
@@ -157,8 +152,7 @@ are listed in `DECK_FEATURES.md`.
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
 | Saga lore counters + DFC | ⏳ | The Everflowing Well; future sagas. |
 | Hideaway lands | ⏳ | Shelldock Isle. |
-| Horizon-canopy "pay 1 + life to draw" lands | ⏳ | Horizon Canopy, Sunbaked Canyon, Waterlogged Grove. |
-| Verge / surveil land family expansion | ⏳ | Each color pair's `*verge` and surveil-land entry. |
+| Verge / surveil land family expansion | 🟡 | All five enemy/allied `*verge` lands (Blazemire/Thornspire/Bleachbone/Riverpyre/Wastewood) ship via `verge_land` (conditional second-color mana ability). Horizon-canopy cycle is complete (`horizon_land` helper; all six). Surveil-land expansion still ⏳. |
 | ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Remaining: Gather Specimens (steal-instead), Hushbringer-style trigger suppression. |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | 🟡 | Damping Sphere wired (`AdditionalCostAfterFirstSpell`); Trinisphere needs a "minimum cost" flavor. Elite Spellbinder reuses the existing tax static. |
 | "Cast spells without paying mana" static | ⏳ | Omniscience, Maelstrom Archangel (combat-damage variant), Aluren (free-cast under-3 creatures). |

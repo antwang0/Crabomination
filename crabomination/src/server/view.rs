@@ -465,6 +465,7 @@ fn project_permanent(
                 && card.damage as i32 >= tough
         },
         named_card: card.named_card.clone(),
+        chosen_color: card.chosen_color,
     }
 }
 
@@ -1240,6 +1241,17 @@ mod tests {
         assert_eq!(project(&state, 0).battlefield.iter()
             .find(|p| p.id == needle).unwrap().named_card.as_deref(),
             Some("Tormod's Crypt"));
+    }
+
+    #[test]
+    fn chosen_color_is_surfaced_in_permanent_view() {
+        let mut state = two_player_game();
+        let heart = state.add_card_to_battlefield(0, catalog::coldsteel_heart());
+        assert_eq!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == heart).unwrap().chosen_color, None);
+        state.battlefield_find_mut(heart).unwrap().chosen_color = Some(crate::mana::Color::Blue);
+        assert_eq!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == heart).unwrap().chosen_color, Some(crate::mana::Color::Blue));
     }
 
     #[test]

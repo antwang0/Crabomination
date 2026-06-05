@@ -17426,6 +17426,62 @@ fn waterlogged_grove_taps_for_green_costing_one_life() {
     assert_eq!(g.players[0].life, life_before - 1, "Should cost 1 life");
 }
 
+// ── Horizon-cycle completion (Fiery Islet / Nurturing Peatland / Silent Clearing) ──
+
+#[test]
+fn fiery_islet_taps_for_blue_costing_one_life() {
+    let mut g = two_player_game();
+    let fi = g.add_card_to_battlefield(0, catalog::fiery_islet());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: fi, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {U}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Blue) > 0);
+    assert_eq!(g.players[0].life, life_before - 1);
+}
+
+#[test]
+fn silent_clearing_sac_draws_a_card() {
+    let mut g = two_player_game();
+    let sc = g.add_card_to_battlefield(0, catalog::silent_clearing());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility { card_id: sc, ability_index: 2, target: None, x_value: None })
+        .expect("sac for draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert!(g.battlefield.iter().all(|c| c.id != sc));
+}
+
+// ── Verge lands (conditional second-color mana ability) ─────────────────────
+
+#[test]
+fn blazemire_verge_taps_for_black_unconditionally() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::blazemire_verge());
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {B}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Black) > 0);
+}
+
+#[test]
+fn blazemire_verge_red_gated_on_swamp_or_mountain() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::blazemire_verge());
+    // No Swamp/Mountain controlled → the red ability is illegal.
+    assert!(g
+        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .is_err());
+    // Controlling a Mountain unlocks it.
+    g.add_card_to_battlefield(0, catalog::mountain());
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .expect("red now allowed");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Red) > 0);
+}
+
 // ── Koma, Cosmos Serpent ────────────────────────────────────────────────────
 
 #[test]
@@ -26127,4 +26183,27 @@ fn thalia_heretic_cathar_taps_opponent_creatures_and_nonbasics() {
     let basic = g.add_card_to_battlefield(1, catalog::island());
     g.fire_self_etb_triggers(basic, 1);
     assert!(!g.battlefield_find(basic).unwrap().tapped, "opp basic land untapped");
+}
+
+// ── Coldsteel Heart (choose-a-color mana rock) ──────────────────────────────
+
+#[test]
+fn coldsteel_heart_enters_tapped_and_taps_for_chosen_color() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Color(Color::Blue)]));
+    let id = g.add_card_to_hand(0, catalog::coldsteel_heart());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let heart = g.battlefield_find(id).expect("resolved onto battlefield");
+    assert_eq!(heart.chosen_color, Some(Color::Blue), "stamped the chosen color");
+    assert!(heart.tapped, "Coldsteel Heart enters tapped");
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for the chosen color");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
 }

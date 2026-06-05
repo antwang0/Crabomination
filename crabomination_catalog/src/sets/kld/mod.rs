@@ -601,9 +601,128 @@ pub fn voltaic_brawler() -> CardDefinition {
     }
 }
 
+/// Aetherborn Marauder — {3}{B} 2/3 Aetherborn. Whenever you get one or more
+/// {E}, put two +1/+1 counters on it (`EventKind::EnergyGained`, CR 107.16).
+pub fn aetherborn_marauder() -> CardDefinition {
+    CardDefinition {
+        name: "Aetherborn Marauder",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Aetherborn],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EnergyGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lathnu Hellion — {2}{R} 4/4 Hellion with Haste. ETB you get {E}{E}; at
+/// the beginning of your upkeep, sacrifice it unless you pay {E}{E}
+/// (`Effect::PayEnergyOrElse`, CR 107.16).
+pub fn lathnu_hellion() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lathnu Hellion",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hellion],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![
+            etb(Effect::AddEnergy(Value::Const(2))),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::PayEnergyOrElse {
+                    amount: 2,
+                    otherwise: Box::new(Effect::SacrificeSource),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Greenbelt Rampager — {G} 3/4 Elephant. ETB: you get {E}{E}, then pay
+/// {E}{E} or return it to its owner's hand (`PayEnergyOrElse`, CR 107.16).
+pub fn greenbelt_rampager() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Greenbelt Rampager",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(2)),
+            Effect::PayEnergyOrElse {
+                amount: 2,
+                otherwise: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                }),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Thriving Rhino — {3}{G} 3/3 Rhino. Whenever it attacks, you may pay
+/// {E}{E}; if you do, it gets +2/+2 until end of turn.
+pub fn thriving_rhino() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Thriving Rhino",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![on_attack(Effect::PayEnergy {
+            amount: 2,
+            then: Box::new(Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Every KLD factory, for snapshot name→factory registration.
 pub fn all_kld_card_factories() -> &'static [crate::CardFactory] {
     &[
+        aetherborn_marauder,
+        lathnu_hellion,
+        greenbelt_rampager,
+        thriving_rhino,
         attune_with_aether,
         rogue_refiner,
         longtusk_cub,
