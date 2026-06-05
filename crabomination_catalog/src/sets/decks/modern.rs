@@ -11876,6 +11876,569 @@ pub fn spikeshot_goblin() -> CardDefinition {
     }
 }
 
+/// Pia and Kiran Nalaar — {2}{R}{R} 2/2 Legendary Human Artificer. ETB create
+/// two 1/1 colorless Thopter artifact tokens with flying. `{2}{R}, Sacrifice
+/// an artifact: deal 2 damage to any target.` (ORI)
+pub fn pia_and_kiran_nalaar() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Supertype, TokenDefinition};
+    use crate::effect::shortcut::{etb, target_filtered};
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Pia and Kiran Nalaar",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You, count: Value::Const(2), definition: thopter,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Zo-Zu the Punisher — {1}{R}{R} 2/2 Legendary Goblin Warrior. Whenever a
+/// land enters, Zo-Zu deals 2 damage to that land's controller. (CHK)
+pub fn zo_zu_the_punisher() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Zo-Zu the Punisher",
+        cost: cost(&[generic(1), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::AnyPlayer),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Midnight Reaper — {2}{B} 3/2 Zombie Knight. Whenever a nontoken creature
+/// you control dies, Midnight Reaper deals 1 damage to you and you draw a
+/// card. (GRN)
+pub fn midnight_reaper() -> CardDefinition {
+    CardDefinition {
+        name: "Midnight Reaper",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken,
+                }),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage { to: Selector::Player(PlayerRef::You), amount: Value::Const(1) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grim Haruspex — {2}{B} 3/2 Human Wizard. Morph {B}. Whenever another
+/// nontoken creature you control dies, draw a card. (KTK)
+pub fn grim_haruspex() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Haruspex",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Morph(cost(&[b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spikeshot Elder — {R} 1/1 Goblin Shaman. `{1}{R}{R}: deals damage equal to
+/// its power to any target.` (LRW)
+pub fn spikeshot_elder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Spikeshot Elder",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r(), r()]),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tormented Soul — {B} 1/1 Spirit. Can't block and can't be blocked. (M12)
+pub fn tormented_soul() -> CardDefinition {
+    CardDefinition {
+        name: "Tormented Soul",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock, Keyword::Unblockable],
+        ..Default::default()
+    }
+}
+
+/// Bloodcrazed Neonate — {1}{R} 2/1 Vampire. Attacks each combat if able.
+/// Whenever it deals combat damage to a player, put a +1/+1 counter on it. (ISD)
+pub fn bloodcrazed_neonate() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodcrazed Neonate",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::MustAttack],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stormblood Berserker — {1}{R} 1/1 Human Berserker. Bloodthirst 2; can't be
+/// blocked except by two or more creatures (Menace). (M12)
+pub fn stormblood_berserker() -> CardDefinition {
+    CardDefinition {
+        name: "Stormblood Berserker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
+        ..Default::default()
+    }
+}
+
+/// Manic Vandal — {2}{R} 2/2 Human Warrior. When it enters, destroy target
+/// artifact. (M11)
+pub fn manic_vandal() -> CardDefinition {
+    CardDefinition {
+        name: "Manic Vandal",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Artifact),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fairgrounds Warden — {2}{W} 1/3 Dwarf Soldier. When it enters, exile target
+/// creature an opponent controls until this creature leaves the battlefield.
+/// (KLD)
+pub fn fairgrounds_warden() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Fairgrounds Warden",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Goblin Cratermaker — {1}{R} 2/2 Goblin Warrior. `{1}, Sacrifice this:
+/// choose one — deal 2 damage to target creature; or destroy target colorless
+/// nonland permanent.` (ELD)
+pub fn goblin_cratermaker() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Goblin Cratermaker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::ChooseMode(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(2),
+                },
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Colorless
+                            .and(SelectionRequirement::Nonland),
+                    ),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hidden Herbalists — {1}{G} 2/2 Human Druid. Revolt — when it enters, if a
+/// permanent left the battlefield under your control this turn, add {G}{G}. (AER)
+pub fn hidden_herbalists() -> CardDefinition {
+    CardDefinition {
+        name: "Hidden Herbalists",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::OfColor(Color::Green, Value::Const(2)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fanatic of Mogis — {3}{R} 4/2 Minotaur Shaman. When it enters, deals damage
+/// to each opponent equal to your devotion to red. (THS)
+pub fn fanatic_of_mogis() -> CardDefinition {
+    CardDefinition {
+        name: "Fanatic of Mogis",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::DevotionTo(vec![Color::Red]),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ridgescale Tusker — {3}{G}{G} 5/5 Pangolin Beast. When it enters, put a
+/// +1/+1 counter on each other creature you control. (AER)
+pub fn ridgescale_tusker() -> CardDefinition {
+    CardDefinition {
+        name: "Ridgescale Tusker",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Solemn Recruit — {1}{W}{W} 2/2 Dwarf Warrior, Double strike. Revolt — at
+/// the beginning of your end step, if a permanent left the battlefield under
+/// your control this turn, put a +1/+1 counter on it. (AER)
+pub fn solemn_recruit() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Solemn Recruit",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::RevoltActive { who: PlayerRef::You }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Narnam Renegade — {G} 1/2 Elf Warrior, Deathtouch. Revolt — enters with a
+/// +1/+1 counter if a permanent left the battlefield under your control this
+/// turn. (AER)
+pub fn narnam_renegade() -> CardDefinition {
+    CardDefinition {
+        name: "Narnam Renegade",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Greenwheel Liberator — {1}{G} 2/1 Elf Warrior. Revolt — enters with two
+/// +1/+1 counters if a permanent left the battlefield under your control this
+/// turn. (AER)
+pub fn greenwheel_liberator() -> CardDefinition {
+    CardDefinition {
+        name: "Greenwheel Liberator",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Inventor's Apprentice — {R} 1/2 Human Artificer. Gets +1/+1 as long as you
+/// control an artifact. (KLD)
+pub fn inventors_apprentice() -> CardDefinition {
+    CardDefinition {
+        name: "Inventor's Apprentice",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "Gets +1/+1 as long as you control an artifact.",
+            effect: crate::effect::StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 1,
+                keyword: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Signal Pest — {1} 0/1 Artifact Pest. Battle cry. Can't be blocked except by
+/// creatures with flying or reach. (MBS)
+pub fn signal_pest() -> CardDefinition {
+    CardDefinition {
+        name: "Signal Pest",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pest], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::CantBeBlockedExceptBy(Box::new(
+            SelectionRequirement::HasKeyword(Keyword::Flying)
+                .or(SelectionRequirement::HasKeyword(Keyword::Reach)),
+        ))],
+        triggered_abilities: vec![crate::effect::shortcut::battle_cry(1)],
+        ..Default::default()
+    }
+}
+
+/// Kitesail Freebooter — {1}{B} 1/2 Human Pirate, Flying. ETB exile a
+/// noncreature, nonland card from target opponent's hand until this creature
+/// leaves the battlefield. (HOU)
+pub fn kitesail_freebooter() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Kitesail Freebooter",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ExileChosenUntilSourceLeaves {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature),
+            return_to: ExileReturnZone::Hand,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bygone Bishop — {2}{W} 2/3 Spirit Cleric, Flying. Whenever you cast a
+/// creature spell with mana value 3 or less, investigate. (EMN)
+pub fn bygone_bishop() -> CardDefinition {
+    CardDefinition {
+        name: "Bygone Bishop",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                }),
+            effect: investigate(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sram, Senior Edificer — {1}{W} 2/2 Legendary Dwarf Advisor. Whenever you
+/// cast an Aura, Equipment, or Vehicle spell, draw a card. (AER)
+pub fn sram_senior_edificer() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, Supertype};
+    CardDefinition {
+        name: "Sram, Senior Edificer",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Zealous Conscripts — {4}{R} Creature — Human Warrior 3/3. Haste. When it
 /// enters, gain control of target permanent until end of turn, untap it, and
 /// it gains haste until end of turn.

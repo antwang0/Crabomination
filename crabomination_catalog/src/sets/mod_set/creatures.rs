@@ -6820,6 +6820,197 @@ pub fn hero_of_bladehold() -> CardDefinition {
     }
 }
 
+fn white_token(name: &'static str, p: i32, t: i32, types: Vec<CreatureType>,
+    keywords: Vec<Keyword>) -> crate::card::TokenDefinition {
+    crate::card::TokenDefinition {
+        name: name.into(),
+        power: p,
+        toughness: t,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        keywords,
+        ..Default::default()
+    }
+}
+
+/// Knight Exemplar — {1}{W}{W} 2/2 Human Knight, First strike. Other Knights
+/// you control get +1/+1 and have indestructible. (M11)
+pub fn knight_exemplar() -> CardDefinition {
+    let other_knights = || Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::HasCreatureType(CreatureType::Knight))
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Knight Exemplar",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Knights you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: other_knights(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Knights you control have indestructible.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: other_knights(),
+                    keyword: Keyword::Indestructible,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Archangel of Thune — {3}{W}{W} 3/4 Angel, Flying + Lifelink. Whenever you
+/// gain life, put a +1/+1 counter on each creature you control. (M14)
+pub fn archangel_of_thune() -> CardDefinition {
+    CardDefinition {
+        name: "Archangel of Thune",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wingmate Roc — {3}{W}{W} 3/4 Bird, Flying. Raid: ETB if you attacked this
+/// turn, create a 3/4 white Bird with flying. Whenever it attacks, gain 1
+/// life for each attacking creature. (KTK)
+pub fn wingmate_roc() -> CardDefinition {
+    CardDefinition {
+        name: "Wingmate Roc",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            crate::effect::shortcut::raid_etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: white_token("Bird", 3, 4, vec![CreatureType::Bird], vec![Keyword::Flying]),
+            }),
+            crate::effect::shortcut::on_attack(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::IsAttacking,
+                ))),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Boros Elite — {W} 1/1 Human Soldier. Battalion — whenever this and at
+/// least two other creatures attack, it gets +2/+2 until end of turn. (GTC)
+pub fn boros_elite() -> CardDefinition {
+    CardDefinition {
+        name: "Boros Elite",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::battalion(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: crate::effect::Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Brimaz, King of Oreskos — {1}{W}{W} 3/4 Legendary Cat Soldier, Vigilance.
+/// Whenever Brimaz attacks, create a 1/1 white Cat Soldier with vigilance
+/// that's attacking. (The "blocks → blocking token" half is dropped — no
+/// create-blocking-token primitive.) (BNG)
+pub fn brimaz_king_of_oreskos() -> CardDefinition {
+    CardDefinition {
+        name: "Brimaz, King of Oreskos",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: white_token("Cat Soldier", 1, 1,
+                vec![CreatureType::Cat, CreatureType::Soldier], vec![Keyword::Vigilance]),
+            cleanup: Default::default(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Adeline, Resplendent Cathar — {1}{W}{W} */4 Legendary Human Knight,
+/// Vigilance. Her power equals the number of creatures you control. Whenever
+/// she attacks, create a 1/1 white Human tapped and attacking (modeled per
+/// the active opponent; the per-opponent fan-out collapses to one). (MID)
+pub fn adeline_resplendent_cathar() -> CardDefinition {
+    CardDefinition {
+        name: "Adeline, Resplendent Cathar",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Adeline's power is equal to the number of creatures you control.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                per_power: 1,
+                per_toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: white_token("Human", 1, 1, vec![CreatureType::Human], vec![]),
+            cleanup: Default::default(),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Mirran Crusader — {1}{W}{W} Creature — Human Knight 2/2 with Double strike,
 /// protection from black, and protection from green. (MBS)
 pub fn mirran_crusader() -> CardDefinition {
@@ -6838,6 +7029,210 @@ pub fn mirran_crusader() -> CardDefinition {
             Keyword::Protection(crate::mana::Color::Black),
             Keyword::Protection(crate::mana::Color::Green),
         ],
+        ..Default::default()
+    }
+}
+
+/// Plated Crusher — {4}{G}{G}{G} 7/6 Beast. Trample, Hexproof. (BFZ)
+pub fn plated_crusher() -> CardDefinition {
+    CardDefinition {
+        name: "Plated Crusher",
+        cost: cost(&[generic(4), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Trample, Keyword::Hexproof],
+        ..Default::default()
+    }
+}
+
+/// Terra Stomper — {3}{G}{G}{G} 8/8 Beast. Can't be countered. Trample. (ZEN)
+pub fn terra_stomper() -> CardDefinition {
+    CardDefinition {
+        name: "Terra Stomper",
+        cost: cost(&[generic(3), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::CantBeCountered, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Rumbling Baloth — {2}{G}{G} 4/4 Beast. (M11)
+pub fn rumbling_baloth() -> CardDefinition {
+    CardDefinition {
+        name: "Rumbling Baloth",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
+/// Charging Badger — {G} 1/1 Badger. Trample. (CNS)
+pub fn charging_badger() -> CardDefinition {
+    CardDefinition {
+        name: "Charging Badger",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Badger], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Bellowing Tanglewurm — {3}{G}{G} 4/4 Wurm. Intimidate. (SOM)
+pub fn bellowing_tanglewurm() -> CardDefinition {
+    CardDefinition {
+        name: "Bellowing Tanglewurm",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Intimidate],
+        ..Default::default()
+    }
+}
+
+/// Vinelasher Kudzu — {1}{G} 1/1 Plant. Landfall — whenever a land you control
+/// enters, put a +1/+1 counter on this creature. (ZEN)
+pub fn vinelasher_kudzu() -> CardDefinition {
+    CardDefinition {
+        name: "Vinelasher Kudzu",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Avatar of the Resolute — {G}{G} 3/2 Avatar. Reach, trample. Enters with a
+/// +1/+1 counter for each other creature you control that has a +1/+1
+/// counter (modeled as an ETB trigger). (AER)
+pub fn avatar_of_the_resolute() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Avatar of the Resolute",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource)
+                    .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+            ))),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pelt Collector — {G} 1/1 Elf Warrior. Whenever another creature you
+/// control enters or dies with greater power than this, put a +1/+1 counter
+/// on Pelt Collector. While it has 3+ counters, it has trample. (GRN)
+pub fn pelt_collector() -> CardDefinition {
+    let bigger = || crate::card::Predicate::EntityMatches {
+        what: Selector::TriggerSource,
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::OtherThanSource)
+            .and(SelectionRequirement::PowerGreaterThanSource),
+    };
+    let grow = || Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Pelt Collector",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(bigger()),
+                effect: grow(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(bigger()),
+                effect: grow(),
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "As long as Pelt Collector has 3+ counters, it has trample.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: crate::card::Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(3),
+                ),
+                power: 0,
+                toughness: 0,
+                keyword: Some(Keyword::Trample),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glen Elendra Archmage — {3}{U} 2/2 Faerie Wizard. Flying, Persist.
+/// `{U}, Sacrifice this creature: Counter target noncreature spell.` (EVE)
+pub fn glen_elendra_archmage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Glen Elendra Archmage",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Persist],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            sac_cost: true,
+            effect: Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::Noncreature),
+                ),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

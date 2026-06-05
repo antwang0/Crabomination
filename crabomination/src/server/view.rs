@@ -94,6 +94,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         activatable_permanents: affordances.activatable_permanents,
         legal_attackers: state.legal_attackers(seat),
         legal_blockers: state.legal_blockers(seat),
+        permanents_to_graveyard_this_turn: state.permanents_to_graveyard_this_turn,
     }
 }
 
@@ -1118,6 +1119,19 @@ mod tests {
             Player::new(0, "P0"),
             Player::new(1, "P1"),
         ])
+    }
+
+    #[test]
+    fn project_surfaces_gravestorm_count() {
+        // CR 702.69 — the view exposes the turn's permanents-to-graveyard
+        // tally so the client can badge a Gravestorm count.
+        let mut g = two_player_game();
+        let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.remove_from_battlefield_to_graveyard(a);
+        g.remove_from_battlefield_to_graveyard(b);
+        let view = project(&g, 0);
+        assert_eq!(view.permanents_to_graveyard_this_turn, 2);
     }
 
     #[test]

@@ -649,6 +649,10 @@ impl GameState {
                 max_opp_lands > your_lands
             }
             Predicate::AttackingAlone => self.attacking.len() == 1,
+            Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
+            Predicate::RevoltActive { who } => self
+                .resolve_player(who, ctx)
+                .is_some_and(|p| self.players[p].permanent_left_battlefield_this_turn),
             Predicate::DeliriumActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
                 let mut kinds: std::collections::HashSet<&crate::card::CardType> =

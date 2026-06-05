@@ -8,6 +8,19 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Card primitives deferred this run (claude/modern_decks).** Real cards
+  skipped for lack of a primitive — each is a small, reusable addition:
+  - **"Whenever this blocks a creature, [affect that creature]"** — a Blocks
+    trigger that binds the *blocked attacker* as the effect target (the
+    "doesn't untap" half is already covered by a Stun counter) — Wall of Frost.
+  - **Rearrange-top-N** (look at top N, reorder, all stay on top — distinct
+    from Scry which can bottom) — Spire Owl, Index.
+  - **Protection-from-each-color as one keyword/state** (Metalcraft-gated
+    multi-protection) — Etched Champion.
+  - **Skyclave-Apparition-style "exile until leaves, then owner makes an X/X"**
+    (linked-exile with a leave-replacement that mints a token instead of
+    returning) — Skyclave Apparition.
+
 - **Embalm/Eternalize token color + cost overrides.** `sets::akh` tokens ride
   `CreateTokenCopyOf` and gain a Zombie type (+4/4 for Eternalize), but the
   copy keeps the original's color and printed mana cost rather than becoming
@@ -641,6 +654,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (Poisonous 2), Ominous Harvest (Gravestorm), Frenzy Sliver (Frenzy 1).
   Tests: `poisonous_marsh_viper_*`, `gravestorm_ominous_harvest_*`,
   `frenzy_sliver_*`.
+
+- ✅ **CR 702.139 — Revolt** (claude/modern_decks). `Player.permanent_left_
+  battlefield_this_turn` (set in the battlefield→graveyard/exile funnels, reset
+  at untap) + `Predicate::RevoltActive` + `shortcut::revolt_etb`. Cards: Narnam
+  Renegade, Greenwheel Liberator. Test: `narnam_renegade_revolt_*`.
+
+- ✅ **CR 702.79 / 702.92 — Persist / Undying on any death** (claude/modern_decks).
+  Persist/Undying previously only returned a creature that died to lethal-damage
+  SBA; death by `Effect::Destroy` or sacrifice silently failed. Extracted the
+  return into `GameState::return_persist_undying` and call it from the
+  destroy/sacrifice funnel (`remove_to_graveyard_with_triggers`) as well.
+  Tests: `persist_returns_creature_destroyed_by_removal`, `glen_elendra_*`.
 
 - ✅ **CR 702.66 — "Spells you cast have delve" static** (claude/modern_decks).
   `StaticEffect::SpellsYouCastHaveDelve` + `controller_grants_spells_delve`

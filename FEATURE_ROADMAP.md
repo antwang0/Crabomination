@@ -26,8 +26,13 @@ read of the code and should be re-verified before picking up an item.
   Skulk, Fear, Unblockable, Soulbond (CR 702.95 — auto-pairing on ETB, shared
   P/T / keyword / granted-ability bonus), Embalm (CR 702.88) / Eternalize
   (CR 702.91) (graveyard exile-self token copy; `sets::akh`), Reconfigure
-  (CR 702.151 — attach + unattach via `GameAction::Reconfigure`), plus
-  uncounterable riders.
+  (CR 702.151 — attach + unattach via `GameAction::Reconfigure`), Poisonous
+  (CR 702.70), Gravestorm (CR 702.69 — `GameState.permanents_to_graveyard_this_
+  turn`), Frenzy (CR 702.68), Battalion (`Predicate::AttackingWithAtLeast`),
+  Revolt (CR 702.139 — `Player.permanent_left_battlefield_this_turn` +
+  `Predicate::RevoltActive`), "spells you cast have delve" (CR 702.66 static),
+  plus uncounterable riders. Persist/Undying (CR 702.79/702.92) now return on
+  *any* death (destroy / sacrifice), not just lethal-damage SBA.
 - **Costs/mana:** colored / generic / colorless / hybrid / mono-hybrid /
   Phyrexian / snow / X symbols; Convoke/Delve generic reduction; Commander
   tax; alternative (pitch) costs.

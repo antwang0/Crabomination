@@ -503,6 +503,10 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
+    /// CR 702.139 — Revolt: a permanent left the battlefield under `who`'s
+    /// control this turn. Backed by
+    /// `Player.permanent_left_battlefield_this_turn`.
+    RevoltActive { who: PlayerRef },
     /// True if the effect's source permanent is currently saddled (CR
     /// 702.171). Backed by `CardInstance.saddled`; gates "whenever this
     /// attacks while saddled" triggers on Mounts.
@@ -665,6 +669,12 @@ pub enum Predicate {
     /// Exalted reminder ("Whenever a creature you control attacks
     /// alone, that creature gets +1/+1 until end of turn").
     AttackingAlone,
+    /// True when at least `n` creatures are attacking this combat. Powers
+    /// the Battalion ability word ("Whenever this creature and at least two
+    /// other creatures attack" → `n == 3`). Read from
+    /// `GameState.attacking.len() >= n`; `false` outside a combat with
+    /// declared attackers.
+    AttackingWithAtLeast(u32),
     /// CR 700.4-ish — **Delirium**: `who`'s graveyard holds cards of at
     /// least 4 distinct card types (the count of *types*, not cards). Backed
     /// by scanning the graveyard's `definition.card_types`. Used by Unholy

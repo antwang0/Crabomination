@@ -189,6 +189,18 @@ pub fn on_attack(effect: Effect) -> TriggeredAbility {
         effect,
     }
 }
+/// Revolt (CR 702.139): "When this enters, if a permanent left the
+/// battlefield under your control this turn, `body`." An ETB trigger
+/// gated on `Predicate::RevoltActive { You }`. Models "enters with a
+/// +1/+1 counter if Revolt" as an ETB add-counter (the counter lands
+/// just after the creature enters rather than as a true ETB replacement).
+pub fn revolt_etb(body: Effect) -> TriggeredAbility {
+    etb(Effect::If {
+        cond: Predicate::RevoltActive { who: PlayerRef::You },
+        then: Box::new(body),
+        else_: Box::new(Effect::Noop),
+    })
+}
 /// CR 702.171 — "Whenever this Mount attacks while saddled, [effect]."
 /// The `SourceSaddled` filter gates the trigger on the Mount's saddled
 /// state (set by a Saddle activation earlier in the turn).
@@ -262,6 +274,17 @@ pub fn exalted() -> TriggeredAbility {
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         },
+    }
+}
+
+/// Battalion shortcut (ability word): "Whenever this creature and at
+/// least two other creatures attack, `body`." An `Attacks / SelfSource`
+/// trigger gated on `Predicate::AttackingWithAtLeast(3)`.
+pub fn battalion(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+            .with_filter(Predicate::AttackingWithAtLeast(3)),
+        effect: body,
     }
 }
 

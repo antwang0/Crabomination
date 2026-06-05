@@ -28050,6 +28050,589 @@ fn gravestorm_ominous_harvest_copies_per_dead_permanent() {
     assert_eq!(g.players[1].life, life_before - 3, "original + 2 copies each lose 1");
 }
 
+#[test]
+fn knight_exemplar_buffs_and_protects_other_knights() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::knight_exemplar());
+    let pal = g.add_card_to_battlefield(0, catalog::silverblade_paladin()); // 2/2 Human Knight
+    let c = g.computed_permanent(pal).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "other Knight gets +1/+1");
+    assert!(g.computed_permanent(pal).unwrap().keywords.contains(&Keyword::Indestructible),
+        "other Knight gains indestructible");
+}
+
+#[test]
+fn archangel_of_thune_counters_each_creature_on_lifegain() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archangel_of_thune());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Gain life via Faithful Mending mode 2 (Draw 2 + GainLife 2).
+    let mending = g.add_card_to_hand(0, catalog::faithful_mending());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: mending, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Faithful Mending castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "lifegain puts a +1/+1 counter on each creature you control");
+}
+
+#[test]
+fn wingmate_roc_raid_makes_token_and_gains_life_on_attack() {
+    let mut g = two_player_game();
+    // Attack first so Raid is on.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    // Now resolve the Roc's ETB with Raid satisfied → makes a Bird token.
+    g.step = TurnStep::PostCombatMain;
+    let roc = g.add_card_to_hand(0, catalog::wingmate_roc());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    cast(&mut g, roc);
+    drain_stack(&mut g);
+    let birds = g.battlefield.iter().filter(|c| c.definition.name == "Bird").count();
+    assert_eq!(birds, 1, "Raid creates a Bird token");
+}
+
+#[test]
+fn boros_elite_battalion_pumps_with_two_other_attackers() {
+    let mut g = two_player_game();
+    let elite = g.add_card_to_battlefield(0, catalog::boros_elite());
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for id in [elite, a, b] { g.clear_sickness(id); }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: elite, target: AttackTarget::Player(1) },
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("attack with three");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elite).unwrap().power(), 3, "Battalion pumps +2/+2 → 3 power");
+}
+
+#[test]
+fn boros_elite_battalion_silent_attacking_alone() {
+    let mut g = two_player_game();
+    let elite = g.add_card_to_battlefield(0, catalog::boros_elite());
+    g.clear_sickness(elite);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: elite, target: AttackTarget::Player(1),
+    }])).expect("attack alone");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elite).unwrap().power(), 1, "no Battalion when attacking alone");
+}
+
+#[test]
+fn brimaz_makes_attacking_cat_token() {
+    let mut g = two_player_game();
+    let brimaz = g.add_card_to_battlefield(0, catalog::brimaz_king_of_oreskos());
+    g.clear_sickness(brimaz);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: brimaz, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let cat = g.battlefield.iter().find(|c| c.definition.name == "Cat Soldier").expect("cat token");
+    assert!(g.attacking.iter().any(|a| a.attacker == cat.id), "Cat token enters attacking");
+}
+
+#[test]
+fn adeline_power_scales_with_creatures() {
+    let mut g = two_player_game();
+    let adeline = g.add_card_to_battlefield(0, catalog::adeline_resplendent_cathar());
+    // Adeline alone counts herself → power 1.
+    assert_eq!(g.computed_permanent(adeline).unwrap().power, 1, "power = 1 creature (herself)");
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(adeline).unwrap().power, 3, "power = 3 creatures you control");
+}
+
+#[test]
+fn pia_and_kiran_make_two_thopters_and_sac_for_damage() {
+    let mut g = two_player_game();
+    let pk = g.add_card_to_hand(0, catalog::pia_and_kiran_nalaar());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    cast(&mut g, pk);
+    drain_stack(&mut g);
+    let thopters: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Thopter").map(|c| c.id).collect();
+    assert_eq!(thopters.len(), 2, "ETB makes two Thopters");
+    // Sacrifice one Thopter to deal 2 to the opponent.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pk, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("activate sac-for-damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "sac an artifact deals 2 to any target");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count(), 1,
+        "one Thopter sacrificed");
+}
+
+#[test]
+fn zo_zu_punishes_land_drops() {
+    let mut g = two_player_game();
+    // Zo-Zu under P1; P0 (active) plays a land → P0 is punished as the
+    // land's controller.
+    g.add_card_to_battlefield(1, catalog::zo_zu_the_punisher());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "Zo-Zu deals 2 to the land's controller");
+}
+
+#[test]
+fn midnight_reaper_draws_and_pings_on_nontoken_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::midnight_reaper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    // Bolt our own bear so the damage→death path dispatches CreatureDied.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[0].life;
+    let lib = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "draw a card on nontoken death");
+    assert_eq!(g.players[0].life, life - 1, "1 damage to you on nontoken death");
+}
+
+#[test]
+fn midnight_reaper_silent_on_token_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::midnight_reaper());
+    // A token creature dying should not trigger Midnight Reaper.
+    let mut tok = catalog::grizzly_bears();
+    tok.name = "Bear Token";
+    let t = g.add_card_to_battlefield(0, tok);
+    g.battlefield_find_mut(t).unwrap().is_token = true;
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[0].life;
+    let lib = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(t)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt token");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "no ping on token death");
+    assert_eq!(g.players[0].library.len(), lib, "no draw on token death");
+}
+
+#[test]
+fn grim_haruspex_draws_on_other_nontoken_death() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let grim = g.add_card_to_battlefield(0, catalog::grim_haruspex());
+    assert!(g.battlefield_find(grim).unwrap().definition.keywords
+        .iter().any(|k| matches!(k, Keyword::Morph(_))), "has Morph");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let lib = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "draw when another nontoken creature dies");
+}
+
+#[test]
+fn avatar_of_the_resolute_enters_with_counters_per_counter_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Two other creatures already carry a +1/+1 counter.
+    for _ in 0..2 {
+        let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(c).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    let avatar = g.add_card_to_hand(0, catalog::avatar_of_the_resolute());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 0;
+    cast(&mut g, avatar);
+    drain_stack(&mut g);
+    let a = g.battlefield.iter().find(|c| c.definition.name == "Avatar of the Resolute").unwrap();
+    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 2,
+        "enters with one counter per other counter-bearing creature");
+}
+
+#[test]
+fn pelt_collector_grows_and_gains_trample() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let pelt = g.add_card_to_battlefield(0, catalog::pelt_collector());
+    // A bigger creature entering bumps Pelt Collector once.
+    let big = g.add_card_to_hand(0, catalog::grizzly_bears()); // 2/2 > 1/1
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 0;
+    cast(&mut g, big);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pelt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "bigger creature entering grows Pelt Collector");
+    // Force it to 3 counters → trample.
+    g.battlefield_find_mut(pelt).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    assert!(g.computed_permanent(pelt).unwrap().keywords.contains(&Keyword::Trample),
+        "trample at 3+ counters");
+}
+
+#[test]
+fn glen_elendra_counters_noncreature_spell() {
+    let mut g = two_player_game();
+    let glen = g.add_card_to_battlefield(0, catalog::glen_elendra_archmage());
+    // Opponent casts a noncreature spell; Glen Elendra sacs to counter it.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: glen, ability_index: 0, target: Some(Target::Permanent(bolt)), x_value: None,
+    }).expect("sac to counter");
+    drain_stack(&mut g);
+    // Persist returns Glen Elendra with a -1/-1 counter.
+    let glen_back = g.battlefield.iter().find(|c| c.definition.name == "Glen Elendra Archmage");
+    assert!(glen_back.is_some(), "Persist returns Glen Elendra");
+    assert_eq!(g.players[0].life, 20, "the bolt was countered (no damage)");
+}
+
+#[test]
+fn persist_returns_creature_destroyed_by_removal() {
+    use crate::card::CounterType;
+    // CR 702.79 — Persist applies on death by destruction, not just lethal
+    // combat damage. Murder a Persist creature → it returns with a -1/-1.
+    let mut g = two_player_game();
+    let glen = g.add_card_to_battlefield(0, catalog::glen_elendra_archmage());
+    let murder = g.add_card_to_hand(1, catalog::murder());
+    g.players[1].mana_pool.add(Color::Black, 2);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder, target: Some(Target::Permanent(glen)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("murder Glen Elendra");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Glen Elendra Archmage")
+        .expect("Persist returns the creature after destroy");
+    assert_eq!(back.counter_count(CounterType::MinusOneMinusOne), 1,
+        "returns with a -1/-1 counter");
+}
+
+#[test]
+fn inventors_apprentice_pumps_with_an_artifact() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::inventors_apprentice());
+    assert_eq!(g.computed_permanent(app).unwrap().power, 1, "1/2 with no artifact");
+    g.add_card_to_battlefield(0, catalog::sol_ring()); // an artifact
+    let cp = g.computed_permanent(app).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "+1/+1 while you control an artifact");
+}
+
+#[test]
+fn signal_pest_blocked_only_by_flying_or_reach() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let pest = g.add_card_to_battlefield(0, catalog::signal_pest());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no evasion-blocker kw
+    let flyer = g.add_card_to_battlefield(1, catalog::wind_drake()); // flying
+    assert!(!g.blocker_can_block_attacker(ground, pest), "ground creature can't block Signal Pest");
+    assert!(g.blocker_can_block_attacker(flyer, pest), "flyer can block Signal Pest");
+    let _ = Keyword::Flying;
+}
+
+#[test]
+fn kitesail_freebooter_exiles_noncreature_until_it_leaves() {
+    let mut g = two_player_game();
+    // Opponent holds a noncreature spell to be exiled.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let kite = g.add_card_to_hand(0, catalog::kitesail_freebooter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    cast(&mut g, kite);
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "noncreature card exiled from hand");
+    // When Kitesail leaves, the card returns.
+    let kite_id = g.battlefield.iter().find(|c| c.definition.name == "Kitesail Freebooter").unwrap().id;
+    g.remove_from_battlefield_to_graveyard(kite_id);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "card returns when Kitesail leaves");
+}
+
+#[test]
+fn bygone_bishop_investigates_on_small_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bygone_bishop());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2 creature
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 0;
+    cast(&mut g, bear);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"),
+        "investigate makes a Clue on a small creature cast");
+}
+
+#[test]
+fn sram_draws_on_equipment_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sram_senior_edificer());
+    g.add_card_to_library(0, catalog::island());
+    // Bonesplitter is an Equipment.
+    let equip = g.add_card_to_hand(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    let lib = g.players[0].library.len();
+    cast(&mut g, equip);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "Sram draws when you cast an Equipment");
+}
+
+#[test]
+fn narnam_renegade_revolt_enters_bigger_after_a_permanent_left() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // No revolt yet → enters as a plain 1/2.
+    let plain = g.add_card_to_hand(0, catalog::narnam_renegade());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 0;
+    cast(&mut g, plain);
+    drain_stack(&mut g);
+    let n1 = g.battlefield.iter().find(|c| c.definition.name == "Narnam Renegade").unwrap();
+    assert_eq!(n1.counter_count(CounterType::PlusOnePlusOne), 0, "no Revolt → no counter");
+    // Sacrifice a permanent → Revolt active for the rest of the turn.
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(fodder);
+    assert!(g.players[0].permanent_left_battlefield_this_turn);
+    let revolt = g.add_card_to_hand(0, catalog::narnam_renegade());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, revolt);
+    drain_stack(&mut g);
+    let n2 = g.battlefield.iter().filter(|c| c.definition.name == "Narnam Renegade")
+        .max_by_key(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap();
+    assert_eq!(n2.counter_count(CounterType::PlusOnePlusOne), 1, "Revolt → +1/+1 counter");
+}
+
+#[test]
+fn hidden_herbalists_revolt_adds_green_mana() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(fodder); // Revolt on
+    let herb = g.add_card_to_hand(0, catalog::hidden_herbalists());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    cast(&mut g, herb);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "Revolt adds two green mana");
+}
+
+#[test]
+fn fanatic_of_mogis_deals_devotion_to_each_opponent() {
+    let mut g = two_player_game();
+    // A {R}{R} red permanent → devotion 2, plus the Fanatic's own {R} = 3.
+    g.add_card_to_battlefield(0, catalog::pia_and_kiran_nalaar());
+    let fan = g.add_card_to_hand(0, catalog::fanatic_of_mogis());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    let life = g.players[1].life;
+    cast(&mut g, fan);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "Fanatic deals devotion-to-red (3) to the opponent");
+}
+
+#[test]
+fn ridgescale_tusker_counters_each_other_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tusker = g.add_card_to_hand(0, catalog::ridgescale_tusker());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    cast(&mut g, tusker);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "other creature gets a +1/+1 counter");
+    let t = g.battlefield.iter().find(|c| c.definition.name == "Ridgescale Tusker").unwrap();
+    assert_eq!(t.counter_count(CounterType::PlusOnePlusOne), 0, "Tusker itself excluded");
+}
+
+#[test]
+fn solemn_recruit_grows_on_revolt_end_step() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let rec = g.add_card_to_battlefield(0, catalog::solemn_recruit());
+    g.active_player_idx = 0;
+    // No revolt yet → no growth.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rec).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    // Trigger Revolt, then the end step grows it.
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(fodder);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rec).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Revolt end step adds a +1/+1 counter");
+}
+
+#[test]
+fn manic_vandal_destroys_an_artifact_on_etb() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let van = g.add_card_to_hand(0, catalog::manic_vandal());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    cast(&mut g, van);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "ETB destroys the artifact");
+}
+
+#[test]
+fn fairgrounds_warden_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let warden = g.add_card_to_hand(0, catalog::fairgrounds_warden());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    cast(&mut g, warden);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim exiled");
+    let wid = g.battlefield.iter().find(|c| c.definition.name == "Fairgrounds Warden").unwrap().id;
+    g.remove_from_battlefield_to_graveyard(wid);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == victim), "victim returns when Warden leaves");
+}
+
+#[test]
+fn goblin_cratermaker_pings_a_creature() {
+    let mut g = two_player_game();
+    let crater = g.add_card_to_battlefield(0, catalog::goblin_cratermaker());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crater, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("sac for mode 1 (2 damage)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "2 damage kills the 2/2");
+    assert!(g.battlefield_find(crater).is_none(), "Cratermaker sacrificed itself");
+}
+
+#[test]
+fn green_beaters_have_their_printed_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let crusher = g.add_card_to_battlefield(0, catalog::plated_crusher());
+    let c = g.battlefield_find(crusher).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample) && c.has_keyword(&Keyword::Hexproof));
+    assert_eq!((c.power(), c.toughness()), (7, 6));
+    let stomper = g.add_card_to_battlefield(0, catalog::terra_stomper());
+    assert!(g.battlefield_find(stomper).unwrap().has_keyword(&Keyword::CantBeCountered));
+    let wurm = g.add_card_to_battlefield(0, catalog::bellowing_tanglewurm());
+    assert!(g.battlefield_find(wurm).unwrap().has_keyword(&Keyword::Intimidate));
+}
+
+#[test]
+fn vinelasher_kudzu_grows_on_landfall() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let kudzu = g.add_card_to_battlefield(0, catalog::vinelasher_kudzu());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(kudzu).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "landfall puts a +1/+1 counter on Vinelasher Kudzu");
+}
+
+#[test]
+fn spikeshot_elder_pings_for_its_power() {
+    let mut g = two_player_game();
+    let elder = g.add_card_to_battlefield(0, catalog::spikeshot_elder());
+    g.battlefield_find_mut(elder).unwrap().power_bonus = 2; // 1 + 2 = 3 power
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elder, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("ping any target");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "deals damage equal to its power");
+}
+
+#[test]
+fn tormented_soul_is_unblockable_and_cant_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let soul = g.add_card_to_battlefield(0, catalog::tormented_soul());
+    let c = g.battlefield_find(soul).unwrap();
+    assert!(c.has_keyword(&Keyword::Unblockable) && c.has_keyword(&Keyword::CantBlock));
+}
+
+#[test]
+fn bloodcrazed_neonate_grows_on_combat_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let neo = g.add_card_to_battlefield(0, catalog::bloodcrazed_neonate());
+    g.clear_sickness(neo);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: neo, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(neo).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "combat damage to a player grows the Neonate");
+}
+
+#[test]
+fn stormblood_berserker_bloodthirst_enters_bigger() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Damage the opponent so Bloodthirst is active.
+    g.players[1].was_dealt_damage_this_turn = true;
+    let berserker = g.add_card_to_hand(0, catalog::stormblood_berserker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    cast(&mut g, berserker);
+    drain_stack(&mut g);
+    let b = g.battlefield.iter().find(|c| c.definition.name == "Stormblood Berserker").unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 2, "Bloodthirst 2 → two counters");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

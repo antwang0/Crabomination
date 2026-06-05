@@ -217,6 +217,8 @@ fn colorless_pool() -> Vec<CardFactory> {
     vec![
         // ── modern_decks: draw-engine artifact ──
         the_endstone,
+        // ── modern_decks: Battle-cry artifact creature ──
+        signal_pest,
         // ── Eldrazi (colorless {C} cost) ──
         reality_smasher,
         // ── colorless utility ──
@@ -387,6 +389,17 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: white value/aggro creatures ──
+        solemn_recruit,
+        fairgrounds_warden,
+        knight_exemplar,
+        archangel_of_thune,
+        wingmate_roc,
+        boros_elite,
+        brimaz_king_of_oreskos,
+        adeline_resplendent_cathar,
+        bygone_bishop,
+        sram_senior_edificer,
         // ── Soulshift (CR 702.46) ──
         hundred_talon_kami,
         // ── Soulbond (CR 702.95) ──
@@ -734,6 +747,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: Persist counter-mage ──
+        glen_elendra_archmage,
         // ── Embalm / Eternalize (CR 702.88 / 702.91) ──
         aven_initiate,
         proven_combatant,
@@ -982,6 +997,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         frenzy_sliver,
         // ── Gravestorm (CR 702.69) ──
         ominous_harvest,
+        // ── modern_decks: black value creatures ──
+        midnight_reaper,
+        grim_haruspex,
+        kitesail_freebooter,
+        tormented_soul,
         // ── Fabricate (CR 702.122) ──
         weaponcraft_enthusiast,
         // ── combat-damage value body ──
@@ -1277,6 +1297,19 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: red legends ──
+        pia_and_kiran_nalaar,
+        zo_zu_the_punisher,
+        // ── modern_decks: devotion payoff ──
+        fanatic_of_mogis,
+        // ── modern_decks: red utility creatures ──
+        manic_vandal,
+        goblin_cratermaker,
+        spikeshot_elder,
+        bloodcrazed_neonate,
+        stormblood_berserker,
+        // ── modern_decks: artifacts-matter aggro ──
+        inventors_apprentice,
         // ── Eternalize (CR 702.91) ──
         earthshaker_khenra,
         // ── aggressive red bodies + burn ──
@@ -1605,6 +1638,21 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Poisonous (CR 702.70) ──
         marsh_viper,
+        // ── modern_decks: +1/+1-counter green creatures ──
+        avatar_of_the_resolute,
+        pelt_collector,
+        // ── Revolt (CR 702.139) ──
+        narnam_renegade,
+        greenwheel_liberator,
+        hidden_herbalists,
+        ridgescale_tusker,
+        // ── modern_decks: green beaters / landfall ──
+        plated_crusher,
+        terra_stomper,
+        rumbling_baloth,
+        charging_badger,
+        bellowing_tanglewurm,
+        vinelasher_kudzu,
         // ── Embalm (CR 702.88) ──
         honored_hydra,
         timeless_witness,
