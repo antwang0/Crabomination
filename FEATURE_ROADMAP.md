@@ -124,6 +124,16 @@ read of the code and should be re-verified before picking up an item.
   Hellkite Charger). **Static-granted coin-flip advantage**
   (`StaticEffect::CoinFlipAdvantage` + `coin_flip_advantage_now`, CR 705.3 —
   Krark's Thumb-style flip advantage from a battlefield permanent).
+  **Predicate-gated self-anthem** (`StaticEffect::PumpSelfIf` — live-evaluated
+  +P/+T and optional keyword; Carnage Interpreter, Keen-Eyed Curator).
+  **"Exiled with" linkage** (`CardInstance.exiled_with` +
+  `Effect::ExileTaggedWithSource` + `Value::DistinctCardTypesExiledWith`, CR 720
+  — Keen-Eyed Curator's exiled-card-types threshold). **Reveal-top-take-matching**
+  (`Effect::RevealTopTakeMatchingToHand` — reveal N, take all cards matching a
+  filter to hand, bottom the rest randomly; Torsten, Thundertrap Trainer).
+  **Exile-all-but-bottom-N** (`Effect::ExileLibraryExceptBottom` — Doomsday
+  Excruciator). **Energy O-Ring drawback** (`Effect::PayEnergyOrElse` wired to
+  Static Prison's "sacrifice unless you pay {E}").
 
 ---
 
