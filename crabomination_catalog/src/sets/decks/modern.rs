@@ -18140,3 +18140,31 @@ pub fn shiko_and_narset_unified() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Parallax Dementia — {1}{B} Enchantment — Aura. Enchant creature. Fading 1.
+/// Enchanted creature gets +3/+2. When this Aura leaves the battlefield,
+/// destroy enchanted creature (it can't be regenerated).
+pub fn parallax_dementia() -> CardDefinition {
+    CardDefinition {
+        name: "Parallax Dementia",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Fading(1)],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+        },
+        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 2, keywords: vec![] }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::DestroyNoRegen {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}

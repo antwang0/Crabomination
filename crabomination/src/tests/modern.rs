@@ -26870,3 +26870,27 @@ fn shiko_flurry_draws_on_nontargeted_second_spell() {
     assert!(g.players[0].hand.iter().any(|c| c.id == drawn),
         "no-target second spell draws a card");
 }
+
+#[test]
+fn parallax_dementia_destroys_enchanted_creature_when_it_leaves() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::parallax_dementia());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.battlefield_find_mut(aura).unwrap().add_counters(CounterType::Fade, 1);
+    // Enchanted creature gets +3/+2.
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (5, 4), "+3/+2 from Parallax Dementia");
+    g.active_player_idx = 0;
+    // Upkeep tick 1: removes the lone fade counter (aura survives).
+    let _ = g.process_fading_vanishing();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_some(), "aura survives the first Fading tick");
+    // Upkeep tick 2: no counter to remove → sacrifice → LTB destroys the creature.
+    let _ = g.process_fading_vanishing();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "aura sacrificed by Fading");
+    assert!(g.battlefield_find(bear).is_none(), "enchanted creature destroyed when aura leaves");
+}

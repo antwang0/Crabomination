@@ -1885,6 +1885,15 @@ impl GameState {
             self.players[controller_idx].creatures_died_this_turn =
                 self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
         }
+        // Last-known-info snapshot (CR 603.10): a "when this leaves the
+        // battlefield" trigger resolves after the permanent is gone, so cache
+        // its pre-removal state for selectors that read it (e.g. an Aura's
+        // `AttachedTo(This)` → enchanted creature — Parallax Dementia).
+        if !leave_triggers.is_empty()
+            && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
+        {
+            self.died_card_snapshots.insert(id, c.clone());
+        }
         self.remove_from_battlefield_to_graveyard(id);
         for (source, effect, controller) in leave_triggers {
             let auto_target =

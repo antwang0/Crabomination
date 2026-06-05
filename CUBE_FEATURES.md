@@ -44,7 +44,6 @@ work is listed below.
 |---|---|---|
 | Mutated Cultist | ⏳ | Mutate primitive needed. |
 | Necrotic Ooze | ⏳ | Gains all activated abilities of creatures in graveyards. Big ability-borrow primitive. |
-| Parallax Dementia | ⏳ | Fading + reanimate-on-leave; Fading ✅, the steal-on-leave rider still needs a primitive. |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
 
 ### Red

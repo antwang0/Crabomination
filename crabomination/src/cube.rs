@@ -1052,6 +1052,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         baleful_mastery,
         parallax_nexus,
         parallax_tide,
+        parallax_dementia,
         // ── modern_decks-16 ──
         shriekmaw,
         collective_brutality,

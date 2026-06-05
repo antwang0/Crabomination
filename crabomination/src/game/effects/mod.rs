@@ -5427,7 +5427,13 @@ impl GameState {
                 .into_iter()
                 .filter_map(|e| {
                     let EntityRef::Permanent(cid) = e else { return None; };
+                    // Last-known-info fallback (CR 603.10): an Aura's
+                    // "when this leaves, do X to enchanted creature" trigger
+                    // resolves after the Aura is already in the graveyard, so
+                    // read `attached_to` from the die-time snapshot when the
+                    // source is no longer on the battlefield (Parallax Dementia).
                     self.battlefield_find(cid)
+                        .or_else(|| self.died_card_snapshots.get(&cid))
                         .and_then(|c| c.attached_to)
                         .map(EntityRef::Permanent)
                 })
