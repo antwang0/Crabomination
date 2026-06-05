@@ -691,6 +691,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Soulbond (CR 702.95) ──
         wingcrafter,
         deadeye_navigator,
+        tandem_lookout,
         // ── modern_decks: land-scaled dig + storm payoff ──
         consult_the_star_charts,
         minds_desire,
@@ -921,8 +922,10 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
-        // ── Afflict (CR 702.131) ──
+        // ── Afflict (CR 702.130) ──
         khenra_eternal,
+        // ── Fabricate (CR 702.122) ──
+        weaponcraft_enthusiast,
         // ── modern_decks: ETB reanimator with a lifelink counter ──
         metamorphosis_fanatic,
         // ── modern_decks: artifacts-matter Esper commander ──

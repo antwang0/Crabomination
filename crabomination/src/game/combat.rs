@@ -1389,6 +1389,25 @@ impl GameState {
                     }
                 }
             }
+            // CR 702.95 — Soulbond-granted combat-damage triggers. A paired
+            // creature carrying `soulbond_bonus.triggered_abilities` grants
+            // them to BOTH members; a `DealsCombatDamageToPlayer` one fires off
+            // the attacker (Tandem Lookout's "deals combat damage → draw").
+            for src in &self.battlefield {
+                let Some(bonus) = &src.definition.soulbond_bonus else { continue };
+                let Some(partner) = src.soulbond_partner else { continue };
+                if src.id != source && partner != source {
+                    continue;
+                }
+                if !self.battlefield.iter().any(|c| c.id == partner) {
+                    continue;
+                }
+                for t in &bonus.triggered_abilities {
+                    if t.event.kind == EventKind::DealsCombatDamageToPlayer {
+                        triggers.push((source, t.effect.clone(), atk_ctrl));
+                    }
+                }
+            }
         }
 
         // Phase 1.5: walk all battlefield permanents for `YourControl`-scope

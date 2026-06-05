@@ -27876,3 +27876,43 @@ fn soulbond_nearheath_pilgrim_grants_lifelink() {
     cast(&mut g, pilgrim);
     assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
 }
+
+/// Weaponcraft Enthusiast's Fabricate 2 takes the counter mode by default
+/// (AutoDecider), entering as a 2/3.
+#[test]
+fn fabricate_weaponcraft_enthusiast_counter_mode() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::weaponcraft_enthusiast());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    let c = g.computed_permanent(id).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 3), "0/1 + two +1/+1 counters");
+}
+
+/// Tandem Lookout's Soulbond grants "deals combat damage → draw" to its partner.
+#[test]
+fn soulbond_tandem_lookout_partner_draws_on_combat_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lookout = g.add_card_to_battlefield(0, catalog::tandem_lookout());
+    // Pair them directly (ETB pairing is exercised by the other Soulbond tests).
+    g.apply_soulbond_pairing(lookout);
+    assert_eq!(g.battlefield_find(bear).unwrap().soulbond_partner, Some(lookout));
+    g.add_card_to_library(0, catalog::grizzly_bears()); // a card to draw
+    g.clear_sickness(bear);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..12 {
+        if g.players[0].hand.len() > hand_before { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "the unblocked partner draws on combat damage");
+}

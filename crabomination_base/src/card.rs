@@ -1115,6 +1115,11 @@ pub struct SoulbondBonus {
     /// `granted_abilities_for` just like `StaticEffect::GrantActivatedAbility`.
     #[serde(default)]
     pub activated_abilities: Vec<crate::effect::ActivatedAbility>,
+    /// Triggered abilities each paired creature gains (CR 702.6e-style grant).
+    /// A `DealsCombatDamageToPlayer` one fires off either paired creature via
+    /// the combat hook — Tandem Lookout's "deals combat damage → draw a card".
+    #[serde(default)]
+    pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
 }
 
 /// Board-count scaling for an [`EquipBonus`] (CR 613 layer 7c). See

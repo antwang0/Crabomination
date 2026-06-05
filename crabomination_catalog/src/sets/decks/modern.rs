@@ -19547,3 +19547,50 @@ pub fn nearheath_pilgrim() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Weaponcraft Enthusiast — {2}{B} 0/1 Aetherborn Artificer. Fabricate 2
+/// (CR 702.122): ETB, put two +1/+1 counters on it OR make two 1/1 Servos.
+pub fn weaponcraft_enthusiast() -> CardDefinition {
+    CardDefinition {
+        name: "Weaponcraft Enthusiast",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Aetherborn, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::fabricate(2)],
+        ..Default::default()
+    }
+}
+
+/// Tandem Lookout — {2}{U} 1/1 Human Wizard. Soulbond; while paired, both
+/// creatures have "Whenever this creature deals combat damage to a player,
+/// draw a card" (CR 702.95; the printed "may" is auto-taken).
+pub fn tandem_lookout() -> CardDefinition {
+    CardDefinition {
+        name: "Tandem Lookout",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
