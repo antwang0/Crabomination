@@ -17709,3 +17709,111 @@ pub fn profts_eidetic_memory() -> CardDefinition {
     }
 }
 
+
+/// Baloth Prime — {3}{G} 10/10. Enters tapped with six stun counters.
+/// Whenever you sacrifice a land, create a 4/4 green Beast and untap this
+/// creature (removing a stun counter). `{4}, Sacrifice a land: Gain 2 life.`
+pub fn baloth_prime() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType, TokenDefinition};
+    use crate::effect::shortcut::etb;
+    let beast = TokenDefinition {
+        name: "Beast".into(),
+        power: 4,
+        toughness: 4,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Baloth Prime",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 10,
+        toughness: 10,
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Tap { what: Selector::This },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::Stun, amount: Value::Const(6) },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Land,
+                    }),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: beast },
+                    Effect::Untap { what: Selector::This, up_to: None },
+                ]),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Icetill Explorer — {2}{G}{G} 2/4. You may play an additional land each
+/// turn. Landfall — whenever a land you control enters, mill a card. (The
+/// "play lands from your graveyard" permission is dropped — no such primitive.)
+pub fn icetill_explorer() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Icetill Explorer",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::Mill { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Endstone — {7} Legendary Artifact. Whenever you play a land or cast a
+/// spell, draw a card. At the beginning of your end step, your life total
+/// becomes half your starting life total, rounded up (modeled as 10 for the
+/// default 20-life game).
+pub fn the_endstone() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::game::TurnStep;
+    let draw = || Effect::Draw { who: Selector::You, amount: Value::Const(1) };
+    CardDefinition {
+        name: "The Endstone",
+        cost: cost(&[generic(7)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: draw(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+                effect: draw(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
+                effect: Effect::SetLifeTotal { who: Selector::You, amount: Value::Const(10) },
+            },
+        ],
+        ..Default::default()
+    }
+}

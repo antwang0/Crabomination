@@ -26598,3 +26598,54 @@ fn profts_eidetic_memory_combat_counters_scale_with_draws() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "X = cards drawn this turn minus one");
 }
+
+#[test]
+fn baloth_prime_enters_tapped_with_stun_and_sac_land_untaps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::baloth_prime());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    {
+        let c = g.battlefield_find(id).unwrap();
+        assert!(c.tapped, "enters tapped");
+        assert_eq!(c.counter_count(CounterType::Stun), 6, "six stun counters");
+    }
+    // Sacrifice a land via the activated ability → Beast + untap (removes a stun).
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let _ = land;
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("sac a land for 2 life");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::Stun), 5, "untap replaced by removing a stun counter");
+    let beasts = g.battlefield.iter().filter(|c| c.definition.name == "Beast" && c.controller == 0).count();
+    assert_eq!(beasts, 1, "sacrificing a land mints a Beast");
+    assert_eq!(g.players[0].life, 22, "gained 2 life");
+}
+
+#[test]
+fn icetill_explorer_mills_on_landfall_and_grants_extra_land() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::icetill_explorer());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    // Play a land → landfall mills one.
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "landfall mills a card");
+}
+
+#[test]
+fn the_endstone_draws_on_land_and_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::the_endstone());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let land = g.add_card_to_hand(0, catalog::forest());
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "playing a land draws a card");
+}

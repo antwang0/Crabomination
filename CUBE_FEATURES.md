@@ -60,8 +60,6 @@ work is listed below.
 |---|---|---|
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
-| Baloth Prime | ⏳ | TBD. |
-| Icetill Explorer | ⏳ | TBD. |
 | Mightform Harmonizer | ⏳ | TBD. |
 | Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
@@ -76,7 +74,6 @@ work is listed below.
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
 | Helm of the Host | ⏳ | Equipment that token-copies on attack. |
 | The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
-| The Endstone | ⏳ | TBD. |
 
 ### Multicolor
 

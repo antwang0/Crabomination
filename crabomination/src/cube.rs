@@ -215,6 +215,8 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // ── modern_decks: draw-engine artifact ──
+        the_endstone,
         // ── Eldrazi (colorless {C} cost) ──
         reality_smasher,
         // ── colorless utility ──
@@ -1458,6 +1460,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: begin-combat counter scaling + Plot ──
         ouroboroid,
         railway_brawler,
+        baloth_prime,
+        icetill_explorer,
         // ── claude/modern_decks: deathtouch body ──
         gnarlwood_dryad,
         gladecover_scout,
