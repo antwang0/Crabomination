@@ -194,6 +194,8 @@ mod tests {
                 devotion: [0; 5],
                 is_monarch: false,
                 has_city_blessing: false,
+                commander_damage_taken: vec![],
+                team: 0,
             }],
             battlefield: vec![],
             stack: vec![],

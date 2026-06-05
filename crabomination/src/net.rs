@@ -449,6 +449,34 @@ pub struct PlayerView {
     /// Surfaced so UIs can show a "blessed" badge. `#[serde(default)]`.
     #[serde(default)]
     pub has_city_blessing: bool,
+    /// CR 903.10a — combat damage this player has been dealt by each
+    /// individual commander, one entry per source commander that has hit
+    /// them. 21 from a *single* commander is a loss, so each entry is
+    /// tracked (and shown) separately rather than summed. Empty outside
+    /// Commander games. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub commander_damage_taken: Vec<CommanderDamageEntry>,
+    /// Team id this seat belongs to (`GameState::team_of`). In free-for-all
+    /// formats each team is a singleton equal to the seat number; in team
+    /// formats (Two-Headed Giant, Star) seats sharing a team share this id.
+    /// Lets the client seat teammates together at the table. `#[serde(default)]`
+    /// for snapshot back-compat (defaults to 0; the client falls back to
+    /// seat-order seating when every team reads as the same default).
+    #[serde(default)]
+    pub team: usize,
+}
+
+/// One source-commander's combat-damage tally against a player (CR 903.10a).
+/// Lethal at 21 from a single commander, so the UI surfaces each source's
+/// running total separately.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommanderDamageEntry {
+    /// Display name of the commander dealing the damage.
+    pub source_name: String,
+    /// Seat that owns the source commander (for the HUD's seat-colour cue).
+    pub source_seat: usize,
+    /// Combat damage this commander has dealt the player so far.
+    pub amount: u32,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

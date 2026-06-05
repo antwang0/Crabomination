@@ -107,6 +107,12 @@ pub struct PendingNetMode(pub Option<(NetMode, MatchFormat)>);
 #[derive(Resource, Default, Debug)]
 pub struct CliBootHint(pub Option<std::path::PathBuf>);
 
+/// Inserted at startup with the value of `--play <format>`. When `Some`,
+/// the menu boots a local-bot match of that format directly (used to verify
+/// format-specific layouts, e.g. the 4-player Commander table).
+#[derive(Resource, Default, Debug)]
+pub struct CliBootFormat(pub Option<MatchFormat>);
+
 #[derive(Clone, Debug)]
 pub enum NetMode {
     /// In-process server, RandomBot opponent.
@@ -155,6 +161,18 @@ impl MatchFormat {
             MatchFormat::Cube => build_cube_state(),
             MatchFormat::Sos => build_sos_state(),
             MatchFormat::Commander => build_commander_state(),
+        }
+    }
+
+    /// Parse a `--play <format>` CLI argument. Case-insensitive; returns
+    /// `None` for an unrecognised name so the launch falls through to the menu.
+    pub fn from_cli(s: &str) -> Option<MatchFormat> {
+        match s.to_ascii_lowercase().as_str() {
+            "modern" => Some(MatchFormat::Modern),
+            "cube" => Some(MatchFormat::Cube),
+            "sos" => Some(MatchFormat::Sos),
+            "commander" | "edh" => Some(MatchFormat::Commander),
+            _ => None,
         }
     }
 
@@ -290,6 +308,7 @@ impl Plugin for MenuPlugin {
             .init_resource::<PendingLobbyServer>()
             .init_resource::<MenuFields>()
             .init_resource::<CliBootHint>()
+            .init_resource::<CliBootFormat>()
             .add_systems(OnEnter(AppState::Menu), spawn_menu)
             .add_systems(OnExit(AppState::Menu), despawn_menu)
             .add_systems(
@@ -313,10 +332,17 @@ impl Plugin for MenuPlugin {
 /// frame, bypassing the menu UI entirely.
 fn apply_cli_boot_hint(
     mut hint: ResMut<CliBootHint>,
+    mut boot_format: ResMut<CliBootFormat>,
     mut pending: ResMut<PendingNetMode>,
     mut next_state: ResMut<NextState<AppState>>,
     fields: Res<MenuFields>,
 ) {
+    // `--play <format>` boots a local-bot match of that format directly.
+    if let Some(format) = boot_format.0.take() {
+        pending.0 = Some((NetMode::LocalBot, format));
+        next_state.set(AppState::InGame);
+        return;
+    }
     let Some(path) = hint.0.take() else { return };
     pending.0 = Some((NetMode::LoadDebugState { path }, fields.format));
     next_state.set(AppState::InGame);

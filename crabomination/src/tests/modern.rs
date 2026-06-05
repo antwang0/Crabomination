@@ -28023,6 +28023,24 @@ fn boros_recruit_first_strike_hybrid() {
     assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::FirstStrike));
 }
 
+/// A hybrid ({R/W}) card counts as BOTH its colors for hidden-zone color
+/// filters (CR 105.2c), matching the battlefield `colors_from_card` path.
+/// Regression: `R::HasColor` previously scanned only plain `Colored` pips and
+/// read Boros Recruit as colorless in hand/graveyard/library.
+#[test]
+fn hybrid_card_matches_both_colors_in_hidden_zone() {
+    use crate::card::SelectionRequirement as R;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::boros_recruit()); // {R/W}
+    let card = g.players[0].hand.iter().find(|c| c.id == id).unwrap().clone();
+    assert!(g.evaluate_requirement_on_card(&R::HasColor(Color::Red), &card, 0),
+        "{{R/W}} hybrid card is red");
+    assert!(g.evaluate_requirement_on_card(&R::HasColor(Color::White), &card, 0),
+        "{{R/W}} hybrid card is white");
+    assert!(!g.evaluate_requirement_on_card(&R::HasColor(Color::Blue), &card, 0),
+        "{{R/W}} hybrid card is not blue");
+}
+
 /// Bloodrock Cyclops must attack when able.
 #[test]
 fn bloodrock_cyclops_must_attack() {

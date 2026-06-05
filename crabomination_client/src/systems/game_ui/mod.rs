@@ -237,6 +237,12 @@ pub struct OpponentStatusPanel;
 #[derive(Component)]
 pub struct GameLogPanel;
 
+/// Outer chrome node of the game log. `position_log_below_opponents` keeps its
+/// `top` just under the opponent status panel so a tall (multi-opponent,
+/// wrapped) panel never overlaps the log.
+#[derive(Component)]
+pub struct GameLogOuterPanel;
+
 #[derive(Component)]
 pub struct HintText;
 
@@ -500,8 +506,8 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             }
         });
 
-    // Top-right: bot status. Background starts neutral and only flips
-    // to the red HUD_BG_DANGER variant when the viewer is genuinely
+    // Top-right: opponent status panel. Background starts neutral and only
+    // flips to the red HUD_BG_DANGER variant when the viewer is genuinely
     // threatened (see `update_opponent_panel_tint`).
     commands
         .spawn((
@@ -520,26 +526,22 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             InGameRoot,
         ))
         .with_children(|p| {
-            // Container — `update_opponent_stats_rows` rebuilds one
-            // chip-row per opponent on view changes. Multi-opponent
-            // formats (Commander) get one visible row per seat instead
-            // of a single `\n`-joined text node.
+            // `update_opponent_stats_rows` rebuilds one chip-row per opponent
+            // on view changes — one visible row per seat.
             p.spawn((
                 Node {
                     flex_direction: FlexDirection::Column,
                     row_gap: Val::Px(6.0),
-                    align_items: AlignItems::Stretch,
+                    align_items: AlignItems::FlexStart,
                     ..default()
                 },
                 OpponentStatsContainer,
             ));
         });
 
-    // Right side: game log. Outer node owns the panel chrome (position,
-    // background, scroll behavior); inner `GameLogPanel` is the flex
-    // column whose children are one `Text` per log entry. Splitting the
-    // two lets `update_log_text` despawn + rebuild children without
-    // tearing the chrome on every change.
+    // Right side: game log, positioned just *below* the opponent panel by
+    // `position_log_below_opponents` (its top tracks the panel's live height,
+    // so the three wrapped Commander opponent rows can't overlap it).
     commands
         .spawn((
             Node {
@@ -553,6 +555,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ..default()
             },
             BackgroundColor(theme::HUD_BG),
+            GameLogOuterPanel,
             InGameRoot,
         ))
         .with_children(|p| {
@@ -979,6 +982,28 @@ pub fn update_log_text(
             ));
         }
     });
+}
+
+/// Keep the game log positioned just below the opponent status panel. The
+/// panel grows with the opponent count (one chip-row each, wrapping to a
+/// couple of lines in Commander), so a fixed log `top` would overlap it for
+/// 3+ players. Reads the panel's live computed height (`ComputedNode::size`
+/// is in logical px here) and parks the log 8px under it.
+pub fn position_log_below_opponents(
+    panel_q: Query<&bevy::ui::ComputedNode, With<OpponentStatusPanel>>,
+    mut log_q: Query<&mut Node, With<GameLogOuterPanel>>,
+) {
+    let Ok(panel) = panel_q.single() else { return };
+    let Ok(mut log) = log_q.single_mut() else { return };
+    let panel_h = panel.size().y;
+    if panel_h <= 0.0 {
+        return;
+    }
+    // Panel sits at top:10; place the log 8px below its bottom edge.
+    let target = Val::Px(10.0 + panel_h + 8.0);
+    if log.top != target {
+        log.top = target;
+    }
 }
 
 /// Canonical phase ordering rendered by the left-edge phase chart.
@@ -1708,7 +1733,7 @@ pub fn sync_game_visuals(
                 continue;
             }
             let base = deck_position(seat, viewer, n_seats);
-            let rot = back_face_rotation(seat, viewer);
+            let rot = back_face_rotation(seat, viewer, n_seats);
             for i in current..target_size {
                 let y = i as f32 * DECK_CARD_Y_STEP + 0.01;
                 let pos = Vec3::new(base.x, y, base.z);
@@ -1853,7 +1878,7 @@ pub fn sync_game_visuals(
     let viewer_deck_base = deck_position(viewer, viewer, n_seats);
     let viewer_deck_top_y = (cv.players[viewer].library.size as f32) * DECK_CARD_Y_STEP + 0.5;
     let viewer_deck_top = Vec3::new(viewer_deck_base.x, viewer_deck_top_y, viewer_deck_base.z);
-    let viewer_deck_back_rot = back_face_rotation(viewer, viewer);
+    let viewer_deck_back_rot = back_face_rotation(viewer, viewer, n_seats);
 
     // ── Deck → Hand transitions (viewer's deck-card visual → face-up hand) ──
     let hand_zoom = inflight.hand_zoom.0;
@@ -2024,7 +2049,7 @@ pub fn sync_game_visuals(
             // library (mulligan put-back) — fly it to the deck pile.
             if in_any_graveyard.contains(&game_id.0) {
                 let gy_pos = graveyard_position(viewer, viewer, n_seats);
-                let gy_rot = back_face_rotation(viewer, viewer);
+                let gy_rot = back_face_rotation(viewer, viewer, n_seats);
                 commands
                     .entity(entity)
                     .remove::<HandCard>()
@@ -2159,7 +2184,7 @@ pub fn sync_game_visuals(
         }
         // Default: fly to the owner's graveyard pile.
         let gy_pos = graveyard_position(owner.0, viewer, n_seats);
-        let gy_rot = back_face_rotation(owner.0, viewer);
+        let gy_rot = back_face_rotation(owner.0, viewer, n_seats);
         commands
             .entity(entity)
             .remove::<BattlefieldCard>()
@@ -2232,7 +2257,7 @@ pub fn sync_game_visuals(
                     .unwrap_or(0);
                 let y = (opp_deck_size as f32) * DECK_CARD_Y_STEP + 0.5;
                 let pos = Vec3::new(opp_deck_base.x, y, opp_deck_base.z);
-                (pos, back_face_rotation(seat, viewer))
+                (pos, back_face_rotation(seat, viewer, n_seats))
             };
 
             let front_mat = card_front_material(&card_name, &mut materials, &asset_server);
@@ -2292,7 +2317,7 @@ pub fn sync_game_visuals(
             let lib_size = cv.players.iter().find(|p| p.seat == seat)
                 .map(|p| p.library.size).unwrap_or(0);
             let y = lib_size as f32 * DECK_CARD_Y_STEP + 0.5;
-            (Vec3::new(base.x, y, base.z), back_face_rotation(seat, viewer))
+            (Vec3::new(base.x, y, base.z), back_face_rotation(seat, viewer, n_seats))
         };
 
         let front_mat = card_front_material(&k.name, &mut materials, &asset_server);

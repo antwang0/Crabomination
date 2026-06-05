@@ -972,9 +972,14 @@ impl GameState {
             R::Land => card.definition.is_land(),
             R::Nonland => !card.definition.is_land(),
             R::Noncreature => !card.definition.is_creature(),
-            R::HasColor(c) => card.definition.cost.symbols.iter().any(|s| {
-                matches!(s, crate::mana::ManaSymbol::Colored(cc) if cc == c)
-            }),
+            // A card's color is set by every colored symbol in its cost,
+            // including hybrid ({R/W}), Phyrexian ({R/P}) and mono-hybrid
+            // ({2/W}) pips — so a {R/W} card is both red and white. Defer to
+            // the shared `ManaCost::colors()` helper (the same expansion the
+            // battlefield path uses via `colors_from_card`); a bare
+            // `Colored`-pip scan would mis-read hybrid/Phyrexian cards as
+            // colorless in hidden zones.
+            R::HasColor(c) => card.definition.cost.colors().contains(c),
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,

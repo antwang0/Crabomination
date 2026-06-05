@@ -35,7 +35,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(p, i, seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i))
+                project_player(p, i, seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0)
             })
             .collect(),
         battlefield: {
@@ -227,6 +227,49 @@ fn exile_entry(card: &CardInstance) -> ExileCardView {
     }
 }
 
+/// Collect the commander-damage tally dealt to `victim` (CR 903.10a), one
+/// entry per source commander, resolving each source `CardId` to its current
+/// name + owning seat. Sorted by descending damage so the closest-to-lethal
+/// source leads. Empty outside Commander games.
+fn commander_damage_taken(
+    state: &GameState,
+    victim: usize,
+) -> Vec<crate::net::CommanderDamageEntry> {
+    let mut entries: Vec<crate::net::CommanderDamageEntry> = state
+        .commander_damage
+        .iter()
+        .filter(|((v, _), amount)| *v == victim && **amount > 0)
+        .map(|((_, source_id), amount)| {
+            // A commander source is usually on the battlefield or back in a
+            // command zone. `find_card_anywhere` covers the former (+ other
+            // zones) but deliberately skips the command zone, so fall back to
+            // scanning each player's command zone for the name/owner.
+            let source = state.find_card_anywhere(*source_id).or_else(|| {
+                state
+                    .players
+                    .iter()
+                    .find_map(|p| p.command.iter().find(|c| c.id == *source_id))
+            });
+            crate::net::CommanderDamageEntry {
+                source_name: source
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_else(|| "Commander".to_string()),
+                source_seat: source.map(|c| c.owner).unwrap_or(0),
+                amount: *amount,
+            }
+        })
+        .collect();
+    // Closest-to-lethal first; tie-break on name for a stable order across
+    // frames (HashMap iteration order is otherwise nondeterministic).
+    entries.sort_by(|a, b| {
+        b.amount
+            .cmp(&a.amount)
+            .then_with(|| a.source_name.cmp(&b.source_name))
+    });
+    entries
+}
+
+#[allow(clippy::too_many_arguments)]
 fn project_player(
     player: &Player,
     player_seat: usize,
@@ -235,6 +278,8 @@ fn project_player(
     devotion: [u32; 5],
     draw_cap: Option<u32>,
     is_monarch: bool,
+    commander_damage_taken: Vec<crate::net::CommanderDamageEntry>,
+    team: usize,
 ) -> PlayerView {
     use crate::game::types::PreventionTarget;
     let has_prevention_shield = prevention_shields
@@ -285,6 +330,8 @@ fn project_player(
         devotion,
         is_monarch,
         has_city_blessing: player.city_blessing,
+        commander_damage_taken,
+        team,
     }
 }
 
@@ -1735,6 +1782,51 @@ mod tests {
         // UI can flag opponents' commanders on the battlefield for
         // damage-tally tooltips.
         assert!(view_p1.players[0].commanders.contains(&atraxa));
+    }
+
+    /// Commander damage recorded in the engine surfaces in the victim's
+    /// `PlayerView`, resolved to the source commander's name + owning seat
+    /// (CR 903.10a). The non-victim seat shows none.
+    #[test]
+    fn commander_damage_taken_surfaces_in_view() {
+        let mut state = two_player_game();
+        let cmd_ids = state.seat_commanders(0, vec![catalog::atraxa_grand_unifier()]);
+        let atraxa = cmd_ids[0];
+        // Seat 0's commander has dealt 14 combat damage to seat 1.
+        state.commander_damage.insert((1, atraxa), 14);
+
+        let view = project(&state, 1);
+        let victim = &view.players[1];
+        assert_eq!(victim.commander_damage_taken.len(), 1);
+        let entry = &victim.commander_damage_taken[0];
+        assert_eq!(entry.amount, 14);
+        assert_eq!(entry.source_seat, 0, "Atraxa is owned by seat 0");
+        assert!(
+            entry.source_name.contains("Atraxa"),
+            "expected resolved commander name, got {}",
+            entry.source_name
+        );
+
+        // The seat that dealt the damage has taken none itself.
+        assert!(view.players[0].commander_damage_taken.is_empty());
+    }
+
+    /// Multiple source commanders are listed separately and sorted with the
+    /// closest-to-lethal first (each is its own CR 903.10a clock).
+    #[test]
+    fn commander_damage_lists_each_source_highest_first() {
+        let mut state = two_player_game();
+        let a = state.seat_commanders(0, vec![catalog::atraxa_grand_unifier()])[0];
+        let b = state.seat_commanders(1, vec![catalog::atraxa_grand_unifier()])[0];
+        // Two different commanders have hit seat 0 for different totals.
+        state.commander_damage.insert((0, a), 6);
+        state.commander_damage.insert((0, b), 17);
+
+        let view = project(&state, 0);
+        let taken = &view.players[0].commander_damage_taken;
+        assert_eq!(taken.len(), 2);
+        assert_eq!(taken[0].amount, 17, "highest tally must lead");
+        assert_eq!(taken[1].amount, 6);
     }
 
     #[test]
