@@ -12000,6 +12000,103 @@ pub fn grim_haruspex() -> CardDefinition {
     }
 }
 
+/// Hidden Herbalists — {1}{G} 2/2 Human Druid. Revolt — when it enters, if a
+/// permanent left the battlefield under your control this turn, add {G}{G}. (AER)
+pub fn hidden_herbalists() -> CardDefinition {
+    CardDefinition {
+        name: "Hidden Herbalists",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::OfColor(Color::Green, Value::Const(2)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fanatic of Mogis — {3}{R} 4/2 Minotaur Shaman. When it enters, deals damage
+/// to each opponent equal to your devotion to red. (THS)
+pub fn fanatic_of_mogis() -> CardDefinition {
+    CardDefinition {
+        name: "Fanatic of Mogis",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::DevotionTo(vec![Color::Red]),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Ridgescale Tusker — {3}{G}{G} 5/5 Pangolin Beast. When it enters, put a
+/// +1/+1 counter on each other creature you control. (AER)
+pub fn ridgescale_tusker() -> CardDefinition {
+    CardDefinition {
+        name: "Ridgescale Tusker",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Solemn Recruit — {1}{W}{W} 2/2 Dwarf Warrior, Double strike. Revolt — at
+/// the beginning of your end step, if a permanent left the battlefield under
+/// your control this turn, put a +1/+1 counter on it. (AER)
+pub fn solemn_recruit() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Solemn Recruit",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl)
+                .with_filter(Predicate::RevoltActive { who: PlayerRef::You }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Narnam Renegade — {G} 1/2 Elf Warrior, Deathtouch. Revolt — enters with a
 /// +1/+1 counter if a permanent left the battlefield under your control this
 /// turn. (AER)
@@ -12024,19 +12121,19 @@ pub fn narnam_renegade() -> CardDefinition {
     }
 }
 
-/// Greenwheel Liberator — {2}{G} 1/1 Human Warrior. Revolt — enters with two
+/// Greenwheel Liberator — {1}{G} 2/1 Elf Warrior. Revolt — enters with two
 /// +1/+1 counters if a permanent left the battlefield under your control this
 /// turn. (AER)
 pub fn greenwheel_liberator() -> CardDefinition {
     CardDefinition {
         name: "Greenwheel Liberator",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 1,
         triggered_abilities: vec![crate::effect::shortcut::revolt_etb(Effect::AddCounter {
             what: Selector::This,

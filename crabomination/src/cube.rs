@@ -390,6 +390,7 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: white value/aggro creatures ──
+        solemn_recruit,
         knight_exemplar,
         archangel_of_thune,
         wingmate_roc,
@@ -1297,6 +1298,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
+        // ── modern_decks: devotion payoff ──
+        fanatic_of_mogis,
         // ── modern_decks: artifacts-matter aggro ──
         inventors_apprentice,
         // ── Eternalize (CR 702.91) ──
@@ -1633,6 +1636,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Revolt (CR 702.139) ──
         narnam_renegade,
         greenwheel_liberator,
+        hidden_herbalists,
+        ridgescale_tusker,
         // ── Embalm (CR 702.88) ──
         honored_hydra,
         timeless_witness,

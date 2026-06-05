@@ -28440,6 +28440,71 @@ fn narnam_renegade_revolt_enters_bigger_after_a_permanent_left() {
     assert_eq!(n2.counter_count(CounterType::PlusOnePlusOne), 1, "Revolt → +1/+1 counter");
 }
 
+#[test]
+fn hidden_herbalists_revolt_adds_green_mana() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(fodder); // Revolt on
+    let herb = g.add_card_to_hand(0, catalog::hidden_herbalists());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    cast(&mut g, herb);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2, "Revolt adds two green mana");
+}
+
+#[test]
+fn fanatic_of_mogis_deals_devotion_to_each_opponent() {
+    let mut g = two_player_game();
+    // A {R}{R} red permanent → devotion 2, plus the Fanatic's own {R} = 3.
+    g.add_card_to_battlefield(0, catalog::pia_and_kiran_nalaar());
+    let fan = g.add_card_to_hand(0, catalog::fanatic_of_mogis());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    let life = g.players[1].life;
+    cast(&mut g, fan);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "Fanatic deals devotion-to-red (3) to the opponent");
+}
+
+#[test]
+fn ridgescale_tusker_counters_each_other_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tusker = g.add_card_to_hand(0, catalog::ridgescale_tusker());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.active_player_idx = 0;
+    cast(&mut g, tusker);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "other creature gets a +1/+1 counter");
+    let t = g.battlefield.iter().find(|c| c.definition.name == "Ridgescale Tusker").unwrap();
+    assert_eq!(t.counter_count(CounterType::PlusOnePlusOne), 0, "Tusker itself excluded");
+}
+
+#[test]
+fn solemn_recruit_grows_on_revolt_end_step() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let rec = g.add_card_to_battlefield(0, catalog::solemn_recruit());
+    g.active_player_idx = 0;
+    // No revolt yet → no growth.
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rec).unwrap().counter_count(CounterType::PlusOnePlusOne), 0);
+    // Trigger Revolt, then the end step grows it.
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(fodder);
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rec).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Revolt end step adds a +1/+1 counter");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {
