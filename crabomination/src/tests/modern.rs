@@ -27849,3 +27849,30 @@ fn soulshift_hundred_talon_kami_returns_spirit() {
     assert!(g.players[0].hand.iter().any(|c| c.id == spirit),
         "Soulshift returns the MV-2 Spirit to hand");
 }
+
+/// Silverblade Paladin's Soulbond grants double strike to both members.
+#[test]
+fn soulbond_silverblade_paladin_grants_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pal = g.add_card_to_hand(0, catalog::silverblade_paladin());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, pal);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+    assert!(g.computed_permanent(pal).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Nearheath Pilgrim's Soulbond grants lifelink to both members.
+#[test]
+fn soulbond_nearheath_pilgrim_grants_lifelink() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pilgrim = g.add_card_to_hand(0, catalog::nearheath_pilgrim());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, pilgrim);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Lifelink));
+}

@@ -19503,3 +19503,47 @@ pub fn hundred_talon_kami() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Silverblade Paladin — {1}{W}{W} 2/2 Human Knight. Soulbond; both paired
+/// creatures have double strike (CR 702.95).
+pub fn silverblade_paladin() -> CardDefinition {
+    CardDefinition {
+        name: "Silverblade Paladin",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            keywords: vec![Keyword::DoubleStrike],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Nearheath Pilgrim — {1}{W} 2/1 Human Cleric. Soulbond; both paired creatures
+/// have lifelink (CR 702.95).
+pub fn nearheath_pilgrim() -> CardDefinition {
+    CardDefinition {
+        name: "Nearheath Pilgrim",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            keywords: vec![Keyword::Lifelink],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}

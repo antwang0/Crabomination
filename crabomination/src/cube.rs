@@ -362,6 +362,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Soulshift (CR 702.46) ──
         hundred_talon_kami,
+        // ── Soulbond (CR 702.95) ──
+        silverblade_paladin,
+        nearheath_pilgrim,
         // ── modern_decks: energy O-Ring + card-advantage vehicle ──
         static_prison,
         shorikai_genesis_engine,

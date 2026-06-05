@@ -2305,11 +2305,9 @@ pub fn spike_feeder() -> CardDefinition {
     }
 }
 
-/// Sunhome Stalwart — {1}{W}, 2/1 Human Soldier with First strike + Mentor.
-/// Mentor (CR 702.135): when it attacks, put a +1/+1 counter on target
-/// attacking creature with lesser power (wired via `PowerLessThanSource`).
+/// Sunhome Stalwart — {1}{W}, 2/2 Human Soldier with First strike + Mentor
+/// (CR 702.134, via `shortcut::mentor()`).
 pub fn sunhome_stalwart() -> CardDefinition {
-    use crate::card::CounterType;
     CardDefinition {
         name: "Sunhome Stalwart",
         cost: cost(&[generic(1), w()]),
@@ -2319,20 +2317,9 @@ pub fn sunhome_stalwart() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 1,
+        toughness: 2,
         keywords: vec![Keyword::FirstStrike],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::IsAttacking
-                        .and(SelectionRequirement::PowerLessThanSource)
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::mentor()],
         ..Default::default()
     }
 }
