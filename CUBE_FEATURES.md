@@ -127,7 +127,6 @@ work is listed below.
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
-| Planar Nexus | 🟡 | Land, ETB tapped, `{T}`: Add one mana of any color — a rainbow tapland. The basic-land-type / fetch riders collapse. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
 | Talon Gates of Madara | ⏳ | TBD. |
 | Three Tree City | ✅ | Legendary Land. Enters with 3 charge counters; {T}, remove counter: add any color; sacrifices itself when the last charge is removed (folded into the ability's resolution, like Gemstone Mine). |

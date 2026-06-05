@@ -492,3 +492,35 @@ fn thriving_rhino_pumps_when_energy_paid_on_attack() {
     assert_eq!(rhino.power(), 5, "paid {{E}}{{E}} for +2/+2");
     assert_eq!(g.players[0].energy, 0);
 }
+
+#[test]
+fn harnessed_lightning_gives_energy_when_hitting_a_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::harnessed_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "3 damage killed the 2/2");
+    assert_eq!(g.players[0].energy, 3, "you get {{E}}{{E}}{{E}} for hitting a permanent");
+}
+
+#[test]
+fn harnessed_lightning_to_face_gives_no_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::harnessed_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 3);
+    assert_eq!(g.players[0].energy, 0, "damage to a player grants no energy");
+}

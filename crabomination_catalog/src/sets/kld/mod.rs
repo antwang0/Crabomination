@@ -716,6 +716,31 @@ pub fn thriving_rhino() -> CardDefinition {
     }
 }
 
+/// Harnessed Lightning — {1}{R} Instant. Deal 3 damage to any target; if it
+/// was dealt to a permanent, you get {E}{E}{E} (CR 107.16 — damage→energy).
+pub fn harnessed_lightning() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Harnessed Lightning",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                },
+                then: Box::new(Effect::AddEnergy(Value::Const(3))),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Every KLD factory, for snapshot name→factory registration.
 pub fn all_kld_card_factories() -> &'static [crate::CardFactory] {
     &[
@@ -723,6 +748,7 @@ pub fn all_kld_card_factories() -> &'static [crate::CardFactory] {
         lathnu_hellion,
         greenbelt_rampager,
         thriving_rhino,
+        harnessed_lightning,
         attune_with_aether,
         rogue_refiner,
         longtusk_cub,

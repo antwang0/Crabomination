@@ -3127,10 +3127,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   rider** — `Effect::PayEnergyOrElse { amount, otherwise }` ships Lathnu
   Hellion (sac) and Greenbelt Rampager (bounce). (c) **✅ EnergyGained trigger
   event** — `EventKind::EnergyGained` (CR 107.16) fires "whenever you get one
-  or more {E}"; Aetherborn Marauder wired. Remaining: (a) **energy-gated mana
-  abilities** — Aether Hub / Servant of the Conduit still collapse the
-  "{T}, Pay {E}: Add any color" split (`ActivatedAbility` has no energy-cost
-  slot); (d) **damage→energy feedback** (Harnessed Lightning).
+  or more {E}"; Aetherborn Marauder wired. (d) **✅ damage→energy feedback** —
+  Harnessed Lightning (deal 3; get {E}{E}{E} if it hit a permanent). Remaining:
+  (a) **energy-gated mana abilities** — Aether Hub / Servant of the Conduit
+  still collapse the "{T}, Pay {E}: Add any color" split (`ActivatedAbility`
+  has no energy-cost slot).
 
 - 🟡 **`ActivatedAbility` `..Default::default()` sweep.** `ActivatedAbility`
   now derives `Default`, and the land/shortcut helpers use
