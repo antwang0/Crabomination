@@ -28310,3 +28310,75 @@ fn darksteel_plate_is_indestructible() {
     let plate = g.add_card_to_battlefield(0, catalog::darksteel_plate());
     assert!(g.computed_permanent(plate).unwrap().keywords.contains(&Keyword::Indestructible));
 }
+
+/// Rogue's Gloves draws a card when its equipped creature connects.
+#[test]
+fn rogues_gloves_draws_on_combat_damage() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // opp has no blockers
+    let gloves = g.add_card_to_battlefield(0, catalog::rogues_gloves());
+    g.battlefield_find_mut(gloves).unwrap().attached_to = Some(attacker);
+    g.add_card_to_library(0, catalog::island());
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[0].hand.len() > hand { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[0].hand.len() > hand, "Rogue's Gloves draws on combat damage");
+}
+
+/// Specter's Shroud forces a discard when its equipped creature connects.
+#[test]
+fn specters_shroud_discards_on_combat_damage() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
+    let shroud = g.add_card_to_battlefield(0, catalog::specters_shroud());
+    g.battlefield_find_mut(shroud).unwrap().attached_to = Some(attacker);
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let opp_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[1].hand.len() < opp_hand { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[1].hand.len() < opp_hand, "defender discards on combat damage");
+}
+
+/// Mask of Memory nets +1 card (draw two, discard one) on combat damage.
+#[test]
+fn mask_of_memory_draws_two_discards_one() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // opp has no blockers
+    let mask = g.add_card_to_battlefield(0, catalog::mask_of_memory());
+    g.battlefield_find_mut(mask).unwrap().attached_to = Some(attacker);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[0].hand.len() > hand { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 1, "draw two, discard one → net +1");
+}

@@ -20083,3 +20083,63 @@ pub fn darksteel_plate() -> CardDefinition {
     def.keywords.push(Keyword::Indestructible);
     def
 }
+
+// ── Combat-damage Equipment (EquipBonus.triggered_abilities, CR 702.6e) ──────
+
+/// Equipment whose equipped creature gains a `DealsCombatDamageToPlayer` rider
+/// (the damaged player is bound to `Target(0)`), plus an optional P/T bonus.
+fn combat_damage_equipment(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    equip: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    rider: Effect,
+) -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(EquipBonus {
+            power,
+            toughness,
+            keywords: vec![],
+            scale: None,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: rider,
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Rogue's Gloves — {2} Equipment. Whenever equipped creature deals combat
+/// damage to a player, draw a card. Equip {2}.
+pub fn rogues_gloves() -> CardDefinition {
+    combat_damage_equipment("Rogue's Gloves", cost(&[generic(2)]), cost(&[generic(2)]), 0, 0,
+        Effect::Draw { who: Selector::You, amount: Value::Const(1) })
+}
+
+/// Specter's Shroud — {2} Equipment. Equipped creature gets +1/+0. Whenever it
+/// deals combat damage to a player, that player discards a card. Equip {1}.
+pub fn specters_shroud() -> CardDefinition {
+    combat_damage_equipment("Specter's Shroud", cost(&[generic(2)]), cost(&[generic(1)]), 1, 0,
+        Effect::Discard { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(1), random: false })
+}
+
+/// Mask of Memory — {2} Equipment. Whenever equipped creature deals combat
+/// damage to a player, draw two cards, then discard a card. Equip {1}.
+pub fn mask_of_memory() -> CardDefinition {
+    combat_damage_equipment("Mask of Memory", cost(&[generic(2)]), cost(&[generic(1)]), 0, 0,
+        Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]))
+}

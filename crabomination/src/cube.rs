@@ -354,6 +354,19 @@ fn colorless_pool() -> Vec<CardFactory> {
         city_of_brass,
         mana_confluence,
         ghost_quarter,
+        swiftfoot_boots,
+        vulshok_morningstar,
+        bone_saw,
+        accorders_shield,
+        strider_harness,
+        loxodon_warhammer,
+        sword_of_vengeance,
+        fireshrieker,
+        whispersilk_cloak,
+        darksteel_plate,
+        rogues_gloves,
+        specters_shroud,
+        mask_of_memory,
     ]
 }
 
