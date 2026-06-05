@@ -19,8 +19,7 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Lion Sash | ⏳ | Equipment + grow via exile-from-graveyard. Needs equipment + counters wiring. |
-| Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
+| Lion Sash | 🟡 | {1}{W} Equipment Cat 1/1; `{W}: exile target gy card, +1/+1 counter if it was a permanent`; equipped creature scales +1/+1 per +1/+1 counter on Lion Sash (`EquipScale.count_self_counters`). Reconfigure approximated as Equip {2} (the "not a creature while attached" rider dropped). Test: `lion_sash_exiles_permanent_card_grows_and_scales_equipped`. || Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 | Virtue of Loyalty | ⏳ | Adventure + enchantment side. Needs Adventure cost-mode primitive. |
 
 ### Blue

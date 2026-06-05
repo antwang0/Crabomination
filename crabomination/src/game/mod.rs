@@ -1699,14 +1699,21 @@ impl GameState {
             // for each artifact/enchantment the Equipment's controller controls).
             let (mut bp, mut bt) = (bonus.power, bonus.toughness);
             if let Some(scale) = &bonus.scale {
-                let n = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| {
-                        c.controller == card.controller
-                            && self.evaluate_requirement_on_card(&scale.filter, c, card.controller)
-                    })
-                    .count() as i32;
+                let n = match scale.count_self_counters {
+                    Some(kind) => card.counter_count(kind) as i32,
+                    None => self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == card.controller
+                                && self.evaluate_requirement_on_card(
+                                    &scale.filter,
+                                    c,
+                                    card.controller,
+                                )
+                        })
+                        .count() as i32,
+                };
                 bp += n * scale.per_power;
                 bt += n * scale.per_toughness;
             }

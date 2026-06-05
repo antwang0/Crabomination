@@ -26993,3 +26993,26 @@ fn helm_of_the_host_copies_equipped_creature_with_haste() {
         .expect("token copy exists");
     assert!(token.has_keyword(&Keyword::Haste), "the copy has haste");
 }
+
+#[test]
+fn lion_sash_exiles_permanent_card_grows_and_scales_equipped() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let sash = g.add_card_to_battlefield(0, catalog::lion_sash());
+    // A permanent (creature) card in the opponent's graveyard.
+    let gy = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sash, ability_index: 0, target: Some(Target::Permanent(gy)), x_value: None,
+    }).expect("activate exile ability");
+    drain_stack(&mut g);
+    // Card exiled, Lion Sash grew a +1/+1 counter (now 2/2).
+    assert!(g.exile.iter().any(|c| c.id == gy), "target card exiled");
+    assert_eq!(g.battlefield_find(sash).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    // Attach to a creature → it gets +1/+1 per +1/+1 counter on Lion Sash.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(sash).unwrap().attached_to = Some(bear);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 3), "equipped scales by Lion Sash's counter");
+}

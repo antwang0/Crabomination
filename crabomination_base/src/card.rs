@@ -1066,6 +1066,11 @@ pub struct EquipScale {
     pub filter: SelectionRequirement,
     pub per_power: i32,
     pub per_toughness: i32,
+    /// When set, the count is the number of counters of this kind on the
+    /// source permanent itself (Lion Sash — "+1/+1 for each +1/+1 counter on
+    /// this Equipment") rather than the controlled-permanent count by `filter`.
+    #[serde(default)]
+    pub count_self_counters: Option<CounterType>,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by

@@ -18311,6 +18311,7 @@ pub fn nettlecyst() -> CardDefinition {
                 filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
                 per_power: 1,
                 per_toughness: 1,
+                count_self_counters: None,
             }),
         }),
         // Living weapon (CR 702.91): mint a Germ and attach on ETB.
@@ -18355,6 +18356,63 @@ pub fn helm_of_the_host() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
             ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lion Sash — {1}{W} Artifact Creature — Equipment Cat 1/1. `{W}: Exile target
+/// card from a graveyard. If it was a permanent card, put a +1/+1 counter on
+/// Lion Sash.` Equipped creature gets +1/+1 for each +1/+1 counter on Lion
+/// Sash. Reconfigure {2} (approximated as Equip {2}; the "isn't a creature
+/// while attached" rider is dropped).
+pub fn lion_sash() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype, CounterType, EquipBonus, EquipScale};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Lion Sash",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 0,
+            toughness: 0,
+            keywords: vec![],
+            scale: Some(EquipScale {
+                filter: SelectionRequirement::Any,
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: Some(CounterType::PlusOnePlusOne),
+            }),
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::InGraveyard),
+                    to: ZoneDest::Exile,
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: SelectionRequirement::Permanent,
+                    },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }
