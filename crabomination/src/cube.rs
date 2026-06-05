@@ -1278,6 +1278,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── aggressive red bodies + burn ──
         bloodrage_brawler,
         nimble_blade_khenra,
+        defiant_khenra,
         open_fire,
         // ── Soulbond (CR 702.95) ──
         hanweir_lancer,
@@ -1601,6 +1602,11 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Embalm (CR 702.88) ──
         honored_hydra,
         timeless_witness,
+        // ── AKH green bodies (Exert, Flash, ramp, big cycler) ──
+        hooded_brawler,
+        greater_sandwurm,
+        pouncing_cheetah,
+        naga_vitalist,
         // ── Soulbond (CR 702.95) ──
         wolfir_silverheart,
         nightshade_peddler,

@@ -328,6 +328,105 @@ pub fn nimble_blade_khenra() -> CardDefinition {
     }
 }
 
+/// Hooded Brawler — {2}{G} 3/2 Snake Warrior. Exert as it attacks: it gets
+/// +2/+2 until end of turn.
+pub fn hooded_brawler() -> CardDefinition {
+    CardDefinition {
+        name: "Hooded Brawler",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Exert],
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Greater Sandwurm — {5}{G}{G} 7/7 Wurm. Can't be blocked by creatures with
+/// power 2 or less. Cycling {2}.
+pub fn greater_sandwurm() -> CardDefinition {
+    CardDefinition {
+        name: "Greater Sandwurm",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 7,
+        toughness: 7,
+        keywords: vec![
+            Keyword::Cycling(cost(&[generic(2)])),
+            Keyword::CantBeBlockedBy(Box::new(SelectionRequirement::PowerAtMost(2))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Pouncing Cheetah — {2}{G} 3/2 Cat, Flash.
+pub fn pouncing_cheetah() -> CardDefinition {
+    CardDefinition {
+        name: "Pouncing Cheetah",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        ..Default::default()
+    }
+}
+
+/// Defiant Khenra — {1}{R} 2/2 Jackal Warrior.
+pub fn defiant_khenra() -> CardDefinition {
+    CardDefinition {
+        name: "Defiant Khenra",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jackal, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Naga Vitalist — {1}{G} 1/2 Snake Druid. {T}: Add one mana of any type a land
+/// you control could produce (modeled via `AnyColorYouCouldProduce`).
+pub fn naga_vitalist() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Naga Vitalist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyColorYouCouldProduce,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Spells / enchantments ────────────────────────────────────────────────────
 
 /// Cast Out — {3}{W} Enchantment, Flash. ETB: exile target nonland permanent an
@@ -407,5 +506,10 @@ pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
         cast_out,
         open_fire,
         gideons_reproach,
+        hooded_brawler,
+        greater_sandwurm,
+        pouncing_cheetah,
+        defiant_khenra,
+        naga_vitalist,
     ]
 }

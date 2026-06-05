@@ -280,3 +280,35 @@ fn cast_out_exiles_until_it_leaves() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear exiled by Cast Out");
 }
+
+/// Greater Sandwurm can't be blocked by a power-2 creature; Naga Vitalist taps
+/// for a color your lands make; Hooded Brawler exerts for +2/+2.
+#[test]
+fn akh_green_batch_functionality() {
+    use crate::card::Keyword;
+    // Greater Sandwurm evasion keyword present.
+    let sw = catalog::greater_sandwurm();
+    assert!(sw.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))));
+    assert!(sw.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_))));
+
+    // Naga Vitalist taps for a color one of your basic lands could make.
+    let mut g = two_player_game();
+    let naga = g.add_card_to_battlefield(0, catalog::naga_vitalist());
+    g.clear_sickness(naga);
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: naga, ability_index: 0, target: None, x_value: None })
+        .expect("Naga taps for mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+
+    // Hooded Brawler exerts for +2/+2 on attack.
+    let hb = g.add_card_to_battlefield(0, catalog::hooded_brawler());
+    g.clear_sickness(hb);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: hb, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(hb).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 4), "3/2 +2/+2 = 5/4 exerted");
+}
