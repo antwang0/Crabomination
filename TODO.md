@@ -33,11 +33,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Dethrone cards are complex (Marchesa, the Black Rose — needs "other creatures
   you control have dethrone" trigger-grant-to-filter + die-return recursion).
   Ship one when those primitives land.
-- **Reconfigure unattach (CR 702.151).** `Keyword::Reconfigure` attaches via the
-  equip path and strips Creature-ness while attached (Lion Sash). The
-  "Reconfigure: unattach this (and it becomes a creature again)" mode has no
-  action yet — add a `GameAction::Reconfigure { equipment, target: Option<CardId> }`
-  (or extend Equip) where `None` detaches, paying the reconfigure cost.
+- **Reconfigure unattach (CR 702.151) — ✅ engine.** `GameAction::Reconfigure
+  { equipment, target: Option<CardId> }` attaches (`Some`) or detaches (`None`)
+  for the reconfigure cost; unattach restores creature-ness. Remaining: a
+  client UI affordance to trigger the unattach (the `E`-key equip flow only
+  attaches today).
 - **Warp / Miracle alt-cast keywords.** Two "cast-mode" keywords still dropped
   on their cards: Warp (Mightform Harmonizer, Pinnacle Emissary — cast cheaply,
   exile at end step, recast later — a Suspend/Plot-adjacent exile-and-recast),

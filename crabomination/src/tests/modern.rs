@@ -27530,6 +27530,30 @@ fn lion_sash_exiles_permanent_card_grows_and_scales_equipped() {
     assert!(s.card_types.contains(&crate::card::CardType::Artifact), "still an artifact");
 }
 
+/// CR 702.151 — Reconfigure unattach detaches the Equipment and restores its
+/// creature-ness.
+#[test]
+fn reconfigure_unattach_restores_creatureness() {
+    let mut g = two_player_game();
+    let sash = g.add_card_to_battlefield(0, catalog::lion_sash());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Attach first.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Reconfigure { equipment: sash, target: Some(bear) })
+        .expect("reconfigure attach");
+    assert_eq!(g.battlefield_find(sash).unwrap().attached_to, Some(bear));
+    // Unattach: it becomes a creature again.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Reconfigure { equipment: sash, target: None })
+        .expect("reconfigure unattach");
+    assert_eq!(g.battlefield_find(sash).unwrap().attached_to, None);
+    let s = g.computed_permanent(sash).unwrap();
+    assert!(s.card_types.contains(&crate::card::CardType::Creature),
+        "unattached Reconfigure Equipment is a creature again");
+}
+
 #[test]
 fn leyline_of_the_guildpact_makes_your_lands_all_basic_types() {
     use crate::card::LandType;
