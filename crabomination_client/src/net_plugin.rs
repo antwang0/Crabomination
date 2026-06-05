@@ -15,13 +15,16 @@
 //! | [`OurSeat`] | Which seat index this client controls |
 //! | [`LatestServerEvents`] | Events from the most recent server action batch |
 
+use std::net::TcpStream;
 use std::sync::{Mutex, mpsc};
+use std::time::{Duration, Instant};
 
 use bevy::prelude::*;
 
 use crabomination::{
     game::GameAction,
     net::{ClientMsg, ClientView, DebugAction, GameEventWire, ServerMsg},
+    server::{tcp_client, ClientChannel},
 };
 
 /// Send game actions to the match server. Also remembers the most
@@ -107,9 +110,20 @@ const MANUAL_TAP_MARKER: &str = "Tap mana to pay";
 pub struct NetInbox(pub Mutex<mpsc::Receiver<ServerMsg>>);
 
 impl NetInbox {
-    pub fn drain(&self) -> Vec<ServerMsg> {
+    /// Drain all pending messages, reporting whether the channel has
+    /// disconnected (the reader thread exited because the socket closed). The
+    /// flag drives mid-match reconnection.
+    pub fn drain(&self) -> (Vec<ServerMsg>, bool) {
         let rx = self.0.lock().unwrap();
-        std::iter::from_fn(|| rx.try_recv().ok()).collect()
+        let mut msgs = Vec::new();
+        let disconnected = loop {
+            match rx.try_recv() {
+                Ok(m) => msgs.push(m),
+                Err(mpsc::TryRecvError::Empty) => break false,
+                Err(mpsc::TryRecvError::Disconnected) => break true,
+            }
+        };
+        (msgs, disconnected)
     }
 }
 
@@ -135,6 +149,23 @@ pub struct LobbyState {
 /// Seat index assigned by the server during handshake.
 #[derive(Resource, Default)]
 pub struct OurSeat(pub usize);
+
+/// State for reconnecting to a dropped lobby match. The server issues a
+/// `ResumeToken` at match start; if the connection then drops mid-match,
+/// `maybe_reconnect` opens a fresh connection to `server_addr` and re-claims
+/// the seat with `Resume { token }`. `None` token ⇒ not a reconnectable match
+/// (in-process / spectate), so a drop is treated as a normal end.
+#[derive(Resource, Default)]
+pub struct ResumeInfo {
+    pub token: Option<String>,
+    pub server_addr: Option<String>,
+    /// Set by `poll_net` when the connection drops; cleared on a successful
+    /// reconnect attempt.
+    pub lost: bool,
+    /// Consecutive failed reconnect attempts; reset once messages flow again.
+    pub attempts: u32,
+    pub last_attempt: Option<std::time::Instant>,
+}
 
 /// Events produced by the most recent server action, cleared each frame before
 /// new messages arrive. Systems that drive animations should read this once
@@ -166,8 +197,11 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<NetConnection>()
             .init_resource::<PendingManaCast>()
             .init_resource::<LobbyState>()
+            .init_resource::<ResumeInfo>()
             .add_systems(PreUpdate, poll_net)
-            .add_systems(Update, (drive_pending_mana_cast, update_pending_cast_banner));
+            .add_systems(Update, (drive_pending_mana_cast, update_pending_cast_banner))
+            // Reconnect runs only when a reconnectable match's link has dropped.
+            .add_systems(Update, maybe_reconnect.run_if(|r: Res<ResumeInfo>| r.lost));
         // Network installation happens via `crate::menu::start_net_session_from_menu`
         // on entry to `AppState::InGame` — see `main.rs` wiring.
     }
@@ -185,22 +219,38 @@ pub fn poll_net(
     mut ended: ResMut<MatchEnded>,
     mut pending_cast: ResMut<PendingManaCast>,
     mut lobby: ResMut<LobbyState>,
+    mut resume: ResMut<ResumeInfo>,
 ) {
     let Some(inbox) = inbox else { return };
     events.0.clear();
-    for msg in inbox.drain() {
+    let (msgs, disconnected) = inbox.drain();
+    // Set when a game-state message arrives, so a (re)established link resets
+    // the reconnect backoff — but a bare `LobbyError` (a rejected resume) does
+    // not, letting `maybe_reconnect` exhaust its attempts and bail to the menu.
+    let mut got_game_msg = false;
+    for msg in msgs {
         match msg {
-            ServerMsg::YourSeat(s) => seat.0 = s,
+            ServerMsg::YourSeat(s) => {
+                seat.0 = s;
+                got_game_msg = true;
+            }
             // The match is starting — the lobby browser uses this to leave the
             // browser and enter the game.
-            ServerMsg::MatchStarted => lobby.match_started = true,
-            ServerMsg::View(v) => view.0 = Some(*v),
+            ServerMsg::MatchStarted => {
+                lobby.match_started = true;
+                got_game_msg = true;
+            }
+            ServerMsg::View(v) => {
+                view.0 = Some(*v);
+                got_game_msg = true;
+            }
             ServerMsg::Events(evs) => events.0 = evs,
             // Combined per-action frame: apply the events (for animation)
             // and the post-action view together.
             ServerMsg::Update { events: evs, view: v } => {
                 events.0 = evs;
                 view.0 = Some(*v);
+                got_game_msg = true;
             }
             ServerMsg::ActionError(e) => {
                 // `ManualTapRequired`: the player has a choice of which mana
@@ -222,7 +272,13 @@ pub fn poll_net(
                     eprintln!("net: server rejected action: {e}");
                 }
             }
-            ServerMsg::MatchOver { winner } => ended.0 = Some(winner),
+            ServerMsg::MatchOver { winner } => {
+                ended.0 = Some(winner);
+                // Game's over — don't try to reconnect when the socket closes.
+                resume.token = None;
+            }
+            // Reconnect: stash the token so a mid-match drop can re-claim the seat.
+            ServerMsg::ResumeToken { token } => resume.token = Some(token),
             // ── Lobby protocol → client-side mirror (rendered by the lobby
             //    browser UI) ────────────────────────────────────────────────
             ServerMsg::LobbyList { lobbies } => {
@@ -243,6 +299,15 @@ pub fn poll_net(
             }
         }
     }
+    if got_game_msg {
+        resume.attempts = 0;
+        resume.lost = false;
+    }
+    // The reader thread exited (socket closed). If this is a reconnectable
+    // match (we hold a resume token), flag it for `maybe_reconnect`.
+    if disconnected && resume.token.is_some() {
+        resume.lost = true;
+    }
 }
 
 /// `OnExit(AppState::InGame)` — tear down the live network session so
@@ -260,6 +325,7 @@ pub fn teardown_net_session(
     mut ended: ResMut<MatchEnded>,
     mut pending_cast: ResMut<PendingManaCast>,
     mut lobby: ResMut<LobbyState>,
+    mut resume: ResMut<ResumeInfo>,
 ) {
     if let Some(stream) = conn.0.take() {
         let _ = stream.shutdown(std::net::Shutdown::Both);
@@ -271,6 +337,83 @@ pub fn teardown_net_session(
     ended.0 = None;
     pending_cast.0 = None;
     *lobby = LobbyState::default();
+    *resume = ResumeInfo::default();
+}
+
+/// How long to wait between reconnect attempts, and how many to make before
+/// giving up and returning to the menu.
+const RECONNECT_RETRY_DELAY: Duration = Duration::from_secs(2);
+const MAX_RECONNECT_ATTEMPTS: u32 = 8;
+
+/// Mid-match reconnect: when a reconnectable match's link drops (`ResumeInfo.
+/// lost`), open a fresh connection to the server and re-claim the seat with
+/// the stored resume token. Backs off between tries and, after
+/// `MAX_RECONNECT_ATTEMPTS`, gives up and returns to the menu. Runs only while
+/// `lost` is set (see the run condition on registration).
+pub fn maybe_reconnect(world: &mut World) {
+    let (token, addr, attempts, last) = {
+        let r = world.resource::<ResumeInfo>();
+        (r.token.clone(), r.server_addr.clone(), r.attempts, r.last_attempt)
+    };
+    let (Some(token), Some(addr)) = (token, addr) else {
+        world.resource_mut::<ResumeInfo>().lost = false;
+        return;
+    };
+
+    let now = Instant::now();
+    if let Some(last) = last
+        && now.duration_since(last) < RECONNECT_RETRY_DELAY
+    {
+        return; // still backing off
+    }
+
+    if attempts >= MAX_RECONNECT_ATTEMPTS {
+        eprintln!("reconnect: gave up after {attempts} attempts — returning to menu");
+        {
+            let mut r = world.resource_mut::<ResumeInfo>();
+            r.lost = false;
+            r.token = None;
+        }
+        if let Some(mut ns) = world.get_resource_mut::<NextState<crate::menu::AppState>>() {
+            ns.set(crate::menu::AppState::Menu);
+        }
+        return;
+    }
+
+    eprintln!("reconnect: attempt {} to {addr}…", attempts + 1);
+    {
+        let mut r = world.resource_mut::<ResumeInfo>();
+        r.attempts += 1;
+        r.last_attempt = Some(now);
+        // Clear the flag for this attempt; `poll_net` re-sets it if the new
+        // link also drops (or never delivers a game message).
+        r.lost = false;
+    }
+
+    match reconnect_with_token(&addr, &token) {
+        Ok((outbox, inbox, conn)) => {
+            world.insert_resource(outbox);
+            world.insert_resource(inbox);
+            world.insert_resource(conn);
+        }
+        Err(e) => {
+            eprintln!("reconnect: connect failed: {e}");
+            // Retry after the backoff delay.
+            world.resource_mut::<ResumeInfo>().lost = true;
+        }
+    }
+}
+
+/// Open a fresh connection and immediately send `Resume { token }`.
+fn reconnect_with_token(
+    addr: &str,
+    token: &str,
+) -> std::io::Result<(NetOutbox, NetInbox, NetConnection)> {
+    let stream = TcpStream::connect(addr)?;
+    let conn_handle = stream.try_clone().ok();
+    let ClientChannel { tx, rx } = tcp_client(stream)?;
+    let _ = tx.send(ClientMsg::Resume { token: token.to_string() });
+    Ok((NetOutbox::new(tx), NetInbox(Mutex::new(rx)), NetConnection(conn_handle)))
 }
 
 /// Drive a `PendingCast`: re-submit the held cast each time the player's

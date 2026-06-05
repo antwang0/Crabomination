@@ -101,6 +101,10 @@ pub fn connect_to_lobby_server(world: &mut World) {
             world.insert_resource(outbox);
             world.insert_resource(inbox);
             world.insert_resource(conn);
+            // Remember the server so a dropped lobby match can reconnect.
+            if let Some(mut r) = world.get_resource_mut::<crate::net_plugin::ResumeInfo>() {
+                r.server_addr = Some(req.addr.clone());
+            }
             eprintln!("lobby: connected to {} as \"{}\"", req.addr, req.name);
         }
         Err(e) => {

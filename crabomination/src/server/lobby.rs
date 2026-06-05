@@ -26,13 +26,34 @@ use std::time::{Duration, Instant};
 use crate::game::GameState;
 use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg};
 
-use super::{run_match, MatchOutcome, RandomBot, SeatChannel, SeatOccupant};
+use super::{
+    run_match_reconnectable, MatchOutcome, RandomBot, SeatChannel, SeatOccupant,
+};
 
 /// Callback invoked when a lobby-started match finishes, with its gamemode,
 /// wall-clock duration, and outcome. Lets the server binary fold lobby matches
 /// into its rolling match stats / logs — lobby mode is the default, so without
 /// this the server would have no per-match observability at all.
 pub type MatchEndHook = Arc<dyn Fn(LobbyFormat, Duration, MatchOutcome) + Send + Sync>;
+
+/// Where a valid [`ClientMsg::Resume`] token routes a reconnecting connection:
+/// the running match's reattach channel and the seat to re-claim. One entry
+/// per human seat; the entries for a match share its `reattach_tx`.
+struct ResumeTarget {
+    reattach_tx: mpsc::Sender<(usize, SeatChannel)>,
+    seat: usize,
+}
+
+/// Generate an unguessable resume token. Two freshly-seeded `RandomState`s
+/// (seeded from the OS RNG for HashMap DoS-resistance) yield 128 bits of
+/// effectively-random hex — enough that another player can't guess a token
+/// and hijack a seat on a LAN game.
+fn new_token() -> String {
+    use std::hash::BuildHasher;
+    let a = std::collections::hash_map::RandomState::new().hash_one(0u8);
+    let b = std::collections::hash_map::RandomState::new().hash_one(0u8);
+    format!("{a:016x}{b:016x}")
+}
 
 /// Identifier the driver assigns to each connection so the [`LobbyManager`]
 /// can reason about membership without touching the channels themselves.
@@ -207,8 +228,12 @@ impl LobbyManager {
             ClientMsg::RemoveBotFromLobby => self.remove_bot(conn),
             ClientMsg::StartLobby => self.start_lobby(conn),
             ClientMsg::LeaveLobby => self.leave(conn),
-            // Browsing connections aren't in a match; ignore game traffic.
-            ClientMsg::SubmitAction(_) | ClientMsg::Debug(_) => LobbyOutcome::default(),
+            // `Resume` is handled by the driver (it needs the channel +
+            // registry, not lobby state); it never reaches the manager. Game
+            // traffic from a browsing connection is ignored.
+            ClientMsg::Resume { .. } | ClientMsg::SubmitAction(_) | ClientMsg::Debug(_) => {
+                LobbyOutcome::default()
+            }
         }
     }
 
@@ -453,9 +478,21 @@ pub fn serve_lobbies<G: Send + 'static>(
 ) {
     let mut mgr = LobbyManager::new();
     let mut channels: HashMap<ConnId, (SeatChannel, G)> = HashMap::new();
+    // Live resume tokens → the running match's reattach channel + seat.
+    let mut registry: HashMap<String, ResumeTarget> = HashMap::new();
+    // A finished match sends its issued tokens here so the driver can prune
+    // them (otherwise a stale token would only be cleared on a failed resume).
+    let (done_tx, done_rx) = mpsc::channel::<Vec<String>>();
     let mut accepting = true;
 
     loop {
+        // Prune tokens of matches that have ended.
+        while let Ok(tokens) = done_rx.try_recv() {
+            for t in tokens {
+                registry.remove(&t);
+            }
+        }
+
         // Intake newly-accepted connections.
         loop {
             match new_conns.try_recv() {
@@ -463,7 +500,7 @@ pub fn serve_lobbies<G: Send + 'static>(
                     eprintln!("lobby: conn {} connected ({} online)", id.0, channels.len() + 1);
                     let outcome = mgr.register(id);
                     channels.insert(id, (ch, guard));
-                    apply(&mut channels, outcome, &on_match_end);
+                    apply(&mut channels, outcome, &on_match_end, &mut registry, &done_tx);
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
@@ -479,9 +516,16 @@ pub fn serve_lobbies<G: Send + 'static>(
             loop {
                 let recv = channels.get(&id).map(|(c, _)| c.rx.try_recv());
                 match recv {
+                    Some(Ok(ClientMsg::Resume { token })) => {
+                        // Driver-level: route this connection back into a match.
+                        resume_into_match(&mut channels, &mut registry, id, &token);
+                        if !channels.contains_key(&id) {
+                            break; // moved into the match
+                        }
+                    }
                     Some(Ok(msg)) => {
                         let outcome = mgr.handle(id, msg);
-                        apply(&mut channels, outcome, &on_match_end);
+                        apply(&mut channels, outcome, &on_match_end, &mut registry, &done_tx);
                         // `apply` may have moved this connection into a match.
                         if !channels.contains_key(&id) {
                             break;
@@ -492,7 +536,7 @@ pub fn serve_lobbies<G: Send + 'static>(
                         channels.remove(&id); // drops the guard → frees the slot
                         eprintln!("lobby: conn {} disconnected ({} online)", id.0, channels.len());
                         let outcome = mgr.disconnect(id);
-                        apply(&mut channels, outcome, &on_match_end);
+                        apply(&mut channels, outcome, &on_match_end, &mut registry, &done_tx);
                         break;
                     }
                 }
@@ -506,12 +550,50 @@ pub fn serve_lobbies<G: Send + 'static>(
     }
 }
 
+/// Route a reconnecting connection back into its match using a resume token.
+/// On success the connection's channel is handed to the match's reattach
+/// channel (and removed from the browsing pool); its transient slot guard is
+/// dropped, since the match already holds the original seat's guard for the
+/// connection cap.
+fn resume_into_match<G>(
+    channels: &mut HashMap<ConnId, (SeatChannel, G)>,
+    registry: &mut HashMap<String, ResumeTarget>,
+    id: ConnId,
+    token: &str,
+) {
+    let Some((seat, reattach_tx)) = registry
+        .get(token)
+        .map(|t| (t.seat, t.reattach_tx.clone()))
+    else {
+        if let Some((ch, _)) = channels.get(&id) {
+            let _ = ch.tx.send(ServerMsg::LobbyError {
+                message: "invalid or expired resume token".into(),
+            });
+        }
+        return;
+    };
+    let Some((ch, _guard)) = channels.remove(&id) else { return };
+    match reattach_tx.send((seat, ch)) {
+        Ok(()) => eprintln!("lobby: conn {} resumed into seat {seat}", id.0),
+        Err(mpsc::SendError((_, ch))) => {
+            // The match ended between issuing the token and this resume.
+            registry.remove(token);
+            let _ = ch.tx.send(ServerMsg::LobbyError {
+                message: "match already ended".into(),
+            });
+        }
+    }
+}
+
 /// Deliver an outcome's messages and, if a lobby filled, move its members'
-/// channels (and their guards) out of the pool and spawn the match.
+/// channels (and their guards) out of the pool and spawn a *reconnectable*
+/// match — issuing each human seat a resume token first.
 fn apply<G: Send + 'static>(
     channels: &mut HashMap<ConnId, (SeatChannel, G)>,
     outcome: LobbyOutcome,
     on_match_end: &MatchEndHook,
+    registry: &mut HashMap<String, ResumeTarget>,
+    done_tx: &mpsc::Sender<Vec<String>>,
 ) {
     for (id, msg) in outcome.sends {
         if let Some((ch, _)) = channels.get(&id) {
@@ -519,42 +601,60 @@ fn apply<G: Send + 'static>(
         }
     }
     if let Some(start) = outcome.start {
+        // Abort the start if any human seat's channel vanished between fill and
+        // spawn (their seat would just disconnect immediately otherwise).
+        let all_present = start.seats.iter().all(|s| match s {
+            SeatSpec::Human(id) => channels.contains_key(id),
+            SeatSpec::Bot => true,
+        });
+        if !all_present {
+            return;
+        }
+
+        let (reattach_tx, reattach_rx) = mpsc::channel::<(usize, SeatChannel)>();
         let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(start.seats.len());
         let mut guards: Vec<G> = Vec::new();
-        let mut all_present = true;
+        let mut tokens: Vec<String> = Vec::new();
         let (mut humans, mut bots) = (0usize, 0usize);
-        for seat in &start.seats {
+        for (seat_idx, seat) in start.seats.iter().enumerate() {
             match seat {
-                SeatSpec::Human(id) => match channels.remove(id) {
-                    Some((ch, guard)) => {
-                        occupants.push(SeatOccupant::Human(ch));
-                        guards.push(guard);
-                        humans += 1;
-                    }
-                    None => all_present = false,
-                },
+                SeatSpec::Human(id) => {
+                    let (ch, guard) = channels.remove(id).expect("checked all_present");
+                    // Issue a per-seat resume token before the match begins; it
+                    // arrives ahead of the actor's YourSeat/MatchStarted.
+                    let token = new_token();
+                    let _ = ch.tx.send(ServerMsg::ResumeToken { token: token.clone() });
+                    registry.insert(token.clone(), ResumeTarget {
+                        reattach_tx: reattach_tx.clone(),
+                        seat: seat_idx,
+                    });
+                    tokens.push(token);
+                    occupants.push(SeatOccupant::Human(ch));
+                    guards.push(guard);
+                    humans += 1;
+                }
                 SeatSpec::Bot => {
                     occupants.push(SeatOccupant::Bot(Box::new(RandomBot::new())));
                     bots += 1;
                 }
             }
         }
-        // Only start if every human seat's channel was still present; a member
-        // that vanished between fill and spawn aborts the start (their seat
-        // would just disconnect immediately otherwise).
-        if all_present && occupants.len() == start.seats.len() {
-            let format = start.format;
-            let hook = Arc::clone(on_match_end);
-            eprintln!("lobby: starting {} match ({humans} human, {bots} bot)", format.label());
-            thread::spawn(move || {
-                // Hold the per-connection guards for the match's lifetime so a
-                // connection cap acquired at accept time isn't released early.
-                let _guards = guards;
-                let started = Instant::now();
-                let outcome = run_match(start.state, occupants);
-                hook(format, started.elapsed(), outcome);
-            });
-        }
+
+        let format = start.format;
+        let hook = Arc::clone(on_match_end);
+        let done = done_tx.clone();
+        eprintln!("lobby: starting {} match ({humans} human, {bots} bot)", format.label());
+        thread::spawn(move || {
+            // Hold the per-connection guards for the match's lifetime so a
+            // connection cap acquired at accept time isn't released early.
+            let _guards = guards;
+            let started = Instant::now();
+            let outcome =
+                run_match_reconnectable(start.state, occupants, vec![], None, Some(reattach_rx));
+            // Match over — let the driver prune our resume tokens.
+            let _ = done.send(tokens);
+            hook(format, started.elapsed(), outcome);
+        });
     }
 }
 
@@ -908,5 +1008,88 @@ mod tests {
             thread::sleep(Duration::from_millis(10));
         }
         false
+    }
+
+    /// End-to-end reconnect through the driver: a host creates a Modern lobby,
+    /// fills it with a bot to start a (human + bot) match, drops its
+    /// connection, then a fresh connection presents the resume token and is
+    /// routed back into the match (receiving the replayed handshake).
+    #[test]
+    fn reconnect_via_resume_token_rejoins_a_lobby_match() {
+        let (new_tx, new_rx) = mpsc::channel();
+        let driver = thread::spawn(move || serve_lobbies(new_rx, Arc::new(|_, _, _| {})));
+
+        let (s1, c1) = seat_pair();
+        new_tx.send((ConnId(1), s1, ())).unwrap();
+
+        // Create a Modern (2-seat) lobby, then add a bot to start the match.
+        let _ = await_lobby_then_create(&c1);
+        c1.tx.send(ClientMsg::AddBotToLobby).unwrap();
+
+        // Collect the resume token and confirm we entered the match (without
+        // discarding either — they arrive in the same burst).
+        let mut token = None;
+        let mut started = false;
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < deadline && !(token.is_some() && started) {
+            for m in drain(&c1.rx) {
+                match m {
+                    ServerMsg::ResumeToken { token: t } => token = Some(t),
+                    ServerMsg::MatchStarted => started = true,
+                    _ => {}
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        let token = token.expect("a resume token is issued at match start");
+        assert!(started, "creator enters the match");
+
+        // The human drops out of the live match (the seat enters the grace
+        // window — the match keeps running).
+        drop(c1);
+        thread::sleep(Duration::from_millis(100));
+
+        // A fresh connection resumes with the token and is routed back in.
+        let (s2, c2) = seat_pair();
+        new_tx.send((ConnId(2), s2, ())).unwrap();
+        thread::sleep(Duration::from_millis(100)); // let the driver register it
+        c2.tx.send(ClientMsg::Resume { token }).unwrap();
+
+        assert!(
+            recv_match_started(&c2),
+            "the reconnecting client re-enters the match",
+        );
+
+        drop(c2);
+        drop(new_tx);
+        let _ = driver.join();
+    }
+
+    /// An unknown / expired resume token is rejected with a LobbyError, and the
+    /// connection stays browsing.
+    #[test]
+    fn resume_with_unknown_token_errors() {
+        let (new_tx, new_rx) = mpsc::channel();
+        let driver = thread::spawn(move || serve_lobbies(new_rx, Arc::new(|_, _, _| {})));
+
+        let (s1, c1) = seat_pair();
+        new_tx.send((ConnId(1), s1, ())).unwrap();
+        c1.tx.send(ClientMsg::Resume { token: "bogus".into() }).unwrap();
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let mut errored = false;
+        while Instant::now() < deadline && !errored {
+            for m in drain(&c1.rx) {
+                if matches!(m, ServerMsg::LobbyError { .. }) {
+                    errored = true;
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(errored, "an unknown resume token is rejected");
+
+        drop(c1);
+        drop(new_tx);
+        let _ = driver.join();
     }
 }

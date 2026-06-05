@@ -44,6 +44,11 @@ pub enum ClientMsg {
     StartLobby,
     /// Lobby: leave the lobby you're currently in and return to browsing.
     LeaveLobby,
+    /// Reconnect: a fresh connection re-claims a seat in a match it dropped
+    /// out of, using the resume token the server issued at match start. The
+    /// server routes this connection back into that match (replaying the
+    /// current view) if the token is valid and the match still alive.
+    Resume { token: String },
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).
     SubmitAction(GameAction),
     /// Debug-console cheat: bypasses turn order / priority and mutates the
@@ -165,6 +170,10 @@ pub enum ServerMsg {
     LobbyUpdated { lobby: LobbyInfo },
     /// Lobby: an operation failed (lobby full, gone, or an illegal request).
     LobbyError { message: String },
+    /// Reconnect: issued to each human seat as a lobby match starts. The
+    /// client stores it and, if its connection drops mid-match, opens a fresh
+    /// connection and sends `ClientMsg::Resume { token }` to re-claim the seat.
+    ResumeToken { token: String },
 }
 
 // ── Projected view types ─────────────────────────────────────────────────────
