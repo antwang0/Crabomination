@@ -306,8 +306,9 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
         &[
             ("F1  ·  ?", "Toggle this help"),
             ("Esc", "Cancel / close / back"),
+            ("Hover", "Preview card beside cursor"),
             ("Ctrl (hold)", "Zoom camera to hovered card"),
-            ("Alt (hold)", "Enlarge card · counters & P/T"),
+            ("Alt (hold)", "Centered card · counters & P/T"),
             ("[  ]  \\", "Animation: slower · faster · reset"),
             ("`", "Debug console"),
             ("X", "Export game state"),
@@ -569,6 +570,108 @@ pub fn peek_popup(
             commands.entity(entity).despawn();
         }
     }
+}
+
+/// Marker for the automatic hover card-zoom preview (Arena-style). Stores
+/// the asset path currently shown so `hover_card_preview` can tell when the
+/// hovered card changed (→ rebuild with new art) versus merely moved
+/// (→ reposition the existing node).
+#[derive(Component)]
+pub struct HoverCardPreview {
+    path: String,
+}
+
+const HOVER_PREVIEW_WIDTH: f32 = 230.0;
+const HOVER_PREVIEW_HEIGHT: f32 = HOVER_PREVIEW_WIDTH * CARD_ASPECT_RATIO;
+/// Gap kept between the preview and both the cursor and the viewport edges.
+const HOVER_PREVIEW_MARGIN: f32 = 16.0;
+
+/// Top-left (x, y) in logical px for a `pw × ph` preview placed beside the
+/// cursor. Picks whichever horizontal side has more room so the preview
+/// never covers the card the cursor is resting on, then clamps both axes so
+/// the whole card stays on screen. Vertically centered on the cursor.
+fn preview_anchor(cursor: Vec2, win: Vec2, pw: f32, ph: f32, margin: f32) -> (f32, f32) {
+    let x_max = (win.x - pw - margin).max(margin);
+    // More room to the right → sit to the cursor's right, else to its left.
+    let x = if win.x - cursor.x >= cursor.x {
+        (cursor.x + margin).clamp(margin, x_max)
+    } else {
+        (cursor.x - margin - pw).clamp(margin, x_max)
+    };
+    let y_max = (win.y - ph - margin).max(margin);
+    let y = (cursor.y - ph * 0.5).clamp(margin, y_max);
+    (x, y)
+}
+
+/// Arena-style automatic card-zoom preview: while a card is hovered (and Alt
+/// isn't held — Alt drives the centered detailed peek + counter tooltip in
+/// `peek_popup` / `update_alt_tooltip`), show an enlarged copy of its face
+/// beside the cursor without dimming the board. Roadmap Tier 7 #1.
+#[allow(clippy::type_complexity)]
+pub fn hover_card_preview(
+    mut commands: Commands,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    windows: Query<&Window, With<bevy::window::PrimaryWindow>>,
+    hovered_cards: Query<&CardFrontTexture, (With<Card>, With<CardHovered>)>,
+    asset_server: Res<AssetServer>,
+    mut existing: Query<(Entity, &mut Node, &HoverCardPreview)>,
+) {
+    let alt_held = keyboard.pressed(KeyCode::AltLeft) || keyboard.pressed(KeyCode::AltRight);
+    let despawn_all = |commands: &mut Commands, existing: &Query<(Entity, &mut Node, &HoverCardPreview)>| {
+        for (e, _, _) in existing.iter() {
+            commands.entity(e).despawn();
+        }
+    };
+
+    let Ok(window) = windows.single() else {
+        despawn_all(&mut commands, &existing);
+        return;
+    };
+
+    // Desired preview: front texture of the hovered card, when the cursor is
+    // on-screen and Alt isn't held.
+    let desired: Option<(String, Vec2)> = match (alt_held, window.cursor_position()) {
+        (false, Some(c)) => hovered_cards.iter().next().map(|t| (t.0.clone(), c)),
+        _ => None,
+    };
+
+    let Some((path, cursor)) = desired else {
+        despawn_all(&mut commands, &existing);
+        return;
+    };
+
+    let win = Vec2::new(window.width(), window.height());
+    let (x, y) = preview_anchor(cursor, win, HOVER_PREVIEW_WIDTH, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_MARGIN);
+
+    if let Ok((entity, mut node, marker)) = existing.single_mut() {
+        node.left = Val::Px(x);
+        node.top = Val::Px(y);
+        // Same card still hovered — repositioning above is all we need.
+        if marker.path == path {
+            return;
+        }
+        // Hovered card changed — rebuild with the new art below.
+        commands.entity(entity).despawn();
+    }
+
+    let texture: Handle<Image> = asset_server.load(&path);
+    commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(x),
+            top: Val::Px(y),
+            width: Val::Px(HOVER_PREVIEW_WIDTH),
+            height: Val::Px(HOVER_PREVIEW_HEIGHT),
+            border: UiRect::all(Val::Px(2.0)),
+            border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+            ..default()
+        },
+        BorderColor::all(theme::ACCENT_GOLD),
+        ImageNode { image: texture, ..default() },
+        Pickable::IGNORE,
+        HoverCardPreview { path },
+        crate::systems::game_ui::InGameRoot,
+    ));
 }
 
 const BROWSER_CARD_WIDTH: f32 = 220.0;
@@ -990,5 +1093,57 @@ pub fn reveal_popup(
         }
     } else {
         for e in &existing { commands.entity(e).despawn(); }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{preview_anchor, HOVER_PREVIEW_HEIGHT, HOVER_PREVIEW_WIDTH, HOVER_PREVIEW_MARGIN};
+    use bevy::math::Vec2;
+
+    const PW: f32 = HOVER_PREVIEW_WIDTH;
+    const PH: f32 = HOVER_PREVIEW_HEIGHT;
+    const M: f32 = HOVER_PREVIEW_MARGIN;
+
+    #[test]
+    fn preview_sits_right_of_cursor_on_left_half() {
+        let win = Vec2::new(1600.0, 1000.0);
+        let (x, _) = preview_anchor(Vec2::new(200.0, 500.0), win, PW, PH, M);
+        // Cursor on the left → preview to its right, never covering the card.
+        assert!(x >= 200.0, "expected preview right of cursor, got x={x}");
+    }
+
+    #[test]
+    fn preview_sits_left_of_cursor_on_right_half() {
+        let win = Vec2::new(1600.0, 1000.0);
+        let cursor_x = 1400.0;
+        let (x, _) = preview_anchor(Vec2::new(cursor_x, 500.0), win, PW, PH, M);
+        // Cursor on the right → preview's right edge is left of the cursor.
+        assert!(x + PW <= cursor_x, "expected preview left of cursor, got x={x}");
+    }
+
+    #[test]
+    fn preview_stays_within_viewport() {
+        let win = Vec2::new(1600.0, 1000.0);
+        // Sweep cursor across extreme positions; the card must never clip.
+        for &(cx, cy) in &[
+            (0.0, 0.0),
+            (1600.0, 1000.0),
+            (0.0, 1000.0),
+            (1600.0, 0.0),
+            (800.0, 500.0),
+        ] {
+            let (x, y) = preview_anchor(Vec2::new(cx, cy), win, PW, PH, M);
+            assert!(x >= M && x + PW <= win.x - M + f32::EPSILON, "x out of bounds: {x}");
+            assert!(y >= M && y + PH <= win.y - M + f32::EPSILON, "y out of bounds: {y}");
+        }
+    }
+
+    #[test]
+    fn preview_centers_vertically_on_cursor_when_room() {
+        let win = Vec2::new(1600.0, 1000.0);
+        let (_, y) = preview_anchor(Vec2::new(200.0, 500.0), win, PW, PH, M);
+        // Mid-screen cursor → card centered on it (top = cursor.y - ph/2).
+        assert!((y - (500.0 - PH * 0.5)).abs() < 0.5, "expected centered, got y={y}");
     }
 }

@@ -530,8 +530,11 @@ feature; sweep card-batch by card-batch.
 
 Mostly buildable on existing `ClientView` / `StackItemView` data.
 
-1. ⏳ **Big card-zoom preview on hover** — table-stakes; only a counter
-   tooltip exists today.
+1. ✅ **Big card-zoom preview on hover** — `hover_card_preview`
+   (`systems::ui`) shows an enlarged copy of the hovered card's face beside
+   the cursor (flipping to whichever side has more room so it never covers
+   the card), with no board-dimming. Alt-hold still drives the centered
+   detailed peek + counter/P-T tooltip.
 2. ⏳ **Stops / auto-yield configuration** — per-phase stops + "yield until
    something needs me" (priority plumbing already exists; today only Pass /
    End Turn / Next Turn).

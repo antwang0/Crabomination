@@ -71,7 +71,7 @@ use systems::quality::{
     EscConsumed, SettingsOpen,
 };
 use systems::ui::{
-    graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards,
+    graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, hover_card_preview,
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights, peek_popup,
     pile_tooltip, reveal_popup, RevealPopupState,
 };
@@ -466,6 +466,7 @@ fn main() {
                 animate_phase_banner,
                 trigger_life_flash,
                 animate_life_flash,
+                hover_card_preview,
             )
                 .run_if(in_state(AppState::InGame)),
         )
