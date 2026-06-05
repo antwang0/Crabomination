@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Embalm/Eternalize token color + cost overrides.** `sets::akh` tokens ride
+  `CreateTokenCopyOf` and gain a Zombie type (+4/4 for Eternalize), but the
+  copy keeps the original's color and printed mana cost rather than becoming
+  "white/black with no mana cost." Add `token_color: Option<Color>` +
+  `strip_cost: bool` to `Effect::CreateTokenCopyOf` to make it faithful.
+- **More AKH/HOU Embalm cards.** Vizier of Many Faces (embalm clone — needs the
+  embalm-copy-any-creature path), Aven Wind Guide (token-anthem static),
+  Heart-Piercer Manticore (ETB sac→ping). The existing `fanatic_of_rhonas`
+  (decks::modern) is missing its real Eternalize {2}{G}{G} — upgrade it.
+- **Earthshaker Khenra's "≤ its power" filter is fixed at 2.** The ETB
+  can't-block uses `PowerAtMost(2)` (the printed power); the eternalized 4/4
+  token still reads 2. A source-relative `PowerAtMostSource` requirement would
+  make it exact.
+
 - **Equip-granted triggers — general dispatch.** Skullclamp ✅ (the equipped
   creature's `CreatureDied` equip-grant is now collected on the death path in
   `resolve_stack`). Still ⏳: chaining `EquipBonus.triggered_abilities` (and

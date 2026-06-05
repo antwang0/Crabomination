@@ -24,7 +24,10 @@ read of the code and should be re-verified before picking up an item.
   Annihilator, Banding, Equip, Fortify, Morph, Megamorph, Prowess, Ward,
   Changeling, Storm, Rebound, Crew, Exert, Shadow, Horsemanship, Intimidate,
   Skulk, Fear, Unblockable, Soulbond (CR 702.95 — auto-pairing on ETB, shared
-  P/T / keyword / granted-ability bonus), plus uncounterable riders.
+  P/T / keyword / granted-ability bonus), Embalm (CR 702.88) / Eternalize
+  (CR 702.91) (graveyard exile-self token copy; `sets::akh`), Reconfigure
+  (CR 702.151 — attach + unattach via `GameAction::Reconfigure`), plus
+  uncounterable riders.
 - **Costs/mana:** colored / generic / colorless / hybrid / mono-hybrid /
   Phyrexian / snow / X symbols; Convoke/Delve generic reduction; Commander
   tax; alternative (pitch) costs.
