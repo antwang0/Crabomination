@@ -9068,7 +9068,7 @@ fn plagued_rusalka_sacrifices_a_creature_to_shrink() {
 #[test]
 fn dragonmaster_outcast_makes_dragon_with_six_lands() {
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::dragonmaster_outcast());
+    g.add_card_to_battlefield(0, catalog::dragonmaster_outcast());
     // Five lands → no Dragon.
     for _ in 0..5 { g.add_card_to_battlefield(0, catalog::forest()); }
     g.active_player_idx = 0;

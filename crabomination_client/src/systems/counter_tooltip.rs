@@ -632,7 +632,7 @@ fn counter_label(kind: CounterType) -> &'static str {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_tooltip_body, keyword_reminder};
+    use super::{build_tooltip_body, keyword_label, keyword_reminder};
     use crabomination::card::{CardId, CardType, CounterType};
     use crabomination::net::PermanentView;
 
