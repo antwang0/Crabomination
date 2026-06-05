@@ -5783,6 +5783,27 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                     None => vec![],
                 }
             }
+            StaticEffect::GrantAllBasicLandTypes { applies_to } => {
+                use crate::card::LandType;
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetLandTypes(vec![
+                            LandType::Plains,
+                            LandType::Island,
+                            LandType::Swamp,
+                            LandType::Mountain,
+                            LandType::Forest,
+                        ]),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }

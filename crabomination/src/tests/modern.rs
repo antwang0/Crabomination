@@ -27016,3 +27016,19 @@ fn lion_sash_exiles_permanent_card_grows_and_scales_equipped() {
     let b = cp.iter().find(|c| c.id == bear).unwrap();
     assert_eq!((b.power, b.toughness), (3, 3), "equipped scales by Lion Sash's counter");
 }
+
+#[test]
+fn leyline_of_the_guildpact_makes_your_lands_all_basic_types() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::leyline_of_the_guildpact());
+    let cp = g.compute_battlefield();
+    let f = cp.iter().find(|c| c.id == forest).unwrap();
+    for lt in [LandType::Plains, LandType::Island, LandType::Swamp, LandType::Mountain, LandType::Forest] {
+        assert!(f.subtypes.land_types.contains(&lt), "Forest gains {lt:?}");
+    }
+    // It now taps for any color via intrinsic basic-land mana abilities.
+    let abilities = g.effective_mana_abilities(forest);
+    assert!(abilities.len() >= 5, "taps for all five colors, got {}", abilities.len());
+}

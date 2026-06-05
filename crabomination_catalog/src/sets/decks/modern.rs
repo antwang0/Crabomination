@@ -18417,3 +18417,25 @@ pub fn lion_sash() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Leyline of the Guildpact — {W}{U}{B}{R}{G} Enchantment. Lands you control
+/// are every basic land type (so they tap for any color). The "your permanents
+/// are all colors" half and the opening-hand Leyline rider are dropped.
+pub fn leyline_of_the_guildpact() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Leyline of the Guildpact",
+        cost: cost(&[w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control are every basic land type.",
+            effect: StaticEffect::GrantAllBasicLandTypes {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}

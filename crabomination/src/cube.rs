@@ -302,6 +302,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         ramos_dragon_engine,
         maelstrom_archangel,
         maelstrom_nexus,
+        leyline_of_the_guildpact,
         coveted_jewel,
         the_mightstone_and_weakstone,
         kozileks_command,

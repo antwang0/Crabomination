@@ -3401,6 +3401,11 @@ pub enum StaticEffect {
     /// front-face of MDFCs (which have only one ability) and on basic
     /// lands (single-color, single-mana already).
     LandsTapColorlessOnly,
+    /// "Lands `applies_to` are every basic land type" (CR 305.7 — Leyline of
+    /// the Guildpact). Emits a layer-4 `SetLandTypes([Plains, Island, Swamp,
+    /// Mountain, Forest])`; the engine's intrinsic-basic-land mana abilities
+    /// then let each affected land tap for any color.
+    GrantAllBasicLandTypes { applies_to: Selector },
     /// Collector Ouphe / Karn-style lock: "Activated abilities of artifacts
     /// can't be activated unless they're mana abilities." Checked globally
     /// in `activate_ability` (affects every player). Mana abilities pass.
