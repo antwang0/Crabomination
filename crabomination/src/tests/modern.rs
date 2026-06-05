@@ -26649,3 +26649,43 @@ fn the_endstone_draws_on_land_and_spell() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), lib_before - 1, "playing a land draws a card");
 }
+
+#[test]
+fn mightform_harmonizer_doubles_power_on_landfall() {
+    let mut g = two_player_game();
+    // Sole creature, so the auto-targeted "double power" lands on it.
+    let mh = g.add_card_to_battlefield(0, catalog::mightform_harmonizer()); // 4/4
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == mh).unwrap();
+    assert_eq!(c.power, 8, "power doubled (4 → 8) until end of turn");
+    assert_eq!(c.toughness, 4, "toughness unchanged");
+}
+
+#[test]
+fn pinnacle_emissary_makes_drone_on_artifact_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pinnacle_emissary());
+    let rock = g.add_card_to_hand(0, catalog::sol_ring()); // {1} artifact
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rock, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sol Ring castable");
+    drain_stack(&mut g);
+    let drones = g.battlefield.iter().filter(|c| c.definition.name == "Drone" && c.controller == 0).count();
+    assert_eq!(drones, 1, "casting an artifact spell mints a Drone");
+}
+
+#[test]
+fn metamorphosis_fanatic_reanimates_with_lifelink_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::metamorphosis_fanatic());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let reanimated = g.battlefield_find(bear).expect("bear returned to battlefield");
+    assert_eq!(reanimated.controller, 0, "under your control");
+    assert!(reanimated.has_keyword(&crate::card::Keyword::Lifelink), "lifelink counter grants lifelink");
+}

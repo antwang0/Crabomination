@@ -17817,3 +17817,99 @@ pub fn the_endstone() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mightform Harmonizer — {2}{G}{G} 4/4. Landfall — whenever a land you
+/// control enters, double the power of target creature you control until end
+/// of turn. (Warp is dropped — no warp alt-cast primitive.)
+pub fn mightform_harmonizer() -> CardDefinition {
+    CardDefinition {
+        name: "Mightform Harmonizer",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Mutant],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            // "Double the power" = add the creature's current power to itself.
+            effect: Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::PowerOf(Box::new(Selector::Target(0))),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pinnacle Emissary — {1}{U}{R} 3/3. Whenever you cast an artifact spell,
+/// create a 1/1 colorless Drone artifact creature token with flying. (Warp and
+/// the token's "can block only flyers" rider are dropped.)
+pub fn pinnacle_emissary() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Pinnacle Emissary",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Drone".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Drone], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Metamorphosis Fanatic — {4}{B}{B} 4/4 Lifelink. ETB: return up to one
+/// target creature card from your graveyard to the battlefield with a lifelink
+/// counter on it. (Miracle is dropped — no miracle alt-cast primitive.)
+pub fn metamorphosis_fanatic() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Metamorphosis Fanatic",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}

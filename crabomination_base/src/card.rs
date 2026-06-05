@@ -102,6 +102,8 @@ pub enum CreatureType {
     Slith,
     // War of the Spark Amass Army token subtype (CR 701.43).
     Army,
+    // Edge-of-Eternities Drone artifact-creature token (Pinnacle Emissary).
+    Drone,
 }
 
 /// Land subtypes (basic land types + others).

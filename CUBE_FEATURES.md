@@ -44,7 +44,6 @@ work is listed below.
 |---|---|---|
 | Mutated Cultist | ⏳ | Mutate primitive needed. |
 | Necrotic Ooze | ⏳ | Gains all activated abilities of creatures in graveyards. Big ability-borrow primitive. |
-| Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
 | Parallax Dementia | ⏳ | Fading + reanimate-on-leave; Fading ✅, the steal-on-leave rider still needs a primitive. |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
 
@@ -60,7 +59,6 @@ work is listed below.
 |---|---|---|
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
-| Mightform Harmonizer | ⏳ | TBD. |
 | Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |
@@ -83,7 +81,6 @@ work is listed below.
 | Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
 | Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
 | Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
-| Pinnacle Emissary | ⏳ | TBD. |
 | Saheeli Rai | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{R} 3-loyalty Planeswalker. **+1**: Scry 1 + ping each opponent for 1 (the "and each PW they control" half drops — no `EachOpponentsPlaneswalker` selector). **-2**: Create a token copy of target friendly creature/artifact, grant haste, delay-trigger Exile at next end step. **-7**: Same body fired twice (the emblem-recurring "each end step" auto-recur is approximated). Tests: `saheeli_rai_plus_one_pings_each_opponent`, `saheeli_rai_minus_two_creates_haste_copy`. |
 | The Gitrog Monster | ⏳ | Land-as-discard / dredge engine. |
 | Wear // Tear | 🟡 | Push (claude/modern_decks batch 102): {1}{R} Sorcery, single-spell approximation that destroys target artifact OR enchantment. The Split-Card primitive (CR 709) is engine-wide ⏳ — both halves collapse to a single faithful effect at the Wear cost. Fuse mode is dropped. Test: `wear_tear_destroys_target_artifact`. |

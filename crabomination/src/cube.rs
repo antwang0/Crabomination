@@ -654,6 +654,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: draw-matters +1/+1 payoff ──
         profts_eidetic_memory,
+        // ── modern_decks: artifacts-matter token maker ──
+        pinnacle_emissary,
         // ── claude/modern_decks: flash flyer ──
         spectral_sailor,
         thieving_magpie,
@@ -874,6 +876,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: ETB reanimator with a lifelink counter ──
+        metamorphosis_fanatic,
         // ── claude/modern_decks: Extort (CR 702.99) ──
         basilica_screecher,
         tithe_drinker,
@@ -1462,6 +1466,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         railway_brawler,
         baloth_prime,
         icetill_explorer,
+        mightform_harmonizer,
         // ── claude/modern_decks: deathtouch body ──
         gnarlwood_dryad,
         gladecover_scout,
