@@ -66,13 +66,16 @@ struct LobbyRefreshButton;
 struct LobbyBackButton;
 #[derive(Component)]
 struct LobbyStatusText;
-/// Row holding the Add/Remove Bot buttons; shown only while seated in a lobby.
+/// Row holding the host-only controls (add/remove bot, start); shown only to
+/// the lobby host (seat 0).
 #[derive(Component)]
 struct LobbyBotControls;
 #[derive(Component)]
 struct LobbyAddBotButton;
 #[derive(Component)]
 struct LobbyRemoveBotButton;
+#[derive(Component)]
+struct LobbyStartButton;
 
 /// The gamemode the Create button will use; cycled by the format button.
 #[derive(Resource, Default)]
@@ -206,8 +209,8 @@ fn spawn_lobby_browser(
                         });
                 });
 
-                // Bot controls — only shown while seated in a lobby (toggled
-                // by `update_bot_controls_visibility`).
+                // Host controls — only shown to the lobby host (toggled by
+                // `update_bot_controls_visibility`).
                 p.spawn((
                     Node {
                         flex_direction: FlexDirection::Row,
@@ -226,6 +229,10 @@ fn spawn_lobby_browser(
                     button(row, &tf, theme::BUTTON_NEUTRAL_BG, LobbyRemoveBotButton)
                         .with_children(|b| {
                             b.spawn((Text::new("Remove Bot"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
+                        });
+                    button(row, &tf, theme::BUTTON_PRIMARY_BG, LobbyStartButton)
+                        .with_children(|b| {
+                            b.spawn((Text::new("Start (fill w/ bots)"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
                         });
                 });
 
@@ -411,8 +418,8 @@ fn update_format_label(
     }
 }
 
-/// Show the Add/Remove Bot row only while seated in a lobby (you can only add
-/// bots to a lobby you're in).
+/// Show the host-control row only to the lobby host (seat 0) — only the host
+/// may add/remove bots or start.
 fn update_bot_controls_visibility(
     lobby: Res<LobbyState>,
     mut q: Query<&mut Node, With<LobbyBotControls>>,
@@ -420,9 +427,9 @@ fn update_bot_controls_visibility(
     if !lobby.is_changed() {
         return;
     }
-    let visible = lobby.joined.is_some();
+    let is_host = lobby.joined.as_ref().map(|(_, slot)| *slot == 0).unwrap_or(false);
     if let Ok(mut node) = q.single_mut() {
-        node.display = if visible { Display::Flex } else { Display::None };
+        node.display = if is_host { Display::Flex } else { Display::None };
     }
 }
 
@@ -442,6 +449,7 @@ fn handle_lobby_buttons(
     back_q: Query<&Interaction, (Changed<Interaction>, With<LobbyBackButton>)>,
     add_bot_q: Query<&Interaction, (Changed<Interaction>, With<LobbyAddBotButton>)>,
     remove_bot_q: Query<&Interaction, (Changed<Interaction>, With<LobbyRemoveBotButton>)>,
+    start_q: Query<&Interaction, (Changed<Interaction>, With<LobbyStartButton>)>,
     join_q: Query<(&Interaction, &LobbyRowJoinButton), Changed<Interaction>>,
 ) {
     if fmt_q.iter().any(|i| *i == Interaction::Pressed) {
@@ -456,6 +464,11 @@ fn handle_lobby_buttons(
         && let Some(o) = &outbox
     {
         o.submit_msg(ClientMsg::RemoveBotFromLobby);
+    }
+    if start_q.iter().any(|i| *i == Interaction::Pressed)
+        && let Some(o) = &outbox
+    {
+        o.submit_msg(ClientMsg::StartLobby);
     }
     if create_q.iter().any(|i| *i == Interaction::Pressed)
         && let Some(o) = &outbox

@@ -34,12 +34,14 @@ pub enum ClientMsg {
     /// reaches capacity the server starts the match for everyone in it.
     JoinLobby { lobby_id: u64 },
     /// Lobby: add a bot (RandomBot) to fill one seat of the lobby you're in.
-    /// If that fills the lobby, the match starts immediately. Ignored if
-    /// you're not in a lobby or it's already full.
+    /// If that fills the lobby, the match starts immediately. Host-only.
     AddBotToLobby,
     /// Lobby: remove the most recently added bot seat from the lobby you're
-    /// in. No-op if there are no bot seats.
+    /// in. Host-only; no-op if there are no bot seats.
     RemoveBotFromLobby,
+    /// Lobby: host requests to start now, filling every empty seat with a bot.
+    /// Host-only.
+    StartLobby,
     /// Lobby: leave the lobby you're currently in and return to browsing.
     LeaveLobby,
     /// A game action (including decision answers wrapped in `GameAction::SubmitDecision`).

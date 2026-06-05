@@ -205,6 +205,7 @@ impl LobbyManager {
             ClientMsg::JoinLobby { lobby_id } => self.join(conn, lobby_id),
             ClientMsg::AddBotToLobby => self.add_bot(conn),
             ClientMsg::RemoveBotFromLobby => self.remove_bot(conn),
+            ClientMsg::StartLobby => self.start_lobby(conn),
             ClientMsg::LeaveLobby => self.leave(conn),
             // Browsing connections aren't in a match; ignore game traffic.
             ClientMsg::SubmitAction(_) | ClientMsg::Debug(_) => LobbyOutcome::default(),
@@ -238,10 +239,9 @@ impl LobbyManager {
             seats: vec![Slot::Human { conn, name: self.name_of(conn) }],
             state: build_state(format),
         };
-        let info = lobby.info();
         self.lobbies.push(lobby);
         self.conn_lobby.insert(conn, id);
-        out.send(conn, ServerMsg::LobbyJoined { lobby: info, your_slot: 0 });
+        self.notify_members(id, &mut out);
         // A 1-seat gamemode would start instantly; none exist today, but the
         // check guards against an exotic format stranding the creator.
         self.maybe_start(id, &mut out);
@@ -249,48 +249,84 @@ impl LobbyManager {
         out
     }
 
-    /// Add a bot seat to the lobby `conn` is in. Fills a seat (and may start
-    /// the match); no-ops with an error if not in a lobby or already full.
-    fn add_bot(&mut self, conn: ConnId) -> LobbyOutcome {
-        let mut out = LobbyOutcome::default();
+    /// Is `conn` the host (seat 0 / first human) of `lobby_id`?
+    fn is_host(&self, conn: ConnId, lobby_id: u64) -> bool {
+        self.lobbies
+            .iter()
+            .find(|l| l.id == lobby_id)
+            .and_then(|l| l.members().first().copied())
+            == Some(conn)
+    }
+
+    /// Resolve `conn`'s lobby and confirm it's the host, or push the
+    /// appropriate `LobbyError` and return `None`.
+    fn host_lobby(&mut self, conn: ConnId, out: &mut LobbyOutcome) -> Option<u64> {
         let Some(&lobby_id) = self.conn_lobby.get(&conn) else {
             out.send(conn, ServerMsg::LobbyError { message: "not in a lobby".into() });
-            return out;
+            return None;
         };
-        let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == lobby_id) else {
-            return out;
-        };
+        if !self.is_host(conn, lobby_id) {
+            out.send(conn, ServerMsg::LobbyError { message: "only the host can do that".into() });
+            return None;
+        }
+        Some(lobby_id)
+    }
+
+    /// Add a bot seat to the lobby (host-only). Fills a seat (and may start the
+    /// match); errors if already full.
+    fn add_bot(&mut self, conn: ConnId) -> LobbyOutcome {
+        let mut out = LobbyOutcome::default();
+        let Some(lobby_id) = self.host_lobby(conn, &mut out) else { return out };
+        let lobby = self.lobbies.iter_mut().find(|l| l.id == lobby_id).unwrap();
         if lobby.seats.len() >= lobby.capacity() {
             out.send(conn, ServerMsg::LobbyError { message: "lobby is full".into() });
             return out;
         }
         lobby.seats.push(Slot::Bot);
-        let info = lobby.info();
-        for m in lobby.members() {
-            out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
+        self.notify_members(lobby_id, &mut out);
+        self.maybe_start(lobby_id, &mut out);
+        self.push_browser_list(&mut out);
+        out
+    }
+
+    /// Remove the most-recently-added bot seat (host-only).
+    fn remove_bot(&mut self, conn: ConnId) -> LobbyOutcome {
+        let mut out = LobbyOutcome::default();
+        let Some(lobby_id) = self.host_lobby(conn, &mut out) else { return out };
+        let lobby = self.lobbies.iter_mut().find(|l| l.id == lobby_id).unwrap();
+        if let Some(pos) = lobby.seats.iter().rposition(|s| matches!(s, Slot::Bot)) {
+            lobby.seats.remove(pos);
+            self.notify_members(lobby_id, &mut out);
+            self.push_browser_list(&mut out);
+        }
+        out
+    }
+
+    /// Host requests an immediate start, filling every empty seat with a bot.
+    fn start_lobby(&mut self, conn: ConnId) -> LobbyOutcome {
+        let mut out = LobbyOutcome::default();
+        let Some(lobby_id) = self.host_lobby(conn, &mut out) else { return out };
+        let lobby = self.lobbies.iter_mut().find(|l| l.id == lobby_id).unwrap();
+        while lobby.seats.len() < lobby.capacity() {
+            lobby.seats.push(Slot::Bot);
         }
         self.maybe_start(lobby_id, &mut out);
         self.push_browser_list(&mut out);
         out
     }
 
-    /// Remove the most-recently-added bot seat from the lobby `conn` is in.
-    fn remove_bot(&mut self, conn: ConnId) -> LobbyOutcome {
-        let mut out = LobbyOutcome::default();
-        let Some(&lobby_id) = self.conn_lobby.get(&conn) else { return out };
-        let Some(lobby) = self.lobbies.iter_mut().find(|l| l.id == lobby_id) else {
-            return out;
-        };
-        // Drop the last bot slot, if any.
-        if let Some(pos) = lobby.seats.iter().rposition(|s| matches!(s, Slot::Bot)) {
-            lobby.seats.remove(pos);
-            let info = lobby.info();
-            for m in lobby.members() {
-                out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
+    /// Send every human member of `lobby_id` a `LobbyJoined` carrying their
+    /// *current* seat index, so each client's view of who's in the lobby — and
+    /// whether it is the host (slot 0) — stays accurate across joins, leaves,
+    /// and bot add/remove (any of which can shift seat indices).
+    fn notify_members(&self, lobby_id: u64, out: &mut LobbyOutcome) {
+        let Some(lobby) = self.lobbies.iter().find(|l| l.id == lobby_id) else { return };
+        let info = lobby.info();
+        for (i, slot) in lobby.seats.iter().enumerate() {
+            if let Slot::Human { conn, .. } = slot {
+                out.send(*conn, ServerMsg::LobbyJoined { lobby: info.clone(), your_slot: i });
             }
-            self.push_browser_list(&mut out);
         }
-        out
     }
 
     fn join(&mut self, conn: ConnId, lobby_id: u64) -> LobbyOutcome {
@@ -314,16 +350,9 @@ impl LobbyManager {
         let name = self.name_of(conn);
         let lobby = self.lobbies.iter_mut().find(|l| l.id == lobby_id).unwrap();
         lobby.seats.push(Slot::Human { conn, name });
-        let slot = lobby.seats.len() - 1;
-        let info = lobby.info();
         self.conn_lobby.insert(conn, lobby_id);
-        out.send(conn, ServerMsg::LobbyJoined { lobby: info.clone(), your_slot: slot });
-        // Tell the human seats already waiting that the roster grew.
-        for m in self.lobby_members(lobby_id) {
-            if m != conn {
-                out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
-            }
-        }
+        // Tell the new member and everyone already waiting their current slot.
+        self.notify_members(lobby_id, &mut out);
         self.maybe_start(lobby_id, &mut out);
         self.push_browser_list(&mut out);
         out
@@ -378,20 +407,11 @@ impl LobbyManager {
         if self.lobbies[idx].human_count() == 0 {
             self.lobbies.remove(idx);
         } else {
-            let info = self.lobbies[idx].info();
-            for m in self.lobbies[idx].members() {
-                out.send(m, ServerMsg::LobbyUpdated { lobby: info.clone() });
-            }
+            // Seats shifted — re-send each remaining member their new slot
+            // (this also transfers the host to the new seat 0).
+            self.notify_members(lobby_id, &mut out);
         }
         out
-    }
-
-    fn lobby_members(&self, lobby_id: u64) -> Vec<ConnId> {
-        self.lobbies
-            .iter()
-            .find(|l| l.id == lobby_id)
-            .map(|l| l.members())
-            .unwrap_or_default()
     }
 
     fn lobby_list_msg(&self) -> ServerMsg {
@@ -645,7 +665,7 @@ mod tests {
         let out = m.handle(ConnId(1), ClientMsg::AddBotToLobby);
         assert!(out.start.is_none());
         let info = out.sends.iter().find_map(|(_, msg)| match msg {
-            ServerMsg::LobbyUpdated { lobby } => Some(lobby.clone()),
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.clone()),
             _ => None,
         }).unwrap();
         assert_eq!((info.players, info.bots), (1, 2));
@@ -653,7 +673,7 @@ mod tests {
         // Remove one bot → back to 1 human + 1 bot.
         let out = m.handle(ConnId(1), ClientMsg::RemoveBotFromLobby);
         let info = out.sends.iter().find_map(|(_, msg)| match msg {
-            ServerMsg::LobbyUpdated { lobby } => Some(lobby.clone()),
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.clone()),
             _ => None,
         }).unwrap();
         assert_eq!((info.players, info.bots), (1, 1));
@@ -747,13 +767,70 @@ mod tests {
         }).unwrap();
         m.handle(ConnId(2), ClientMsg::JoinLobby { lobby_id: id });
 
-        // Seat 1 drops; seat 2 (still waiting) is told the roster shrank.
+        // Seat 1 (the host) drops; seat 2 is told the roster shrank AND that
+        // it is now seat 0 (the new host).
         let out = m.disconnect(ConnId(1));
         let updated = out.sends.iter().find_map(|(c, msg)| match msg {
-            ServerMsg::LobbyUpdated { lobby } if *c == ConnId(2) => Some(lobby.players),
+            ServerMsg::LobbyJoined { lobby, your_slot } if *c == ConnId(2) => {
+                Some((lobby.players, *your_slot))
+            }
             _ => None,
         });
-        assert_eq!(updated, Some(1), "remaining member sees one player left");
+        assert_eq!(updated, Some((1, 0)), "remaining member becomes the host at slot 0");
+    }
+
+    #[test]
+    fn host_start_fills_empty_seats_with_bots() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        let out = m.handle(ConnId(1), ClientMsg::CreateLobby {
+            name: "edh".into(),
+            format: LobbyFormat::Commander, // 4 seats
+        });
+        let id = out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.id),
+            _ => None,
+        }).unwrap();
+
+        // Host starts now → the other 3 seats fill with bots and the match
+        // begins (1 human + 3 bots).
+        let out = m.handle(ConnId(1), ClientMsg::StartLobby);
+        let start = out.start.expect("host start fills + starts");
+        assert_eq!(start.seats.len(), 4);
+        assert!(matches!(start.seats[0], SeatSpec::Human(ConnId(1))));
+        assert!(start.seats[1..].iter().all(|s| matches!(s, SeatSpec::Bot)));
+        let _ = id;
+    }
+
+    #[test]
+    fn only_host_may_add_bots_or_start() {
+        let mut m = LobbyManager::new();
+        m.register(ConnId(1));
+        m.register(ConnId(2));
+        let out = m.handle(ConnId(1), ClientMsg::CreateLobby {
+            name: "edh".into(),
+            format: LobbyFormat::Commander,
+        });
+        let id = out.sends.iter().find_map(|(_, msg)| match msg {
+            ServerMsg::LobbyJoined { lobby, .. } => Some(lobby.id),
+            _ => None,
+        }).unwrap();
+        m.handle(ConnId(2), ClientMsg::JoinLobby { lobby_id: id });
+
+        // Non-host seat 2 can't add bots or start.
+        for cmd in [ClientMsg::AddBotToLobby, ClientMsg::RemoveBotFromLobby, ClientMsg::StartLobby] {
+            let out = m.handle(ConnId(2), cmd);
+            assert!(out.start.is_none());
+            assert!(
+                out.sends.iter().any(|(c, msg)|
+                    *c == ConnId(2) && matches!(msg, ServerMsg::LobbyError { .. })),
+                "non-host action must be refused",
+            );
+        }
+        // Host (seat 1) can add a bot.
+        let out = m.handle(ConnId(1), ClientMsg::AddBotToLobby);
+        assert!(out.sends.iter().any(|(_, msg)|
+            matches!(msg, ServerMsg::LobbyJoined { lobby, .. } if lobby.bots == 1)));
     }
 
     /// End-to-end through the threaded driver: two in-process clients connect,

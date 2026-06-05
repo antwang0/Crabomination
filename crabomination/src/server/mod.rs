@@ -562,6 +562,7 @@ fn run_match_inner(
             | ClientMsg::JoinLobby { .. }
             | ClientMsg::AddBotToLobby
             | ClientMsg::RemoveBotFromLobby
+            | ClientMsg::StartLobby
             | ClientMsg::LeaveLobby => {}
         }
     }
