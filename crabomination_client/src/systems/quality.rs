@@ -83,6 +83,11 @@ pub fn setup_quality_panel(
                 ..default()
             },
             BackgroundColor(theme::OVERLAY_BG),
+            // Sit above every other in-game overlay (the mulligan / decision
+            // modals carry no z-index, so they'd otherwise render on top of
+            // this since they spawn later). The escape menu is the pause
+            // surface — it must always be reachable and on top.
+            GlobalZIndex(1000),
             SettingsMenuRoot,
             crate::systems::game_ui::InGameRoot,
         ))
