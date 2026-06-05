@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Soulbond pairing is auto-resolved (CR 702.95).** `apply_soulbond_pairing`
+  pairs with the lowest-CardId eligible partner instead of prompting the
+  controller. Add a `Decision::ChooseSoulbondPartner` (with a decline option)
+  so a UI seat can pick / decline the pair.
+- **Soulbond-granted triggered abilities only cover combat damage.**
+  `SoulbondBonus.triggered_abilities` are dispatched via the combat
+  `DealsCombatDamageToPlayer` hook only (enough for Tandem Lookout). A general
+  path (chain them into `dispatch_triggers_for_events` like
+  `granted_triggers_eot`) would cover any future soulbond trigger shape.
+- **Dethrone (CR 702.105) has no catalog card.** The `dethrone()` shortcut +
+  `Predicate::PlayerHasMostLife` are wired and tested, but the only printed
+  Dethrone cards are complex (Marchesa, the Black Rose — needs "other creatures
+  you control have dethrone" trigger-grant-to-filter + die-return recursion).
+  Ship one when those primitives land.
 - **Reconfigure unattach (CR 702.151).** `Keyword::Reconfigure` attaches via the
   equip path and strips Creature-ness while attached (Lion Sash). The
   "Reconfigure: unattach this (and it becomes a creature again)" mode has no
