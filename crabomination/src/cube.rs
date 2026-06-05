@@ -1597,6 +1597,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         farseek,
         sakura_tribe_elder,
         wood_elves,
+        viridian_emissary,
+        werebear,
         elvish_mystic,
         keen_eyed_curator,
         harmonize,

@@ -5691,6 +5691,7 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
 fn graveyard_threshold_selfpump_for_name(name: &'static str) -> Option<(usize, i32, i32)> {
     match name {
         "Elvish Reclaimer" => Some((7, 2, 2)),
+        "Werebear" => Some((7, 3, 3)),
         _ => None,
     }
 }

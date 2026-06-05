@@ -5197,6 +5197,53 @@ pub fn sakura_tribe_elder() -> CardDefinition {
     }
 }
 
+/// Werebear — {1}{G} Creature — Human Bear Druid 1/1. `{T}: Add {G}`.
+/// Threshold — gets +3/+3 with seven or more cards in your graveyard (rides
+/// `graveyard_threshold_selfpump_for_name`).
+pub fn werebear() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Werebear",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Bear, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColor(Color::Green, Value::Const(1)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Viridian Emissary — {1}{G} Creature — Phyrexian Elf Scout 2/1. When it dies,
+/// you may search your library for a basic land, put it onto the battlefield
+/// tapped, then shuffle.
+pub fn viridian_emissary() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Viridian Emissary",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Elf, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::MayDo {
+            description: "Search for a basic land".into(),
+            body: Box::new(search_to_battlefield(SelectionRequirement::IsBasicLand, true)),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Wood Elves — {2}{G} Creature — Elf Scout. 1/1. When this enters,
 /// search your library for a Forest card, put it onto the battlefield.
 ///

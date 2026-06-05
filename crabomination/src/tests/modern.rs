@@ -9644,6 +9644,36 @@ fn sakura_tribe_elder_sacrifices_for_a_basic() {
     assert!(view.unwrap().tapped, "Forest enters tapped");
 }
 
+#[test]
+fn werebear_threshold_pumps_at_seven_graveyard_cards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::werebear());
+    // Below threshold: base 1/1.
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((1, 1)));
+    // Fill graveyard to seven → +3/+3.
+    for _ in 0..7 { g.add_card_to_graveyard(0, catalog::forest()); }
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((4, 4)),
+        "Threshold grants +3/+3");
+}
+
+#[test]
+fn viridian_emissary_dies_ramps_a_basic_tapped() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::viridian_emissary());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    let f = g.battlefield.iter().find(|c| c.id == forest).expect("ramped a basic");
+    assert!(f.tapped, "basic enters tapped");
+}
+
 /// Wood Elves: ETB search a Forest into play untapped.
 #[test]
 fn wood_elves_etb_searches_forest_untapped() {
