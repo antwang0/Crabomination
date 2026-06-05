@@ -20557,6 +20557,26 @@ fn lavaspur_boots_grants_haste_and_plus_one_one() {
     assert!(cp.keywords.contains(&crate::card::Keyword::Haste), "boots grant haste");
 }
 
+/// Skullclamp's equip-granted "dies → draw two" trigger fires when the
+/// equipped creature dies (CR 702.6e).
+#[test]
+fn skullclamp_draws_two_when_equipped_creature_dies() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let clamp = g.add_card_to_battlefield(0, catalog::skullclamp());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: clamp, target: bear })
+        .expect("equip {1}");
+    // 2/2 + 1/-1 = 3/1. One damage is lethal.
+    let hand_before = g.players[0].hand.len();
+    g.battlefield_find_mut(bear).unwrap().damage = 1;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear died");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "Skullclamp drew two");
+}
+
 /// Equip rejects a creature you don't control (CR 702.6c).
 #[test]
 fn equip_rejects_creature_you_dont_control() {

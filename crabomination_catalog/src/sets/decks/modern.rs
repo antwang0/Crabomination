@@ -14945,6 +14945,35 @@ pub fn shuko() -> CardDefinition {
     }
 }
 
+/// Skullclamp — {1} Artifact — Equipment. Equipped creature gets +1/-1.
+/// Whenever equipped creature dies, draw two cards. Equip {1}.
+/// The dies trigger rides `EquipBonus.triggered_abilities` (CR 702.6e),
+/// collected on the equipped creature's death path.
+pub fn skullclamp() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name: "Skullclamp",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: -1,
+            keywords: vec![],
+            scale: None,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
 /// Lavaspur Boots — {1} Artifact — Equipment.
 /// Equipped creature gets +1/+1 and has haste. Equip {1}.
 ///

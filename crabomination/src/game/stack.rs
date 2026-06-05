@@ -1433,7 +1433,7 @@ impl GameState {
             }
             // Collect Dies triggers and Persist/Undying info before removing from battlefield.
             let (
-                die_triggers,
+                mut die_triggers,
                 has_persist,
                 has_undying,
                 minus_count,
@@ -1492,6 +1492,22 @@ impl GameState {
                     )
                 })
                 .unwrap_or_default();
+            // CR 702.6e — Equipment-granted "dies" triggers fire as though
+            // printed on the equipped creature (Skullclamp). Collect them
+            // while the creature is still attached (pre-removal). Source is
+            // the dying creature so `Selector::This` reads its last-known
+            // info; controller is the creature's controller.
+            for eq in &self.battlefield {
+                if eq.attached_to != Some(id) {
+                    continue;
+                }
+                let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                for ta in &bonus.triggered_abilities {
+                    if ta.event.kind == EventKind::CreatureDied {
+                        die_triggers.push((id, ta.effect.clone(), controller_idx));
+                    }
+                }
+            }
             // Bump the controller's per-turn died-creature tally for
             // Witherbloom "if a creature died under your control this
             // turn" payoffs (Essenceknit Scholar).

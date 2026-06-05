@@ -8,13 +8,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Skullclamp / death-trigger-via-equip.** Skullclamp's "whenever equipped
-  creature dies, draw two" needs the equipped creature's *granted* triggered
-  abilities (`EquipBonus.triggered_abilities`) to dispatch on non-combat events.
-  Today they only fire off the combat `DealsCombatDamageToPlayer` hook (Sword
-  cycle). Chain `EquipBonus.triggered_abilities` (and the Soulbond-granted
-  triggers) into the general `dispatch_triggers_for_events` walk so any granted
-  trigger shape fires; then ship Skullclamp.
+- **Equip-granted triggers — general dispatch.** Skullclamp ✅ (the equipped
+  creature's `CreatureDied` equip-grant is now collected on the death path in
+  `resolve_stack`). Still ⏳: chaining `EquipBonus.triggered_abilities` (and
+  Soulbond-granted triggers) into the general `dispatch_triggers_for_events`
+  walk so *any* equip-granted trigger shape (ETB, attacks, draws, …) fires —
+  today only `DealsCombatDamageToPlayer` (combat.rs) and `CreatureDied`
+  (death path) are covered.
 - **Ghost Quarter's basic-land search rider** is dropped (the destroyed land's
   controller may fetch a basic). Needs last-known-controller resolution after
   the land leaves; pairs with a `PlayerRef::ControllerOf(last-known)` lookup.

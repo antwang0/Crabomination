@@ -317,6 +317,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks-17 ──
         lightning_greaves,
         stonecoil_serpent,
+        // ── equip-granted dies trigger (CR 702.6e) ──
+        skullclamp,
         // ── modern_decks: living weapon + board-scaled equip bonus ──
         nettlecyst,
         // ── modern_decks: begin-combat token-copy equipment ──
