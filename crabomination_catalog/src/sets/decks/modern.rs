@@ -12624,6 +12624,7 @@ pub fn wear_tear() -> CardDefinition {
                 },
             },
             fuse: true,
+            aftermath: false,
         })),
         ..Default::default()
     }
@@ -12654,6 +12655,7 @@ pub fn fire_ice() -> CardDefinition {
                 ]),
             },
             fuse: false,
+            aftermath: false,
         })),
         ..Default::default()
     }
@@ -12682,6 +12684,7 @@ pub fn far_away() -> CardDefinition {
                 },
             },
             fuse: true,
+            aftermath: false,
         })),
         ..Default::default()
     }
@@ -12719,6 +12722,7 @@ pub fn assault_battery() -> CardDefinition {
                 },
             },
             fuse: false,
+            aftermath: false,
         })),
         ..Default::default()
     }
@@ -12746,6 +12750,7 @@ pub fn stand_deliver() -> CardDefinition {
                 },
             },
             fuse: false,
+            aftermath: false,
         })),
         ..Default::default()
     }
@@ -12774,6 +12779,62 @@ pub fn wax_wane() -> CardDefinition {
                 },
             },
             fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Spring // Mind — {2}{G} // {4}{U}{U} split with Aftermath (CR 702.127).
+/// Spring (left, Sorcery) searches a basic land onto the battlefield tapped;
+/// Mind (right, Instant) — castable only from the graveyard, then exiled —
+/// draws two cards.
+pub fn spring_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Spring // Mind",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(4), u(), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Onward // Victory — {2}{R} // {2}{W} split with Aftermath (CR 702.127).
+/// Onward (left, Instant) gives target creature +X/+0 where X is its power;
+/// Victory (right, Sorcery) — castable only from the graveyard, then exiled —
+/// gives target creature double strike until end of turn.
+pub fn onward_victory() -> CardDefinition {
+    CardDefinition {
+        name: "Onward // Victory",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::PowerOf(Box::new(Selector::Target(0))),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            fuse: false,
+            aftermath: true,
         })),
         ..Default::default()
     }

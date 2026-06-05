@@ -680,6 +680,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Red) {
         v.push(lightning_helix);
+        v.push(onward_victory);
         v.push(talisman_of_conviction);
         v.push(rustvale_bridge);
         v.push(commercial_district);
@@ -918,6 +919,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
         v.push(talisman_of_curiosity);
+        v.push(spring_mind);
         v.push(tanglepool_bridge);
         v.push(hedge_maze);
         // ── SOS Quandrix (G/U) ──

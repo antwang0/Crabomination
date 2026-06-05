@@ -1309,6 +1309,11 @@ impl GameState {
         if fused && !split.fuse {
             return Err(GameError::NotFusable);
         }
+        // CR 702.127a — an Aftermath half can be cast only from the graveyard
+        // (`CastAftermath`), never from hand.
+        if split.aftermath {
+            return Err(GameError::InvalidTarget);
+        }
         // Both halves of a split card are instant/sorcery (noncreature) — a
         // Ranger-Captain of Eos lock forbids casting them.
         if self.players[p].cant_cast_noncreature_this_turn {
@@ -1365,6 +1370,75 @@ impl GameState {
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         card.split_cast = Some(if fused { 2 } else { 1 });
+        let mut events = receipt.auto_events;
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p,
+            card,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+            mana_spent,
+        );
+        Ok(events)
+    }
+
+    /// CR 702.127 — cast the Aftermath (right) half of a split card from the
+    /// owner's graveyard. Pays the right half's cost; on resolution the card
+    /// is exiled (handled by the spell resolver via `split_cast` + the
+    /// `aftermath` flag).
+    pub(crate) fn cast_aftermath(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let pos = self
+            .players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInGraveyard(card_id))?;
+        let split = self.players[p].graveyard[pos]
+            .definition
+            .has_split()
+            .filter(|s| s.aftermath)
+            .cloned()
+            .ok_or(GameError::InvalidTarget)?;
+        if self.players[p].cant_cast_noncreature_this_turn {
+            return Err(GameError::CantCastNoncreature);
+        }
+        let must_be_sorcery_speed =
+            !split.right.is_instant_speed() || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality_with_source(tgt, p, Some(card_id))?;
+        }
+        let mut cost = if split.right.cost.has_x() {
+            split.right.cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            split.right.cost.clone()
+        };
+        apply_spell_cost_floor(self, &mut cost);
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self.players[p].graveyard.remove(pos);
+        card.cast_from_hand = false;
+        card.split_cast = Some(1);
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
         self.finalize_cast(

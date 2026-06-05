@@ -16241,6 +16241,66 @@ fn stand_deliver_right_bounces_permanent() {
 }
 
 #[test]
+fn spring_mind_aftermath_from_graveyard_then_exiled() {
+    // CR 702.127 — Mind (right half) is castable only from the graveyard,
+    // draws two, then is exiled.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spring_mind());
+    for _ in 0..3 {
+        let cid = g.next_id();
+        g.players[0].add_to_library_top(cid, catalog::grizzly_bears());
+    }
+    // Can't cast the aftermath half from hand.
+    assert!(g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "aftermath not castable from hand");
+
+    // Cast Spring (left) — lands in the graveyard.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spring castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Spring in graveyard");
+
+    // Now cast Mind (aftermath) from the graveyard: draw two, then exile.
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mind castable from graveyard");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "Mind drew two");
+    assert!(g.exile.iter().any(|c| c.id == id), "Mind exiled after resolving");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id), "no longer in graveyard");
+}
+
+#[test]
+fn onward_victory_aftermath_grants_double_strike() {
+    // Victory (aftermath half) gives target creature double strike.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::onward_victory());
+    // Move the card straight to the graveyard to cast its aftermath half.
+    let card = g.players[0].remove_from_hand(id).unwrap();
+    g.players[0].graveyard.push(card);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Victory castable from graveyard");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&crate::card::Keyword::DoubleStrike),
+        "bear gained double strike");
+    assert!(g.exile.iter().any(|c| c.id == id), "Victory exiled");
+}
+
+#[test]
 fn stillmoon_cavalier_grants_flying_eot() {
     let mut g = two_player_game();
     let cav = g.add_card_to_battlefield(0, catalog::stillmoon_cavalier());

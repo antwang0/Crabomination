@@ -143,6 +143,16 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.127 — cast the **Aftermath** (right) half of a split card from
+    /// the graveyard, paying the right half's cost. Exiled on resolution.
+    CastAftermath {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.153 — cast a spell paying its optional Casualty cost,
     /// sacrificing `sacrifice` (a creature you control with power ≥ the
     /// casualty number) as an additional cost. On cast the spell is copied.

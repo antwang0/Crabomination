@@ -1021,6 +1021,11 @@ pub struct SplitCard {
     pub right: SplitHalf,
     /// CR 702.102 — Fuse: may cast both halves as one spell from hand.
     pub fuse: bool,
+    /// CR 702.127 — Aftermath: the right half can be cast *only* from the
+    /// graveyard (`GameAction::CastAftermath`), and is exiled on resolution.
+    /// The left half is cast from hand normally and lands in the graveyard,
+    /// where the aftermath half then becomes available.
+    pub aftermath: bool,
 }
 
 /// One half of a split card (the left half's data lives directly on the

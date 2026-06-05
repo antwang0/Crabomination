@@ -3326,6 +3326,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_split_half(card_id, target, additional_targets, mode, x_value, true),
+            GameAction::CastAftermath {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_aftermath(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellCasualty {
                 card_id,
                 sacrifice,
@@ -5533,6 +5540,14 @@ impl GameState {
         if card.bought_back {
             let owner = card.owner;
             self.players[owner].hand.push(card);
+            return Ok(events);
+        }
+        // CR 702.127e — an Aftermath half (right half cast from the graveyard)
+        // is exiled on resolution rather than returning to the graveyard.
+        if card.split_cast == Some(1)
+            && card.definition.split.as_ref().is_some_and(|s| s.aftermath)
+        {
+            self.exile.push(card);
             return Ok(events);
         }
         // CR 715 — an adventure spell goes to exile (not the graveyard) on
