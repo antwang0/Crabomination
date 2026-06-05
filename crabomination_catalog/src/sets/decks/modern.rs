@@ -18461,3 +18461,27 @@ pub fn consult_the_star_charts() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Power Depot — Artifact Land. Enters tapped. `{T}: Add {C}` and `{T}: Add one
+/// mana of any color` (the printed "spend only on artifact spells/abilities"
+/// restriction and Modular 1 are dropped). Mana-fixing artifact land.
+pub fn power_depot() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Power Depot",
+        card_types: vec![CardType::Artifact, CardType::Land],
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![super::super::etb_tap()],
+        ..Default::default()
+    }
+}

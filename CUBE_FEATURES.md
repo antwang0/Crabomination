@@ -94,7 +94,7 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Power Depot | ⏳ | Charge-counter mana storage. |
+| Power Depot | 🟡 | Artifact Land, enters tapped, `{T}: Add {C}` + `{T}: Add one mana of any color`. The "spend only on artifact spells/abilities" mana restriction and Modular 1 are dropped. Test: `power_depot_enters_tapped_and_fixes_mana`. |
 | Talon Gates of Madara | ⏳ | TBD. |
 
 ## Engine features needed

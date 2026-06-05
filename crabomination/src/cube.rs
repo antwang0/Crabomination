@@ -257,6 +257,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         glimmerpost,
         cloudpost,
         lotus_field,
+        // ── modern_decks: mana-fixing artifact land ──
+        power_depot,
         // ── Modern utility artifacts ──
         // coalition_relic — 🟡 charge-counter burst ability omitted
         ghost_vacuum,

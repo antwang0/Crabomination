@@ -27050,3 +27050,22 @@ fn consult_the_star_charts_digs_x_equal_to_lands() {
     assert!(g.players[0].hand.iter().any(|c| c.id == want),
         "picks the chosen card from the top three into hand");
 }
+
+#[test]
+fn power_depot_enters_tapped_and_fixes_mana() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::power_depot());
+    // Entered via add_card_to_battlefield doesn't run ETB; verify the tap
+    // trigger fires through the normal play path instead.
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().tapped, "Power Depot enters tapped");
+    assert!(g.battlefield_find(id).unwrap().definition.card_types.contains(&crate::card::CardType::Artifact));
+    // Untap and tap for any color (the second ability).
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: Some(0),
+    }).expect("tap for any color");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana of a chosen color");
+}
