@@ -17720,14 +17720,26 @@ fn omnath_locus_of_creation_etb_draws_and_gains_life() {
 // ── Torsten ─────────────────────────────────────────────────────────────────
 
 #[test]
-fn torsten_founder_is_7_7_legendary_with_land_search_etb() {
-    use crate::card::Supertype;
-    let card = catalog::torsten_founder_of_benalia();
-    assert_eq!(card.name, "Torsten, Founder of Benalia");
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 7);
-    assert!(card.supertypes.contains(&Supertype::Legendary));
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB land search");
+fn torsten_etb_takes_creatures_and_lands_and_dies_to_seven_soldiers() {
+    let mut g = two_player_game();
+    // Top of library: Bear (creature), Forest (land), Bolt (instant). Only the
+    // first two go to hand; the instant is bottomed.
+    g.players[0].library.clear();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::torsten_founder_of_benalia());
+    // Fire the ETB trigger.
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "creature + land taken to hand");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bolt), "instant bottomed");
+    // Now kill it: seven Soldiers.
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    let soldiers = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Soldier" && c.controller == 0).count();
+    assert_eq!(soldiers, 7, "dies → seven 1/1 Soldiers");
 }
 
 // ── Coveted Jewel ───────────────────────────────────────────────────────────

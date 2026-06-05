@@ -14161,12 +14161,14 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
     }
 }
 
-/// Torsten, Founder of Benalia — {3}{G}{W}{W} Legendary 7/7 Human Soldier.
-/// ETB: Search 3 basic lands -> BF tapped.
+/// Torsten, Founder of Benalia — {5}{G}{W} Legendary 7/7 Human Soldier.
+/// ETB: reveal top 7, take any number of creature/land cards to hand, rest
+/// to the bottom in a random order. Dies: create seven 1/1 white Soldiers.
 pub fn torsten_founder_of_benalia() -> CardDefinition {
+    use crate::card::TokenDefinition;
     CardDefinition {
         name: "Torsten, Founder of Benalia",
-        cost: cost(&[generic(3), g(), w(), w()]),
+        cost: cost(&[generic(5), g(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -14175,17 +14177,32 @@ pub fn torsten_founder_of_benalia() -> CardDefinition {
         },
         power: 7,
         toughness: 7,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Repeat {
-                count: Value::Const(3),
-                body: Box::new(Effect::Search {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::RevealTopTakeMatchingToHand {
                     who: PlayerRef::You,
-                    filter: SelectionRequirement::IsBasicLand,
-                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-                }),
+                    count: Value::Const(7),
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                },
             },
-        }],
+            crate::effect::shortcut::on_dies(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(7),
+                definition: TokenDefinition {
+                    name: "Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            }),
+        ],
         ..Default::default()
     }
 }

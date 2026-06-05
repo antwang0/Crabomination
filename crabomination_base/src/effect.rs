@@ -1403,6 +1403,12 @@ pub enum Effect {
     /// bottomed. Card types considered: artifact, battle, creature,
     /// enchantment, instant, land, planeswalker, sorcery.
     RevealTopTakeOnePerType { who: PlayerRef, count: Value },
+    /// Reveal the top `count` cards of `who`'s library, put every card
+    /// matching `filter` into their hand, and bottom the rest in a random
+    /// order (CR 401.4). "Put any number" is resolved as take-all-matching
+    /// (the value-maximizing default). Torsten, Founder of Benalia's
+    /// "reveal seven, take creatures and/or lands."
+    RevealTopTakeMatchingToHand { who: PlayerRef, count: Value, filter: SelectionRequirement },
 
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.
@@ -2386,6 +2392,9 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::RevealTopTakeOnePerType { who, count } => {
+                player_has_target(who) || value_has_target(count)
+            }
+            Effect::RevealTopTakeMatchingToHand { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::Explore { who } => sel_has_target(who),

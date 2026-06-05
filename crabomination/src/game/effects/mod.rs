@@ -3778,6 +3778,36 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopTakeMatchingToHand { who, count, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if revealed.is_empty() { return Ok(()); }
+                // Take every revealed card matching the filter into hand.
+                let taken: Vec<crate::card::CardId> = revealed.iter().copied().filter(|id| {
+                    self.evaluate_requirement_static(filter, &Target::Permanent(*id), p, ctx.source)
+                }).collect();
+                for id in &taken {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *id) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].hand.push(card);
+                    }
+                }
+                // Bottom the rest in a random order (CR 401.4).
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    revealed.iter().copied().filter(|id| !taken.contains(id)).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ShuffleGraveyardIntoLibrary { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let cards = std::mem::take(&mut self.players[p].graveyard);
