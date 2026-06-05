@@ -93,6 +93,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -163,6 +164,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -219,6 +221,7 @@ pub fn pillardrop_rescuer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -311,6 +314,7 @@ pub fn sparring_regimen() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -377,6 +381,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -476,6 +481,7 @@ pub fn reconstruct_history() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -615,6 +621,7 @@ pub fn lorehold_excavation() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -673,6 +680,7 @@ pub fn lorehold_acolyte() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -739,6 +747,7 @@ pub fn lorehold_warrior_priest() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -795,6 +804,7 @@ pub fn lorehold_ember_priest() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -849,6 +859,7 @@ pub fn lorehold_skirmish() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -901,6 +912,7 @@ pub fn lorehold_pyrosage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -955,6 +967,7 @@ pub fn lorehold_loremaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1002,6 +1015,7 @@ pub fn lorehold_aerospirit() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1056,6 +1070,7 @@ pub fn lorehold_ember_forge() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1123,6 +1138,7 @@ pub fn lorehold_spiritcaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1177,6 +1193,7 @@ pub fn lorehold_pyrebrand() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1236,6 +1253,7 @@ pub fn lorehold_reclamation() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1291,6 +1309,7 @@ pub fn lorehold_reverberator() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1342,6 +1361,7 @@ pub fn lorehold_pyrescribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1390,6 +1410,7 @@ pub fn lorehold_echoist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1445,6 +1466,7 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1501,6 +1523,7 @@ pub fn lorehold_recollect() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1565,6 +1588,7 @@ pub fn lorehold_anthemist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1614,6 +1638,7 @@ pub fn lorehold_bonepriest() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1674,6 +1699,7 @@ pub fn lorehold_battlescroll() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1743,6 +1769,7 @@ pub fn lorehold_tomescholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1793,6 +1820,7 @@ pub fn lorehold_ember_brand() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1843,6 +1871,7 @@ pub fn lorehold_spectrescribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1900,6 +1929,7 @@ pub fn lorehold_sparkstrike() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1951,6 +1981,7 @@ pub fn lorehold_bonereader() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2008,6 +2039,7 @@ pub fn lorehold_spiritarcher() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2068,6 +2100,7 @@ pub fn lorehold_echoflame() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2141,6 +2174,7 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2215,6 +2249,7 @@ pub fn lorehold_emberscribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2268,6 +2303,7 @@ pub fn lorehold_reliquary() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2320,6 +2356,7 @@ pub fn lorehold_ringleader() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2373,6 +2410,7 @@ pub fn lorehold_strikevanguard() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2433,6 +2471,7 @@ pub fn lorehold_ember_recall() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2496,6 +2535,7 @@ pub fn lorehold_warband() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2563,6 +2603,7 @@ pub fn lorehold_phoenix() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2619,6 +2660,7 @@ pub fn lorehold_battlechronicler() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2679,6 +2721,7 @@ pub fn lorehold_searing_wisdom() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2725,6 +2768,7 @@ pub fn lorehold_saint() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2782,6 +2826,7 @@ pub fn lorehold_volley() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2854,6 +2899,7 @@ pub fn lorehold_spirit_caller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2910,6 +2956,7 @@ pub fn lorehold_recital() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2975,6 +3022,7 @@ pub fn lorehold_pyrostriker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3027,6 +3075,7 @@ pub fn lorehold_soulshaper() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3077,6 +3126,7 @@ pub fn lorehold_ironhand() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3136,6 +3186,7 @@ pub fn lorehold_revival() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3185,6 +3236,7 @@ pub fn lorehold_sparkflare() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3253,6 +3305,7 @@ pub fn spirit_conduit() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3311,6 +3364,7 @@ pub fn lorehold_spirit_anthem() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3364,6 +3418,7 @@ pub fn lorehold_spellrunner() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3428,6 +3483,7 @@ pub fn lorehold_battlecaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3483,6 +3539,7 @@ pub fn lorehold_pyresurge() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3540,6 +3597,7 @@ pub fn spirit_sparkguard() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3597,6 +3655,7 @@ pub fn lorehold_outburst() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3647,6 +3706,7 @@ pub fn lorehold_pyresinger() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3697,6 +3757,7 @@ pub fn lorehold_soulchanter() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3751,6 +3812,7 @@ pub fn lorehold_flameherald() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3803,6 +3865,7 @@ pub fn lorehold_embercouncil() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3869,6 +3932,7 @@ pub fn lorehold_cinderpriest() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3914,6 +3978,7 @@ pub fn lorehold_sparkscholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3956,6 +4021,7 @@ pub fn lorehold_ironscribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4009,6 +4075,7 @@ pub fn lorehold_spiritflame() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4063,6 +4130,7 @@ pub fn lorehold_sparkknight() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4110,6 +4178,7 @@ pub fn lorehold_stoneweaver() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4160,6 +4229,7 @@ pub fn lorehold_pyrescroll() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4220,6 +4290,7 @@ pub fn lorehold_battle_witness() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4267,6 +4338,7 @@ pub fn lorehold_battlescholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4308,6 +4380,7 @@ pub fn lorehold_pyrokineticist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4359,6 +4432,7 @@ pub fn lorehold_wargleam() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4406,6 +4480,7 @@ pub fn lorehold_stoneglyph() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4446,6 +4521,7 @@ pub fn lorehold_reverend() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4503,6 +4579,7 @@ pub fn lorehold_recountmage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4559,6 +4636,7 @@ pub fn lorehold_inscribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4622,6 +4700,7 @@ pub fn lorehold_reenactor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4663,6 +4742,7 @@ pub fn lorehold_ardent_pyromage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4768,6 +4848,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4824,6 +4905,7 @@ pub fn lorehold_spirit_sentinel() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4874,6 +4956,7 @@ pub fn lorehold_pyrotechnician() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4926,6 +5009,7 @@ pub fn lorehold_spectrebrand() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -4966,6 +5050,7 @@ pub fn lorehold_charwarden() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5006,6 +5091,7 @@ pub fn lorehold_lightcleric() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5052,6 +5138,7 @@ pub fn lorehold_grave_crusader() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5101,6 +5188,7 @@ pub fn lorehold_pyrescholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5152,6 +5240,7 @@ pub fn lorehold_vow() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5203,6 +5292,7 @@ pub fn lorehold_spectrecaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5243,6 +5333,7 @@ pub fn lorehold_forgemaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5296,6 +5387,7 @@ pub fn lorehold_skirmlord() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5354,6 +5446,7 @@ pub fn lorehold_memoirist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5397,6 +5490,7 @@ pub fn lorehold_ardent_acolyte() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5449,6 +5543,7 @@ pub fn lorehold_bequeathing() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5511,6 +5606,7 @@ pub fn lorehold_pyromaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5565,6 +5661,7 @@ pub fn lorehold_spirit_hymn() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5607,6 +5704,7 @@ pub fn lorehold_spirit_sage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5648,6 +5746,7 @@ pub fn lorehold_pyrechronicler() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5689,6 +5788,7 @@ pub fn lorehold_mass_ritual() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5733,6 +5833,7 @@ pub fn lorehold_soulburst() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5773,6 +5874,7 @@ pub fn lorehold_ancestor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5814,6 +5916,7 @@ pub fn lorehold_pyrescribe_adept() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5863,6 +5966,7 @@ pub fn lorehold_burnscribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5924,6 +6028,7 @@ pub fn lorehold_spirit_legion() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -5982,6 +6087,7 @@ pub fn lorehold_zealot() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6022,6 +6128,7 @@ pub fn lorehold_pyreheart() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6076,6 +6183,7 @@ pub fn spirit_phalanx() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6123,6 +6231,7 @@ pub fn lorehold_warhost() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6172,6 +6281,7 @@ pub fn lorehold_devotion() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6224,6 +6334,7 @@ pub fn lorehold_pyremender() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6263,6 +6374,7 @@ pub fn spirit_vanguard() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6303,6 +6415,7 @@ pub fn lorehold_ember_sage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6350,6 +6463,7 @@ pub fn lorehold_ghostmaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6399,6 +6513,7 @@ pub fn lorehold_b37_spiritflame() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6438,6 +6553,7 @@ pub fn lorehold_b37_beacon() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6494,6 +6610,7 @@ pub fn lorehold_sermonizer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6544,6 +6661,7 @@ pub fn lorehold_b35_lightning() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6586,6 +6704,7 @@ pub fn lorehold_ember_priest_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6625,6 +6744,7 @@ pub fn lorehold_skydefender() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6676,6 +6796,7 @@ pub fn lorehold_archivist_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6723,6 +6844,7 @@ pub fn lorehold_spiritrider() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6762,6 +6884,7 @@ pub fn lorehold_wargeist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6813,6 +6936,7 @@ pub fn lorehold_hellraiser() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6859,6 +6983,7 @@ pub fn lorehold_annalist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6909,6 +7034,7 @@ pub fn lorehold_bonfire() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -6974,6 +7100,7 @@ pub fn lorehold_spiritsage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7013,6 +7140,7 @@ pub fn lorehold_pyrokin() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7052,6 +7180,7 @@ pub fn spirit_outrider() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7091,6 +7220,7 @@ pub fn spirit_warbearer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7134,6 +7264,7 @@ pub fn lorehold_ember_reader() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7187,6 +7318,7 @@ pub fn spirit_cantor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7246,6 +7378,7 @@ pub fn lorehold_wraithcaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7296,6 +7429,7 @@ pub fn lorehold_ballad() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7336,6 +7470,7 @@ pub fn lorehold_ironwill() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7383,6 +7518,7 @@ pub fn spirit_pyremage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7424,6 +7560,7 @@ pub fn lorehold_emberkeeper() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7467,6 +7604,7 @@ pub fn lorehold_warden_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7507,6 +7645,7 @@ pub fn spirit_ironguard() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7558,6 +7697,7 @@ pub fn lorehold_recital_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7601,6 +7741,7 @@ pub fn lorehold_stoneguard() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7641,6 +7782,7 @@ pub fn spirit_vanguard_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7693,6 +7835,7 @@ pub fn lorehold_pyresummon() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7734,6 +7877,7 @@ pub fn lorehold_saberspirit() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7775,6 +7919,7 @@ pub fn spirit_bookburner() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7822,6 +7967,7 @@ pub fn lorehold_knight_champion() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7868,6 +8014,7 @@ pub fn lorehold_pyrelancer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7911,6 +8058,7 @@ pub fn lorehold_emberhand_priest() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -7954,6 +8102,7 @@ pub fn lorehold_ironbacked_archivist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8001,6 +8150,7 @@ pub fn lorehold_lightspeaker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8045,6 +8195,7 @@ pub fn lorehold_warpriest() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8086,6 +8237,7 @@ pub fn lorehold_emberscholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8134,6 +8286,7 @@ pub fn lorehold_relicbearer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8174,6 +8327,7 @@ pub fn lorehold_ember_sentinel() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8216,6 +8370,7 @@ pub fn lorehold_spiritbinder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8257,6 +8412,7 @@ pub fn lorehold_sparkflinger() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8300,6 +8456,7 @@ pub fn lorehold_battle_cry() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8350,6 +8507,7 @@ pub fn lorehold_battle_memorial() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8400,6 +8558,7 @@ pub fn lorehold_veteran() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8440,6 +8599,7 @@ pub fn lorehold_scrollwarden() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8492,6 +8652,7 @@ pub fn lorehold_flameherald_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8533,6 +8694,7 @@ pub fn spirit_bardguard() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8574,6 +8736,7 @@ pub fn lorehold_sparkwarden() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8621,6 +8784,7 @@ pub fn lorehold_spiritscribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8661,6 +8825,7 @@ pub fn lorehold_phoenix_soldier() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8703,6 +8868,7 @@ pub fn spirit_spellsmith() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8749,6 +8915,7 @@ pub fn lorehold_glimmercaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8799,6 +8966,7 @@ pub fn lorehold_refrain() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8851,6 +9019,7 @@ pub fn spirit_banner_bearer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8904,6 +9073,7 @@ pub fn lorehold_battle_drum() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8945,6 +9115,7 @@ pub fn spirit_spearmaiden() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -8988,6 +9159,7 @@ pub fn lorehold_lavabolt() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9030,6 +9202,7 @@ pub fn lorehold_skyrunner() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9079,6 +9252,7 @@ pub fn lorehold_stoneward() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9130,6 +9304,7 @@ pub fn lorehold_pyremender_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9181,6 +9356,7 @@ pub fn lorehold_pyreward() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9222,6 +9398,7 @@ pub fn spirit_honor_guard() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9275,6 +9452,7 @@ pub fn lorehold_smiteseer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9316,6 +9494,7 @@ pub fn lorehold_embersmith() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9355,6 +9534,7 @@ pub fn spirit_mentor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9398,6 +9578,7 @@ pub fn lorehold_wargist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9438,6 +9619,7 @@ pub fn lorehold_sparkstrike_b50() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9478,6 +9660,7 @@ pub fn spirit_battlemaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9524,6 +9707,7 @@ pub fn lorehold_memoriam() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9563,6 +9747,7 @@ pub fn spirit_berserker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9614,6 +9799,7 @@ pub fn lorehold_memorialist_b50() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9664,6 +9850,7 @@ pub fn lorehold_echocaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9713,6 +9900,7 @@ pub fn lorehold_sparkshock() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9761,6 +9949,7 @@ pub fn lorehold_skystorm() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9800,6 +9989,7 @@ pub fn lorehold_reverence() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9839,6 +10029,7 @@ pub fn lorehold_pyromentor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9890,6 +10081,7 @@ pub fn lorehold_spirit_veteran() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9935,6 +10127,7 @@ pub fn lorehold_embermend() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -9984,6 +10177,7 @@ pub fn lorehold_spiritchron() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10029,6 +10223,7 @@ pub fn lorehold_sparklock() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10070,6 +10265,7 @@ pub fn lorehold_emberscribe_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10109,6 +10305,7 @@ pub fn lorehold_spirit_redeemer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10158,6 +10355,7 @@ pub fn lorehold_emberlock() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10208,6 +10406,7 @@ pub fn lorehold_skyblaze() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10247,6 +10446,7 @@ pub fn spirit_blazekin() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10289,6 +10489,7 @@ pub fn lorehold_invoker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10342,6 +10543,7 @@ pub fn spirit_sparkmage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10382,6 +10584,7 @@ pub fn lorehold_chronicler_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10431,6 +10634,7 @@ pub fn lorehold_relicwarden() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10486,6 +10690,7 @@ pub fn lorehold_pyrescribe_elder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10530,6 +10735,7 @@ pub fn lorehold_skirmish_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10574,6 +10780,7 @@ pub fn lorehold_sparkflame() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10613,6 +10820,7 @@ pub fn lorehold_spiritcaller_b55() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10665,6 +10873,7 @@ pub fn spirit_banneret() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10716,6 +10925,7 @@ pub fn lorehold_forge_cleric() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10760,6 +10970,7 @@ pub fn lorehold_pyrescholar_b56() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10812,6 +11023,7 @@ pub fn lorehold_summit() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10856,6 +11068,7 @@ pub fn spirit_scribe() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10906,6 +11119,7 @@ pub fn lorehold_ember_strike() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10948,6 +11162,7 @@ pub fn lorehold_battlepriest() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -10991,6 +11206,7 @@ pub fn lorehold_bonereader_b57() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11034,6 +11250,7 @@ pub fn lorehold_sparkscholar_b57() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11085,6 +11302,7 @@ pub fn lorehold_reverence_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11127,6 +11345,7 @@ pub fn lorehold_skybattler() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11172,6 +11391,7 @@ pub fn lorehold_bonechanter() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11226,6 +11446,7 @@ pub fn lorehold_sparkdancer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11274,6 +11495,7 @@ pub fn lorehold_reliquarian() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11316,6 +11538,7 @@ pub fn lorehold_skyignite() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11356,6 +11579,7 @@ pub fn lorehold_pyrelearner() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11407,6 +11631,7 @@ pub fn lorehold_spiritbinder_b59() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11448,6 +11673,7 @@ pub fn lorehold_emberscribe_b59() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11489,6 +11715,7 @@ pub fn lorehold_chronicler_b60() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11529,6 +11756,7 @@ pub fn lorehold_sparkmage_b60() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11575,6 +11803,7 @@ pub fn lorehold_battle_sage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11626,6 +11855,7 @@ pub fn lorehold_relicseer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11669,6 +11899,7 @@ pub fn lorehold_emberspeaker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11724,6 +11955,7 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11769,6 +12001,7 @@ pub fn spirit_bannerer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11808,6 +12041,7 @@ pub fn lorehold_scholar_b61() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11848,6 +12082,7 @@ pub fn lorehold_warpoet() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11891,6 +12126,7 @@ pub fn lorehold_brimstoner() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11945,6 +12181,7 @@ pub fn spirit_reliquarian() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -11987,6 +12224,7 @@ pub fn spirit_sparkblade() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12026,6 +12264,7 @@ pub fn lorehold_spiritchron_b63() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12076,6 +12315,7 @@ pub fn lorehold_embertongue() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12115,6 +12355,7 @@ pub fn lorehold_sparkstoneflinger() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12163,6 +12404,7 @@ pub fn lorehold_memorialcaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12204,6 +12446,7 @@ pub fn lorehold_sparkscholar_b63() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12245,6 +12488,7 @@ pub fn lorehold_sparkscholar_b63_v2() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12304,6 +12548,7 @@ pub fn lorehold_coinflinger() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12347,6 +12592,7 @@ pub fn lorehold_ember_speaker_b64() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12386,6 +12632,7 @@ pub fn spirit_spellblade() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12436,6 +12683,7 @@ pub fn lorehold_sparkchorus() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12475,6 +12723,7 @@ pub fn lorehold_sigilbearer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12516,6 +12765,7 @@ pub fn spirit_wardancer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12556,6 +12806,7 @@ pub fn lorehold_pyromancer_b66() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12600,6 +12851,7 @@ pub fn lorehold_spiritmint_b66() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12651,6 +12903,7 @@ pub fn lorehold_battlegrave() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12690,6 +12943,7 @@ pub fn lorehold_skybearer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12729,6 +12983,7 @@ pub fn lorehold_spellbreaker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12771,6 +13026,7 @@ pub fn lorehold_sparkscholar_b67() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12810,6 +13066,7 @@ pub fn lorehold_cinderpriest_b67() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12858,6 +13115,7 @@ pub fn lorehold_memorialer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12907,6 +13165,7 @@ pub fn lorehold_spiritflare() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12953,6 +13212,7 @@ pub fn lorehold_spirit_crier() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -12997,6 +13257,7 @@ pub fn lorehold_bellringer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13050,6 +13311,7 @@ pub fn lorehold_sparkshrine() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13089,6 +13351,7 @@ pub fn lorehold_embertenured() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13134,6 +13397,7 @@ pub fn spirit_glyphbinder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13174,6 +13438,7 @@ pub fn lorehold_pyrebinder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13214,6 +13479,7 @@ pub fn lorehold_heroic_sage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13256,6 +13522,7 @@ pub fn lorehold_bloodrazer_b125() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13296,6 +13563,7 @@ pub fn lorehold_saintkeeper_b125() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13336,6 +13604,7 @@ pub fn lorehold_vanguardian_b125() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13387,6 +13656,7 @@ pub fn lorehold_heraldcaller_b125() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13429,6 +13699,7 @@ pub fn lorehold_spiritbinder_b126() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13468,6 +13739,7 @@ pub fn lorehold_cinderscholar_b126() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13508,6 +13780,7 @@ pub fn lorehold_halfblood_b126() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13548,6 +13821,7 @@ pub fn lorehold_skywatcher_b126() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13588,6 +13862,7 @@ pub fn lorehold_ember_mage_b126() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13628,6 +13903,7 @@ pub fn lorehold_sparkscholar_b126() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13670,6 +13946,7 @@ pub fn lorehold_aerialist_b127() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13710,6 +13987,7 @@ pub fn lorehold_ironbound_b127() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13758,6 +14036,7 @@ pub fn lorehold_pyrebrand_b127() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13810,6 +14089,7 @@ pub fn lorehold_veteran_b127() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13850,6 +14130,7 @@ pub fn lorehold_honorbound_b127() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13896,6 +14177,7 @@ pub fn lorehold_embercurse_b127() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13938,6 +14220,7 @@ pub fn lorehold_skybinder_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -13979,6 +14262,7 @@ pub fn lorehold_bookforger_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14019,6 +14303,7 @@ pub fn lorehold_bell_ringer_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14065,6 +14350,7 @@ pub fn lorehold_cliffstrike_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14105,6 +14391,7 @@ pub fn lorehold_sparkmender_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14145,6 +14432,7 @@ pub fn lorehold_battlespirit_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14185,6 +14473,7 @@ pub fn lorehold_soulreaver_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14235,6 +14524,7 @@ pub fn lorehold_pyrestone_b128() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14292,6 +14582,7 @@ pub fn lorehold_spirit_banner_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14355,6 +14646,7 @@ pub fn lorehold_stoneglyph_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14395,6 +14687,7 @@ pub fn lorehold_pyrespirit_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14445,6 +14738,7 @@ pub fn lorehold_lectern_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14495,6 +14789,7 @@ pub fn lorehold_memorist_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14537,6 +14832,7 @@ pub fn lorehold_sparkscholar_ii_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14578,6 +14874,7 @@ pub fn lorehold_excavation_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14628,6 +14925,7 @@ pub fn lorehold_pyreverse_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14668,6 +14966,7 @@ pub fn lorehold_sparkmender_ii_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14715,6 +15014,7 @@ pub fn lorehold_embertongue_b129() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14758,6 +15058,7 @@ pub fn lorehold_spiritcaller_b130() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14811,6 +15112,7 @@ pub fn lorehold_skyguard_banner_b130() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14852,6 +15154,7 @@ pub fn lorehold_pyresage_b130() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14903,6 +15206,7 @@ pub fn lorehold_reliquarian_b130() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14950,6 +15254,7 @@ pub fn lorehold_battle_cantrip_b130() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -14990,6 +15295,7 @@ pub fn lorehold_pyremaster_b130() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15032,6 +15338,7 @@ pub fn lorehold_spirit_warden_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15071,6 +15378,7 @@ pub fn lorehold_pyrosaint_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15114,6 +15422,7 @@ pub fn lorehold_relic_keeper_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15167,6 +15476,7 @@ pub fn lorehold_sparkpriest_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15218,6 +15528,7 @@ pub fn lorehold_battle_chant_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15264,6 +15575,7 @@ pub fn lorehold_remembrance_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15303,6 +15615,7 @@ pub fn lorehold_ember_choir_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15349,6 +15662,7 @@ pub fn lorehold_pyremourner_b131() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15391,6 +15705,7 @@ pub fn lorehold_cleric_recruit_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15431,6 +15746,7 @@ pub fn lorehold_pyrescholar_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15471,6 +15787,7 @@ pub fn lorehold_spiritforger_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15511,6 +15828,7 @@ pub fn lorehold_ember_bandit_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15553,6 +15871,7 @@ pub fn lorehold_skyforge_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15593,6 +15912,7 @@ pub fn lorehold_champions_echo_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15634,6 +15954,7 @@ pub fn lorehold_pyresinger_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15676,6 +15997,7 @@ pub fn lorehold_spirit_cleric_b133() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15717,6 +16039,7 @@ pub fn lorehold_bell_ringer_ii_b133() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15757,6 +16080,7 @@ pub fn lorehold_sparkstrider_b133() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15796,6 +16120,7 @@ pub fn lorehold_final_lesson_b132() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15838,6 +16163,7 @@ pub fn lorehold_skirmisher_b135() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15889,6 +16215,7 @@ pub fn lorehold_crackleflame_b135() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15928,6 +16255,7 @@ pub fn lorehold_sparkpilgrim_b135() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -15969,6 +16297,7 @@ pub fn lorehold_pyremartyr_b135() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16011,6 +16340,7 @@ pub fn lorehold_ember_chant_b136() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16051,6 +16381,7 @@ pub fn lorehold_skirmisher_captain_b136() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16091,6 +16422,7 @@ pub fn lorehold_sage_choir_b136() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16130,6 +16462,7 @@ pub fn lorehold_ember_sprite_b136() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16174,6 +16507,7 @@ pub fn lorehold_spirit_captain_b137() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16215,6 +16549,7 @@ pub fn lorehold_pyrocaller_b138() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16254,6 +16589,7 @@ pub fn lorehold_spirit_marshal_b138() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16293,6 +16629,7 @@ pub fn lorehold_sparkdancer_b138() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16340,6 +16677,7 @@ pub fn lorehold_spiritsong_b138() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16387,6 +16725,7 @@ pub fn lorehold_pyromancer_adept_b139() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16426,6 +16765,7 @@ pub fn lorehold_spiritwarden_b139() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16466,6 +16806,7 @@ pub fn lorehold_battle_witness_b139() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16505,6 +16846,7 @@ pub fn lorehold_ember_cleric_b138() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16547,6 +16889,7 @@ pub fn lorehold_stormcleric_b141() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16587,6 +16930,7 @@ pub fn lorehold_pyrosage_b141() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16633,6 +16977,7 @@ pub fn lorehold_spiritforge_b141() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16682,6 +17027,7 @@ pub fn lorehold_ember_soldier_b141() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16724,6 +17070,7 @@ pub fn lorehold_sparkscholar_iii_b141() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16772,6 +17119,7 @@ pub fn lorehold_pyroscribe_b142() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16827,6 +17175,7 @@ pub fn lorehold_spiritbond_b142() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16878,6 +17227,7 @@ pub fn lorehold_stoneveil_b142() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16927,6 +17277,7 @@ pub fn lorehold_spiritmender_b142() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -16970,6 +17321,7 @@ pub fn lorehold_spellfire_b142() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17024,6 +17376,7 @@ pub fn lorehold_ember_acolyte_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17066,6 +17419,7 @@ pub fn lorehold_pyromancer_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17112,6 +17466,7 @@ pub fn lorehold_stonemason_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17153,6 +17508,7 @@ pub fn lorehold_inferno_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17204,6 +17560,7 @@ pub fn lorehold_spirit_bond_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17243,6 +17600,7 @@ pub fn lorehold_flamekeeper_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17295,6 +17653,7 @@ pub fn lorehold_battle_chant_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17339,6 +17698,7 @@ pub fn lorehold_ignis_b144() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17379,6 +17739,7 @@ pub fn lorehold_conjurer_b144() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17428,6 +17789,7 @@ pub fn lorehold_pyroflame_b144() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17480,6 +17842,7 @@ pub fn lorehold_spiritcaller_b145() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17520,6 +17883,7 @@ pub fn lorehold_inferno_acolyte_b145() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17559,6 +17923,7 @@ pub fn lorehold_knight_errant_b145() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17597,6 +17962,7 @@ pub fn lorehold_embermage_b144() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17639,6 +18005,7 @@ pub fn lorehold_cinderscholar_b143() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17689,6 +18056,7 @@ pub fn lorehold_echocaller_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17730,6 +18098,7 @@ pub fn lorehold_spirit_glyph_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17769,6 +18138,7 @@ pub fn lorehold_ember_adept_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17809,6 +18179,7 @@ pub fn lorehold_pyresinger_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17853,6 +18224,7 @@ pub fn lorehold_spirit_burst_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17893,6 +18265,7 @@ pub fn lorehold_soulrender_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17941,6 +18314,7 @@ pub fn lorehold_battle_sage_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -17981,6 +18355,7 @@ pub fn lorehold_pyrebound_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18030,6 +18405,7 @@ pub fn lorehold_spirit_decree_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18070,6 +18446,7 @@ pub fn lorehold_glyph_strike_b146() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18112,6 +18489,7 @@ pub fn lorehold_glyphcaster_b147() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18151,6 +18529,7 @@ pub fn lorehold_ironwarden_b147() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18194,6 +18573,7 @@ pub fn lorehold_pyrehowler_b147() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18243,6 +18623,7 @@ pub fn lorehold_cinderscry_b147() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18295,6 +18676,7 @@ pub fn spirit_banner_bearer_b147() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18343,6 +18725,7 @@ pub fn lorehold_lightcaller_b148() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18385,6 +18768,7 @@ pub fn lorehold_ember_wraith_b148() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18428,6 +18812,7 @@ pub fn lorehold_cinderlist_b148() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18467,6 +18852,7 @@ pub fn lorehold_skystalker_b148() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18514,6 +18900,7 @@ pub fn lorehold_spirit_smith_b148() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18556,6 +18943,7 @@ pub fn lorehold_echobreaker_b149() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18595,6 +18983,7 @@ pub fn lorehold_eternal_phoenix_b149() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18634,6 +19023,7 @@ pub fn lorehold_pyre_stalker_b149() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18678,6 +19068,7 @@ pub fn lorehold_embermage_b150() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18717,6 +19108,7 @@ pub fn lorehold_spiritforge_b150() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18756,6 +19148,7 @@ pub fn lorehold_ancestor_b150() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18795,6 +19188,7 @@ pub fn lorehold_sparkmage_b150() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18842,6 +19236,7 @@ pub fn lorehold_bonfire_b150() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18881,6 +19276,7 @@ pub fn lorehold_spirit_tender_b150() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18923,6 +19319,7 @@ pub fn lorehold_ember_strike_b150() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -18964,6 +19361,7 @@ pub fn lorehold_skirmisher_b151() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19013,6 +19411,7 @@ pub fn lorehold_pyrelore_b151() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19052,6 +19451,7 @@ pub fn lorehold_spirit_guide_b151() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19098,6 +19498,7 @@ pub fn lorehold_battlemage_b151() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19137,6 +19538,7 @@ pub fn lorehold_sun_spirit_b151() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19178,6 +19580,7 @@ pub fn lorehold_spirit_stalker_b152() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19220,6 +19623,7 @@ pub fn lorehold_ember_cleric_b152() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19259,6 +19663,7 @@ pub fn lorehold_pyre_ancient_b152() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19298,6 +19703,7 @@ pub fn lorehold_pyromancer_b152() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19342,6 +19748,7 @@ pub fn lorehold_spirit_surger_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19386,6 +19793,7 @@ pub fn lorehold_reflux_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19426,6 +19834,7 @@ pub fn lorehold_battlespirit_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19466,6 +19875,7 @@ pub fn lorehold_cinderspeaker_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19507,6 +19917,7 @@ pub fn lorehold_smiterite_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19560,6 +19971,7 @@ pub fn lorehold_memoryflame_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19613,6 +20025,7 @@ pub fn lorehold_spirit_banner_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19658,6 +20071,7 @@ pub fn lorehold_stratagem_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19698,6 +20112,7 @@ pub fn lorehold_searingscholar_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19737,6 +20152,7 @@ pub fn lorehold_cinderward_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19785,6 +20201,7 @@ pub fn lorehold_strikeritual_b154() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19826,6 +20243,7 @@ pub fn lorehold_chronicler_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19871,6 +20289,7 @@ pub fn spirit_crusader_ii_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19910,6 +20329,7 @@ pub fn lorehold_reverent_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19951,6 +20371,7 @@ pub fn lorehold_ironscribe_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -19990,6 +20411,7 @@ pub fn pillardrop_veteran_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20031,6 +20453,7 @@ pub fn lorehold_flamebrand_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20075,6 +20498,7 @@ pub fn lorehold_spirit_captain_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20124,6 +20548,7 @@ pub fn lorehold_pyromancer_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20176,6 +20601,7 @@ pub fn lorehold_banner_b156() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20222,6 +20648,7 @@ pub fn lorehold_marshal_b156() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20269,6 +20696,7 @@ pub fn lorehold_banner_bearer_b156() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20311,6 +20739,7 @@ pub fn lorehold_glyphbearer_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20350,6 +20779,7 @@ pub fn lorehold_watchspirit_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20391,6 +20821,7 @@ pub fn lorehold_spiritforge_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20435,6 +20866,7 @@ pub fn lorehold_pyrescholar_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20474,6 +20906,7 @@ pub fn lorehold_bonewright_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20513,6 +20946,7 @@ pub fn lorehold_skystrider_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20557,6 +20991,7 @@ pub fn lorehold_battlechant_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20604,6 +21039,7 @@ pub fn lorehold_ancestralist_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20643,6 +21079,7 @@ pub fn lorehold_echocaller_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20680,6 +21117,7 @@ pub fn lorehold_pyrebolt_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20719,6 +21157,7 @@ pub fn lorehold_vanguard_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20762,6 +21201,7 @@ pub fn lorehold_spirit_caller_b155() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20803,6 +21243,7 @@ pub fn lorehold_wallscribe_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20842,6 +21283,7 @@ pub fn lorehold_embermage_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20881,6 +21323,7 @@ pub fn lorehold_spirit_drummer_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20920,6 +21363,7 @@ pub fn lorehold_stoneflame_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20959,6 +21403,7 @@ pub fn lorehold_reaver_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -20998,6 +21443,7 @@ pub fn spirit_vanguard_ii_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21037,6 +21483,7 @@ pub fn lorehold_spectermage_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21076,6 +21523,7 @@ pub fn lorehold_spirit_caster_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21115,6 +21563,7 @@ pub fn lorehold_crusader_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21161,6 +21610,7 @@ pub fn lorehold_spellsong_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21213,6 +21663,7 @@ pub fn lorehold_spiritforger_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21253,6 +21704,7 @@ pub fn lorehold_stonewright_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21292,6 +21744,7 @@ pub fn lorehold_pyremage_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21342,6 +21795,7 @@ pub fn lorehold_spectral_lance_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21388,6 +21842,7 @@ pub fn lorehold_recallmage_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21428,6 +21883,7 @@ pub fn lorehold_spectral_watcher_b158() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21470,6 +21926,7 @@ pub fn lorehold_pyrescholar_b159() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21509,6 +21966,7 @@ pub fn lorehold_sentinel_b159() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21548,6 +22006,7 @@ pub fn lorehold_ember_mage_b159() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21587,6 +22046,7 @@ pub fn lorehold_spectral_cavalry_b159() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21654,6 +22114,7 @@ pub fn lorehold_battlescroll_b159() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21695,6 +22156,7 @@ pub fn lorehold_spectralguard_b160() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21735,6 +22197,7 @@ pub fn lorehold_sparkpriest_b160() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21774,6 +22237,7 @@ pub fn lorehold_bonewright_b160() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21823,6 +22287,7 @@ pub fn lorehold_recallsmith_b160() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21862,6 +22327,7 @@ pub fn lorehold_ghostflame_b160() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21902,6 +22368,7 @@ pub fn lorehold_pyresage_b160() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21941,6 +22408,7 @@ pub fn lorehold_recoverer_b160() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -21982,6 +22450,7 @@ pub fn lorehold_pyrescholar_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22039,6 +22508,7 @@ pub fn lorehold_cavalcade_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22084,6 +22554,7 @@ pub fn lorehold_wallflame_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22123,6 +22594,7 @@ pub fn lorehold_reckoner_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22162,6 +22634,7 @@ pub fn lorehold_spectralfist_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22201,6 +22674,7 @@ pub fn lorehold_pyreknight_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22244,6 +22718,7 @@ pub fn lorehold_tutorpriest_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22283,6 +22758,7 @@ pub fn lorehold_sparkspirit_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22322,6 +22798,7 @@ pub fn lorehold_ghostbinder_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22361,6 +22838,7 @@ pub fn lorehold_crackleflame_b161() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22402,6 +22880,7 @@ pub fn lorehold_bonelord_b162() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22441,6 +22920,7 @@ pub fn lorehold_spectralrider_b162() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22480,6 +22960,7 @@ pub fn lorehold_brave_b162() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22522,6 +23003,7 @@ pub fn lorehold_battleweave_b162() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22567,6 +23049,7 @@ pub fn lorehold_spectralweaver_b162() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22608,6 +23091,7 @@ pub fn lorehold_coursemate_b163() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22647,6 +23131,7 @@ pub fn lorehold_pyrebound_b163() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22686,6 +23171,7 @@ pub fn lorehold_spirit_guard_b163() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22725,6 +23211,7 @@ pub fn lorehold_phantasm_b163() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22764,6 +23251,7 @@ pub fn lorehold_sparkling_spirit_b163() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22804,6 +23292,7 @@ pub fn lorehold_sparkscholar_b163() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22852,6 +23341,7 @@ pub fn lorehold_lightcage_b163() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22902,6 +23392,7 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -22988,6 +23479,7 @@ pub fn lorehold_command() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23037,6 +23529,7 @@ pub fn lorehold_pyremender_b164() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23077,6 +23570,7 @@ pub fn lorehold_ghostflame_b164() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23116,6 +23610,7 @@ pub fn lorehold_skybinder_b164() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23155,6 +23650,7 @@ pub fn lorehold_ironforge_b164() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23272,6 +23768,7 @@ pub fn lorehold_flamebinder_b165() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23337,6 +23834,7 @@ pub fn lorehold_pyreguard_b165() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23375,6 +23873,7 @@ pub fn lorehold_braveheart_b165() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23453,6 +23952,7 @@ pub fn rip_apart() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23523,6 +24023,7 @@ pub fn lorehold_sparkmage_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23562,6 +24063,7 @@ pub fn lorehold_spiritskirmisher_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23611,6 +24113,7 @@ pub fn lorehold_pyresmith_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23663,6 +24166,7 @@ pub fn lorehold_recall_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23702,6 +24206,7 @@ pub fn lorehold_pyreweaver_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23743,6 +24248,7 @@ pub fn lorehold_vandal_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23782,6 +24288,7 @@ pub fn lorehold_spectrescholar_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23818,6 +24325,7 @@ pub fn lorehold_charge_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23861,6 +24369,7 @@ pub fn lorehold_boltmage_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23900,6 +24409,7 @@ pub fn lorehold_battlespirit_b166() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23944,6 +24454,7 @@ pub fn lorehold_banisher_b167() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -23983,6 +24494,7 @@ pub fn lorehold_champion_b167() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -24022,6 +24534,7 @@ pub fn lorehold_strikewing_b167() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -24067,6 +24580,7 @@ pub fn lorehold_inscription_b167() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -24106,6 +24620,7 @@ pub fn lorehold_spiritcaller_ii_b167() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25710,6 +26225,7 @@ pub fn returned_pastcaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25752,6 +26268,7 @@ pub fn lorehold_stoneward_b193() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25791,6 +26308,7 @@ pub fn lorehold_ravenrider_b193() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25830,6 +26348,7 @@ pub fn lorehold_boltstudent_b193() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25869,6 +26388,7 @@ pub fn lorehold_spiritsummoner_b193() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25908,6 +26428,7 @@ pub fn lorehold_pyrescholar_b193() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25947,6 +26468,7 @@ pub fn lorehold_sparkscholar_b193() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -25994,6 +26516,7 @@ pub fn lorehold_soulsign_b193() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26036,6 +26559,7 @@ pub fn lorehold_boltscribe_b194() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26075,6 +26599,7 @@ pub fn lorehold_vanguard_ii_b194() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26117,6 +26642,7 @@ pub fn lorehold_bolt_b194() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26157,6 +26683,7 @@ pub fn lorehold_mausolescholar_b194() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26204,6 +26731,7 @@ pub fn lorehold_frostbreaker_b195() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26246,6 +26774,7 @@ pub fn lorehold_spiritcaller_b195() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26285,6 +26814,7 @@ pub fn lorehold_memoryguard_b195() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26325,6 +26855,7 @@ pub fn lorehold_pyrescribe_b195() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26367,6 +26898,7 @@ pub fn lorehold_lavalord_b196() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26408,6 +26940,7 @@ pub fn lorehold_sparkward_b196() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26447,6 +26980,7 @@ pub fn lorehold_stormrider_b196() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26487,6 +27021,7 @@ pub fn lorehold_bookburn_b196() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26528,6 +27063,7 @@ pub fn lorehold_sparkmage_b197() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26567,6 +27103,7 @@ pub fn lorehold_brawnsage_b197() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26613,6 +27150,7 @@ pub fn lorehold_apprentice_ii_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26652,6 +27190,7 @@ pub fn lorehold_watchtower_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26692,6 +27231,7 @@ pub fn lorehold_pyromancer_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26732,6 +27272,7 @@ pub fn lorehold_sparkbinder_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26777,6 +27318,7 @@ pub fn lorehold_battlecaller_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26816,6 +27358,7 @@ pub fn lorehold_spiritbinder_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26856,6 +27399,7 @@ pub fn lorehold_burner_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26895,6 +27439,7 @@ pub fn lorehold_champion_b198() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26937,6 +27482,7 @@ pub fn lorehold_ember_b199() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -26980,6 +27526,7 @@ pub fn lorehold_recurrence_b199() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27019,6 +27566,7 @@ pub fn lorehold_frontier_b199() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27059,6 +27607,7 @@ pub fn lorehold_boltscribe_b199() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27098,6 +27647,7 @@ pub fn lorehold_aegis_b199() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27138,6 +27688,7 @@ pub fn lorehold_sparkguard_b200() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27178,6 +27729,7 @@ pub fn lorehold_smite_b200() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27227,6 +27779,7 @@ pub fn lorehold_vanguard_b201() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27266,6 +27819,7 @@ pub fn lorehold_wildfire_b201() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27319,6 +27873,7 @@ pub fn lorehold_reanimator_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27359,6 +27914,7 @@ pub fn lorehold_pyromancer_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27408,6 +27964,7 @@ pub fn lorehold_charge_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27448,6 +28005,7 @@ pub fn lorehold_spirit_caller_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27485,6 +28043,7 @@ pub fn lorehold_bolt_ii_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27524,6 +28083,7 @@ pub fn lorehold_battlescholar_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27571,6 +28131,7 @@ pub fn lorehold_excavate_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27621,6 +28182,7 @@ pub fn lorehold_frontlord_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27658,6 +28220,7 @@ pub fn lorehold_cleanse_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27703,6 +28266,7 @@ pub fn lorehold_echoblade_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27743,6 +28307,7 @@ pub fn lorehold_lavascholar_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27783,6 +28348,7 @@ pub fn lorehold_ghostsmith_b202() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27823,6 +28389,7 @@ pub fn lorehold_apprentice_b203() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27863,6 +28430,7 @@ pub fn lorehold_soulbinder_b203() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27906,6 +28474,7 @@ pub fn lorehold_spirit_sage_b203() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27942,6 +28511,7 @@ pub fn lorehold_strike_b203() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -27981,6 +28551,7 @@ pub fn lorehold_ancestor_b203() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28019,6 +28590,7 @@ pub fn lorehold_spirit_squire_b203() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28061,6 +28633,7 @@ pub fn lorehold_battlemage_b204() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28100,6 +28673,7 @@ pub fn lorehold_pyromaster_b204() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28138,6 +28712,7 @@ pub fn lorehold_ardent_b204() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28174,6 +28749,7 @@ pub fn lorehold_flameburst_b204() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28217,6 +28793,7 @@ pub fn lorehold_spiritbringer_b204() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28268,6 +28845,7 @@ pub fn lorehold_battlescarred_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28312,6 +28890,7 @@ pub fn lorehold_echovenger_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28359,6 +28938,7 @@ pub fn lorehold_vengescribe_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28403,6 +28983,7 @@ pub fn lorehold_grudgebearer_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28446,6 +29027,7 @@ pub fn lorehold_stoneguard_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28489,6 +29071,7 @@ pub fn lorehold_chroniclekeeper_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28529,6 +29112,7 @@ pub fn lorehold_warhost_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28569,6 +29153,7 @@ pub fn lorehold_emberhistorian_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28608,6 +29193,7 @@ pub fn lorehold_relicwarden_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28648,6 +29234,7 @@ pub fn lorehold_warchronicler_b205() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28691,6 +29278,7 @@ pub fn lorehold_skirmisher_b206() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28733,6 +29321,7 @@ pub fn lorehold_archivekeeper_b206() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28773,6 +29362,7 @@ pub fn lorehold_ember_veteran_b206() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28816,6 +29406,7 @@ pub fn lorehold_soulkindler_b207() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28855,6 +29446,7 @@ pub fn lorehold_cinderscribe_b207() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28894,6 +29486,7 @@ pub fn lorehold_battlecaller_b207() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28937,6 +29530,7 @@ pub fn lorehold_emberbolt_b207() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -28985,6 +29579,7 @@ pub fn lorehold_relicsmith_b207() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -29039,6 +29634,7 @@ pub fn lorehold_charge_ii_b207() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -29078,6 +29674,7 @@ pub fn lorehold_vanguard_b207() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -29123,6 +29720,7 @@ pub fn lorehold_vanguard_captain_b208() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -29169,6 +29767,7 @@ pub fn lorehold_pyrohistorian_b208() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -29208,5 +29807,6 @@ pub fn lorehold_skydefender_b208() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }

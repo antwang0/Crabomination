@@ -181,6 +181,8 @@ pub struct HandAffordances {
     pub foretellable: Vec<CardId>,
     pub plottable: Vec<CardId>,
     pub adventurable: Vec<CardId>,
+    /// CR 709 — split cards whose **right** half is castable right now.
+    pub splittable_right: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
 }
 
@@ -3044,6 +3046,34 @@ impl GameState {
             .collect()
     }
 
+    /// Split cards in `caster`'s hand whose right half they could cast right
+    /// now (CR 709). The probe auto-targets the right half's effect.
+    fn splittable_right_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter_map(|c| {
+                let split = c.definition.has_split()?;
+                let (target, additional_targets) = if split.right.effect.requires_target() {
+                    let (t, extras) = template
+                        .auto_targets_for_effect_all_slots(&split.right.effect, caster, None);
+                    t.as_ref()?;
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                let id = c.id;
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastSplitRight {
+                        card_id: id, target, additional_targets, mode: None, x_value: None,
+                    },
+                )
+                .then_some(id)
+            })
+            .collect()
+    }
+
     /// Compute every from-hand affordance hint for `seat` in one pass.
     ///
     /// The individual `*_hand_cards` / `activatable_permanents` methods each
@@ -3078,6 +3108,7 @@ impl GameState {
             foretellable: self.foretellable_hand_cards_on(&template, seat),
             plottable: self.plottable_hand_cards_on(&template, seat),
             adventurable: self.adventurable_hand_cards_on(&template, seat),
+            splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
         }
     }
@@ -3281,6 +3312,20 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_adventure_creature(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSplitRight {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_split_half(card_id, target, additional_targets, mode, x_value, false),
+            GameAction::CastSplitFused {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_split_half(card_id, target, additional_targets, mode, x_value, true),
             GameAction::CastSpellCasualty {
                 card_id,
                 sacrifice,
@@ -5372,6 +5417,17 @@ impl GameState {
                     .as_ref()
                     .map(|a| a.effect.clone())
                     .unwrap_or(Effect::Noop)
+            } else if let (Some(half), Some(split)) =
+                (card.split_cast, card.definition.split.as_ref())
+            {
+                // CR 709 — resolve the chosen half. Left (0) is the main body;
+                // right (1) is `split.right`. Fused (2) resolves the left body
+                // here, then the right half runs in a second pass below with
+                // its own target (slot 0 of `additional_targets`).
+                match half {
+                    1 => split.right.effect.clone(),
+                    _ => card.definition.effect.clone(),
+                }
             } else {
                 card.definition.effect.clone()
             }
@@ -5389,7 +5445,29 @@ impl GameState {
             card.cast_from_hand,
         );
         ctx.kicked = card.kicked;
-        let events = self.resolve_effect(&effect, &ctx)?;
+        let mut events = self.resolve_effect(&effect, &ctx)?;
+        // CR 709 / 702.102 — a fused split cast resolves its right half in a
+        // second pass, reading its target from `additional_targets` slot 0
+        // (the left half consumed `target`). Fusable halves are single-target.
+        if card.split_cast == Some(2)
+            && let Some(split) = card.definition.split.as_ref()
+        {
+            let right_effect = split.right.effect.clone();
+            let right_ctx = EffectContext::for_spell_with_source_and_origin(
+                card.id,
+                card.definition.name,
+                caster,
+                additional_targets.first().cloned(),
+                Vec::new(),
+                mode,
+                x_value,
+                converged_value,
+                mana_spent,
+                card.cast_from_hand,
+            );
+            let mut right_events = self.resolve_effect(&right_effect, &right_ctx)?;
+            events.append(&mut right_events);
+        }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
                 decision,

@@ -8,8 +8,8 @@
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect,
-    Keyword, LandType, SelectionRequirement, Selector, SoulbondBonus, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility, Value, WardCost,
+    Keyword, LandType, SelectionRequirement, Selector, SoulbondBonus, SplitCard, SplitHalf,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{
@@ -12604,27 +12604,27 @@ pub fn heroic_intervention() -> CardDefinition {
     }
 }
 
-/// Wear // Tear — {1}{R} // {W} Sorcery — split card. Wear destroys
-/// target artifact; Tear destroys target enchantment. (Fuse: cast both
-/// halves for their combined cost.)
-///
-/// Cube-style approximation: the split-card primitive (CR 709) is
-/// engine-wide ⏳. We ship the Tear half (destroy target enchantment)
-/// at the Wear cost of {1}{R} as a single-spell approximation — the
-/// most expensive but most useful cast pattern. A real Split-Card
-/// primitive would expose both halves and the fuse cost. Sorting it
-/// under R so the cube fan-out picks it up.
+/// Wear // Tear — {1}{R} // {W} Instant — split card with Fuse (CR 709 /
+/// 702.102). Wear (left) destroys target artifact; Tear (right) destroys
+/// target enchantment. Cast either half, or both fused for {1}{R}{W}.
 pub fn wear_tear() -> CardDefinition {
     CardDefinition {
         name: "Wear // Tear",
         cost: cost(&[generic(1), r()]),
-        card_types: vec![CardType::Sorcery],
+        card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Artifact
-                    .or(SelectionRequirement::Enchantment),
-            ),
+            what: target_filtered(SelectionRequirement::Artifact),
         },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[w()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Enchantment),
+                },
+            },
+            fuse: true,
+        })),
         ..Default::default()
     }
 }

@@ -83,6 +83,7 @@ pub fn witherbloom_soothsayer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -136,6 +137,7 @@ pub fn lorehold_vanquisher() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -197,6 +199,7 @@ pub fn lorehold_burnscholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -261,6 +264,7 @@ pub fn pillardrop_cultivator() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -308,6 +312,7 @@ pub fn prismari_skywatcher() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -366,6 +371,7 @@ pub fn brewmaster_pyrologist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -416,6 +422,7 @@ pub fn prismari_spell_smith() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -472,6 +479,7 @@ pub fn quandrix_botanist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -532,6 +540,7 @@ pub fn quandrix_augur() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -586,6 +595,7 @@ pub fn fractal_trefoil() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -648,6 +658,7 @@ pub fn quandrix_equationist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -714,6 +725,7 @@ pub fn pyrokinetic_insight() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -768,6 +780,7 @@ pub fn lorehold_spirit_tutor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -836,6 +849,7 @@ pub fn strixhaven_sanctum() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -900,6 +914,7 @@ pub fn strixhaven_bloomstadium() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -987,6 +1002,7 @@ pub fn mystic_slate() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1042,6 +1058,7 @@ pub fn silverquill_verseweaver() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1110,6 +1127,7 @@ pub fn inkling_choirmaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1198,6 +1216,7 @@ pub fn bramble_brewer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1253,6 +1272,7 @@ pub fn witherbloom_decanter() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1332,6 +1352,7 @@ pub fn pestbrood_grovecaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1408,6 +1429,7 @@ pub fn lorehold_cathedral() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1467,6 +1489,7 @@ pub fn lorehold_bannerbearer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1541,6 +1564,7 @@ pub fn lorehold_pyromage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1615,6 +1639,7 @@ pub fn quandrix_geomancer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1670,6 +1695,7 @@ pub fn quandrix_fractalist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1726,6 +1752,7 @@ pub fn quandrix_skybinder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1790,6 +1817,7 @@ pub fn prismari_mistcaller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1847,6 +1875,7 @@ pub fn prismari_conflagration() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1908,6 +1937,7 @@ pub fn prismari_treasurewright() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1957,6 +1987,7 @@ pub fn silverquill_auctioneer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2035,6 +2066,7 @@ pub fn witherbloom_reanimist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2095,6 +2127,7 @@ pub fn lorehold_skirmisher() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2153,6 +2186,7 @@ pub fn quandrix_landmapper() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2230,6 +2264,7 @@ pub fn prismari_spellsong() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2284,6 +2319,7 @@ pub fn silverquill_reaper() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2367,6 +2403,7 @@ pub fn strixhaven_reservoir() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2437,6 +2474,7 @@ pub fn lone_rider() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2484,6 +2522,7 @@ pub fn spelltongue_statute() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2558,6 +2597,7 @@ pub fn solo_striker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2631,6 +2671,7 @@ pub fn lorehold_tomb_robber() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2703,6 +2744,7 @@ pub fn quandrix_loremind() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2762,6 +2804,7 @@ pub fn prismari_sparkbinder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2829,6 +2872,7 @@ pub fn witherbloom_hexweaver() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2900,6 +2944,7 @@ pub fn lorehold_phantasmist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2970,6 +3015,7 @@ pub fn lorehold_bookburner() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3022,6 +3068,7 @@ pub fn prismari_lightcaster() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3073,6 +3120,7 @@ pub fn prismari_stormbringer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3121,6 +3169,7 @@ pub fn quandrix_counterspeaker() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3221,6 +3270,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3289,6 +3339,7 @@ pub fn witherbloom_wanderer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3359,6 +3410,7 @@ pub fn witherbloom_pestbinder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3427,6 +3479,7 @@ pub fn strixhaven_vault() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3474,6 +3527,7 @@ pub fn strixhaven_acolyte() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3523,6 +3577,7 @@ pub fn strixhaven_scholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3574,6 +3629,7 @@ pub fn strixhaven_quill_mage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3621,6 +3677,7 @@ pub fn strixhaven_initiate() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3674,6 +3731,7 @@ pub fn strixhaven_burnscholar() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3727,6 +3785,7 @@ pub fn strixhaven_necropact() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3799,5 +3858,6 @@ pub fn lorehold_stonebrand() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }

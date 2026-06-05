@@ -279,7 +279,15 @@ not how Magic works" moments.
 - ⏳ **Battle card type** (CR 110.4) + defense counters +
   `AttackTarget::Battle` (noted in `TODO.md`).
 - ⏳ **Sagas** (lore counters, chapter abilities, DFC sagas).
-- ⏳ **Split cards** (CR 709) + **Fuse**.
+- ✅ **Split cards** (CR 709) + **Fuse** (CR 702.102). The left half lives on
+  the main `CardDefinition` (cast via the normal path); `CardDefinition.split:
+  Some(SplitCard{ right, fuse })` carries the right half + Fuse flag. Cast the
+  right half via `GameAction::CastSplitRight`, or both fused via
+  `CastSplitFused` (combined cost; left target rides `target`, right target
+  rides `additional_targets` slot 0, resolved in a second pass). `CardInstance.
+  split_cast` marks which half(s) are on the stack. Affordance surfaced via
+  `HandAffordances.splittable_right` → `PlayerView.splittable_right_hand`.
+  Ships Wear // Tear.
 - ✅ **Adventure** (CR 715) — `CardDefinition.adventure` + `CardInstance.
   {adventuring,on_adventure}` + `GameAction::CastAdventure` /
   `CastAdventureCreature`. The adventure half resolves down the spell path

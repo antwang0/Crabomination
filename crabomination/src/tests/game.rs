@@ -158,6 +158,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             foretell_cost: None,
             adventure: None,
             plot_cost: None,
+            split: None,
         }
     }
 
@@ -5276,6 +5277,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {

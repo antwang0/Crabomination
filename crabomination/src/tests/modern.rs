@@ -18498,19 +18498,44 @@ fn sinkhole_destroys_target_land() {
 }
 
 #[test]
-fn wear_tear_destroys_artifact_or_enchantment() {
+fn wear_tear_right_half_destroys_enchantment() {
+    // CR 709 — casting the Tear (right) half destroys target enchantment.
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::bad_moon());
+    let id = g.add_card_to_hand(0, catalog::wear_tear());
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Permanent(ench)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tear castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment destroyed");
+}
+
+#[test]
+fn wear_tear_fused_destroys_both() {
+    // CR 702.102 — fused cast destroys an artifact (Wear) and an enchantment
+    // (Tear) for the combined cost {1}{R}{W}. Left target rides `target`,
+    // right target rides `additional_targets` slot 0.
     let mut g = two_player_game();
     let artifact = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let ench = g.add_card_to_battlefield(1, catalog::bad_moon());
     let id = g.add_card_to_hand(0, catalog::wear_tear());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(artifact)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Wear // Tear castable");
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id,
+        target: Some(Target::Permanent(artifact)),
+        additional_targets: vec![Target::Permanent(ench)],
+        mode: None, x_value: None,
+    }).expect("fused cast");
     drain_stack(&mut g);
 
     assert!(!g.battlefield.iter().any(|c| c.id == artifact), "artifact destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment destroyed");
 }
 
 #[test]
