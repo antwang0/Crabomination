@@ -1823,6 +1823,51 @@ impl GameState {
                 });
             }
         }
+        // "As long as [condition], this creature gets +P/+T and has [keyword]."
+        // (`StaticEffect::PumpSelfIf`) — evaluate the gating predicate live
+        // against the source and, while it holds, emit a layer-7 pump plus an
+        // optional keyword grant.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpSelfIf {
+                    condition,
+                    power,
+                    toughness,
+                    keyword,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                if !self.evaluate_predicate(condition, &ctx) {
+                    continue;
+                }
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(*power, *toughness),
+                });
+                if let Some(kw) = keyword {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -5797,6 +5842,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PumpSelfByControlledPermanents — needs a live battlefield
             // count; resolved in `gather_continuous_effects`.
             | StaticEffect::PumpSelfByControlledPermanents { .. }
+            // PumpSelfIf — needs live predicate evaluation; resolved in
+            // `gather_continuous_effects`.
+            | StaticEffect::PumpSelfIf { .. }
             // ExileNontokenCreaturesNotCast (Containment Priest) — read at
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.

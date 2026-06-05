@@ -12863,16 +12863,21 @@ pub fn decree_of_justice() -> CardDefinition {
     }
 }
 
-/// Carnage Interpreter — {2}{B}{R} Creature — Vampire. 4/3 with Trample.
-/// "When this creature enters, each opponent discards a card."
-///
-/// Synthesised body for the ⏳ cube row. A BR aggressive body that
-/// strips a card on entry, fitting Rakdos sacrifice/discard shells.
+/// Carnage Interpreter — {1}{B/R}{B/R} Creature — Vampire. 4/3.
+/// ETB: discard your hand, then investigate four times. As long as you have
+/// one or fewer cards in hand, it gets +2/+2 and has menace.
 pub fn carnage_interpreter() -> CardDefinition {
+    use crate::card::StaticAbility;
     use crate::effect::shortcut::etb;
+    use crate::effect::StaticEffect;
+    use crate::game::effects::clue_token;
     CardDefinition {
         name: "Carnage Interpreter",
-        cost: cost(&[generic(2), b(), r()]),
+        cost: cost(&[
+            generic(1),
+            crate::mana::hybrid(Color::Black, Color::Red),
+            crate::mana::hybrid(Color::Black, Color::Red),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vampire],
@@ -12880,12 +12885,27 @@ pub fn carnage_interpreter() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(1),
-            random: true,
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::HandSizeOf(PlayerRef::You),
+                random: false,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                definition: clue_token(),
+            },
+        ]))],
+        static_abilities: vec![StaticAbility {
+            description: "As long as you have one or fewer cards in hand, this creature gets +2/+2 and has menace.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::Const(1)),
+                power: 2,
+                toughness: 2,
+                keyword: Some(Keyword::Menace),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -14744,9 +14764,14 @@ pub fn rift_bolt() -> CardDefinition {
 /// "{T}: Add {C}{C}."
 /// (Approximation: Locus subtype noted but not mechanically relevant
 /// without the Locus-counting static from Cloudpost.)
+/// Trenchpost — Locus Land. `{T}: Add {C}`; `{3}, {T}: Target player mills a
+/// card for each Locus you control.`
 pub fn trenchpost() -> CardDefinition {
-    use crate::card::LandType;
+    use crate::card::{ActivatedAbility, LandType};
     use crate::catalog::sets::tap_add_colorless;
+    let locus_count = Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(LandType::Locus).and(SelectionRequirement::ControlledByYou),
+    )));
     CardDefinition {
         name: "Trenchpost",
         card_types: vec![CardType::Land],
@@ -14754,14 +14779,18 @@ pub fn trenchpost() -> CardDefinition {
             land_types: vec![LandType::Locus],
             ..Default::default()
         },
-        activated_abilities: vec![{
-            let mut ab = tap_add_colorless();
-            ab.effect = Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(2)),
-            };
-            ab
-        }],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::Mill {
+                    who: target_filtered(SelectionRequirement::Player),
+                    amount: locus_count,
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

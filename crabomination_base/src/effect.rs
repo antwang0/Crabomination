@@ -3273,6 +3273,18 @@ pub enum StaticEffect {
         per_power: i32,
         per_toughness: i32,
     },
+    /// "As long as [condition], this creature gets +P/+T and has [keyword]."
+    /// A conditional self-anthem gated by a `Predicate` evaluated live (with
+    /// the source/controller as context) on every layer recompute. Powers
+    /// threshold creatures — Carnage Interpreter (≤1 card in hand → +2/+2,
+    /// menace), Keen-Eyed Curator (4+ card types exiled with it → +4/+4,
+    /// trample), etc. `keyword` is granted only while the condition holds.
+    PumpSelfIf {
+        condition: Predicate,
+        power: i32,
+        toughness: i32,
+        keyword: Option<Keyword>,
+    },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").

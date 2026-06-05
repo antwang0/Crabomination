@@ -16423,18 +16423,37 @@ fn tempest_angler_etb_scries_two() {
 }
 
 #[test]
-fn carnage_interpreter_etb_makes_each_opp_discard() {
+fn carnage_interpreter_etb_discards_hand_and_investigates_four() {
     let mut g = two_player_game();
-    g.add_card_to_hand(1, catalog::island());
-    g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Two other cards in hand are discarded; four Clues are minted.
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::carnage_interpreter());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(1);
-    let opp_hand_before = g.players[1].hand.len();
     cast(&mut g, id);
-    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1,
-        "Opp discards one card on ETB");
+    assert_eq!(g.players[0].hand.len(), 0, "the whole hand is discarded");
+    let clues = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Clue" && c.controller == 0).count();
+    assert_eq!(clues, 4, "investigate four times");
+}
+
+#[test]
+fn carnage_interpreter_buffs_self_with_empty_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::carnage_interpreter());
+    // Empty hand → +2/+2 and menace.
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((c.power, c.toughness), (6, 5), "+2/+2 while hand ≤ 1");
+    assert!(c.keywords.contains(&crate::card::Keyword::Menace), "menace while hand ≤ 1");
+    // Two cards in hand removes the bonus.
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 3), "base stats with a full hand");
+    assert!(!c.keywords.contains(&crate::card::Keyword::Menace));
 }
 
 #[test]
@@ -26475,4 +26494,22 @@ fn broodspinner_etb_surveils_and_sac_makes_insects_per_gy_type() {
     assert!(g.battlefield_find(id).is_none(), "Broodspinner sacrificed itself");
     let insects = g.battlefield.iter().filter(|c| c.definition.name == "Insect" && c.controller == 0).count();
     assert_eq!(insects, 3, "one Insect per distinct gy card type (creature/instant/land)");
+}
+
+#[test]
+fn trenchpost_mills_one_per_locus_you_control() {
+    let mut g = two_player_game();
+    // Three Locus lands you control → opponent mills three.
+    let src = g.add_card_to_battlefield(0, catalog::trenchpost());
+    g.add_card_to_battlefield(0, catalog::trenchpost());
+    g.add_card_to_battlefield(0, catalog::trenchpost());
+    g.clear_sickness(src);
+    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    g.players[0].mana_pool.add_colorless(3);
+    let lib_before = g.players[1].library.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: src, ability_index: 1, target: Some(Target::Player(1)), x_value: None,
+    }).expect("Trenchpost {3},{T} mills");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), lib_before - 3, "milled one card per Locus controlled");
 }
