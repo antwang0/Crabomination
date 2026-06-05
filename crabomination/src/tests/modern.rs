@@ -16283,6 +16283,128 @@ fn rough_tumble_right_hits_only_fliers() {
 }
 
 #[test]
+fn dead_gone_left_kills_right_bounces() {
+    // Dead (left) deals 2 to a 2/2; Gone (right) bounces an opponent's creature.
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::dead_gone());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dead castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "Dead killed the bear");
+
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id2 = g.add_card_to_hand(0, catalog::dead_gone());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id2, target: Some(Target::Permanent(other)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gone castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == other), "Gone bounced it");
+}
+
+#[test]
+fn give_take_left_adds_three_counters() {
+    // Give (left) puts three +1/+1 counters on target creature.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::give_take());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Give castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.counter_count(crate::card::CounterType::PlusOnePlusOne), 3);
+    assert_eq!((b.power(), b.toughness()), (5, 5));
+}
+
+#[test]
+fn ready_left_grants_indestructible_and_untaps() {
+    // Ready (left) gives your creatures indestructible and untaps them.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::ready_willing());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ready castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.has_keyword(&crate::card::Keyword::Indestructible), "granted indestructible");
+    assert!(!b.tapped, "untapped");
+}
+
+#[test]
+fn profit_loss_fused_pumps_yours_shrinks_theirs() {
+    // Fused: Profit +1/+1 to my creatures, Loss -1/-1 to opponent's.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 -> 3/3
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 -> 1/1
+    let id = g.add_card_to_hand(0, catalog::profit_loss());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("fused cast");
+    drain_stack(&mut g);
+
+    let m = g.battlefield_find(mine).unwrap();
+    let t = g.battlefield_find(theirs).unwrap();
+    assert_eq!((m.power(), m.toughness()), (3, 3), "Profit pumped mine");
+    assert_eq!((t.power(), t.toughness()), (1, 1), "Loss shrank theirs");
+}
+
+#[test]
+fn supply_left_makes_x_saprolings() {
+    // Supply (left) makes X 1/1 Saprolings with X=3.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::supply_demand());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Supply castable");
+    drain_stack(&mut g);
+
+    let n = g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count();
+    assert_eq!(n, 3, "made 3 Saprolings");
+}
+
+#[test]
+fn trouble_right_burns_for_target_hand_size() {
+    // Trouble (right) deals damage = cards in the target player's hand.
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        let cid = g.next_id();
+        g.players[1].hand.push(crate::card::CardInstance::new(cid, catalog::grizzly_bears(), 1));
+    }
+    let hand_n = g.players[1].hand.len() as i32;
+    let id = g.add_card_to_hand(0, catalog::toil_trouble());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Trouble castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, before - hand_n, "Trouble burned for hand size");
+}
+
+#[test]
 fn cut_ribbons_aftermath_drains_each_opponent_for_x() {
     // Ribbons (aftermath) drains each opponent for X. Cast it from the
     // graveyard with X=3.

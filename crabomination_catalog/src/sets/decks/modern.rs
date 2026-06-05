@@ -13026,6 +13026,229 @@ pub fn mouth_feed() -> CardDefinition {
     }
 }
 
+/// Profit // Loss — {1}{W} // {2}{B} Instant split with Fuse (CR 709 /
+/// 702.102). Profit (left) gives creatures you control +1/+1; Loss (right)
+/// gives creatures your opponents control -1/-1, both until end of turn.
+pub fn profit_loss() -> CardDefinition {
+    use crate::effect::shortcut::{each_opponent_creature, each_your_creature};
+    CardDefinition {
+        name: "Profit // Loss",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: each_your_creature(),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::PumpPT {
+                    what: each_opponent_creature(),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Supply // Demand — {X}{G}{W} // {1}{W}{U} Sorcery split (CR 709, no Fuse).
+/// Supply (left) creates X 1/1 green Saprolings; Demand (right) tutors a
+/// multicolored card to hand.
+pub fn supply_demand() -> CardDefinition {
+    CardDefinition {
+        name: "Supply // Demand",
+        cost: cost(&[x(), g(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: TokenDefinition {
+                name: "Saproling".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Saproling],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), w(), u()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Multicolored,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Toil // Trouble — {2}{B} // {2}{R} Sorcery split with Fuse (CR 709 /
+/// 702.102). Toil (left) makes target player draw two and lose 2 life;
+/// Trouble (right) deals damage to target player equal to the cards in their
+/// hand.
+pub fn toil_trouble() -> CardDefinition {
+    CardDefinition {
+        name: "Toil // Trouble",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(2) },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::HandSizeOf(PlayerRef::Target(0)),
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Dead // Gone — {R} // {2}{R} Instant split (CR 709, no Fuse). Dead (left)
+/// deals 2 damage to target creature; Gone (right) returns target creature you
+/// don't control to its owner's hand.
+pub fn dead_gone() -> CardDefinition {
+    CardDefinition {
+        name: "Dead // Gone",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), r()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou.negate()),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Give // Take — {2}{G} // {2}{U} Sorcery split with Fuse (CR 709 / 702.102).
+/// Give (left) puts three +1/+1 counters on target creature; Take (right)
+/// removes all +1/+1 counters from target creature you control and draws that
+/// many cards.
+pub fn give_take() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Give // Take",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(3),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), u()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::Target(0)),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                    },
+                    Effect::RemoveCounter {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::Target(0)),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                    },
+                ]),
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Ready // Willing — {1}{G}{W} // {1}{W}{B} Instant split with Fuse (CR 709 /
+/// 702.102). Ready (left) gives your creatures indestructible and untaps them;
+/// Willing (right) gives your creatures deathtouch and lifelink. All effects
+/// last until end of turn.
+pub fn ready_willing() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    CardDefinition {
+        name: "Ready // Willing",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: each_your_creature(), up_to: None },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), w(), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: each_your_creature(),
+                        keyword: Keyword::Deathtouch,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: each_your_creature(),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
 /// Frontline Devastator — {3}{R} 3/3 Zombie Minotaur Warrior. Afflict 2
 /// (CR 702.131 — becomes blocked → defending player loses 2 life).
 /// {1}{R}: +1/+0 until end of turn.

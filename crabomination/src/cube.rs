@@ -920,6 +920,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(gaeas_skyfolk);
         v.push(talisman_of_curiosity);
         v.push(spring_mind);
+        v.push(give_take);
         v.push(tanglepool_bridge);
         v.push(hedge_maze);
         // ── SOS Quandrix (G/U) ──
@@ -973,6 +974,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(glimpse_the_unthinkable);
         v.push(far_away);
         v.push(consign_oblivion);
+        v.push(profit_loss);
         v.push(gloomlake_verge);
         v.push(dimir_signet);
         v.push(clearwater_pathway);
@@ -1309,6 +1311,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         frontline_devastator,
         rough_tumble,
         cut_ribbons,
+        toil_trouble,
+        dead_gone,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
         // ── modern_decks: red utility creatures ──
@@ -1649,6 +1653,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Poisonous (CR 702.70) ──
         marsh_viper,
         mouth_feed,
+        supply_demand,
         // ── modern_decks: +1/+1-counter green creatures ──
         avatar_of_the_resolute,
         pelt_collector,
@@ -1879,6 +1884,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(torsten_founder_of_benalia);
         v.push(wax_wane);
         v.push(alive_well);
+        v.push(ready_willing);
         v.push(horizon_canopy);
         v.push(hushwood_verge);
         v.push(talisman_of_unity);

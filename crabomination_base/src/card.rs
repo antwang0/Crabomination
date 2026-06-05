@@ -56,7 +56,7 @@ pub enum CreatureType {
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion,
-    Ooze, Plant,
+    Ooze, Plant, Saproling,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,
     Orc, Warlock, Bard, Sorcerer, Pilot,
