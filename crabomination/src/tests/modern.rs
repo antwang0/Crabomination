@@ -26476,3 +26476,39 @@ fn broodspinner_etb_surveils_and_sac_makes_insects_per_gy_type() {
     let insects = g.battlefield.iter().filter(|c| c.definition.name == "Insect" && c.controller == 0).count();
     assert_eq!(insects, 3, "one Insect per distinct gy card type (creature/instant/land)");
 }
+
+#[test]
+fn ouroboroid_puts_power_counters_on_your_team_at_combat() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let ouro = g.add_card_to_battlefield(0, catalog::ouroboroid()); // power 1
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(ouro);
+    g.clear_sickness(bear);
+    // Begin-combat trigger fires on the controller's turn (P0 active).
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    // X = Ouroboroid's power (1) → +1/+1 on each of your creatures.
+    assert!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "bear gained at least one +1/+1 counter");
+}
+
+#[test]
+fn railway_brawler_pumps_entering_creatures_by_their_power() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::railway_brawler());
+    // Another creature you control enters (cast through the stack so the ETB
+    // watcher fires): a 2/2 bear → +2 counters (X = its power).
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bears castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "entering 2/2 got X=2 counters");
+}

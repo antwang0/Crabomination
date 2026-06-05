@@ -17542,3 +17542,70 @@ pub fn broodspinner() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ouroboroid — {2}{G}{G} 1/3 Plant Wurm. At the beginning of combat on your
+/// turn, put X +1/+1 counters on each creature you control, where X is this
+/// creature's power. (X is read per-creature as the counters land, so a board
+/// with Ouroboroid feeding itself can snowball — a faithful-enough read of
+/// "where X is this creature's power".)
+pub fn ouroboroid() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Ouroboroid",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(crate::game::TurnStep::BeginCombat), EventScope::ActivePlayer),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::PowerOf(Box::new(Selector::This)),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Railway Brawler — {3}{G}{G} 5/5 Rhino Warrior. Reach, trample. Whenever
+/// another creature you control enters, put X +1/+1 counters on it, where X is
+/// its power. Plot {3}{G}.
+pub fn railway_brawler() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Railway Brawler",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rhino, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        plot_cost: Some(cost(&[generic(3), g()])),
+        ..Default::default()
+    }
+}

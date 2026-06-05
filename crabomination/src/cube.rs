@@ -1463,6 +1463,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         penumbra_spider,
         // ── Lure (CR 509.1c all-must-block) ──
         lure,
+        // ── modern_decks: cube maybeboard (counters-matter) ──
+        ouroboroid,
+        railway_brawler,
         // ── Undying aggro ──
         strangleroot_geist,
         // ── classic core-set bodies (claude/modern_decks) ──
