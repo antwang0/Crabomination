@@ -318,8 +318,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         nettlecyst,
         // ── modern_decks: begin-combat token-copy equipment ──
         helm_of_the_host,
-        // ── modern_decks: +2/+2 double-protection sword ──
+        // ── modern_decks: +2/+2 double-protection sword cycle ──
         sword_of_body_and_mind,
+        sword_of_feast_and_famine,
+        sword_of_war_and_peace,
         // ── Push XXIV (session 8) — colorless cube additions ──
         phyrexian_revoker,
         solemn_simulacrum,

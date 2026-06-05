@@ -27219,3 +27219,59 @@ fn sword_of_body_and_mind_combat_damage_makes_wolf_and_mills() {
         "Sword mints a Wolf on combat damage");
     assert!(g.players[1].graveyard.len() >= opp_gy + 10, "defender milled ten");
 }
+
+#[test]
+fn sword_of_feast_and_famine_discards_and_untaps_lands() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_feast_and_famine());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // defender's card to discard
+    let tapped_forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(tapped_forest).unwrap().tapped = true;
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let opp_hand = g.players[1].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[1].hand.len() < opp_hand { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[1].hand.len() < opp_hand, "defender discarded a card");
+    assert!(!g.battlefield_find(tapped_forest).unwrap().tapped, "your land untapped");
+}
+
+#[test]
+fn sword_of_war_and_peace_burns_by_hand_and_gains_life() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_war_and_peace());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); } // defender hand = 3
+    for _ in 0..2 { g.add_card_to_hand(0, catalog::forest()); } // your hand contributes life
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let opp_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    let my_hand = g.players[0].hand.len() as i32;
+    let opp_hand = g.players[1].hand.len() as i32;
+    // Equipped (Sword grants +2/+2), so combat damage is the buffed power.
+    let combat = g.compute_battlefield().iter().find(|c| c.id == attacker).unwrap().power;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[0].life > my_life { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, opp_life - combat - opp_hand, "burned by defender's hand size");
+    assert_eq!(g.players[0].life, my_life + my_hand, "gained life by your hand size");
+}

@@ -18614,3 +18614,59 @@ pub fn sword_of_body_and_mind() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Helper for the Mirran/Phyrexian Sword cycle: {3} Equipment, Equip {2}, +2/+2
+/// and protection from two colors, plus a `DealsCombatDamageToPlayer` rider.
+fn sword(name: &'static str, prot: [Color; 2], rider: Effect) -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name,
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 2,
+            keywords: vec![Keyword::Protection(prot[0]), Keyword::Protection(prot[1])],
+            scale: None,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: rider,
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Sword of Feast and Famine — {3} Equipment, Equip {2}. Equipped creature gets
+/// +2/+2 and protection from black and from green. Whenever it deals combat
+/// damage to a player, that player discards a card and you untap all your lands.
+pub fn sword_of_feast_and_famine() -> CardDefinition {
+    sword("Sword of Feast and Famine", [Color::Black, Color::Green], Effect::Seq(vec![
+        Effect::Discard { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(1), random: false },
+        Effect::Untap {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ),
+            up_to: None,
+        },
+    ]))
+}
+
+/// Sword of War and Peace — {3} Equipment, Equip {2}. Equipped creature gets
+/// +2/+2 and protection from red and from white. Whenever it deals combat
+/// damage to a player, that player takes damage equal to the cards in their
+/// hand and you gain life equal to the cards in your hand.
+pub fn sword_of_war_and_peace() -> CardDefinition {
+    sword("Sword of War and Peace", [Color::Red, Color::White], Effect::Seq(vec![
+        Effect::DealDamage {
+            to: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::HandSizeOf(PlayerRef::Target(0)),
+        },
+        Effect::GainLife { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You) },
+    ]))
+}
