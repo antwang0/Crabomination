@@ -217,6 +217,8 @@ fn colorless_pool() -> Vec<CardFactory> {
     vec![
         // ── modern_decks: draw-engine artifact ──
         the_endstone,
+        // ── modern_decks: Battle-cry artifact creature ──
+        signal_pest,
         // ── Eldrazi (colorless {C} cost) ──
         reality_smasher,
         // ── colorless utility ──
@@ -394,6 +396,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         boros_elite,
         brimaz_king_of_oreskos,
         adeline_resplendent_cathar,
+        bygone_bishop,
+        sram_senior_edificer,
         // ── Soulshift (CR 702.46) ──
         hundred_talon_kami,
         // ── Soulbond (CR 702.95) ──
@@ -994,6 +998,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: black value creatures ──
         midnight_reaper,
         grim_haruspex,
+        kitesail_freebooter,
         // ── Fabricate (CR 702.122) ──
         weaponcraft_enthusiast,
         // ── combat-damage value body ──
@@ -1292,6 +1297,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
+        // ── modern_decks: artifacts-matter aggro ──
+        inventors_apprentice,
         // ── Eternalize (CR 702.91) ──
         earthshaker_khenra,
         // ── aggressive red bodies + burn ──

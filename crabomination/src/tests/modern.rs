@@ -28346,6 +28346,75 @@ fn persist_returns_creature_destroyed_by_removal() {
         "returns with a -1/-1 counter");
 }
 
+#[test]
+fn inventors_apprentice_pumps_with_an_artifact() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::inventors_apprentice());
+    assert_eq!(g.computed_permanent(app).unwrap().power, 1, "1/2 with no artifact");
+    g.add_card_to_battlefield(0, catalog::sol_ring()); // an artifact
+    let cp = g.computed_permanent(app).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "+1/+1 while you control an artifact");
+}
+
+#[test]
+fn signal_pest_blocked_only_by_flying_or_reach() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let pest = g.add_card_to_battlefield(0, catalog::signal_pest());
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // no evasion-blocker kw
+    let flyer = g.add_card_to_battlefield(1, catalog::wind_drake()); // flying
+    assert!(!g.blocker_can_block_attacker(ground, pest), "ground creature can't block Signal Pest");
+    assert!(g.blocker_can_block_attacker(flyer, pest), "flyer can block Signal Pest");
+    let _ = Keyword::Flying;
+}
+
+#[test]
+fn kitesail_freebooter_exiles_noncreature_until_it_leaves() {
+    let mut g = two_player_game();
+    // Opponent holds a noncreature spell to be exiled.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let kite = g.add_card_to_hand(0, catalog::kitesail_freebooter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    cast(&mut g, kite);
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "noncreature card exiled from hand");
+    // When Kitesail leaves, the card returns.
+    let kite_id = g.battlefield.iter().find(|c| c.definition.name == "Kitesail Freebooter").unwrap().id;
+    g.remove_from_battlefield_to_graveyard(kite_id);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "card returns when Kitesail leaves");
+}
+
+#[test]
+fn bygone_bishop_investigates_on_small_creature_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bygone_bishop());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // MV 2 creature
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 0;
+    cast(&mut g, bear);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"),
+        "investigate makes a Clue on a small creature cast");
+}
+
+#[test]
+fn sram_draws_on_equipment_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sram_senior_edificer());
+    g.add_card_to_library(0, catalog::island());
+    // Bonesplitter is an Equipment.
+    let equip = g.add_card_to_hand(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    let lib = g.players[0].library.len();
+    cast(&mut g, equip);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "Sram draws when you cast an Equipment");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

@@ -12000,6 +12000,138 @@ pub fn grim_haruspex() -> CardDefinition {
     }
 }
 
+/// Inventor's Apprentice — {R} 1/2 Human Artificer. Gets +1/+1 as long as you
+/// control an artifact. (KLD)
+pub fn inventors_apprentice() -> CardDefinition {
+    CardDefinition {
+        name: "Inventor's Apprentice",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "Gets +1/+1 as long as you control an artifact.",
+            effect: crate::effect::StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 1,
+                toughness: 1,
+                keyword: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Signal Pest — {1} 0/1 Artifact Pest. Battle cry. Can't be blocked except by
+/// creatures with flying or reach. (MBS)
+pub fn signal_pest() -> CardDefinition {
+    CardDefinition {
+        name: "Signal Pest",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pest], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::CantBeBlockedExceptBy(Box::new(
+            SelectionRequirement::HasKeyword(Keyword::Flying)
+                .or(SelectionRequirement::HasKeyword(Keyword::Reach)),
+        ))],
+        triggered_abilities: vec![crate::effect::shortcut::battle_cry(1)],
+        ..Default::default()
+    }
+}
+
+/// Kitesail Freebooter — {1}{B} 1/2 Human Pirate, Flying. ETB exile a
+/// noncreature, nonland card from target opponent's hand until this creature
+/// leaves the battlefield. (HOU)
+pub fn kitesail_freebooter() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Kitesail Freebooter",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ExileChosenUntilSourceLeaves {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Nonland.and(SelectionRequirement::Noncreature),
+            return_to: ExileReturnZone::Hand,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bygone Bishop — {2}{W} 2/3 Spirit Cleric, Flying. Whenever you cast a
+/// creature spell with mana value 3 or less, investigate. (EMN)
+pub fn bygone_bishop() -> CardDefinition {
+    CardDefinition {
+        name: "Bygone Bishop",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                }),
+            effect: investigate(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sram, Senior Edificer — {1}{W} 2/2 Legendary Dwarf Advisor. Whenever you
+/// cast an Aura, Equipment, or Vehicle spell, draw a card. (AER)
+pub fn sram_senior_edificer() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, Supertype};
+    CardDefinition {
+        name: "Sram, Senior Edificer",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment))
+                        .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Vehicle)),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Zealous Conscripts — {4}{R} Creature — Human Warrior 3/3. Haste. When it
 /// enters, gain control of target permanent until end of turn, untap it, and
 /// it gains haste until end of turn.
