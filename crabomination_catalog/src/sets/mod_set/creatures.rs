@@ -7033,6 +7033,97 @@ pub fn mirran_crusader() -> CardDefinition {
     }
 }
 
+/// Plated Crusher — {4}{G}{G}{G} 7/6 Beast. Trample, Hexproof. (BFZ)
+pub fn plated_crusher() -> CardDefinition {
+    CardDefinition {
+        name: "Plated Crusher",
+        cost: cost(&[generic(4), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 7,
+        toughness: 6,
+        keywords: vec![Keyword::Trample, Keyword::Hexproof],
+        ..Default::default()
+    }
+}
+
+/// Terra Stomper — {3}{G}{G}{G} 8/8 Beast. Can't be countered. Trample. (ZEN)
+pub fn terra_stomper() -> CardDefinition {
+    CardDefinition {
+        name: "Terra Stomper",
+        cost: cost(&[generic(3), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::CantBeCountered, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Rumbling Baloth — {2}{G}{G} 4/4 Beast. (M11)
+pub fn rumbling_baloth() -> CardDefinition {
+    CardDefinition {
+        name: "Rumbling Baloth",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
+/// Charging Badger — {G} 1/1 Badger. Trample. (CNS)
+pub fn charging_badger() -> CardDefinition {
+    CardDefinition {
+        name: "Charging Badger",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Badger], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Bellowing Tanglewurm — {3}{G}{G} 4/4 Wurm. Intimidate. (SOM)
+pub fn bellowing_tanglewurm() -> CardDefinition {
+    CardDefinition {
+        name: "Bellowing Tanglewurm",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Intimidate],
+        ..Default::default()
+    }
+}
+
+/// Vinelasher Kudzu — {1}{G} 1/1 Plant. Landfall — whenever a land you control
+/// enters, put a +1/+1 counter on this creature. (ZEN)
+pub fn vinelasher_kudzu() -> CardDefinition {
+    CardDefinition {
+        name: "Vinelasher Kudzu",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Avatar of the Resolute — {G}{G} 3/2 Avatar. Reach, trample. Enters with a
 /// +1/+1 counter for each other creature you control that has a +1/+1
 /// counter (modeled as an ETB trigger). (AER)

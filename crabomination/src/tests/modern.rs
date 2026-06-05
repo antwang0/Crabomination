@@ -28549,6 +28549,33 @@ fn goblin_cratermaker_pings_a_creature() {
     assert!(g.battlefield_find(crater).is_none(), "Cratermaker sacrificed itself");
 }
 
+#[test]
+fn green_beaters_have_their_printed_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let crusher = g.add_card_to_battlefield(0, catalog::plated_crusher());
+    let c = g.battlefield_find(crusher).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample) && c.has_keyword(&Keyword::Hexproof));
+    assert_eq!((c.power(), c.toughness()), (7, 6));
+    let stomper = g.add_card_to_battlefield(0, catalog::terra_stomper());
+    assert!(g.battlefield_find(stomper).unwrap().has_keyword(&Keyword::CantBeCountered));
+    let wurm = g.add_card_to_battlefield(0, catalog::bellowing_tanglewurm());
+    assert!(g.battlefield_find(wurm).unwrap().has_keyword(&Keyword::Intimidate));
+}
+
+#[test]
+fn vinelasher_kudzu_grows_on_landfall() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let kudzu = g.add_card_to_battlefield(0, catalog::vinelasher_kudzu());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(kudzu).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "landfall puts a +1/+1 counter on Vinelasher Kudzu");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

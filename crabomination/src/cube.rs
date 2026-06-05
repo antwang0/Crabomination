@@ -1642,6 +1642,13 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         greenwheel_liberator,
         hidden_herbalists,
         ridgescale_tusker,
+        // ── modern_decks: green beaters / landfall ──
+        plated_crusher,
+        terra_stomper,
+        rumbling_baloth,
+        charging_badger,
+        bellowing_tanglewurm,
+        vinelasher_kudzu,
         // ── Embalm (CR 702.88) ──
         honored_hydra,
         timeless_witness,
