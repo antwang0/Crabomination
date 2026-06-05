@@ -360,6 +360,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Soulshift (CR 702.46) ──
+        hundred_talon_kami,
         // ── modern_decks: energy O-Ring + card-advantage vehicle ──
         static_prison,
         shorikai_genesis_engine,
@@ -683,7 +685,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
-        // ── Soulbond (CR 702.46) ──
+        // ── Soulbond (CR 702.95) ──
         wingcrafter,
         deadeye_navigator,
         // ── modern_decks: land-scaled dig + storm payoff ──
@@ -916,6 +918,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Afflict (CR 702.131) ──
+        khenra_eternal,
         // ── modern_decks: ETB reanimator with a lifelink counter ──
         metamorphosis_fanatic,
         // ── modern_decks: artifacts-matter Esper commander ──
@@ -1207,8 +1211,13 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
-        // ── Soulbond (CR 702.46) ──
+        // ── Soulbond (CR 702.95) ──
         hanweir_lancer,
+        // ── Mentor (CR 702.134) ──
+        goblin_banneret,
+        hammer_dropper,
+        // ── Provoke (CR 702.39) ──
+        crested_craghorn,
         // ── claude/modern_decks: Riot (CR 702.137) ──
         zhur_taa_goblin,
         frenzied_arynx,
@@ -1519,7 +1528,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
-        // ── Soulbond (CR 702.46) ──
+        // ── Soulbond (CR 702.95) ──
         wolfir_silverheart,
         nightshade_peddler,
         trusted_forcemage,

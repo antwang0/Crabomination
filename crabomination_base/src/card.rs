@@ -551,7 +551,7 @@ pub enum Keyword {
     /// (Charging Rhino, Spectral Force). At most one blocker may be assigned
     /// to it. Enforced in `declare_blockers` (the inverse of Menace).
     CantBeBlockedByMoreThanOne,
-    /// CR 702.46 — Soulbond. A marker keyword; when this or another creature
+    /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each
     /// paired creature gains is carried in `CardDefinition.soulbond_bonus`.
@@ -955,7 +955,7 @@ pub struct CardDefinition {
     /// activate approximation). Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
-    /// CR 702.46 — Soulbond bonus. When `Some`, this card carries the Soulbond
+    /// CR 702.95 — Soulbond bonus. When `Some`, this card carries the Soulbond
     /// keyword and, while paired (`CardInstance.soulbond_partner`), confers
     /// this bonus on BOTH itself and its partner. Defaults to `None`.
     #[serde(default)]
@@ -1098,7 +1098,7 @@ pub struct EquipBonus {
     pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
 }
 
-/// CR 702.46 — the bonus each member of a Soulbond pair gains while paired.
+/// CR 702.95 — the bonus each member of a Soulbond pair gains while paired.
 /// Stored on `CardDefinition.soulbond_bonus` of the card that carries the
 /// Soulbond keyword; `gather_continuous_effects` applies it to BOTH paired
 /// creatures while the link is live, and `granted_abilities_for` surfaces
@@ -1463,7 +1463,7 @@ pub struct CardInstance {
     pub toughness_bonus: i32,
     pub counters: HashMap<CounterType, u32>,
     pub attached_to: Option<CardId>,
-    /// CR 702.46 — the creature this one is Soulbond-paired with, if any.
+    /// CR 702.95 — the creature this one is Soulbond-paired with, if any.
     /// Either member of a pair points at the other. Cleared when either
     /// creature leaves the battlefield (SBA in `stack.rs`).
     pub soulbond_partner: Option<CardId>,
@@ -1820,7 +1820,7 @@ struct CardInstanceWire {
     toughness_bonus: i32,
     counters: Vec<(CounterType, u32)>,
     attached_to: Option<CardId>,
-    /// CR 702.46 Soulbond partner. `#[serde(default)]` so older snapshots load
+    /// CR 702.95 Soulbond partner. `#[serde(default)]` so older snapshots load
     /// as `None`.
     #[serde(default)]
     soulbond_partner: Option<CardId>,

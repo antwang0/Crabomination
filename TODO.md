@@ -556,6 +556,32 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `Effect::GrantTriggeredAbility`. Cards: Conclave Sledge-Captain, Death-
   Greeter's Champion, Bola Slinger (granted on-attack tap). Tests: `backup_*`.
 
+- ✅ **CR 702.95 — Soulbond** (claude/modern_decks). `Keyword::Soulbond` +
+  `CardInstance.soulbond_partner` + `CardDefinition.soulbond_bonus`
+  (`SoulbondBonus` carries P/T, keywords, and granted activated abilities).
+  Pairing auto-resolves on ETB (`apply_soulbond_pairing`, hooked off
+  `PermanentEntered` in `dispatch_triggers_for_events`); the bonus rides BOTH
+  members as continuous effects (`gather_continuous_effects`) and the granted
+  abilities surface through `granted_abilities_for`. The pair breaks via SBA
+  (702.95h) when either creature leaves. Cards: Wolfir Silverheart, Wingcrafter,
+  Nightshade Peddler, Trusted Forcemage, Hanweir Lancer, Deadeye Navigator
+  (granted self-flicker). Tests: `soulbond_*`. Remaining: a controller "may"
+  prompt instead of the auto-pair (today the lowest-CardId partner is chosen).
+
+- ✅ **CR 702.134 — Mentor** (claude/modern_decks). `shortcut::mentor()` — an
+  `Attacks / SelfSource` trigger targeting an attacking creature with lesser
+  power (`IsAttacking ∧ OtherThanSource ∧ PowerLessThanSource`); a +1/+1 counter
+  lands on it. Fizzles with no legal target. Cards: Goblin Banneret, Hammer
+  Dropper. Tests: `mentor_*`, `goblin_banneret_pump_ability`.
+
+- ✅ **CR 702.130 / 702.39 / 702.46 — Afflict / Provoke / Soulshift carded**
+  (claude/modern_decks). The `shortcut::afflict`, `provoke`, and `soulshift`
+  primitives already existed but had no catalog card or test; each now ships a
+  card validating the primitive end-to-end: Khenra Eternal (Afflict 1 — drain
+  on block), Crested Craghorn (Provoke — untap + must-block), Hundred-Talon Kami
+  (Soulshift 4 — return an MV≤4 Spirit on death). Tests: `afflict_*`,
+  `provoke_*`, `soulshift_*`.
+
 - 🟡 **CR 303 — Auras** (claude/modern_decks). "Enchanted permanent" is now a
   queryable state: `SelectionRequirement::IsEnchanted` scans for an enchantment
   whose `attached_to` points at the candidate (Equipment excluded). Drives

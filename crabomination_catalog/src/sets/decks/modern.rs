@@ -19261,7 +19261,7 @@ pub fn sword_of_war_and_peace() -> CardDefinition {
     ]))
 }
 
-// ── Soulbond (CR 702.46) ─────────────────────────────────────────────────────
+// ── Soulbond (CR 702.95) ─────────────────────────────────────────────────────
 // Each carries `Keyword::Soulbond` + a `soulbond_bonus` the engine applies to
 // both members of the pair while the link is live (pairing is auto-resolved on
 // ETB; see `GameState::apply_soulbond_pairing`).
@@ -19399,6 +19399,107 @@ pub fn deadeye_navigator() -> CardDefinition {
             }],
             ..Default::default()
         }),
+        ..Default::default()
+    }
+}
+
+// ── Mentor (CR 702.134) ──────────────────────────────────────────────────────
+
+/// Goblin Banneret — {R} 1/1 Goblin Soldier. Mentor; `{1}{R}: +2/+0`.
+pub fn goblin_banneret() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Banneret",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::mentor()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hammer Dropper — {2}{R}{W} 5/2 Giant Soldier. Mentor.
+pub fn hammer_dropper() -> CardDefinition {
+    CardDefinition {
+        name: "Hammer Dropper",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::mentor()],
+        ..Default::default()
+    }
+}
+
+// ── Mechanic completions: cards for existing-but-unused primitives ────────────
+
+/// Khenra Eternal — {1}{B} 2/2 Zombie Warrior. Afflict 1 (CR 702.130).
+pub fn khenra_eternal() -> CardDefinition {
+    CardDefinition {
+        name: "Khenra Eternal",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::afflict(1)],
+        ..Default::default()
+    }
+}
+
+/// Crested Craghorn — {4}{R} 4/1 Goat Beast. Haste + Provoke (CR 702.39).
+pub fn crested_craghorn() -> CardDefinition {
+    CardDefinition {
+        name: "Crested Craghorn",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![crate::effect::shortcut::provoke()],
+        ..Default::default()
+    }
+}
+
+/// Hundred-Talon Kami — {4}{W} 2/3 Spirit. Flying + Soulshift 4 (CR 702.46).
+pub fn hundred_talon_kami() -> CardDefinition {
+    CardDefinition {
+        name: "Hundred-Talon Kami",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
         ..Default::default()
     }
 }

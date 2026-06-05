@@ -27661,7 +27661,7 @@ fn sword_of_war_and_peace_burns_by_hand_and_gains_life() {
     assert_eq!(g.players[0].life, my_life + my_hand, "gained life by your hand size");
 }
 
-// ── Soulbond (CR 702.46) ─────────────────────────────────────────────────────
+// ── Soulbond (CR 702.95) ─────────────────────────────────────────────────────
 
 /// Wolfir Silverheart pairs with a creature on ETB and gives both +4/+4.
 #[test]
@@ -27758,4 +27758,94 @@ fn soulbond_deadeye_navigator_grants_flicker_to_partner() {
     // It re-enters the battlefield (a Grizzly Bears is still in play).
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
         "flickered creature returns to the battlefield");
+}
+
+// ── Mentor (CR 702.134) ──────────────────────────────────────────────────────
+
+/// Hammer Dropper's Mentor puts a +1/+1 counter on a lesser-power co-attacker.
+#[test]
+fn mentor_hammer_dropper_counters_lesser_attacker() {
+    let mut g = two_player_game();
+    let dropper = g.add_card_to_battlefield(0, catalog::hammer_dropper()); // 5/2
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(dropper).unwrap().summoning_sick = false;
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: dropper, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Mentor counters the lesser-power attacker");
+}
+
+/// Goblin Banneret's `{1}{R}: +2/+0` pump resolves.
+#[test]
+fn goblin_banneret_pump_ability() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::goblin_banneret());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "1/1 → 3/1");
+}
+
+// ── Afflict / Provoke / Soulshift (existing primitives, now carded) ──────────
+
+/// Khenra Eternal's Afflict 1 drains the defender when it becomes blocked.
+#[test]
+fn afflict_khenra_eternal_drains_on_block() {
+    let mut g = two_player_game();
+    let khenra = g.add_card_to_battlefield(0, catalog::khenra_eternal());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(khenra).unwrap().summoning_sick = false;
+    let life_before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: khenra, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, khenra)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 1, "Afflict 1 drains the blocking player");
+}
+
+/// Crested Craghorn's Provoke untaps and forces a defender to block.
+#[test]
+fn provoke_crested_craghorn_forces_block() {
+    let mut g = two_player_game();
+    let craghorn = g.add_card_to_battlefield(0, catalog::crested_craghorn());
+    let defender = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(defender).unwrap().tapped = true;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: craghorn, target: AttackTarget::Player(1) }])
+        .expect("attack"); // Craghorn has haste
+    drain_stack(&mut g);
+    // Provoke untaps the target and sets a must-block requirement on it.
+    assert!(!g.battlefield_find(defender).unwrap().tapped, "Provoke untaps the target");
+    assert_eq!(g.battlefield_find(defender).unwrap().must_block, Some(craghorn),
+        "Provoke forces the target to block the attacker");
+}
+
+/// Hundred-Talon Kami's Soulshift 4 returns a small Spirit on death.
+#[test]
+fn soulshift_hundred_talon_kami_returns_spirit() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // accept Soulshift
+    // A cheap (MV-2) Spirit in the graveyard for Soulshift 4 to retrieve.
+    let spirit = g.add_card_to_battlefield(0, catalog::mistwalker());
+    g.remove_from_battlefield_to_graveyard(spirit);
+    let kami = g.add_card_to_battlefield(0, catalog::hundred_talon_kami());
+    g.battlefield_find_mut(kami).unwrap().damage = 99; // lethal → dies → Soulshift 4
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spirit),
+        "Soulshift returns the MV-2 Spirit to hand");
 }

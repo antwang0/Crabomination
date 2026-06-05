@@ -1740,7 +1740,7 @@ impl GameState {
                 });
             }
         }
-        // CR 702.46 — Soulbond. A creature carrying a `soulbond_bonus` that's
+        // CR 702.95 — Soulbond. A creature carrying a `soulbond_bonus` that's
         // paired confers the bonus on BOTH itself and its partner (P/T layer
         // 7c, keywords layer 6), for as long as both stay on the battlefield.
         for card in &self.battlefield {
@@ -3934,7 +3934,7 @@ impl GameState {
     /// spell-cast, dies, step changes) are skipped here to avoid double-firing.
     /// Everything else (TurnBegins, CardDrawn, LandPlayed, LifeGained, etc.)
     /// gains trigger capability through this path.
-    /// CR 702.46 — when `entered` (a creature) comes onto the battlefield,
+    /// CR 702.95 — when `entered` (a creature) comes onto the battlefield,
     /// pair it with an eligible unpaired creature its controller controls. The
     /// "may" is auto-resolved (pairing is value-positive); the partner with
     /// the lowest CardId is chosen for determinism. A Soulbond creature can
@@ -3974,7 +3974,7 @@ impl GameState {
         if events.is_empty() {
             return;
         }
-        // CR 702.46 — Soulbond pairing. When a creature enters, attempt to pair
+        // CR 702.95 — Soulbond pairing. When a creature enters, attempt to pair
         // it (auto-resolved "may"). Done before trigger dispatch so a paired
         // creature's bonus is live for any subsequent ETB-trigger evaluation.
         for e in events {

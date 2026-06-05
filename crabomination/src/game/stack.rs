@@ -1638,7 +1638,7 @@ impl GameState {
             }
         }
 
-        // CR 702.46h — Soulbond pairs break when either creature leaves the
+        // CR 702.95h — Soulbond pairs break when either creature leaves the
         // battlefield. Clear any link that points at a card no longer in play.
         let on_bf: std::collections::HashSet<CardId> =
             self.battlefield.iter().map(|c| c.id).collect();
@@ -1822,7 +1822,7 @@ impl GameState {
     ) {
         use crate::card::Zone;
         let owner = card.owner;
-        // CR 702.46h — a card leaving the battlefield is no longer Soulbond-
+        // CR 702.95h — a card leaving the battlefield is no longer Soulbond-
         // paired. Clear its own link so a later re-entry can re-pair cleanly
         // (the SBA in `check_state_based_actions` clears the partner's side).
         let mut card = card;

@@ -5380,6 +5380,28 @@ pub mod shortcut {
         }
     }
 
+    /// Mentor (CR 702.134): "Whenever this creature attacks, put a +1/+1
+    /// counter on target attacking creature with lesser power." An `Attacks /
+    /// SelfSource` trigger targeting another attacking creature whose power is
+    /// less than the source's; the counter lands on that target. If no such
+    /// creature is attacking, the trigger has no legal target and does nothing.
+    pub fn mentor() -> TriggeredAbility {
+        use crate::card::CounterType;
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::IsAttacking
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::PowerLessThanSource),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }
+    }
+
     /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
     /// creatures." A bare `Effect` for use as a spell effect or ability body.
     pub fn support(n: u8) -> Effect {
