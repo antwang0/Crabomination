@@ -18242,3 +18242,45 @@ pub fn teval_arbiter_of_virtue() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sab-Sunen, Luxa Embodied — {3}{G}{U} Legendary 6/6 God. Reach, trample,
+/// indestructible. At your precombat main phase, put a +1/+1 counter on it,
+/// then draw two cards if it has an odd number of counters. (The "can't attack
+/// or block unless it has an even number of counters" restriction needs a
+/// parity attack-gate primitive and is dropped.)
+pub fn sab_sunen_luxa_embodied() -> CardDefinition {
+    use crate::card::{CounterType, Supertype};
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Sab-Sunen, Luxa Embodied",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::God],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Reach, Keyword::Trample, Keyword::Indestructible],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::If {
+                    cond: Predicate::ValueIsOdd(Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    }),
+                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

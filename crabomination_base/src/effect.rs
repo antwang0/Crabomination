@@ -457,6 +457,10 @@ pub enum Predicate {
     /// MV-equals filters (Postmortem Lunge "creature card with mana
     /// value X", Fix What's Broken "each card with mana value X").
     ValueEquals(Value, Value),
+    /// The value is odd. Powers "if it has an odd number of counters on it"
+    /// riders (Sab-Sunen, Luxa Embodied). `ValueIsOdd(0)` is false (zero is
+    /// even, CR-flavor).
+    ValueIsOdd(Value),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
     /// The given entity's properties match the filter.

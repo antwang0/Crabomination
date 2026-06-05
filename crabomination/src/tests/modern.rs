@@ -26929,3 +26929,24 @@ fn teval_loses_life_equal_to_cast_spell_mana_value() {
     cast(&mut g, bears);
     assert_eq!(g.players[0].life, life_before - 2, "lose life = cast spell's mana value");
 }
+
+#[test]
+fn sab_sunen_draws_two_on_odd_counter_main_phase() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sab_sunen_luxa_embodied());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.active_player_idx = 0;
+    let hand0 = g.players[0].hand.len();
+    // Main phase tick 1: 0 → 1 counter (odd) → draw 2.
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "odd counter count draws two");
+    // Main phase tick 2: 1 → 2 counters (even) → no draw.
+    let hand1 = g.players[0].hand.len();
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.players[0].hand.len(), hand1, "even counter count draws nothing");
+}

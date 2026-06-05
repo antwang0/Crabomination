@@ -1054,6 +1054,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         parallax_tide,
         parallax_dementia,
         teval_arbiter_of_virtue,
+        sab_sunen_luxa_embodied,
         // ── modern_decks-16 ──
         shriekmaw,
         collective_brutality,

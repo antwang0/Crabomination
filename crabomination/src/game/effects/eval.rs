@@ -323,6 +323,7 @@ impl GameState {
             Predicate::ValueAtLeast(a, b) => self.evaluate_value(a, ctx) >= self.evaluate_value(b, ctx),
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
             Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),
+            Predicate::ValueIsOdd(v) => self.evaluate_value(v, ctx).rem_euclid(2) == 1,
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
             Predicate::EntityMatches { what, filter } => self
                 .resolve_selector(what, ctx)
