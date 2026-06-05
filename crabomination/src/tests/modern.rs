@@ -8938,6 +8938,19 @@ fn disfigure_kills_a_two_two_via_minus_two_minus_two() {
 }
 
 #[test]
+fn borderland_marauder_pumps_while_attacking() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::borderland_marauder());
+    g.clear_sickness(id);
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((1, 2)));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }]).expect("attack");
+    assert_eq!(g.compute_battlefield().iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((3, 2)),
+        "+2/+0 while attacking");
+}
+
+#[test]
 fn pia_nalaar_etb_makes_a_thopter() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::pia_nalaar());

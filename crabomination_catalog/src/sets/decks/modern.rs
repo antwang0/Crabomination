@@ -11752,6 +11752,37 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
     }
 }
 
+/// Borderland Marauder — {1}{R} Creature — Human Warrior 1/2. As long as it's
+/// attacking, it gets +2/+0.
+pub fn borderland_marauder() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Borderland Marauder",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is attacking, it gets +2/+0.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsAttacking,
+                },
+                power: 2,
+                toughness: 0,
+                keyword: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Pia Nalaar — {2}{R} Legendary Creature — Human Artificer 2/2. ETB creates a
 /// 1/1 Thopter (flying). `{1}{R}: target artifact creature gets +1/+0 EOT.`
 /// `{1}, Sacrifice an artifact: target creature can't block this turn.`
