@@ -205,8 +205,10 @@ impl GameState {
                 self.give_priority_to_active();
             }
             TurnStep::Cleanup => {
-                // Reset per-turn spell counter.
+                // Reset per-turn spell counter and the Gravestorm
+                // permanents-died tally.
                 self.spells_cast_this_turn = 0;
+                self.permanents_to_graveyard_this_turn = 0;
                 self.give_priority_to_active();
             }
             _ => {
@@ -1803,6 +1805,14 @@ impl GameState {
                 crate::card::Zone::Battlefield,
                 initial_to,
             );
+            // CR 702.69 — bump the turn's "permanents put into a graveyard
+            // from the battlefield" tally for Gravestorm. Only when the
+            // card actually landed in a graveyard (Finality / dies-to-exile
+            // redirects don't count).
+            if resolved == crate::card::Zone::Graveyard {
+                self.permanents_to_graveyard_this_turn =
+                    self.permanents_to_graveyard_this_turn.saturating_add(1);
+            }
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.return_linked_exiles(id, &mut events);

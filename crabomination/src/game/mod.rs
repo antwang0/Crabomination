@@ -226,6 +226,11 @@ pub struct GameState {
     pub(crate) skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// CR 702.69 — count of permanents put into a graveyard from the
+    /// battlefield this turn (any controller, any type). Drives Gravestorm
+    /// copy counts; reset at each turn's untap step.
+    #[serde(default)]
+    pub permanents_to_graveyard_this_turn: u32,
     /// Delayed triggered abilities registered by resolved spells/abilities
     /// (Pact upkeep cost, Goryo's exile-at-EOT, etc.). Fired by the step
     /// dispatcher when the matching event occurs.
@@ -542,6 +547,7 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
@@ -620,6 +626,7 @@ impl GameState {
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            permanents_to_graveyard_this_turn: 0,
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
@@ -1467,6 +1474,21 @@ impl GameState {
                     .count() as u32
             })
             .sum()
+    }
+
+    /// CR 702.66 — true if player `seat` controls a permanent granting
+    /// "spells you cast have delve" (Teval, Arbiter of Virtue). Lets the
+    /// cast path accept a delve-cards list on any spell, not just those
+    /// printed with `Keyword::Delve`.
+    pub fn controller_grants_spells_delve(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::SpellsYouCastHaveDelve))
+        })
     }
 
     /// True if `seat` cannot gain life *right now*, per CR 119.7. ORs:
@@ -6039,6 +6061,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // UncounterableCreaturesOfChosenType — read at cast time by
             // `caster_grants_uncounterable_with_x`; no layer effect.
             | StaticEffect::UncounterableCreaturesOfChosenType
+            // SpellsYouCastHaveDelve (Teval) — read at cast time by
+            // `controller_grants_spells_delve`; no layer effect.
+            | StaticEffect::SpellsYouCastHaveDelve
             // EtbTriggerTax — read at ETB trigger push time by
             // `apply_etb_trigger_tax` (Strict Proctor); no layer effect.
             | StaticEffect::EtbTriggerTax { .. }

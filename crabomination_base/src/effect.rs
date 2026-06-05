@@ -3514,6 +3514,11 @@ pub enum StaticEffect {
     /// `chosen_creature_type == None` falls back to "unrestricted" so
     /// legacy test fixtures that bypass the ETB still work.
     UncounterableCreaturesOfChosenType,
+    /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
+    /// Read at cast time by `controller_grants_spells_delve`: a delve-cards
+    /// list is accepted on any spell whose controller has this static, not
+    /// just spells printed with `Keyword::Delve`.
+    SpellsYouCastHaveDelve,
     /// "Instant and sorcery spells you cast have Affinity for [filter]"
     /// (CR 702.40). The static grants every IS spell the controller casts
     /// an Affinity-style discount of {1} per battlefield permanent matching
@@ -5710,6 +5715,21 @@ pub mod shortcut {
                     amount: Value::Const(n),
                 }),
                 else_: Box::new(Effect::Noop),
+            },
+        }
+    }
+
+    /// Poisonous N (CR 702.70): "Whenever this creature deals combat damage
+    /// to a player, that player gets N poison counters." A
+    /// `DealsCombatDamageToPlayer / SelfSource` trigger; the damaged player is
+    /// bound to target slot 0 by `fire_combat_damage_to_player_triggers`.
+    pub fn poisonous(n: u32) -> TriggeredAbility {
+        use crate::card::{EventKind, EventScope, EventSpec};
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddPoison {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(n as i32),
             },
         }
     }

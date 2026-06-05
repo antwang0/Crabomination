@@ -978,6 +978,10 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         dreamstealer,
         // ── Afflict (CR 702.130) ──
         khenra_eternal,
+        // ── Frenzy (CR 702.68) ──
+        frenzy_sliver,
+        // ── Gravestorm (CR 702.69) ──
+        ominous_harvest,
         // ── Fabricate (CR 702.122) ──
         weaponcraft_enthusiast,
         // ── combat-damage value body ──
@@ -1599,6 +1603,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Poisonous (CR 702.70) ──
+        marsh_viper,
         // ── Embalm (CR 702.88) ──
         honored_hydra,
         timeless_witness,

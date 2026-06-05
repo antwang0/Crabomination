@@ -1476,6 +1476,7 @@ impl GameState {
         // reduced cost is paid — so a rejected cast leaves them in place.
         if !delve_cards.is_empty()
             && !card.definition.keywords.contains(&crate::card::Keyword::Delve)
+            && !self.controller_grants_spells_delve(p)
         {
             self.players[p].hand.push(card);
             return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have delve
@@ -1911,6 +1912,15 @@ impl GameState {
                     card.definition.clone(),
                     self.spells_cast_this_turn.saturating_sub(1),
                 )
+            })
+            // CR 702.69 — Gravestorm: copy for each permanent put into a
+            // graveyard from the battlefield this turn (counted before this
+            // spell resolves, so its own future death isn't included).
+            .or_else(|| {
+                card.definition
+                    .keywords
+                    .contains(&Keyword::Gravestorm)
+                    .then(|| (card.definition.clone(), self.permanents_to_graveyard_this_turn))
             });
 
         self.stack.push(StackItem::Spell {

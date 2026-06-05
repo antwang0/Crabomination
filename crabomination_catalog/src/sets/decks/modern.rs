@@ -18870,6 +18870,10 @@ pub fn teval_arbiter_of_virtue() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        static_abilities: vec![crate::effect::StaticAbility {
+            description: "Spells you cast have delve.",
+            effect: crate::effect::StaticEffect::SpellsYouCastHaveDelve,
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
             effect: Effect::LoseLife {
@@ -19546,6 +19550,66 @@ pub fn hundred_talon_kami() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![crate::effect::shortcut::soulshift(4)],
+        ..Default::default()
+    }
+}
+
+/// Marsh Viper — {3}{G} 1/2 Snake. Poisonous 2 (CR 702.70): combat damage
+/// to a player gives them two poison counters.
+pub fn marsh_viper() -> CardDefinition {
+    CardDefinition {
+        name: "Marsh Viper",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::poisonous(2)],
+        ..Default::default()
+    }
+}
+
+/// Frenzy Sliver — {1}{B} 1/1 Sliver. Frenzy 1 (CR 702.68). The printed
+/// card grants frenzy 1 to all Slivers; modeled here as self-frenzy on the
+/// Sliver itself (the lord half is dropped).
+pub fn frenzy_sliver() -> CardDefinition {
+    CardDefinition {
+        name: "Frenzy Sliver",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Sliver],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::frenzy(1)],
+        ..Default::default()
+    }
+}
+
+/// Ominous Harvest — {2}{B} Sorcery. Gravestorm (CR 702.69). Target player
+/// draws a card and loses 1 life; copied for each permanent that died this
+/// turn.
+pub fn ominous_harvest() -> CardDefinition {
+    CardDefinition {
+        name: "Ominous Harvest",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Gravestorm],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(1),
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(1),
+            },
+        ]),
         ..Default::default()
     }
 }

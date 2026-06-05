@@ -631,6 +631,23 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (Soulshift 4 — return an MV≤4 Spirit on death). Tests: `afflict_*`,
   `provoke_*`, `soulshift_*`.
 
+- ✅ **CR 702.68 / 702.69 / 702.70 — Frenzy / Gravestorm / Poisonous**
+  (claude/modern_decks). Poisonous N is a new `shortcut::poisonous`
+  (`DealsCombatDamageToPlayer / SelfSource` → `AddPoison` on the damaged
+  player). Gravestorm is a new `Keyword::Gravestorm` mirroring Storm's
+  self-copy, counting a new `GameState.permanents_to_graveyard_this_turn`
+  tally (bumped in `remove_from_battlefield_to_graveyard`, reset at Cleanup).
+  Frenzy reuses the existing `shortcut::frenzy`. Cards: Marsh Viper
+  (Poisonous 2), Ominous Harvest (Gravestorm), Frenzy Sliver (Frenzy 1).
+  Tests: `poisonous_marsh_viper_*`, `gravestorm_ominous_harvest_*`,
+  `frenzy_sliver_*`.
+
+- ✅ **CR 702.66 — "Spells you cast have delve" static** (claude/modern_decks).
+  `StaticEffect::SpellsYouCastHaveDelve` + `controller_grants_spells_delve`
+  let the cast path accept a delve-cards list on any spell, not just ones
+  printed with `Keyword::Delve`. Completes Teval, Arbiter of Virtue (now ✅).
+  Test: `teval_grants_spells_delve`.
+
 - 🟡 **CR 303 — Auras** (claude/modern_decks). "Enchanted permanent" is now a
   queryable state: `SelectionRequirement::IsEnchanted` scans for an enchantment
   whose `attached_to` points at the candidate (Equipment excluded). Drives

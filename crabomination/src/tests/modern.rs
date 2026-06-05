@@ -27391,6 +27391,26 @@ fn teval_loses_life_equal_to_cast_spell_mana_value() {
 }
 
 #[test]
+fn teval_grants_spells_delve() {
+    // CR 702.66 — Teval's static lets any spell pay generic with graveyard
+    // exile even though Grizzly Bears isn't printed with delve.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::teval_arbiter_of_virtue());
+    let gy: Vec<_> = (0..2).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    // Only one green mana — the {1} generic must come from delving one card.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let exile_before = g.exile.len();
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: bears, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: vec![gy[0]],
+    }).expect("Bears castable for G after delving one (Teval grants delve)");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"));
+    assert_eq!(g.exile.len(), exile_before + 1, "one delved card moved to exile");
+}
+
+#[test]
 fn sab_sunen_draws_two_on_odd_counter_main_phase() {
     use crate::card::CounterType;
     let mut g = two_player_game();
@@ -27967,6 +27987,67 @@ fn soulshift_hundred_talon_kami_returns_spirit() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == spirit),
         "Soulshift returns the MV-2 Spirit to hand");
+}
+
+/// Marsh Viper's Poisonous 2 (CR 702.70) gives the damaged player two poison.
+#[test]
+fn poisonous_marsh_viper_adds_two_poison_on_combat_damage() {
+    let mut g = two_player_game();
+    let viper = g.add_card_to_battlefield(0, catalog::marsh_viper());
+    g.clear_sickness(viper);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: viper, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g); // Poisonous is a triggered ability — resolve it off the stack
+    assert_eq!(g.players[1].poison_counters, 2, "Poisonous 2 adds two poison counters");
+}
+
+/// Frenzy Sliver's Frenzy 1 (CR 702.68) pumps it +1/+0 when unblocked.
+#[test]
+fn frenzy_sliver_pumps_when_unblocked() {
+    let mut g = two_player_game();
+    let sliver = g.add_card_to_battlefield(0, catalog::frenzy_sliver());
+    g.clear_sickness(sliver);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sliver, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(sliver).unwrap().power(), 2,
+        "Frenzy 1 pumps unblocked attacker to 2 power");
+}
+
+/// Ominous Harvest's Gravestorm (CR 702.69) copies once per permanent that
+/// died this turn.
+#[test]
+fn gravestorm_ominous_harvest_copies_per_dead_permanent() {
+    let mut g = two_player_game();
+    // Two permanents die this turn → two Gravestorm copies + the original = 3
+    // resolutions, each "target player draws 1, loses 1".
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(a);
+    g.remove_from_battlefield_to_graveyard(b);
+    assert_eq!(g.permanents_to_graveyard_this_turn, 2);
+    for _ in 0..6 { g.add_card_to_library(1, catalog::island()); }
+    let harvest = g.add_card_to_hand(0, catalog::ominous_harvest());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[1].life;
+    let hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: harvest, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before + 3, "original + 2 copies each draw 1");
+    assert_eq!(g.players[1].life, life_before - 3, "original + 2 copies each lose 1");
 }
 
 /// Silverblade Paladin's Soulbond grants double strike to both members.
