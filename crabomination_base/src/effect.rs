@@ -1409,6 +1409,11 @@ pub enum Effect {
     /// (the value-maximizing default). Torsten, Founder of Benalia's
     /// "reveal seven, take creatures and/or lands."
     RevealTopTakeMatchingToHand { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// Each player in `who` exiles all but the bottom `keep` cards of their
+    /// library (face down — face-down exile isn't modeled, so the cards are
+    /// exiled plainly). Doomsday Excruciator's "each player exiles all but the
+    /// bottom six cards of their library."
+    ExileLibraryExceptBottom { who: PlayerRef, keep: Value },
 
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.
@@ -2396,6 +2401,9 @@ impl Effect {
             }
             Effect::RevealTopTakeMatchingToHand { who, count, .. } => {
                 player_has_target(who) || value_has_target(count)
+            }
+            Effect::ExileLibraryExceptBottom { who, keep } => {
+                player_has_target(who) || value_has_target(keep)
             }
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),

@@ -3808,6 +3808,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileLibraryExceptBottom { who, keep } => {
+                let keep = self.evaluate_value(keep, ctx).max(0) as usize;
+                for p in self.resolve_players(who, ctx) {
+                    let take = self.players[p].library.len().saturating_sub(keep);
+                    let ids: Vec<crate::card::CardId> =
+                        self.players[p].library.iter().take(take).map(|c| c.id).collect();
+                    for id in ids {
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ShuffleGraveyardIntoLibrary { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let cards = std::mem::take(&mut self.players[p].graveyard);

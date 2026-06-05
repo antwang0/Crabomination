@@ -17764,14 +17764,16 @@ fn coveted_jewel_etb_draws_three() {
 // ── Doomsday Excruciator ────────────────────────────────────────────────────
 
 #[test]
-fn doomsday_excruciator_is_6_6_flying_demon() {
-    use crate::card::Keyword;
-    let card = catalog::doomsday_excruciator();
-    assert_eq!(card.name, "Doomsday Excruciator");
-    assert_eq!(card.power, 6);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB mill trigger");
+fn doomsday_excruciator_etb_leaves_each_player_six_cards() {
+    let mut g = two_player_game();
+    for _ in 0..15 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..15 { g.add_card_to_library(1, catalog::forest()); }
+    let id = g.add_card_to_battlefield(0, catalog::doomsday_excruciator());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 6, "controller keeps bottom six");
+    assert_eq!(g.players[1].library.len(), 6, "opponent keeps bottom six");
+    assert!(g.exile.len() >= 18, "the rest are exiled");
 }
 
 // ── Planar Nexus ────────────────────────────────────────────────────────────

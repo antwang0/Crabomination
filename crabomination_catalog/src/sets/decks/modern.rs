@@ -14470,12 +14470,13 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
     }
 }
 
-/// Doomsday Excruciator — {5}{B}{B} 6/6 Flying Demon.
-/// ETB: Each player mills 20.
+/// Doomsday Excruciator — {B}{B}{B}{B}{B}{B} 6/6 Flying Demon. ETB: each
+/// player exiles all but the bottom six cards of their library. At your
+/// upkeep, draw a card. (The "if it was cast" / face-down riders are dropped.)
 pub fn doomsday_excruciator() -> CardDefinition {
     CardDefinition {
         name: "Doomsday Excruciator",
-        cost: cost(&[generic(5), b(), b()]),
+        cost: cost(&[b(), b(), b(), b(), b(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Demon],
@@ -14484,12 +14485,19 @@ pub fn doomsday_excruciator() -> CardDefinition {
         power: 6,
         toughness: 6,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(
-            Effect::Mill {
-                who: Selector::Player(PlayerRef::EachPlayer),
-                amount: Value::Const(20),
+        triggered_abilities: vec![
+            etb(Effect::ExileLibraryExceptBottom {
+                who: PlayerRef::EachPlayer,
+                keep: Value::Const(6),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             },
-        )],
+        ],
         ..Default::default()
     }
 }
