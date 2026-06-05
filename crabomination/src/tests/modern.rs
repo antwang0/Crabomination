@@ -28576,6 +28576,63 @@ fn vinelasher_kudzu_grows_on_landfall() {
         "landfall puts a +1/+1 counter on Vinelasher Kudzu");
 }
 
+#[test]
+fn spikeshot_elder_pings_for_its_power() {
+    let mut g = two_player_game();
+    let elder = g.add_card_to_battlefield(0, catalog::spikeshot_elder());
+    g.battlefield_find_mut(elder).unwrap().power_bonus = 2; // 1 + 2 = 3 power
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elder, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("ping any target");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3, "deals damage equal to its power");
+}
+
+#[test]
+fn tormented_soul_is_unblockable_and_cant_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let soul = g.add_card_to_battlefield(0, catalog::tormented_soul());
+    let c = g.battlefield_find(soul).unwrap();
+    assert!(c.has_keyword(&Keyword::Unblockable) && c.has_keyword(&Keyword::CantBlock));
+}
+
+#[test]
+fn bloodcrazed_neonate_grows_on_combat_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let neo = g.add_card_to_battlefield(0, catalog::bloodcrazed_neonate());
+    g.clear_sickness(neo);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: neo, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(neo).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "combat damage to a player grows the Neonate");
+}
+
+#[test]
+fn stormblood_berserker_bloodthirst_enters_bigger() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Damage the opponent so Bloodthirst is active.
+    g.players[1].was_dealt_damage_this_turn = true;
+    let berserker = g.add_card_to_hand(0, catalog::stormblood_berserker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.active_player_idx = 0;
+    cast(&mut g, berserker);
+    drain_stack(&mut g);
+    let b = g.battlefield.iter().find(|c| c.definition.name == "Stormblood Berserker").unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 2, "Bloodthirst 2 → two counters");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

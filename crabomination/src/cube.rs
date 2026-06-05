@@ -1001,6 +1001,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         midnight_reaper,
         grim_haruspex,
         kitesail_freebooter,
+        tormented_soul,
         // ── Fabricate (CR 702.122) ──
         weaponcraft_enthusiast,
         // ── combat-damage value body ──
@@ -1304,6 +1305,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: red utility creatures ──
         manic_vandal,
         goblin_cratermaker,
+        spikeshot_elder,
+        bloodcrazed_neonate,
+        stormblood_berserker,
         // ── modern_decks: artifacts-matter aggro ──
         inventors_apprentice,
         // ── Eternalize (CR 702.91) ──

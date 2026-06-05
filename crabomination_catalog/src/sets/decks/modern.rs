@@ -12000,6 +12000,88 @@ pub fn grim_haruspex() -> CardDefinition {
     }
 }
 
+/// Spikeshot Elder — {R} 1/1 Goblin Shaman. `{1}{R}{R}: deals damage equal to
+/// its power to any target.` (LRW)
+pub fn spikeshot_elder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Spikeshot Elder",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r(), r()]),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tormented Soul — {B} 1/1 Spirit. Can't block and can't be blocked. (M12)
+pub fn tormented_soul() -> CardDefinition {
+    CardDefinition {
+        name: "Tormented Soul",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock, Keyword::Unblockable],
+        ..Default::default()
+    }
+}
+
+/// Bloodcrazed Neonate — {1}{R} 2/1 Vampire. Attacks each combat if able.
+/// Whenever it deals combat damage to a player, put a +1/+1 counter on it. (ISD)
+pub fn bloodcrazed_neonate() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodcrazed Neonate",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::MustAttack],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stormblood Berserker — {1}{R} 1/1 Human Berserker. Bloodthirst 2; can't be
+/// blocked except by two or more creatures (Menace). (M12)
+pub fn stormblood_berserker() -> CardDefinition {
+    CardDefinition {
+        name: "Stormblood Berserker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![crate::effect::shortcut::bloodthirst(2)],
+        ..Default::default()
+    }
+}
+
 /// Manic Vandal — {2}{R} 2/2 Human Warrior. When it enters, destroy target
 /// artifact. (M11)
 pub fn manic_vandal() -> CardDefinition {
