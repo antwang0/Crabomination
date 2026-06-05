@@ -2650,6 +2650,27 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 606 — set loyalty outright (loyalty-set effect). Overwrites
+            // the Loyalty counter to `value`, emitting a balancing
+            // CounterAdded / CounterRemoved so listeners see the delta.
+            Effect::SetLoyalty { what, value } => {
+                let target = self.evaluate_value(value, ctx).max(0) as u32;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        let cur = c.counter_count(CounterType::Loyalty);
+                        c.counters.insert(CounterType::Loyalty, target);
+                        if target > cur {
+                            events.push(GameEvent::CounterAdded { card_id: cid, counter_type: CounterType::Loyalty, count: target - cur });
+                        } else if cur > target {
+                            events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: CounterType::Loyalty, count: cur - target });
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             // CR 122.1b — Add a keyword counter to `what`. The host gains
             // the named keyword while at least one counter of this kind
             // is present (applied as a layer-6 grant in
@@ -3095,6 +3116,7 @@ impl GameState {
                 source,
                 extra_creature_types,
                 override_pt,
+                non_legendary,
             } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mut n = self.evaluate_value(count, ctx).max(0) as u32;
@@ -3131,6 +3153,9 @@ impl GameState {
                 if let Some((p_o, t_o)) = override_pt {
                     def.power = *p_o;
                     def.toughness = *t_o;
+                }
+                if *non_legendary {
+                    def.supertypes.clear();
                 }
                 for _ in 0..n {
                     let id = self.next_id();
@@ -3843,9 +3868,19 @@ impl GameState {
             }
 
             Effect::ShuffleGraveyardIntoLibrary { who } => {
+                use rand::seq::SliceRandom;
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let cards = std::mem::take(&mut self.players[p].graveyard);
                     self.players[p].library.extend(cards);
+                    self.players[p].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
+            Effect::ShuffleLibrary { who } => {
+                use rand::seq::SliceRandom;
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].library.shuffle(&mut rand::rng());
                 }
                 Ok(())
             }

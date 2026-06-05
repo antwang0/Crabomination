@@ -156,7 +156,16 @@ read of the code and should be re-verified before picking up an item.
   triggered abilities** (`EquipBonus.triggered_abilities`, CR 702.6e — Sword of
   Body and Mind / Feast and Famine / War and Peace's combat riders).
   **Reconfigure** (`Keyword::Reconfigure`, CR 702.151 — Lion Sash). **Remove all
-  counters** (`Effect::RemoveAllCounters` — Vampire Hexmage).
+  counters** (`Effect::RemoveAllCounters` — Vampire Hexmage). **Loyalty-set**
+  (`Effect::SetLoyalty`, CR 606 — Geyadrone Dihada's "reset loyalty to its
+  starting value when behind on life," gated by
+  `Predicate::PlayerHasLessLifeThanOpponent`). **Shuffle library**
+  (`Effect::ShuffleLibrary`, CR 103.2c — Mind's Desire's pre-exile shuffle).
+  **Non-legendary token copy** (`CreateTokenCopyOf.non_legendary`, CR 707.2e —
+  Helm of the Host's copy isn't legendary, so a legendary host survives the
+  legend rule). **Living weapon** (Nettlecyst, Batterskull). **Painlands**
+  (`painland` helper — the 10-card allied/enemy "Wastes/Reef/Forge" cycle) plus
+  City of Brass / Mana Confluence / Ghost Quarter.
 
 ---
 

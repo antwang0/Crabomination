@@ -54,6 +54,26 @@ pub fn no_abilities() -> Vec<ActivatedAbility> {
     vec![]
 }
 
+/// Painland (the allied/enemy "Wastes/Reef/Forge" cycle): `{T}: Add {C}` plus
+/// two `{T}: Add {color}, this land deals 1 damage to you` abilities. No basic
+/// land types; enters untapped. Adarkar Wastes, Underground River, etc.
+pub fn painland(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
+    let colored = |color: Color| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::Seq(vec![
+            Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![color]) },
+            Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add_colorless(), colored(color_a), colored(color_b)],
+        ..Default::default()
+    }
+}
+
 /// Mana ability shorthand: `{T}, Pay N life: Add {color}.` — the horizon-land
 /// / painland cost line. The life is paid up front during activation.
 pub fn tap_pay_life_add(color: Color, life: u32) -> ActivatedAbility {

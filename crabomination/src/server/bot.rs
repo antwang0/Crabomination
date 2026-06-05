@@ -1513,12 +1513,22 @@ fn find_free_mana_rock(state: &GameState, seat: usize) -> Option<(CardId, usize)
 }
 
 fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
-    if !a.tap_cost || a.sac_cost || !a.mana_cost.symbols.is_empty() {
+    if !a.tap_cost || a.sac_cost || a.life_cost > 0 || !a.mana_cost.symbols.is_empty() {
         return false;
     }
+    // Plain fixed-color / colorless rocks (Sol Ring, Mind Stone) plus
+    // fixed-multicolor `OfColor` rocks — all decision-free, so the bot can
+    // tap them and keep sequencing toward a cast. *Choice* sources
+    // (`AnyOneColor`) are excluded on purpose: a mid-sequence `ChooseColor`
+    // breaks the tap-then-cast flow (see `bot_does_not_tap_color_choice_mana_source`).
+    // Damage / life-loss riders (painlands; the `life_cost > 0` guard above)
+    // are excluded so the bot doesn't hurt itself for a free tap.
     matches!(
         &a.effect,
-        Effect::AddMana { pool: ManaPayload::Colors(_) | ManaPayload::Colorless(_), .. }
+        Effect::AddMana {
+            pool: ManaPayload::Colors(_) | ManaPayload::Colorless(_) | ManaPayload::OfColor(_, _),
+            ..
+        }
     )
 }
 
@@ -1833,6 +1843,7 @@ mod tests {
             _ => panic!("bot should activate Sol Ring's mana ability"),
         }
     }
+
 
     /// The bot spends surplus energy on a beneficial energy-payoff ability
     /// (Longtusk Cub's `{E}{E}{E}: +1/+1 counter`) once nothing better to do.
@@ -2201,6 +2212,26 @@ mod tests {
             assert_ne!(card_id, bird,
                 "bot must NOT auto-tap a color-choice mana source (would block on ChooseColor)");
         }
+    }
+
+    /// `is_free_mana_ability` accepts decision-free rocks but rejects
+    /// life/damage-rider and color-choice sources.
+    #[test]
+    fn free_mana_ability_excludes_life_and_choice_sources() {
+        use crate::effect::{PlayerRef, Value};
+        let plain = ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+            ..Default::default()
+        };
+        assert!(is_free_mana_ability(&plain), "plain {{C}} rock is free");
+        let pay_life = ActivatedAbility { life_cost: 1, ..plain.clone() };
+        assert!(!is_free_mana_ability(&pay_life), "life-paying mana source isn't free");
+        let any_color = ActivatedAbility {
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            ..plain
+        };
+        assert!(!is_free_mana_ability(&any_color), "color-choice source isn't auto-tapped");
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main

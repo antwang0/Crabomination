@@ -2388,6 +2388,7 @@ pub fn echocasting_symposium() -> CardDefinition {
                 ),
                 extra_creature_types: vec![],
                 override_pt: None,
+                non_legendary: false,
             },
             Effect::RegisterParadigm,
         ]),
@@ -2521,6 +2522,7 @@ pub fn applied_geometry() -> CardDefinition {
                 ),
                 extra_creature_types: vec![crate::card::CreatureType::Fractal],
                 override_pt: Some((0, 0)),
+                non_legendary: false,
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

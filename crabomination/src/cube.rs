@@ -339,6 +339,21 @@ fn colorless_pool() -> Vec<CardFactory> {
         arcbound_hybrid,
         arcbound_bruiser,
         arcbound_slith,
+        // ── claude/modern_decks: mana rocks, utility artifacts, rainbow lands ──
+        thran_dynamo,
+        ur_golems_eye,
+        dreamstone_hedron,
+        gilded_lotus,
+        arcane_signet,
+        commanders_sphere,
+        prismatic_lens,
+        guardian_idol,
+        temple_bell,
+        wayfarers_bauble,
+        batterskull,
+        city_of_brass,
+        mana_confluence,
+        ghost_quarter,
     ]
 }
 

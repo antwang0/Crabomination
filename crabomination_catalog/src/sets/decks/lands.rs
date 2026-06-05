@@ -7,8 +7,8 @@
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
 use super::super::{
-    dual_land_with, etb_tap, etb_tap_then_surveil_one, fastland_etb_conditional_tap,
-    shockland_pay_two_or_tap, tap_add,
+    dual_land_with, etb_tap, etb_tap_then_surveil_one, fastland_etb_conditional_tap, painland,
+    shockland_pay_two_or_tap, tap_add, tap_add_colorless,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType, Selector,
@@ -663,4 +663,80 @@ pub fn needleverge_pathway() -> CardDefinition {
         "Needleverge Pathway", LandType::Mountain, Color::Red,
         "Pillarverge Pathway", LandType::Plains, Color::White,
     )
+}
+
+// ── Painlands (allied + enemy "Wastes/Reef/Forge" cycle) ─────────────────────
+//
+// `{T}: Add {C}` plus two `{T}: Add {color}, deals 1 damage to you` abilities;
+// no basic land types, enters untapped. Built via `super::super::painland`.
+
+pub fn adarkar_wastes() -> CardDefinition { painland("Adarkar Wastes", Color::White, Color::Blue) }
+pub fn underground_river() -> CardDefinition { painland("Underground River", Color::Blue, Color::Black) }
+pub fn sulfurous_springs() -> CardDefinition { painland("Sulfurous Springs", Color::Black, Color::Red) }
+pub fn karplusan_forest() -> CardDefinition { painland("Karplusan Forest", Color::Red, Color::Green) }
+pub fn brushland() -> CardDefinition { painland("Brushland", Color::Green, Color::White) }
+pub fn caves_of_koilos() -> CardDefinition { painland("Caves of Koilos", Color::White, Color::Black) }
+pub fn shivan_reef() -> CardDefinition { painland("Shivan Reef", Color::Blue, Color::Red) }
+pub fn llanowar_wastes() -> CardDefinition { painland("Llanowar Wastes", Color::Black, Color::Green) }
+pub fn yavimaya_coast() -> CardDefinition { painland("Yavimaya Coast", Color::Green, Color::Blue) }
+pub fn battlefield_forge() -> CardDefinition { painland("Battlefield Forge", Color::Red, Color::White) }
+
+// ── Rainbow lands ────────────────────────────────────────────────────────────
+
+/// City of Brass — `{T}: Add one mana of any color. This land deals 1 damage to
+/// you.` (The printed "whenever this becomes tapped" trigger collapses onto the
+/// mana ability — its only natural tap source.)
+pub fn city_of_brass() -> CardDefinition {
+    CardDefinition {
+        name: "City of Brass",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mana Confluence — `{T}, Pay 1 life: Add one mana of any color.`
+pub fn mana_confluence() -> CardDefinition {
+    CardDefinition {
+        name: "Mana Confluence",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            life_cost: 1,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ghost Quarter — `{T}: Add {C}` plus `{T}, Sacrifice this land: Destroy
+/// target land.` (The printed "its controller may search for a basic land"
+/// rider — a downside-mitigation for the opponent — is dropped; tracked in
+/// TODO.md.)
+pub fn ghost_quarter() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Ghost Quarter",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Destroy {
+                    what: crate::effect::shortcut::target_filtered(SelectionRequirement::Land),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
 }

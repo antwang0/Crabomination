@@ -79,6 +79,25 @@ pub(super) enum StatChipKind {
     Night,
 }
 
+/// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
+/// `None` when the player has no devotion (the common non-Theros case), so
+/// callers can skip the chip entirely. Shared by the viewer and opponent rows.
+pub(super) fn devotion_chip_body(devotion: &[u32; 5]) -> Option<String> {
+    if !devotion.iter().any(|&d| d > 0) {
+        return None;
+    }
+    const SYM: [&str; 5] = ["W", "U", "B", "R", "G"];
+    Some(
+        devotion
+            .iter()
+            .enumerate()
+            .filter(|&(_, &d)| d > 0)
+            .map(|(i, &d)| format!("{}{}", SYM[i], d))
+            .collect::<Vec<_>>()
+            .join(" "),
+    )
+}
+
 /// Whether to surface the "spells cast this turn" chip. Shown once a
 /// second spell has been cast this turn (the point where Storm / magecraft
 /// / prowess payoffs start to matter), so single-spell turns stay
@@ -432,16 +451,7 @@ pub fn update_player_stats_chips(
         }
         // CR 700.5 devotion — only surface in Theros-flavored games (any
         // nonzero color). Compact per-color readout, e.g. "◆ B3 G1".
-        if p.devotion.iter().any(|&d| d > 0) {
-            const SYM: [&str; 5] = ["W", "U", "B", "R", "G"];
-            let body: String = p
-                .devotion
-                .iter()
-                .enumerate()
-                .filter(|&(_, &d)| d > 0)
-                .map(|(i, &d)| format!("{}{}", SYM[i], d))
-                .collect::<Vec<_>>()
-                .join(" ");
+        if let Some(body) = devotion_chip_body(&p.devotion) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
         }
         // CR 724 monarch — a plain crown when the viewer holds it, otherwise a
@@ -692,6 +702,20 @@ pub fn update_opponent_stats_rows(
                         StatChipKind::Emblem,
                         format!("✦ {}", p.emblems.len()),
                     );
+                }
+                // CR 700.5 devotion — surface an opponent's devotion the same
+                // way the viewer's row does, so devotion-matters board states
+                // (an opponent's Nyx god turning on) are legible.
+                if let Some(body) = devotion_chip_body(&p.devotion) {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
+                }
+                // CR 724 monarch crown — show which opponent holds the crown.
+                if p.is_monarch {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, "👑".to_string());
+                }
+                // CR 700.6 city's blessing on an opponent.
+                if p.has_city_blessing {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::Blessing, "✦ blessed".to_string());
                 }
             });
         }

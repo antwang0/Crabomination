@@ -11238,6 +11238,7 @@ pub fn saheeli_rai() -> CardDefinition {
             ),
             extra_creature_types: vec![],
             override_pt: None,
+            non_legendary: false,
         },
         Effect::GrantKeyword {
             what: Selector::LastCreatedToken,
@@ -11306,6 +11307,7 @@ pub fn saheeli_rai() -> CardDefinition {
                                 ),
                                 extra_creature_types: vec![],
                                 override_pt: None,
+                                non_legendary: false,
                             },
                             Effect::GrantKeyword {
                                 what: Selector::LastCreatedTokens,
@@ -11533,13 +11535,14 @@ pub fn collective_brutality() -> CardDefinition {
 /// turn. Untap it. It gains haste until end of turn.
 /// **-7**: Ult — each opponent loses half their life, rounded up.
 ///
-/// The +1's "loyalty reset" rider collapses (engine has no loyalty-set
-/// primitive). The -3 GainControl + Untap + Haste is the headline
-/// Threaten-style play pattern; the -7 ult is faithful via
+/// The +1's "if you have less life than an opponent, reset loyalty to its
+/// starting value (3)" rider rides `Effect::SetLoyalty` gated on
+/// `Predicate::PlayerHasLessLifeThanOpponent`. The -3 GainControl + Untap +
+/// Haste is the Threaten-style play pattern; the -7 ult is faithful via
 /// `Effect::LoseHalfLife`.
 pub fn geyadrone_dihada() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
-    use crate::effect::Duration;
+    use crate::effect::{Duration, Predicate};
     CardDefinition {
         name: "Geyadrone Dihada",
         cost: cost(&[generic(2), b(), r()]),
@@ -11561,6 +11564,14 @@ pub fn geyadrone_dihada() -> CardDefinition {
                     Effect::Draw {
                         who: Selector::You,
                         amount: Value::Const(1),
+                    },
+                    Effect::If {
+                        cond: Predicate::PlayerHasLessLifeThanOpponent { who: PlayerRef::You },
+                        then: Box::new(Effect::SetLoyalty {
+                            what: Selector::This,
+                            value: Value::Const(3),
+                        }),
+                        else_: Box::new(Effect::Noop),
                     },
                 ]),
             },
@@ -13864,6 +13875,7 @@ pub fn thundertrap_trainer() -> CardDefinition {
                     source: Selector::This,
                     extra_creature_types: vec![],
                     override_pt: Some((1, 1)),
+                    non_legendary: false,
                 }),
                 else_: Box::new(Effect::Noop),
             }),
@@ -17278,6 +17290,7 @@ pub fn esikas_chariot() -> CardDefinition {
                     ),
                     extra_creature_types: vec![],
                     override_pt: None,
+                    non_legendary: false,
                 },
             },
         ],
@@ -18929,9 +18942,9 @@ pub fn nettlecyst() -> CardDefinition {
 }
 
 /// Helm of the Host — {4} Legendary Artifact — Equipment. At the beginning of
-/// combat on your turn, create a token copy of equipped creature with haste.
-/// Equip {5}. (The printed "the token isn't legendary" rider is dropped — the
-/// copy keeps the original's supertypes; faithful for non-legendary hosts.)
+/// combat on your turn, create a non-legendary token copy of equipped creature
+/// with haste. Equip {5}. (`non_legendary` strips the copy's supertypes so a
+/// legendary host doesn't lose the original to the legend rule, CR 707.2e.)
 pub fn helm_of_the_host() -> CardDefinition {
     use crate::card::{ArtifactSubtype, Supertype};
     use crate::game::types::TurnStep;
@@ -18954,6 +18967,7 @@ pub fn helm_of_the_host() -> CardDefinition {
                     source: Selector::AttachedTo(Box::new(Selector::This)),
                     extra_creature_types: vec![],
                     override_pt: None,
+                    non_legendary: true,
                 },
                 Effect::GrantKeyword {
                     what: Selector::LastCreatedToken,
@@ -19144,10 +19158,10 @@ pub fn virtue_of_loyalty() -> CardDefinition {
     }
 }
 
-/// Mind's Desire — {4}{U}{U} Sorcery. Storm (CR 702.40). Exile the top card of
-/// your library; until end of turn you may play it without paying its mana
-/// cost. (The pre-exile library shuffle is omitted — with Storm copying, this
-/// exiles the top N cards across the copies.)
+/// Mind's Desire — {4}{U}{U} Sorcery. Storm (CR 702.40). Shuffle your library,
+/// then exile the top card; until end of turn you may play it without paying
+/// its mana cost. With Storm copying, each copy shuffles and exiles its own
+/// top card.
 pub fn minds_desire() -> CardDefinition {
     use crate::card::MayPlayDuration;
     CardDefinition {
@@ -19155,11 +19169,14 @@ pub fn minds_desire() -> CardDefinition {
         cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Storm],
-        effect: Effect::ExileTopAndGrantMayPlay {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            duration: MayPlayDuration::EndOfThisTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::ShuffleLibrary { who: PlayerRef::You },
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                duration: MayPlayDuration::EndOfThisTurn,
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -19697,4 +19714,372 @@ pub fn bloodrock_cyclops() -> CardDefinition {
         keywords: vec![Keyword::MustAttack],
         ..Default::default()
     }
+}
+
+// ── Mana rocks & utility artifacts (cube staples) ────────────────────────────
+
+/// Tap-for-N-colorless rock helper: `{T}: Add {C}×n`.
+fn tap_colorless_rock(name: &'static str, mana: crate::mana::ManaCost, n: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(n)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thran Dynamo — {4} Artifact. {T}: Add {C}{C}{C}.
+pub fn thran_dynamo() -> CardDefinition {
+    tap_colorless_rock("Thran Dynamo", cost(&[generic(4)]), 3)
+}
+
+/// Ur-Golem's Eye — {4} Artifact. {T}: Add {C}{C}.
+pub fn ur_golems_eye() -> CardDefinition {
+    tap_colorless_rock("Ur-Golem's Eye", cost(&[generic(4)]), 2)
+}
+
+/// Gilded Lotus — {5} Artifact. {T}: Add three mana of any one color.
+pub fn gilded_lotus() -> CardDefinition {
+    CardDefinition {
+        name: "Gilded Lotus",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(3)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Arcane Signet — {2} Artifact. {T}: Add one mana of any color (in your
+/// commander's color identity — approximated as any color, no identity gate).
+pub fn arcane_signet() -> CardDefinition {
+    CardDefinition {
+        name: "Arcane Signet",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Commander's Sphere — {3} Artifact. {T}: Add one mana of any color (commander
+/// identity approximated as any color). Sacrifice this artifact: Draw a card.
+pub fn commanders_sphere() -> CardDefinition {
+    CardDefinition {
+        name: "Commander's Sphere",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Prismatic Lens — {2} Artifact. {T}: Add {C}. {1}, {T}: Add one mana of any
+/// color.
+pub fn prismatic_lens() -> CardDefinition {
+    CardDefinition {
+        name: "Prismatic Lens",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dreamstone Hedron — {6} Artifact. {T}: Add {C}{C}{C}. {3}, {T}, Sacrifice
+/// this artifact: Draw three cards.
+pub fn dreamstone_hedron() -> CardDefinition {
+    CardDefinition {
+        name: "Dreamstone Hedron",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(3)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Temple Bell — {3} Artifact. {T}: Each player draws a card.
+pub fn temple_bell() -> CardDefinition {
+    CardDefinition {
+        name: "Temple Bell",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wayfarer's Bauble — {1} Artifact. {2}, {T}, Sacrifice this artifact: Search
+/// your library for a basic land card, put it onto the battlefield tapped, then
+/// shuffle.
+pub fn wayfarers_bauble() -> CardDefinition {
+    CardDefinition {
+        name: "Wayfarer's Bauble",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Guardian Idol — {2} Artifact. Enters tapped. {T}: Add {C}. {2}: becomes a
+/// 2/2 Golem artifact creature until end of turn.
+pub fn guardian_idol() -> CardDefinition {
+    CardDefinition {
+        name: "Guardian Idol",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![modern_etb_tap()],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::BecomeCreature {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    creature_types: vec![CreatureType::Golem],
+                    keywords: vec![],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Batterskull — {5} Artifact — Equipment. Living weapon. Equipped creature
+/// gets +4/+4 and has vigilance and lifelink. {3}: Return this to its owner's
+/// hand. Equip {5}.
+pub fn batterskull() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    use crate::effect::shortcut::etb;
+    let germ = TokenDefinition {
+        name: "Phyrexian Germ".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Batterskull",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(5)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 4,
+            toughness: 4,
+            keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+            scale: None,
+            triggered_abilities: vec![],
+        }),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Simple stat/keyword Equipment (cube filler) ──────────────────────────────
+
+/// Build a plain Equipment whose only effect is a static `equipped_bonus`
+/// (P/T + keywords) and an equip cost. No ETB / triggered riders.
+fn simple_equipment(
+    name: &'static str,
+    mana: crate::mana::ManaCost,
+    equip: crate::mana::ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(equip)],
+        equipped_bonus: Some(EquipBonus {
+            power,
+            toughness,
+            keywords,
+            scale: None,
+            triggered_abilities: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Swiftfoot Boots — {2} Equipment. Equipped creature has hexproof and haste.
+/// Equip {1}.
+pub fn swiftfoot_boots() -> CardDefinition {
+    simple_equipment("Swiftfoot Boots", cost(&[generic(2)]), cost(&[generic(1)]), 0, 0,
+        vec![Keyword::Hexproof, Keyword::Haste])
+}
+
+/// Vulshok Morningstar — {2} Equipment. Equipped creature gets +2/+2. Equip {2}.
+pub fn vulshok_morningstar() -> CardDefinition {
+    simple_equipment("Vulshok Morningstar", cost(&[generic(2)]), cost(&[generic(2)]), 2, 2, vec![])
+}
+
+/// Bone Saw — {0} Equipment. Equipped creature gets +1/+0. Equip {1}.
+pub fn bone_saw() -> CardDefinition {
+    simple_equipment("Bone Saw", cost(&[]), cost(&[generic(1)]), 1, 0, vec![])
+}
+
+/// Accorder's Shield — {0} Equipment. Equipped creature gets +0/+3 and has
+/// vigilance. Equip {3}.
+pub fn accorders_shield() -> CardDefinition {
+    simple_equipment("Accorder's Shield", cost(&[]), cost(&[generic(3)]), 0, 3, vec![Keyword::Vigilance])
+}
+
+/// Strider Harness — {3} Equipment. Equipped creature gets +1/+1 and has haste.
+/// Equip {1}.
+pub fn strider_harness() -> CardDefinition {
+    simple_equipment("Strider Harness", cost(&[generic(3)]), cost(&[generic(1)]), 1, 1, vec![Keyword::Haste])
+}
+
+/// Loxodon Warhammer — {3} Equipment. Equipped creature gets +3/+0 and has
+/// trample and lifelink. Equip {3}.
+pub fn loxodon_warhammer() -> CardDefinition {
+    simple_equipment("Loxodon Warhammer", cost(&[generic(3)]), cost(&[generic(3)]), 3, 0,
+        vec![Keyword::Trample, Keyword::Lifelink])
+}
+
+/// Sword of Vengeance — {3} Equipment. Equipped creature gets +2/+0 and has
+/// first strike, vigilance, trample, and haste. Equip {3}.
+pub fn sword_of_vengeance() -> CardDefinition {
+    simple_equipment("Sword of Vengeance", cost(&[generic(3)]), cost(&[generic(3)]), 2, 0,
+        vec![Keyword::FirstStrike, Keyword::Vigilance, Keyword::Trample, Keyword::Haste])
+}
+
+/// Fireshrieker — {3} Equipment. Equipped creature has double strike. Equip {2}.
+pub fn fireshrieker() -> CardDefinition {
+    simple_equipment("Fireshrieker", cost(&[generic(3)]), cost(&[generic(2)]), 0, 0,
+        vec![Keyword::DoubleStrike])
+}
+
+/// Whispersilk Cloak — {3} Equipment. Equipped creature can't be blocked and
+/// has shroud. Equip {2}.
+pub fn whispersilk_cloak() -> CardDefinition {
+    simple_equipment("Whispersilk Cloak", cost(&[generic(3)]), cost(&[generic(2)]), 0, 0,
+        vec![Keyword::Unblockable, Keyword::Shroud])
+}
+
+/// Darksteel Plate — {3} Equipment (indestructible itself). Equipped creature
+/// has indestructible. Equip {2}.
+pub fn darksteel_plate() -> CardDefinition {
+    let mut def = simple_equipment("Darksteel Plate", cost(&[generic(3)]), cost(&[generic(2)]), 0, 0,
+        vec![Keyword::Indestructible]);
+    def.keywords.push(Keyword::Indestructible);
+    def
 }

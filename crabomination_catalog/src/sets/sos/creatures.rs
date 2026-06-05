@@ -3627,6 +3627,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
                     source: Selector::This,
                     extra_creature_types: vec![],
                     override_pt: None,
+                    non_legendary: false,
                 },
             ]),
         )],

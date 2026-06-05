@@ -496,6 +496,10 @@ pub enum Predicate {
     /// 702.105 — "attacks the player with the most life or tied for most
     /// life"); pair with `who: DefendingPlayer` on an `Attacks` trigger.
     PlayerHasMostLife { who: PlayerRef },
+    /// True if any player matched by `who` has strictly less life than at least
+    /// one of their opponents. Geyadrone Dihada's "if you have less life than
+    /// an opponent" loyalty-reset rider.
+    PlayerHasLessLifeThanOpponent { who: PlayerRef },
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
@@ -1436,6 +1440,8 @@ pub enum Effect {
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
     /// Shuffle `who`'s graveyard into their library.
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
+    /// Shuffle `who`'s library (CR 103.2c). Mind's Desire's pre-exile shuffle.
+    ShuffleLibrary { who: PlayerRef },
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },
@@ -1593,6 +1599,11 @@ pub enum Effect {
     /// Remove every counter of every kind from `what` (CR 122.6 — Vampire
     /// Hexmage's "remove all counters from target permanent").
     RemoveAllCounters { what: Selector },
+    /// Set the loyalty (CR 606) of `what` to `value` — a loyalty-set effect
+    /// ("its loyalty becomes …" / "reset to its starting loyalty"). Overwrites
+    /// the `Loyalty` counter count outright rather than adding/removing.
+    /// Geyadrone Dihada's +1 loyalty-reset rider.
+    SetLoyalty { what: Selector, value: Value },
     /// CR 122.1b — Add a keyword counter to `what`. The host gains the
     /// named keyword while at least one counter of this kind is present
     /// (applied as a layer-6 grant in `compute_battlefield`). Removed
@@ -1700,6 +1711,11 @@ pub enum Effect {
         extra_creature_types: Vec<crate::card::CreatureType>,
         #[serde(default)]
         override_pt: Option<(i32, i32)>,
+        /// CR 707.2e rider — the token copy isn't legendary (Helm of the
+        /// Host). Strips supertypes from the copy so the legend rule doesn't
+        /// destroy it alongside a legendary host.
+        #[serde(default)]
+        non_legendary: bool,
     },
     /// CR 701.32 — Populate: `who` creates a token that's a copy of a creature
     /// token they control (their choice; AutoDecider keeps the highest-power
@@ -2428,6 +2444,7 @@ impl Effect {
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
             Effect::ShuffleGraveyardIntoLibrary { who } => player_has_target(who),
+            Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
                     ManaPayload::Colorless(v)
@@ -2491,6 +2508,7 @@ impl Effect {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
             Effect::RemoveAllCounters { what } => sel_has_target(what),
+            Effect::SetLoyalty { what, value } => sel_has_target(what) || value_has_target(value),
             Effect::Proliferate => false,
             Effect::GainControl { what, .. } => sel_has_target(what),
             Effect::CreateToken { who, count, .. }
@@ -2654,6 +2672,7 @@ impl Effect {
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
             | Effect::RemoveAllCounters { what }
+            | Effect::SetLoyalty { what, .. }
             | Effect::AddKeywordCounter { what, .. }
             | Effect::RemoveKeywordCounter { what, .. } => sel_filter(what),
             // CreateTokenCopyOf — the `source` is the targeted permanent to

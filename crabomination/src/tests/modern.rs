@@ -10,6 +10,9 @@ use crate::TurnStep;
 use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
 
+/// Card-factory fn pointer — keeps parametrized-test case tables readable.
+type Factory = fn() -> crate::card::CardDefinition;
+
 // ── Cantrips ─────────────────────────────────────────────────────────────────
 
 /// Augury Raven resolves as a 2/3 flyer when cast for its foretell cost.
@@ -15412,6 +15415,25 @@ fn geyadrone_dihada_plus_one_drains_each_opponent_for_one() {
     assert!(g.players[0].hand.len() > hand_before, "You draw a card");
 }
 
+/// +1's rider resets loyalty to 3 when you have less life than an opponent.
+#[test]
+fn geyadrone_dihada_plus_one_resets_loyalty_when_behind() {
+    let mut g = two_player_game();
+    let dihada = g.add_card_to_battlefield(0, catalog::geyadrone_dihada());
+    g.add_card_to_library(0, catalog::island());
+    // Push loyalty to 8, then fall behind on life.
+    g.battlefield_find_mut(dihada).unwrap().add_counters(CounterType::Loyalty, 5); // 3 + 5 = 8
+    g.players[0].life = 5;
+    g.players[1].life = 20;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dihada, ability_index: 0, target: None,
+    }).expect("Dihada +1");
+    drain_stack(&mut g);
+    // +1 raised it to 9, then the rider reset it to the starting 3.
+    assert_eq!(g.battlefield_find(dihada).unwrap().counter_count(CounterType::Loyalty), 3,
+        "loyalty reset to starting value when behind on life");
+}
+
 #[test]
 fn geyadrone_dihada_minus_seven_halves_opponent_life() {
     let mut g = two_player_game();
@@ -27402,6 +27424,26 @@ fn helm_of_the_host_copies_equipped_creature_with_haste() {
     assert!(token.has_keyword(&Keyword::Haste), "the copy has haste");
 }
 
+/// CR 707.2e — Helm's copy of a *legendary* host isn't legendary, so the
+/// legend-rule SBA doesn't destroy the original alongside it.
+#[test]
+fn helm_of_the_host_copy_of_legend_is_not_legendary() {
+    use crate::card::Supertype;
+    let mut g = two_player_game();
+    let krenko = g.add_card_to_battlefield(0, catalog::krenko_mob_boss());
+    let helm = g.add_card_to_battlefield(0, catalog::helm_of_the_host());
+    g.battlefield_find_mut(helm).unwrap().attached_to = Some(krenko);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let krenkos: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Krenko, Mob Boss").collect();
+    assert_eq!(krenkos.len(), 2, "both the host and its non-legendary copy survive");
+    let token = krenkos.iter().find(|c| c.is_token).expect("token copy");
+    assert!(!token.definition.supertypes.contains(&Supertype::Legendary),
+        "the token copy isn't legendary");
+}
+
 #[test]
 fn lion_sash_exiles_permanent_card_grows_and_scales_equipped() {
     use crate::card::CounterType;
@@ -28036,4 +28078,235 @@ fn dethrone_silent_when_attacking_lower_life_player() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
         "Dethrone is silent against a non-highest-life player");
+}
+
+// ── Painlands / rainbow lands / mana rocks (cube staples) ────────────────────
+
+/// Each painland taps for {C} (no damage) and for either color, dealing 1.
+#[test]
+fn painlands_tap_for_colors_and_ping() {
+    let cases: &[(Factory, Color, Color)] = &[
+        (catalog::adarkar_wastes, Color::White, Color::Blue),
+        (catalog::underground_river, Color::Blue, Color::Black),
+        (catalog::sulfurous_springs, Color::Black, Color::Red),
+        (catalog::karplusan_forest, Color::Red, Color::Green),
+        (catalog::brushland, Color::Green, Color::White),
+        (catalog::caves_of_koilos, Color::White, Color::Black),
+        (catalog::shivan_reef, Color::Blue, Color::Red),
+        (catalog::llanowar_wastes, Color::Black, Color::Green),
+        (catalog::yavimaya_coast, Color::Green, Color::Blue),
+        (catalog::battlefield_forge, Color::Red, Color::White),
+    ];
+    for (make, c1, _c2) in cases {
+        let mut g = two_player_game();
+        let land = g.add_card_to_battlefield(0, make());
+        g.clear_sickness(land);
+        // Colorless ability (index 0): no damage.
+        let life = g.players[0].life;
+        g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 0, target: None, x_value: None }).expect("tap C");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+        assert_eq!(g.players[0].life, life, "{{C}} ability deals no damage");
+        // Untap and use the first colored ability (index 1): pings for 1.
+        g.battlefield_find_mut(land).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 1, target: None, x_value: None }).expect("tap color");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(*c1), 1);
+        assert_eq!(g.players[0].life, life - 1, "colored ability deals 1 damage");
+    }
+}
+
+/// City of Brass taps for any color and pings its controller for 1.
+#[test]
+fn city_of_brass_taps_any_color_with_ping() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::city_of_brass());
+    g.clear_sickness(land);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 0, target: None, x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produces one mana");
+    assert_eq!(g.players[0].life, life - 1, "deals 1 damage to you");
+}
+
+/// Mana Confluence pays 1 life for one mana of any color.
+#[test]
+fn mana_confluence_pays_life_for_any_color() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::mana_confluence());
+    g.clear_sickness(land);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 0, target: None, x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+    assert_eq!(g.players[0].life, life - 1, "pays 1 life");
+}
+
+/// Ghost Quarter sacrifices to destroy a target land.
+#[test]
+fn ghost_quarter_destroys_target_land() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let gq = g.add_card_to_battlefield(0, catalog::ghost_quarter());
+    let victim = g.add_card_to_battlefield(1, catalog::island());
+    g.clear_sickness(gq);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gq, ability_index: 1, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("activate sac-destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != victim), "target land destroyed");
+    assert!(g.battlefield.iter().all(|c| c.id != gq), "Ghost Quarter sacrificed");
+}
+
+/// Thran Dynamo / Ur-Golem's Eye / Dreamstone Hedron tap for colorless burst.
+#[test]
+fn colorless_rocks_tap_for_burst() {
+    for (make, n) in [
+        (catalog::thran_dynamo as fn() -> crate::card::CardDefinition, 3u32),
+        (catalog::ur_golems_eye, 2),
+        (catalog::dreamstone_hedron, 3),
+    ] {
+        let mut g = two_player_game();
+        let rock = g.add_card_to_battlefield(0, make());
+        g.clear_sickness(rock);
+        g.perform_action(GameAction::ActivateAbility { card_id: rock, ability_index: 0, target: None, x_value: None }).expect("tap");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), n);
+    }
+}
+
+/// Prismatic Lens taps for {C} on its first ability.
+#[test]
+fn prismatic_lens_taps_for_colorless() {
+    let mut g = two_player_game();
+    let lens = g.add_card_to_battlefield(0, catalog::prismatic_lens());
+    g.clear_sickness(lens);
+    g.perform_action(GameAction::ActivateAbility { card_id: lens, ability_index: 0, target: None, x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+}
+
+/// Gilded Lotus taps for three mana of one color.
+#[test]
+fn gilded_lotus_taps_for_three_of_one_color() {
+    let mut g = two_player_game();
+    let lotus = g.add_card_to_battlefield(0, catalog::gilded_lotus());
+    g.clear_sickness(lotus);
+    g.perform_action(GameAction::ActivateAbility { card_id: lotus, ability_index: 0, target: None, x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 3);
+}
+
+/// Commander's Sphere can be sacrificed to draw a card.
+#[test]
+fn commanders_sphere_sacrifices_to_draw() {
+    let mut g = two_player_game();
+    let sphere = g.add_card_to_battlefield(0, catalog::commanders_sphere());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility { card_id: sphere, ability_index: 1, target: None, x_value: None }).expect("sac to draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert!(g.battlefield.iter().all(|c| c.id != sphere), "sphere sacrificed");
+}
+
+/// Temple Bell makes every player draw a card.
+#[test]
+fn temple_bell_each_player_draws() {
+    let mut g = two_player_game();
+    let bell = g.add_card_to_battlefield(0, catalog::temple_bell());
+    g.clear_sickness(bell);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.perform_action(GameAction::ActivateAbility { card_id: bell, ability_index: 0, target: None, x_value: None }).expect("ring");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 + 1);
+    assert_eq!(g.players[1].hand.len(), h1 + 1);
+}
+
+/// Wayfarer's Bauble fetches a basic land onto the battlefield tapped.
+#[test]
+fn wayfarers_bauble_fetches_basic_land() {
+    let mut g = two_player_game();
+    let bauble = g.add_card_to_battlefield(0, catalog::wayfarers_bauble());
+    g.clear_sickness(bauble);
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let lands = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    g.perform_action(GameAction::ActivateAbility { card_id: bauble, ability_index: 0, target: None, x_value: None }).expect("crack bauble");
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands + 1, "a basic land entered");
+    assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped), "fetched land enters tapped");
+}
+
+/// Guardian Idol can animate into a 2/2 Golem.
+#[test]
+fn guardian_idol_animates_to_golem() {
+    let mut g = two_player_game();
+    let idol = g.add_card_to_battlefield(0, catalog::guardian_idol());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: idol, ability_index: 1, target: None, x_value: None }).expect("animate");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(idol).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+}
+
+/// Batterskull's living weapon mints a Germ and attaches, making a 4/4.
+#[test]
+fn batterskull_living_weapon_makes_four_four() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::batterskull());
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, id);
+    let germ = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Phyrexian Germ")
+        .expect("Germ token created");
+    let id = germ.id;
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "Germ is a 4/4 while equipped");
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Simple stat/keyword Equipment grants its bonus and keywords when attached.
+#[test]
+fn simple_equipment_grants_bonus_and_keywords() {
+    use crate::card::Keyword;
+    let cases: &[(Factory, i32, i32, &[Keyword])] = &[
+        (catalog::swiftfoot_boots, 0, 0, &[Keyword::Hexproof, Keyword::Haste]),
+        (catalog::vulshok_morningstar, 2, 2, &[]),
+        (catalog::bone_saw, 1, 0, &[]),
+        (catalog::accorders_shield, 0, 3, &[Keyword::Vigilance]),
+        (catalog::strider_harness, 1, 1, &[Keyword::Haste]),
+        (catalog::loxodon_warhammer, 3, 0, &[Keyword::Trample, Keyword::Lifelink]),
+        (catalog::sword_of_vengeance, 2, 0, &[Keyword::FirstStrike, Keyword::Vigilance, Keyword::Trample, Keyword::Haste]),
+        (catalog::fireshrieker, 0, 0, &[Keyword::DoubleStrike]),
+        (catalog::whispersilk_cloak, 0, 0, &[Keyword::Unblockable, Keyword::Shroud]),
+        (catalog::darksteel_plate, 0, 0, &[Keyword::Indestructible]),
+    ];
+    for (make, dp, dt, kws) in cases {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        let eq = g.add_card_to_battlefield(0, make());
+        g.battlefield_find_mut(eq).unwrap().attached_to = Some(bear);
+        let cp = g.computed_permanent(bear).unwrap();
+        assert_eq!((cp.power, cp.toughness), (2 + dp, 2 + dt),
+            "{} grants +{}/+{}", g.battlefield_find(eq).unwrap().definition.name, dp, dt);
+        for kw in *kws {
+            assert!(cp.keywords.contains(kw), "equipped creature gains {kw:?}");
+        }
+    }
+}
+
+/// Darksteel Plate is itself indestructible.
+#[test]
+fn darksteel_plate_is_indestructible() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let plate = g.add_card_to_battlefield(0, catalog::darksteel_plate());
+    assert!(g.computed_permanent(plate).unwrap().keywords.contains(&Keyword::Indestructible));
 }
