@@ -593,6 +593,23 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature".into(),
         K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
         K::Suspend(n, cost) => format!("Suspend {n}—{}", cost.summary()),
+        // Cost/count-bearing keywords that otherwise fell through to the raw
+        // `{:?}` debug shape — give them printed-Oracle phrasing.
+        K::Bushido(n) => format!("Bushido {n}"),
+        K::Rampage(n) => format!("Rampage {n}"),
+        K::Regenerate(_) => "Regeneration".into(),
+        K::Buyback(cost) => format!("Buyback {}", cost.summary()),
+        K::Morph(cost) => format!("Morph {}", cost.summary()),
+        K::Megamorph(cost) => format!("Megamorph {}", cost.summary()),
+        K::Saddle(n) => format!("Saddle {n}"),
+        K::Casualty(n) => format!("Casualty {n}"),
+        K::Escape(cost, n) => format!("Escape {}, exile {n}", cost.summary()),
+        K::Fortify(cost) => format!("Fortify {}", cost.summary()),
+        K::FlashbackTap(n) => format!("Flashback—Tap {n} creatures"),
+        K::Unleash => "Unleash".into(),
+        K::MustBlock => "Blocks each combat if able".into(),
+        K::MustAttack => "Attacks each combat if able".into(),
+        K::CantBeCopied => "Can't be copied".into(),
         _ => format!("{kw:?}"),
     }
 }
