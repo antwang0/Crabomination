@@ -246,6 +246,14 @@ struct MatchStats {
     /// average (small σ) or swing wildly (large σ), complementing the
     /// min/max envelope and the histogram shape.
     total_turns_squared: u128,
+    /// Running sum of squared match durations in **milliseconds**
+    /// (`Σ ms²`). The duration analogue of `total_turns_squared`: paired
+    /// with `total_duration` (`Σ ms`) and the match count it yields the
+    /// population standard deviation of match length via
+    /// [`duration_stddev`](Self::duration_stddev), so the rolling summary
+    /// reports duration σ next to the turn-count σ. Milliseconds keep the
+    /// squares well within `u128` even for very long sessions.
+    total_duration_squared_ms: u128,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -449,6 +457,8 @@ impl MatchStats {
         });
         let idx = Self::bucket_index(d);
         self.duration_buckets[idx] = self.duration_buckets[idx].saturating_add(1);
+        let ms = d.as_millis();
+        self.total_duration_squared_ms = self.total_duration_squared_ms.saturating_add(ms * ms);
     }
     /// Estimate the `p`th-percentile match duration from the histogram.
     /// `p` is a fraction in `[0.0, 1.0]`. Returns the upper edge of the
@@ -520,6 +530,25 @@ impl MatchStats {
         let mean = self.total_turns as f64 / n;
         let mean_sq = self.total_turns_squared as f64 / n;
         (mean_sq - mean * mean).max(0.0).sqrt() as f32
+    }
+    /// Population standard deviation of match durations, computed from the
+    /// running `Σ ms` (`total_duration`) and `Σ ms²`
+    /// (`total_duration_squared_ms`) accumulators (σ = √(E[x²] − E[x]²)),
+    /// returned as a [`Duration`]. Returns `Duration::ZERO` when no matches
+    /// have completed. The duration analogue of
+    /// [`turn_count_stddev`](Self::turn_count_stddev): a tight σ next to the
+    /// average means consistent match lengths; a large σ flags a "fast
+    /// concession vs. long grind" split the average alone hides.
+    fn duration_stddev(&self) -> Duration {
+        let n = self.total_matches();
+        if n == 0 {
+            return Duration::ZERO;
+        }
+        let n = n as f64;
+        let mean = self.total_duration.as_millis() as f64 / n;
+        let mean_sq = self.total_duration_squared_ms as f64 / n;
+        let var = (mean_sq - mean * mean).max(0.0);
+        Duration::from_millis(var.sqrt() as u64)
     }
     /// Upper edge (inclusive estimate) of turn bucket `i`. Matches the
     /// cut points in [`turn_bucket_index`](Self::turn_bucket_index); the
@@ -680,9 +709,10 @@ fn format_match_stats(s: &MatchStats) -> String {
     // sample.
     if n >= 2 {
         out.push_str(&format!(
-            " p50≤{}, p95≤{} (turns p50≤{}, p95≤{}, σ={:.1})",
+            " p50≤{}, p95≤{}, σ={} (turns p50≤{}, p95≤{}, σ={:.1})",
             format_duration(s.percentile(0.50)),
             format_duration(s.percentile(0.95)),
+            format_duration(s.duration_stddev()),
             s.turn_percentile(0.50),
             s.turn_percentile(0.95),
             s.turn_count_stddev(),
@@ -1478,6 +1508,19 @@ mod tests {
         }
         assert!((s.turn_count_stddev() - 8f32.sqrt()).abs() < 0.001,
             "population stddev of [4,4,10] is √8");
+    }
+
+    #[test]
+    fn duration_stddev_measures_spread() {
+        let mut s = MatchStats::default();
+        assert_eq!(s.duration_stddev(), Duration::ZERO, "no matches → 0");
+        // Durations [1s, 1s, 7s]: mean 3s, variance (4+4+16)/3 = 8 s²,
+        // σ = √8 s ≈ 2828 ms.
+        for ms in [1000u64, 1000, 7000] {
+            s.record_bot(Duration::from_millis(ms), Format::Demo);
+        }
+        let sigma = s.duration_stddev().as_millis();
+        assert!((2825..=2831).contains(&sigma), "σ of [1s,1s,7s] ≈ 2828ms, got {sigma}");
     }
 
     #[test]

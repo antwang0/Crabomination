@@ -840,6 +840,12 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub attachments: Vec<String>,
+    /// CR 702.95 — the `CardId` of this creature's Soulbond partner, if it's
+    /// paired. Lets the client draw a pairing link / badge "Soulbonded with …"
+    /// in the tooltip without scanning the battlefield. `None` for the common
+    /// (unpaired) case. Populated by `project_permanent`.
+    #[serde(default)]
+    pub soulbond_partner: Option<CardId>,
 }
 
 impl PermanentView {

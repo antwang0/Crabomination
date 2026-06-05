@@ -166,6 +166,12 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Attached: {}", p.attachments.join(", ")));
     }
 
+    // Soulbond pairing (CR 702.95): flag the pair so the player sees the
+    // creature is sharing its partner's bonus.
+    if p.soulbond_partner.is_some() {
+        lines.push("Soulbonded".to_string());
+    }
+
     // Card name chosen by Pithing Needle / Phyrexian Revoker (CR 201.3).
     if let Some(name) = &p.named_card {
         lines.push(format!("Naming: {name}"));
@@ -687,6 +693,7 @@ mod tests {
             named_card: None,
             chosen_color: None,
             attachments: vec![],
+            soulbond_partner: None,
         }
     }
 

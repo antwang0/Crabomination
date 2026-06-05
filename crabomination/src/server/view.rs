@@ -474,6 +474,10 @@ fn project_permanent(
             .filter(|o| o.attached_to == Some(card.id))
             .map(|o| o.definition.name.to_string())
             .collect(),
+        // CR 702.95 — Soulbond partner (only while still on the battlefield).
+        soulbond_partner: card
+            .soulbond_partner
+            .filter(|p| battlefield.iter().any(|o| o.id == *p)),
     }
 }
 
@@ -1270,6 +1274,23 @@ mod tests {
         state.battlefield_find_mut(heart).unwrap().chosen_color = Some(crate::mana::Color::Blue);
         assert_eq!(project(&state, 0).battlefield.iter()
             .find(|p| p.id == heart).unwrap().chosen_color, Some(crate::mana::Color::Blue));
+    }
+
+    #[test]
+    fn soulbond_partner_is_surfaced_in_permanent_view() {
+        let mut state = two_player_game();
+        let a = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = state.add_card_to_battlefield(0, catalog::wolfir_silverheart());
+        assert_eq!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == a).unwrap().soulbond_partner, None);
+        state.battlefield_find_mut(a).unwrap().soulbond_partner = Some(b);
+        state.battlefield_find_mut(b).unwrap().soulbond_partner = Some(a);
+        assert_eq!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == a).unwrap().soulbond_partner, Some(b));
+        // A stale link to an off-battlefield card is suppressed.
+        state.remove_from_battlefield_to_graveyard(b);
+        assert_eq!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == a).unwrap().soulbond_partner, None);
     }
 
     #[test]
