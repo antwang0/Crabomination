@@ -1676,6 +1676,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(twisted_landscape);
         v.push(sheltering_landscape);
         v.push(bountiful_landscape);
+        v.push(enduring_vitality);
+        v.push(fangkeepers_familiar);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(gaeas_skyfolk);

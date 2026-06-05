@@ -26409,3 +26409,49 @@ fn landscape_cycle_taps_for_colorless_and_fetches_a_basic() {
         assert!(g.battlefield_find(land2).is_none(), "the Landscape sacrificed itself");
     }
 }
+
+#[test]
+fn enduring_vitality_grants_mana_and_returns_as_enchantment() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::enduring_vitality());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Granted "{T}: Add one mana of any color" (index 0 on the bear).
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, x_value: None,
+    }).expect("granted mana ability");
+    assert_eq!(g.players[0].mana_pool.total() - before, 1, "creature tapped for a mana");
+    // Dies (Bolt the 3/3) → returns as a noncreature enchantment.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt Enduring Vitality");
+    drain_stack(&mut g);
+    let back = g.battlefield_find(id).expect("returned to the battlefield");
+    assert!(back.definition.card_types.contains(&CardType::Enchantment));
+    assert!(!back.definition.card_types.contains(&CardType::Creature),
+        "comes back as a noncreature enchantment");
+}
+
+#[test]
+fn fangkeepers_familiar_mode_zero_gains_life_and_surveils() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::fangkeepers_familiar());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(0)]));
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable (Flash body)");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "mode 0 gained 3 life");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "the Snake resolves");
+}

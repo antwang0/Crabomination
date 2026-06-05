@@ -61,7 +61,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
-| Enduring Vitality | ⏳ | Roomba-style return on death + creature mana untap. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
 | Baloth Prime | ⏳ | TBD. |
@@ -109,7 +108,6 @@ work is listed below.
 | Geyadrone Dihada | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 3-loyalty Planeswalker. **+1**: Each opp loses 1 + you draw 1 (the "if you have less life than an opp, reset loyalty" rider drops — no loyalty-set primitive). **-3**: Threaten — `GainControl(EOT) + Untap + GrantKeyword(Haste, EOT)`. **-7**: Each opp loses half their life rounded up (`Effect::LoseHalfLife`, faithful); card stays 🟡 only for the +1 loyalty-reset rider. Tests: `geyadrone_dihada_plus_one_drains_each_opponent_for_one`, `geyadrone_dihada_minus_three_steals_creature`, `geyadrone_dihada_minus_seven_halves_opponent_life`. |
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |
-| Fangkeeper's Familiar | ⏳ | TBD. |
 | Teval, Arbiter of Virtue | ⏳ | TBD. |
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
 | Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |

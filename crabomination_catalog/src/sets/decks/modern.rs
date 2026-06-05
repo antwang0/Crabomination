@@ -17454,3 +17454,51 @@ pub fn bountiful_landscape() -> CardDefinition {
     landscape("Bountiful Landscape", [LandType::Forest, LandType::Island, LandType::Mountain],
         [Color::Green, Color::Blue, Color::Red])
 }
+
+/// Enduring Vitality — {1}{G}{G} Enchantment Creature — Elk Glimmer 3/3.
+/// Vigilance. Creatures you control have "{T}: Add one mana of any color."
+/// When it dies, return it to the battlefield as a noncreature enchantment.
+pub fn enduring_vitality() -> CardDefinition {
+    CardDefinition {
+        name: "Enduring Vitality",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elk, CreatureType::Glimmer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )],
+        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::ReturnSelfAsEnchantment)],
+        ..Default::default()
+    }
+}
+
+/// Fangkeeper's Familiar — {1}{B}{G}{U} 3/3 Snake. Flash. ETB choose one —
+/// gain 3 life and surveil 3; destroy target enchantment; or counter target
+/// creature spell.
+pub fn fangkeepers_familiar() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Fangkeeper's Familiar",
+        cost: cost(&[generic(1), b(), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(3) },
+            ]),
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::CounterSpell { what: target_filtered(SelectionRequirement::Creature) },
+        ]))],
+        ..Default::default()
+    }
+}
