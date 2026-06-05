@@ -741,6 +741,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: Persist counter-mage ──
+        glen_elendra_archmage,
         // ── Embalm / Eternalize (CR 702.88 / 702.91) ──
         aven_initiate,
         proven_combatant,
@@ -1618,6 +1620,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Poisonous (CR 702.70) ──
         marsh_viper,
+        // ── modern_decks: +1/+1-counter green creatures ──
+        avatar_of_the_resolute,
+        pelt_collector,
         // ── Embalm (CR 702.88) ──
         honored_hydra,
         timeless_witness,

@@ -28262,6 +28262,90 @@ fn grim_haruspex_draws_on_other_nontoken_death() {
     assert_eq!(g.players[0].library.len(), lib - 1, "draw when another nontoken creature dies");
 }
 
+#[test]
+fn avatar_of_the_resolute_enters_with_counters_per_counter_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Two other creatures already carry a +1/+1 counter.
+    for _ in 0..2 {
+        let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(c).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    }
+    let avatar = g.add_card_to_hand(0, catalog::avatar_of_the_resolute());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 0;
+    cast(&mut g, avatar);
+    drain_stack(&mut g);
+    let a = g.battlefield.iter().find(|c| c.definition.name == "Avatar of the Resolute").unwrap();
+    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 2,
+        "enters with one counter per other counter-bearing creature");
+}
+
+#[test]
+fn pelt_collector_grows_and_gains_trample() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let pelt = g.add_card_to_battlefield(0, catalog::pelt_collector());
+    // A bigger creature entering bumps Pelt Collector once.
+    let big = g.add_card_to_hand(0, catalog::grizzly_bears()); // 2/2 > 1/1
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 0;
+    cast(&mut g, big);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pelt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "bigger creature entering grows Pelt Collector");
+    // Force it to 3 counters → trample.
+    g.battlefield_find_mut(pelt).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    assert!(g.computed_permanent(pelt).unwrap().keywords.contains(&Keyword::Trample),
+        "trample at 3+ counters");
+}
+
+#[test]
+fn glen_elendra_counters_noncreature_spell() {
+    let mut g = two_player_game();
+    let glen = g.add_card_to_battlefield(0, catalog::glen_elendra_archmage());
+    // Opponent casts a noncreature spell; Glen Elendra sacs to counter it.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt");
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: glen, ability_index: 0, target: Some(Target::Permanent(bolt)), x_value: None,
+    }).expect("sac to counter");
+    drain_stack(&mut g);
+    // Persist returns Glen Elendra with a -1/-1 counter.
+    let glen_back = g.battlefield.iter().find(|c| c.definition.name == "Glen Elendra Archmage");
+    assert!(glen_back.is_some(), "Persist returns Glen Elendra");
+    assert_eq!(g.players[0].life, 20, "the bolt was countered (no damage)");
+}
+
+#[test]
+fn persist_returns_creature_destroyed_by_removal() {
+    use crate::card::CounterType;
+    // CR 702.79 — Persist applies on death by destruction, not just lethal
+    // combat damage. Murder a Persist creature → it returns with a -1/-1.
+    let mut g = two_player_game();
+    let glen = g.add_card_to_battlefield(0, catalog::glen_elendra_archmage());
+    let murder = g.add_card_to_hand(1, catalog::murder());
+    g.players[1].mana_pool.add(Color::Black, 2);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: murder, target: Some(Target::Permanent(glen)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("murder Glen Elendra");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Glen Elendra Archmage")
+        .expect("Persist returns the creature after destroy");
+    assert_eq!(back.counter_count(CounterType::MinusOneMinusOne), 1,
+        "returns with a -1/-1 counter");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {

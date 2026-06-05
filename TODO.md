@@ -642,6 +642,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Tests: `poisonous_marsh_viper_*`, `gravestorm_ominous_harvest_*`,
   `frenzy_sliver_*`.
 
+- ✅ **CR 702.79 / 702.92 — Persist / Undying on any death** (claude/modern_decks).
+  Persist/Undying previously only returned a creature that died to lethal-damage
+  SBA; death by `Effect::Destroy` or sacrifice silently failed. Extracted the
+  return into `GameState::return_persist_undying` and call it from the
+  destroy/sacrifice funnel (`remove_to_graveyard_with_triggers`) as well.
+  Tests: `persist_returns_creature_destroyed_by_removal`, `glen_elendra_*`.
+
 - ✅ **CR 702.66 — "Spells you cast have delve" static** (claude/modern_decks).
   `StaticEffect::SpellsYouCastHaveDelve` + `controller_grants_spells_delve`
   let the cast path accept a delve-cards list on any spell, not just ones

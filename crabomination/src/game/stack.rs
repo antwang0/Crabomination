@@ -1536,44 +1536,11 @@ impl GameState {
                     intervening_if: None,
                 });
             }
-            // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
-            if has_persist && minus_count == 0 {
-                // Find the card in owner's graveyard and return it.
-                if let Some(pos) = self.players[owner]
-                    .graveyard
-                    .iter()
-                    .position(|c| c.id == id)
-                {
-                    let mut returned = self.players[owner].graveyard.remove(pos);
-                    self.players[owner].cards_left_graveyard_this_turn =
-                        self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
-                    returned.damage = 0;
-                    returned.summoning_sick = true;
-                    returned.add_counters(crate::card::CounterType::MinusOneMinusOne, 1);
-                    let rid = returned.id;
-                    events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
-                    self.battlefield.push(returned);
-                    events.push(GameEvent::PermanentEntered { card_id: rid });
-                }
-            }
-            // Undying: return to battlefield with +1/+1 counter if it had no +1/+1 counter.
-            else if has_undying && plus_count == 0
-                && let Some(pos) = self.players[owner]
-                    .graveyard
-                    .iter()
-                    .position(|c| c.id == id)
-            {
-                let mut returned = self.players[owner].graveyard.remove(pos);
-                self.players[owner].cards_left_graveyard_this_turn =
-                    self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
-                returned.damage = 0;
-                returned.summoning_sick = true;
-                returned.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
-                let rid = returned.id;
-                events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
-                self.battlefield.push(returned);
-                events.push(GameEvent::PermanentEntered { card_id: rid });
-            }
+            // Persist / Undying return (CR 702.79 / 702.92), shared with the
+            // destroy / sacrifice funnels via `return_persist_undying`.
+            self.return_persist_undying(
+                id, owner, (has_persist, has_undying, minus_count, plus_count), &mut events,
+            );
             let _ = controller_idx; // used via closure above
         }
 
@@ -1917,6 +1884,21 @@ impl GameState {
                 (triggers, creature_controller)
             })
             .unwrap_or_default();
+        // Capture Persist/Undying info before the card leaves the battlefield.
+        let (persist_has, undying_has, persist_minus, persist_plus, persist_owner) = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .map(|c| {
+                (
+                    c.definition.keywords.contains(&Keyword::Persist),
+                    c.definition.keywords.contains(&Keyword::Undying),
+                    c.counter_count(crate::card::CounterType::MinusOneMinusOne),
+                    c.counter_count(crate::card::CounterType::PlusOnePlusOne),
+                    c.owner,
+                )
+            })
+            .unwrap_or((false, false, 0, 0, 0));
         // Bump the controller's per-turn died-creature tally for
         // Witherbloom payoffs (Essenceknit Scholar). This path is the
         // standard destroy / damage-lethal route that bypasses the SBA
@@ -1938,6 +1920,7 @@ impl GameState {
             self.died_card_snapshots.insert(id, c.clone());
         }
         self.remove_from_battlefield_to_graveyard(id);
+        let mut out = Vec::new();
         for (source, effect, controller) in leave_triggers {
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
@@ -1955,6 +1938,49 @@ impl GameState {
                 intervening_if: None,
             });
         }
-        vec![] // Trigger events are on the stack; callers resolve them via pass_priority.
+        // CR 702.79 / 702.92 — Persist / Undying apply on *any* death, not
+        // just lethal-damage SBA. The destroy / sacrifice funnels route
+        // through here, so return the creature now if it qualifies.
+        self.return_persist_undying(
+            id, persist_owner, (persist_has, undying_has, persist_minus, persist_plus), &mut out,
+        );
+        out // dies-trigger events are on the stack; Persist returns are in `out`.
+    }
+
+    /// CR 702.79 / 702.92 — Persist / Undying return. Shared by every death
+    /// funnel (SBA lethal damage, `Effect::Destroy`, sacrifice) so a creature
+    /// with Persist/Undying returns regardless of how it died. `owner` and the
+    /// counter counts must be captured from the dying card *before* it left the
+    /// battlefield.
+    /// `info` bundles `(has_persist, has_undying, minus_counter_count,
+    /// plus_counter_count)` captured from the dying card before removal.
+    pub(crate) fn return_persist_undying(
+        &mut self,
+        id: CardId,
+        owner: usize,
+        info: (bool, bool, u32, u32),
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::card::CounterType;
+        let (has_persist, has_undying, minus_count, plus_count) = info;
+        let kind = if has_persist && minus_count == 0 {
+            CounterType::MinusOneMinusOne
+        } else if has_undying && plus_count == 0 {
+            CounterType::PlusOnePlusOne
+        } else {
+            return;
+        };
+        if let Some(pos) = self.players[owner].graveyard.iter().position(|c| c.id == id) {
+            let mut returned = self.players[owner].graveyard.remove(pos);
+            self.players[owner].cards_left_graveyard_this_turn =
+                self.players[owner].cards_left_graveyard_this_turn.saturating_add(1);
+            returned.damage = 0;
+            returned.summoning_sick = true;
+            returned.add_counters(kind, 1);
+            let rid = returned.id;
+            events.push(GameEvent::CardLeftGraveyard { player: owner, card_id: rid });
+            self.battlefield.push(returned);
+            events.push(GameEvent::PermanentEntered { card_id: rid });
+        }
     }
 }

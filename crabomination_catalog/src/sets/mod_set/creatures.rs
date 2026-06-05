@@ -7033,6 +7033,119 @@ pub fn mirran_crusader() -> CardDefinition {
     }
 }
 
+/// Avatar of the Resolute — {G}{G} 3/2 Avatar. Reach, trample. Enters with a
+/// +1/+1 counter for each other creature you control that has a +1/+1
+/// counter (modeled as an ETB trigger). (AER)
+pub fn avatar_of_the_resolute() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Avatar of the Resolute",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource)
+                    .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+            ))),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pelt Collector — {G} 1/1 Elf Warrior. Whenever another creature you
+/// control enters or dies with greater power than this, put a +1/+1 counter
+/// on Pelt Collector. While it has 3+ counters, it has trample. (GRN)
+pub fn pelt_collector() -> CardDefinition {
+    let bigger = || crate::card::Predicate::EntityMatches {
+        what: Selector::TriggerSource,
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::OtherThanSource)
+            .and(SelectionRequirement::PowerGreaterThanSource),
+    };
+    let grow = || Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Pelt Collector",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(bigger()),
+                effect: grow(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                    .with_filter(bigger()),
+                effect: grow(),
+            },
+        ],
+        static_abilities: vec![StaticAbility {
+            description: "As long as Pelt Collector has 3+ counters, it has trample.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: crate::card::Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(3),
+                ),
+                power: 0,
+                toughness: 0,
+                keyword: Some(Keyword::Trample),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Glen Elendra Archmage — {3}{U} 2/2 Faerie Wizard. Flying, Persist.
+/// `{U}, Sacrifice this creature: Counter target noncreature spell.` (EVE)
+pub fn glen_elendra_archmage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Glen Elendra Archmage",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Persist],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[u()]),
+            sac_cost: true,
+            effect: Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::Noncreature),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Helper: "{W}, {T}: Tap target creature." (Goldmeadow Harrier / Gideon's
 /// Lawkeeper share this ability.)
 fn tapper_1_1(name: &'static str, types: Vec<CreatureType>) -> CardDefinition {
