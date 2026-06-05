@@ -8,12 +8,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Cards need Scryfall.** This run's environment has Scryfall on the deny
-  list (`api.scryfall.com` → "Host not in allowlist") and the local cache
-  (`scripts/.scryfall_cache.json`, 332 cards) is already fully implemented in
-  the catalog, so no new real cards could be verified/added. When Scryfall is
-  reachable again, land monarch / Ascend / day-night payoff cards (the engine
-  now supports all three) plus the long tail in `CUBE_FEATURES.md`.
+- **Card lookups now work offline.** `scripts/.scryfall_cache.json` has been
+  expanded from 332 cards to the full Scryfall oracle set (~35.5k cards, every
+  unique card keyed by name, with DFC/adventure front-face aliases), so the
+  routine can implement any card without network access. Rebuild/refresh it
+  with `python scripts/build_oracle_cache.py` (downloads the latest
+  `oracle_cards` bulk and merges, preserving curated entries). Remaining card
+  work: land monarch / Ascend / day-night payoff cards (the engine now
+  supports all three) plus the long tail in `CUBE_FEATURES.md`.
 - **Daybound / Nightbound DFC transform** (CR 702.145). The day/night game
   state + the CR 502.2 transition now ship (`GameState.day_night`,
   `Effect::BecomeDay`/`BecomeNight`, `Predicate::IsDay`/`IsNight`); what
@@ -36,8 +38,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - **Block-restriction follow-ups (CR 509.1b).** The `CantBeBlockedExceptBy`
   filter matcher (`blocker_matches_block_filter`) covers type/color/keyword/
   P-T; "except by Walls/multicolored/specific subtype" compose already. Still
-  needing other primitives: Signal Pest / Goblin Piledriver (Scryfall-verified
-  stats, host firewalled), Soldier of the Pantheon ("protection from
+  needing other primitives: Signal Pest / Goblin Piledriver, Soldier of the
+  Pantheon ("protection from
   multicolored" — a non-color protection grant). Brimaz's block-token rider
   and Whirler Rogue's "tap an artifact: grant unblockable" activated cost are
   also still ⏳.
@@ -87,8 +89,7 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   color, keyword, power/toughness thresholds). Ships Silhana Ledgewalker
   (except by flyers) and Steel Leaf Champion (not by power ≤ 2). Remaining
   consumers: Goblin Piledriver / Soldier of the Pantheon (these have other
-  riders — protection-from-color is their real evasion), Signal Pest (needs
-  Scryfall-verified P/T, firewalled).
+  riders — protection-from-color is their real evasion), Signal Pest.
 - **Choose-color-on-ETB mana rocks — ✅ DONE.** `Effect::ChooseColorForSelf`
   stamps `CardInstance.chosen_color` at ETB; `ManaPayload::ChosenColorOfSource`
   taps for it. Coldsteel Heart shipped. Star Compass (basic-land-type gated)
@@ -146,8 +147,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `instants_or_sorceries_cast_this_turn` tally still equals `granted_at`, so it
   self-expires on the next IS cast with no consume hook. Cleared in lockstep
   with the tally each turn. A real consumer card (Thundertrap Trainer's dropped
-  discount rider) needs Scryfall-verified text — the catalog body is
-  synthesized, so the exact amount is unknown (api.scryfall.com is firewalled).
+  discount rider) has a synthesized catalog body, so the exact amount should
+  be re-checked against the Scryfall cache.
 - **Squad / Backup / Bargain keywords.** Squad (CR 702.157) needs "pay an
   additional cost any number of times" tracking + copy-of-self tokens (the
   `CreateTokenCopyOf` half exists). Backup N (CR 702.164) is ETB +N/+N on a
@@ -161,8 +162,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   fires) sacrifice/exile the tokens as the combat phase ends. `shortcut::
   mobilize(n)` (CR 702.169), `shortcut::myriad` / `Effect::Myriad` (CR 702.115),
   and `shortcut::enlist` / `Effect::Enlist` (CR 702.151) are wired + tested.
-  Real printed cards using these keywords still need Scryfall-verified stats
-  (the api.scryfall.com host is blocked by the environment network policy).
+  Real printed cards using these keywords can be added with stats from the
+  Scryfall cache (`scripts/.scryfall_cache.json`).
 - **Bot accepts beneficial Exploit/Devour.** `shortcut::exploit` /
   `devour` resolve their sacrifice via `MayDo` / `SacrificeAnyNumber`;
   `AutoDecider` and the current bot decline (the body is self-costly by
@@ -180,13 +181,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   offers a Bestow line (enchant its sturdiest creature) in
   `main_phase_action`; **Buyback** is still bot-TODO, and the Bevy client
   still has no "pay buyback?" / "bestow on a creature?" affordance.
-- **New-card pipeline is Scryfall-gated.** `api.scryfall.com` is blocked by
-  the network policy and `scripts/.scryfall_cache.json` (332 cube cards) is
-  fully implemented, so faithful *new* cards can only come from text already
-  in code comments / the md trackers. This run completed 🟡 partials and
-  md-described cards (Spear/Whip/Hammer, Parallax Nexus/Tide, Enduring
-  Innocence) rather than guessing unverified definitions. Re-enable Scryfall
-  (or seed the cache) to lift the new-card floor.
 - **Foretell (CR 702.143) — ✅ DONE.** `CardDefinition.foretell_cost` +
   `GameAction::Foretell` (pay {2}, exile face-down, sorcery speed) +
   `GameAction::CastForetold` (cast from exile for the foretell cost on a
@@ -217,12 +211,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   it during the declare-blockers step (pick a ninja in hand + an unblocked
   attacker to return). Add a button/flow like Crew. The bot doesn't use
   Ninjutsu either (it would need a "swap up" heuristic).
-- **Scryfall blocked in this env** — `api.scryfall.com` returns 403 (network
-  policy), so new/synthesised cards can't be verified. `scripts/.scryfall_
-  cache.json` (332 cards) is the only source; cards outside it can't be
-  faithfully added or completed. Remaining 🟡 cube cards (Torsten, Messenger
-  Falcons P/T, Doomsday Excruciator, Keen-Eyed Curator, the synthesised
-  bodies) are blocked on this until the cache is extended or the policy opens.
 - **Reuse `StaticEffect::PumpSelfByControlledPermanents`** — the new
   self-buff-scaled-by-controlled-permanents static (Karn's Construct token)
   also fits Master of Etherium, Tempered Steel-style self-counts, and any
@@ -247,17 +235,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - **Opponent-controlled pay-to-copy** — Chain Lightning's "the damaged player
   may pay {R}{R} to copy this spell." `Effect::CopySpell*` exist but are all
   controller-side; needs a copy offered to a different player.
-- **Card floor blocked by Scryfall egress.** All 332 cards in
-  `scripts/.scryfall_cache.json` are implemented; new cube/STX TBDs (Baloth
-  Prime, Icetill Explorer, Ouroboroid, …) still need a session with Scryfall
-  access. Prefer promoting documented 🟡 partials + engine primitives until
-  then. The `claude/modern_decks` runs promoted Callous Sell-Sword, Drown in
-  the Loch, **Spoils of the Vault** (NamedBySource), **Plunge into Darkness**
-  (ChooseAmount + entwine), and added **Maze of Ith** (per-source combat
-  prevention). Most remaining cube 🟡s (Keen-Eyed Curator, Doomsday
-  Excruciator, Collective Brutality escalate, the Parallax fade cards) are
-  **not in the cache** and have synthesised bodies, so faithful completion is
-  blocked until egress opens — don't guess their text.
 - **Card-data audit vs Scryfall cache** (`cargo run --bin dump_cards` diffed
   against `scripts/.scryfall_cache.json`). The claude/modern_decks run fixed
   18 mana-cost bugs and 4 keyword bugs this way. **Remaining diffs are all
@@ -276,15 +253,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Helix's bounce, etc.) can adopt the two-slot `Move` pattern; the
   remaining gap is the *auto-target* picker only filling slot 0 for bots.
 
-- **Scryfall is blocked by the web-session network policy** (HTTP 403 for
-  `api.scryfall.com`, both `scripts/fetch_cards.py` and the `WebFetch`
-  tool). Only the 332 cards already in `scripts/.scryfall_cache.json` are
-  available — all of which are implemented. New-card work that needs
-  Scryfall verification (the ⏳ cube TBDs: Baloth Prime, Icetill Explorer,
-  Mightform Harmonizer, Ouroboroid, Springleaf Parade, Metamorphosis
-  Fanatic, The Endstone, the *verge* / tri-landscape lands, etc.) is
-  blocked until a session with Scryfall egress runs. Prefer promoting the
-  documented 🟡 partials and engine primitives meanwhile.
 
 - **"May" triggers: bot now value-aware; human suspend still ⏳.**
   `AutoDecider` still declines every `Decision::OptionalTrigger`
@@ -444,18 +412,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (Geyadrone), energy (Amped Raptor), divided damage / "any number of targets"
   (Pyrokinesis, the STX Outburst/Snow Day cycle), escalate (Collective
   Brutality), multi-player choice (Indulgent Tormentor) — or are synthesized
-  bodies whose exact text can't be verified while Scryfall is off-allowlist.
+  bodies whose exact text should be re-derived from the Scryfall cache.
 - **Flashback with an additional cost** — ✅ done this run.
   `flashback_additional_cost_for_name` (name-keyed, the `dynamic_pt_for_name`
   idiom) + `cast_flashback` validation/payment; `AdditionalCastCost::
   SacrificePermanent` gained a `count`. Lava Dart (sac a Mountain) + Dread
   Return (sac three creatures) promoted. Next flashback rider that needs it:
   pay-life / exile-from-gy flashback costs (none in the current pool).
-- **Card sourcing is data-blocked** — api.scryfall.com is outside the network
-  allowlist and `scripts/cards_dump.json` (319-card pool) is fully implemented,
-  so brand-new cards can only be added for staples whose exact stats/text are
-  known cold. This run added 24 classic core-set bodies (`lea`); further bulk
-  card work needs a Scryfall-equivalent data source in the sandbox.
 - **Multi-target "choose two"** — `Effect::ChooseN` allocates a target slot
   per chosen mode; Cryptic Command (counter/bounce) and Kolaghan's Command
   (reanimate/any-target) now ship the faithful "choose two". Remaining:
@@ -497,8 +460,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   help (the count is shown in the HUD already).
 - **Theros gods left to add** — Heliod (God of the Sun), Purphoros, Pharika,
   and the two-color Theros: Beyond Death gods all reuse
-  `StaticEffect::NotCreatureWhileDevotionBelow`; not added this run pending
-  Scryfall-verified ability text (api.scryfall.com is blocked here).
+  `StaticEffect::NotCreatureWhileDevotionBelow`; add them with ability text
+  from the Scryfall cache.
 - **Client build deps** — building the client in the web sandbox needs
   `libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev` (install via
   apt). Once present `cargo build/clippy -p crabomination_client` works.
@@ -510,243 +473,11 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
-- ✅ **CR 715 — Adventure** (claude/modern_decks). `CardDefinition.adventure`
-  + `CardInstance.{adventuring,on_adventure}` + `GameAction::CastAdventure` /
-  `CastAdventureCreature`. Adventure halves resolve as instant/sorcery spells
-  (Prowess/Magecraft fire via the adventure types) and exile-with-permission;
-  the creature half casts from exile later. ~13 Eldraine adventurers wired.
-- ✅ **CR 702.170 — Plot** (claude/modern_decks). `CardDefinition.plot_cost`
-  + `GameState.{plotted_cards,plotted_this_turn}` + `GameAction::Plot` /
-  `CastPlotted` (exile face-up for the plot cost, free cast on a later turn).
-  Spinewoods Paladin, Vault Plunderer, Slickshot Show-Off, Outcaster Trailblazer.
-- ✅ **CR 702.171 — Saddle** (claude/modern_decks). `Keyword::Saddle(n)` +
-  `CardInstance.saddled` + `Predicate::SourceSaddled` + `GameAction::Saddle`
-  + `shortcut::attacks_while_saddled`. Stingerback Terror.
-- ✅ **CR 702.153 — Casualty** (claude/modern_decks). `Keyword::Casualty(n)`
-  + `GameAction::CastSpellCasualty` (optional sacrifice-a-creature additional
-  cost that copies the spell via `copy_stack_spell`). Cut of the Profits.
-- ✅ **CR 702.108 — Raid** (claude/modern_decks, ability word).
-  `shortcut::raid_etb(body)` + `Predicate::PlayerAttackedThisTurn` backed by
-  `Player.attacked_this_turn` (set in `declare_attackers`, reset in
-  `do_untap`). Mardu Heart-Piercer in `sets::ktk`. Tests in `tests_ktk`.
-- ✅ **CR 702.110 — Dash** (claude/modern_decks). `shortcut::dash(cost)` —
-  `AlternativeCost { dash: true }`; the dashed creature gains haste on ETB
-  (`CardInstance.dashed`) and a `NextEndStep` delayed trigger returns it to
-  its owner's hand. Khans `sets::ktk`. Tests in `tests_ktk`.
-- ✅ **CR 702.142 — Boast** (claude/modern_decks). `shortcut::boast(cost, eff)`
-  — once-per-turn activated ability gated on `Predicate::SourceAttackedThisTurn`
-  (`CardInstance.attacked_this_turn`, set in `declare_attackers`, reset at the
-  turn boundary). Kaldheim `sets::khm`. Tests in `tests_combat_keywords`.
-- ✅ **CR 702.39 — Provoke** (claude/modern_decks). `shortcut::provoke` /
-  `Effect::Provoke` untaps the target and stamps `CardInstance.must_block`;
-  `declare_blockers` forces that creature to block the provoker if able
-  (cleared at end of combat). Tests in `tests_combat_keywords`.
-- ✅ **CR 702.54 — Bloodthirst** (claude/modern_decks). `shortcut::bloodthirst(n)`
-  — ETB `If(Predicate::PlayerDamagedThisTurn{EachOpponent} → AddCounter n)`;
-  new `Player.was_dealt_damage_this_turn` (set in `deal_damage_to_from`, reset
-  for all players in `do_untap`). Tests in `tests_counters`.
-- ✅ **CR 702.43 — Modular** (claude/modern_decks). `shortcut::modular_dies`
-  pairs with `enters_with_counters`; the dies-trigger adds the source's
-  *last-known* +1/+1 count to a target artifact creature (the source is in
-  the graveyard, so `MoveCounter` can't read it — mirrors Hangarback's
-  last-known path). Tests in `tests_counters`.
-- ✅ **CR 702.57 — Graft** (claude/modern_decks). `shortcut::graft` —
-  `EntersBattlefield/YourControl` trigger moving a +1/+1 counter to the
-  entering creature (no-op once empty). Tests in `tests_counters`.
-- ✅ **CR 702.97 — Outlast** (claude/modern_decks). `shortcut::outlast(cost)`
-  — sorcery-speed `{cost},{T}: +1/+1 counter`; counter-anthems ride the
-  layer system's `AllWithCounter` decomposition. Tests in `tests_counters`.
-- ✅ **CR 702.111 — Renown** (claude/modern_decks). `shortcut::renown(n)` —
-  combat-damage trigger gated on "no +1/+1 counters" (renown-once
-  approximation). Tests in `tests_counters`.
-- ✅ **CR 702.121 — Melee** (claude/modern_decks). `shortcut::melee` — flat
-  +1/+1 on attack (per-opponent tally collapses to one). Test in
-  `tests_counters`.
-- ✅ **CR 701.21 — Bolster** (claude/modern_decks). `shortcut::bolster(n)`
-  + `Selector::LeastToughnessYouControl` (the controller's least-toughness
-  creature, first on tie). Test: `bolster_buffs_least_toughness_creature`.
-
-- ✅ **CR 702.122 — Fabricate** (claude/modern_decks). `shortcut::fabricate(n)`
-  — ETB `ChooseMode([AddCounter +1/+1 ×n, CreateToken n Servo])`; AutoDecider
-  picks counters, scripted picks Servos. New `CreatureType::Servo`. Tests:
-  `fabricate_counter_mode_*`, `fabricate_token_mode_*`.
-
-- ✅ **CR 702.108 — Adapt** (claude/modern_decks). `shortcut::adapt(n)` —
-  `If(Not(EntityMatches{This, WithCounter(+1/+1)})) → AddCounter n`. Wired
-  as Pteramander's `{7}: Adapt 4`. Test: `pteramander_adapt_four_*`.
-
-- ✅ **CR 702.149 — Training** (claude/modern_decks). `shortcut::training()`
-  — `Attacks/SelfSource` trigger gated on a co-attacker with the new
-  `SelectionRequirement::PowerGreaterThanSource`, adds a +1/+1 to `This`.
-  Pridemalkin. Tests: `cr_702_149_training_*`.
-
-- ✅ **CR 702.158 — Connive** (claude/modern_decks). `shortcut::connive(n)`
-  — Draw n, discard n, +1/+1 per nonland pitched (counted via
-  `Selector::DiscardedThisResolution{Nonland}`). Quandrix Cryptomancer.
-  Test: `cr_702_158_connive_*`.
-
-- ✅ **CR 601.2d / divided damage** (claude/modern_decks).
-  `Effect::DealDamageDivided` + `Decision::DivideDamage` — Forked Bolt,
-  Pyrokinesis, Crackle with Power, Magma Opus. AutoDecider spreads evenly.
-
-- ✅ **CR 702.139 — Escape** (claude/modern_decks). `Keyword::Escape(cost, n)`
-  + `GameAction::CastEscape`: cast from graveyard for the escape mana cost
-  plus exiling N other graveyard cards. Instants/sorceries resolve back to
-  the graveyard (re-escapable). Ships Cling to Dust. Tests in `tests/modern`.
-
-- ✅ **CR 702.32 — Fading** (claude/modern_decks). `Keyword::Fading(N)` enters
-  with N fade counters (both ETB paths via `apply_fading_vanishing_etb`);
-  `process_fading_vanishing` (turn-based at upkeep) removes one each turn and
-  sacrifices when it can't. Parallax Nexus / Parallax Tide. Tests:
-  `fading_ticks_down_then_sacrifices_when_empty`, `parallax_tide_*`.
-- ✅ **CR 702.62 — Vanishing** (claude/modern_decks). `Keyword::Vanishing(N)`
-  enters with N time counters; same upkeep routine sacrifices when the last is
-  removed. Test: `vanishing_sacrifices_when_last_time_counter_removed`.
-
-- ✅ **CR 509.1b — Block restrictions by characteristic** (claude/modern_decks).
-  `Keyword::CantBeBlockedExceptBy(filter)` / `CantBeBlockedBy(filter)`, read in
-  `can_block_attacker_computed` via `blocker_matches_block_filter` (type/color/
-  keyword/power/toughness on the blocker's *computed* characteristics). The bot
-  honors them through a `blocker_can_block_attacker` legality gate. Silhana
-  Ledgewalker, Steel Leaf Champion. Tests: `silhana_ledgewalker_*`,
-  `steel_leaf_champion_*`, `bot_skips_illegal_block_against_steel_leaf_champion`.
-- ✅ **CR 509.1g — Can't be blocked by more than one** (claude/modern_decks).
-  `Keyword::CantBeBlockedByMoreThanOne` (inverse of Menace), enforced in
-  `declare_blockers`. Charging Rhino. Test: `charging_rhino_blocked_by_at_most_one`.
-- ✅ **CR 701.16 / 701.x — Per-player "half their own X"** (claude/modern_decks).
-  `Effect::{MillHalf, DiscardHalf, SacrificeHalf}` scale to each affected
-  player's own library/hand/permanent count (mirror `LoseHalfLife`). Lord
-  Xander, the Collector is now faithful. Tests: `lord_xander_*`.
-
 - ✅ **CR 603.3b — Same-controller trigger ordering** (claude/modern_decks).
   `order_same_controller_triggers` lets a `wants_ui` controller order their
   own simultaneous triggers via `Decision::OrderTriggers`; AutoDecider keeps
   the default. Client modal wired. Server suspend path still ⏳ (see
   Follow-ups). Tests: `same_controller_triggers_*`, `wants_ui_controller_*`.
-
-- ✅ **CR 603.2 — "Becomes the target" SelfSource triggers** (claude/modern_decks).
-  `event_matches` now accepts `GameEvent::BecameTarget` in the SelfSource
-  `scope_ok` arm (previously the implicit target==source check passed but the
-  scope match dropped it, so these triggers silently never fired). Powers
-  Goldspan Dragon (Treasure on attack/target) and Phantasmal Image's
-  sacrifice-when-targeted rider. Tests:
-  `goldspan_dragon_treasure_on_becoming_targeted`,
-  `phantasmal_image_sacrifices_itself_when_targeted`.
-
-- ✅ **CR 119.5 — Set life total** (claude/modern_decks). Biorhythm now uses
-  `Effect::SetLifeTotal` over `ForEach(EachPlayer)` with
-  `Value::CreatureCountControlledBy(Triggerer)`, so every seat's life becomes
-  its own creature count (multiplayer-correct). Test:
-  `biorhythm_sets_each_player_to_own_count_in_multiplayer`.
-
-- ✅ **CR 702.130 — Enrage** (+ claude/modern_decks: now fires on **lethal**
-  damage — `dispatch_triggers_for_events` walks `died_card_snapshots` for
-  SelfSource `DealtDamage` triggers, so a creature that dies to the same
-  damage still triggers via last-known info; CR 603.10a). Ripjaw Raptor,
-  Frilled Deathspitter, Raptor Hatchling.
-
-- ✅ **CR 702.68 — Frenzy** (claude/modern_decks). `shortcut::frenzy(n)` —
-  `AttacksAndIsntBlocked / SelfSource` pump of `This` +n/+0 EOT (built on
-  the existing `on_unblocked` helper). Silent when blocked. Tests in
-  `tests/combat_keywords.rs`.
-
-- ✅ **CR 702.131 — Afflict** (claude/modern_decks). `shortcut::afflict(n)` —
-  `BecomesBlocked / SelfSource` trigger that makes `PlayerRef::DefendingPlayer`
-  lose n life (resolved while the source is still attacking).
-
-- ✅ **CR 702.135 — Afterlife** (claude/modern_decks). `shortcut::afterlife(n)`
-  — `CreatureDied / SelfSource` trigger minting n 1/1 white-and-black Spirit
-  tokens with flying.
-
-- ✅ **CR 702.105 — Exploit** (claude/modern_decks). `shortcut::exploit(payoff)`
-  — ETB `MayDo([Sacrifice 1 creature, payoff])`; declining the sac skips the
-  payoff (702.105d). Demo: Silverquill Tithe-Taker b209. Tests
-  `cr_702_105_exploit_*` in `tests::stx::part_18`.
-- ✅ **CR 702.83 — Devour** (claude/modern_decks). `shortcut::devour(n)` —
-  ETB `SacrificeAnyNumber` over other creatures, each dropping n +1/+1
-  counters on `Selector::This`. Demo: Witherbloom Devourer b209. Test
-  `cr_702_83_devour_enters_with_counters_per_sacrifice`.
-- ✅ **CR 702.119 — Escalate** (claude/modern_decks). `Effect::Escalate
-  { modes, cost }` — the cast-time `mode` is the base pick; a
-  `Decision::ChooseModes` answer escalates to more distinct modes, paying
-  `cost` (Collective Brutality's discard-a-card, capped by hand size) per
-  extra. Per-mode target slots assigned in run order. Collective Brutality
-  is now faithful; test `collective_brutality_escalate_runs_two_modes_paying_discard`.
-
-- ✅ **CR 702.99 — Extort** (claude/modern_decks). `shortcut::extort()` —
-  `SpellCast / YourControl` trigger over `MayPay({W/B}, drain 1)`. Basilica
-  Screecher. Tests: `cr_702_99_extort_*`.
-
-- ✅ **CR 702.137 — Riot** (claude/modern_decks). `shortcut::riot()` — ETB
-  `ChooseMode([GrantKeyword(Haste, Permanent), AddCounter(+1/+1)])`; AutoDecider
-  takes haste, scripted picks the counter. Zhur-Taa Goblin. Tests:
-  `cr_702_137_riot_*`.
-
-- ✅ **CR 702.46 — Soulshift** (claude/modern_decks). `shortcut::soulshift(n)`
-  — `CreatureDied / SelfSource` `MayDo(Move target → hand)` over an
-  `InGraveyard ∧ HasCreatureType(Spirit) ∧ ManaValueAtMost(n)` filter. Test:
-  `cr_702_46_soulshift_returns_a_spirit_from_graveyard`. (No real Soulshift
-  card wired yet — Scryfall was unreachable this run; add Kamigawa Spirits
-  when network is available.)
-
-  (Bushido CR 702.45, Flanking CR 702.25, Rampage CR 702.23 already ship as
-  `Keyword::*` combat-step rules wired in `combat.rs::declare_blockers`.)
-
-- ✅ **CR 700.5 — Devotion** (claude/modern_decks). `Value::DevotionTo(colors)`
-  counts colored mana symbols among your permanents (hybrid/Phyrexian count
-  per half). `StaticEffect::NotCreatureWhileDevotionBelow` gates the Nyx
-  gods' creature-ness via a layer-4 `RemoveCardType(Creature)`, resolved
-  against live devotion in `gather_continuous_effects`. `ManaPayload::
-  DevotionOfChosenColor` powers Nykthos. Surfaced in `PlayerView.devotion`.
-  Cards: Gray Merchant of Asphodel, Nylea, Thassa, Erebos, Nykthos.
-
-- ✅ **CR 508.0 — "Attacks only alone"** (claude/modern_decks).
-  `Keyword::AttacksAlone` — `declare_attackers` rejects a multi-attacker
-  batch containing it. Master of Cruelties. Test:
-  `master_of_cruelties_cannot_attack_alongside_another_creature`.
-
-- ✅ **CR 508.1d — "Attacks each combat if able"** (claude/modern_decks).
-  `Keyword::MustAttack` — `declare_attackers` rejects a declaration that
-  omits an able must-attack creature while an opponent is in range; the bot
-  force-includes them. Juggernaut. Tests: `juggernaut_must_be_declared_as_
-  attacker`, `juggernaut_tapped_is_exempt_from_must_attack`.
-
-- ✅ **CR 702.49 — Ninjutsu** (claude/modern_decks). `Keyword::Ninjutsu(cost)`
-  + `GameAction::Ninjutsu { ninja, returning }` — a declare-blockers special
-  action that pays the cost, returns an unblocked attacker to hand, and puts
-  the ninja onto the battlefield tapped and attacking the same defender
-  (bypassing the declare-attackers timing/sickness gates). Fallen Shinobi.
-  Tests: `fallen_shinobi_ninjutsu_swaps_in_for_an_unblocked_attacker`,
-  `fallen_shinobi_ninjutsu_rejected_on_blocked_attacker`.
-
-- ✅ **CR 508.1a — Defender-board attack restriction** (claude/modern_decks).
-  `Keyword::CanAttackOnlyIfDefenderControls(filter)` — `declare_attackers`
-  rejects declaring the bearer unless the attack's defending player controls
-  a permanent matching `filter` (evaluated per-attacker before the mutable
-  attacker binding). Dandân ("can't attack unless defending player controls
-  an Island"). Tests: `dandan_cannot_attack_unless_defender_controls_an_island`.
-
-- ✅ **CR 701.38 — Goad** (claude/modern_decks). `CardInstance.goaded_by` +
-  `Effect::Goad`; goaded creatures are treated as must-attack in
-  `declare_attackers` (engine + bot force-include), and each goader's grant
-  clears at their own `do_untap` ("until your next turn"). Disrupt Decorum.
-  Tests: `disrupt_decorum_goads_opponents_creatures`,
-  `goaded_creature_must_attack`, `goad_expires_at_goaders_next_turn`.
-  Follow-up: the "attack a player other than the goader if able" clause is
-  vacuous in 1v1 (the goader is the only target) and not yet enforced in
-  multiplayer; Big Play mode 0's "attacks next turn if able" still wants a
-  future-turn-scoped variant.
-
-- ✅ **CR 701.40 — Explore** (claude/modern_decks). `Effect::Explore` +
-  `EventKind`/`GameEvent::Explored` (wired through the trigger dispatcher
-  and net wire). Reveal top of library: land → hand, otherwise +1/+1 counter
-  on the exploring permanent (the optional graveyard choice collapses to
-  keep-on-top). Merfolk Branchwalker, Jadelight Ranger (double explore),
-  Wildgrowth Walker (explore payoff). Tests in `tests/modern`.
-
-- ✅ **CR 701.13 — Investigate** (claude/modern_decks).
-  `shortcut::investigate(n)` mints `n` `clue_token()`s (`{2}, Sac: Draw`);
-  Thraben Inspector (ETB). Test: `thraben_inspector_investigates_on_etb`.
 
 - ✅ **CR 702.32 — Kicker** (claude/modern_decks).
   `GameAction::CastSpellKicked` folds the optional kicker cost into the
@@ -759,36 +490,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Asunder, Bloodchief's Thirst, Burst Lightning, Into the Roil, Goblin
   Bushwhacker (ETB-kicked). Tests in `tests/modern` + `tests/stx/part_01`.
   Remaining: client opt-in affordance + a bot heuristic to kick.
-
-- ✅ **CR 603.6e — Linked "exile until ~ leaves"** (claude/modern_decks).
-  `Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves` stamp
-  `CardInstance.exiled_by`; `return_linked_exiles` (called from every
-  battlefield-removal path) returns the card to battlefield/hand when the
-  source leaves. Banisher Priest, Fiend Hunter, Oblivion Ring, Brain
-  Maggot, Tidehollow Sculler. Snapshot round-trips the link.
-
-- ✅ **CR 702.92 — Battle cry** (claude/modern_decks). `shortcut::battle_cry`
-  — `Attacks/SelfSource` trigger pumping `IsAttacking ∧ OtherThanSource`
-  +N/+0. Goblin Wardriver. Tests: `cr_702_92_battle_cry_pumps_other_attackers_only`.
-
-- ✅ **CR 702.83 — Exalted** — `shortcut::exalted` (already engine-wired);
-  added card users Akrasan Squire / Aven Squire + a multi-source stacking
-  test (`cr_702_83b_multiple_exalted_stack_on_lone_attacker`).
-
-- ✅ **CR 702.135 — Mentor** (claude/modern_decks). Attacks/SelfSource
-  trigger adding a +1/+1 counter to a target `IsAttacking ∧
-  PowerLessThanSource ∧ OtherThanSource` creature. Sunhome Stalwart.
-  Test: `cr_702_135_mentor_counters_lesser_power_attacker`.
-
-- ✅ **CR 702.100 — Evolve** (claude/modern_decks). `shortcut::evolve` —
-  `EntersBattlefield/YourControl` trigger gated on the entering creature
-  (`TriggerSource`) being another creature with the new
-  `SelectionRequirement::GreaterPowerOrToughnessThanSource`, adding a
-  +1/+1 counter to `This`. Cloudfin Raptor, Experiment One, Fathom Mage
-  (Fathom Mage chains a `CounterAdded(+1/+1)/SelfSource` → Draw). Tests:
-  `cloudfin_raptor_evolves_when_bigger_creature_enters`,
-  `experiment_one_does_not_evolve_for_equal_creature`,
-  `fathom_mage_draws_when_it_evolves`.
 
 - ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
   batch 142 — audit against `MagicCompRules_20260417.txt` lines
@@ -1041,8 +742,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Knight of the Reliquary tests (in cube + stx::iconic) cover the
   `DynamicPt::*` CDA paths.
 
-- ✅ **CR 701.21 — Sacrifice**
-
 - 🟡 **CR 119 — Life** (push modern_decks batch 50,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`). The life-total primitive — how
@@ -1168,8 +867,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   post-draw actions on replaced draws), and 121.8 (mid-cast
   face-down draws) all land.
 
-- ✅ **CR 501 — Beginning Phase**
-
 - 🟡 **CR 502 — Untap Step** (push modern_decks batch 39,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The untap step's turn-based actions.
@@ -1217,14 +914,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `tests::stx::stun_counter_*` cover (c); CR 502.3 prevent-untap is
   locked in via `cr_502_3_prevent_untap_*` (push batch 162). Promote
   to ✅ when 502.1 (Phasing) AND 502.2 (Day/Night) land.
-
-- ✅ **CR 503 — Upkeep Step**
-
-- ✅ **CR 606 — Loyalty Abilities**
-
-- ✅ **CR 504 — Draw Step**
-
-- ✅ **CR 505 — Main Phase**
 
 - 🟡 **CR 509 — Declare Blockers Step** (push modern_decks batch 33,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
@@ -1799,8 +1488,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Battle type), 122.1i (rad counters), and 122.2-strict counter
   clearing on zone change.
 
-- ✅ **CR 405 — Stack**
-
 - 🟡 **CR 401 — Library** (push claude/modern_decks batch 126 audit,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt` lines 1984–1998): The library zone
@@ -1856,8 +1543,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   401.4 (multi-card-same-position picker) and 401.5/401.6 (cast-time
   top-of-library recompute) land. 401.7 is fully ✅ as of batch 138 via
   the new `LibraryPosition::FromTop(usize)` primitive.
-
-- ✅ **CR 406 — Exile**
 
 - 🟡 **CR 705 — Flipping a Coin** (push modern_decks batch 48/63 audit,
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): Stale ⏳
@@ -2047,25 +1732,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Wear // Tear ships at full fidelity (both halves castable, Fuse
   mode wired, target filters per half).
 
-- ✅ **CR 107 — Numbers and Symbols** (incl. **107.16 Energy {E}**:
-  `Player.energy` + `Effect::AddEnergy`/`PayEnergy`/`PayEnergyOrElse`; the
-  **`EventKind::EnergyGained` trigger** — "whenever you get one or more {E}"
-  — now fires off `GameEvent::EnergyGained` with the amount exposed via
-  `Value::TriggerEventAmount`. Cards: Aetherborn Marauder, Lathnu Hellion,
-  Greenbelt Rampager, plus the existing Kaladesh suite.)
-
-- ✅ **CR 701.32 — Populate** (claude/modern_decks). `Effect::Populate { who }`
-  copies a creature token the player controls (AutoDecider keeps the
-  highest-power one; token doublers apply). Tests:
-  `populate_copies_a_creature_token_you_control`,
-  `populate_is_noop_without_a_creature_token`.
-
-- ✅ **CR 109 — Objects**
-
-- ✅ **CR 110 — Permanents**
-
-- ✅ **CR 111 — Tokens**
-
 - ✅ **CR 510 — Combat Damage Step** (push modern_decks batch 38; multi-
   blocker damage-split player prompt landed claude/modern_decks — audit
   against `MagicCompRules_20260417.txt`):
@@ -2124,8 +1790,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   work: a `DecisionWire::AssignCombatDamage` modal so a networked human
   picks the split (server consults the decider synchronously today, same
   caveat as `CombatDamageOrder`).
-
-- ✅ **CR 511 — End of Combat Step**
 
 - 🟡 **CR 506 — Combat Phase** (push modern_decks audit,
   claude/modern_decks branch): The combat-phase framework — five
@@ -2311,8 +1975,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   framework. Promote to ✅ when 115.7 (change targets) lands as a
   primitive.
 
-- ✅ **CR 122.6 — Counters on permanents entering with counters**
-
 - 🟡 **CR 121 — Drawing a Card** (push modern_decks audit,
   claude/modern_decks branch): The card-draw foundation, gated as
   the engine's `Effect::Draw` + `Player::draw_top` site. Audit:
@@ -2353,10 +2015,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   replacement-draw card lands): add `Effect::DrawReplacement` event
   emission so cards like Notion Thief / Possibility Storm can wire
   cleanly.
-
-- ✅ **CR 119 — Life**
-
-- ✅ **CR 117 — Timing and Priority**
 
 - 🟡 **CR 614 — Replacement Effects** (push modern_decks batch 56
   audit, claude/modern_decks branch — audit against
@@ -2430,14 +2088,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   the umbrella row to ✅ when 614.2 (general damage-replacement)
   and 614.9 (redirection) land.
 
-- ✅ **CR 614.1a — "Instead" replacement: pay-or-sacrifice ETB-trigger
-
-- ✅ **CR 614.16 — "If an effect would create tokens / put counters,
-
-- ✅ **CR 113.10b — "Loses all abilities" continuous effects**
-
-- ✅ **CR 603.4 — Intervening 'if' clause (both halves now wired)**
-
 - 🟡 **CR 115.3 / 115.5 — Target distinctness + self-targeting**
   (push modern_decks audit, claude/modern_decks branch): "The same
   target can't be chosen multiple times for any one instance of the
@@ -2508,37 +2158,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (b) damage **redirection** (Maze of Ith); (c) per-source "next N from
   source X" shields.
 
-- ✅ **CR 120.6 — Marked damage persists until cleanup; lethal damage
-
-- ✅ **CR 120.4 — Four-part damage-dealing sequence**
-
-- ✅ **CR 120.5 — Damage doesn't destroy a creature directly; SBA
-
-- ✅ **CR 120.7 — Source of damage tracking**
-
-- ✅ **CR 613.4c / 613.7c — Layer 7c (counter / +N/+M) applies above
-
-- ✅ **CR 608.3f / 707.10f — Permanent-spell copies are tokens**
-
-- ✅ **CR 707.10c / 707.10 — Copy effects and "new targets"**
-
-- ✅ **CR 700.4 — Definition of "dies"**
-
-- ✅ **CR 104.2b — "An effect may state that a player wins the game"**
-
-- ✅ **CR 701.13 — Exile**
-
-- ✅ **CR 701.16 — Investigate**
-
-- ✅ **CR 700.1 — Events**
-
-- ✅ **CR 701.17 — Mill**
-
-- ✅ **CR 402.2 — Maximum hand size enforced at cleanup, opt-out via
-- ✅ **CR 119.9 — Zero-life-gain emits no event**
-
-- ✅ **CR 119.6 — Zero or negative life loses the game**
-
 - 🟡 **CR 305 — Lands** (push modern_decks batch 67 audit,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The land primitive — playing a land,
@@ -2598,16 +2217,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Promote the umbrella to ✅ when 305.7 (set-subtype rewrite) lands;
   the remaining clauses are end-to-end CR-compliant.
 
-- ✅ **CR 305.2 / 305.2a / 305.2b — One land per turn enforcement +
-
-- ✅ **CR 608.2c / 701.6a — Later text on a card may modify earlier
-
-- ✅ **CR 109.3 / 121 — Power and toughness can be read off the
-- ✅ **CR 605.3a / 605.3b — Mana abilities resolve immediately without
-- ✅ **CR 514.1 — Cleanup-step discard down to max hand size**
-- ✅ **CR 614.12 — "Enters with N counters" replacement effects**
-- ✅ **CR 701.14 — Fight**
-
 - 🟡 **CR 701.48 — Learn** (push modern_decks batch 24 audit,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   "Learn" means "You may discard a card. If you do, draw a card. If you
@@ -2627,30 +2236,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Sciences ✅, Mascot Interception ✅, Containment Breach ✅ — all use
   the same "Learn → Draw 1" approximation. Promote to ✅ when the
   Lesson sideboard model lands.
-
-- ✅ **CR 701.21 — Sacrifice**
-
-- ✅ **CR 603.10a — Die-trigger scope filtering for the dying card**
-
-- ✅ **CR 701.26 — Tap and Untap**
-
-- ✅ **CR 701.25c — Surveil 0 emits no surveil event**
-
-- ✅ **CR 701.7 — Create (tokens)**
-
-- ✅ **CR 701.22b — Scry 0 emits no scry event**
-
-- ✅ **CR 120.8 — 0-damage event suppression**
-- ✅ **CR 702.90b — Infect damage to a player adds poison counters**
-- ✅ **CR 702.180c — Toxic N**. `Keyword::Toxic(N)` gives the defending
-  player N poison counters when the creature deals combat damage to them,
-  stacking with normal damage and Infect. Wired in combat (`AttackerInfo`
-  + the player-damage path); 10-poison loss SBA already present.
-- ✅ **CR 305.6/.7 + 613 — basic-land type changes**.
-  `Effect::BecomeBasicLand` swaps the type line and intrinsic mana
-  (`intrinsic_land_mana_abilities` derives `{T}: Add <color>` from computed
-  basic land types); `Effect::ResetCreature` sets a creature's P/T + types
-  and strips abilities via the layer system (Oko, Turn to Frog).
 
 - 🟡 **CR 702.15 — Lifelink**. The
   lifelink keyword: a source with lifelink causes its controller to
@@ -2768,17 +2353,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   defaults to "all friendlies + your own life total" as a
   reasonable bot baseline).
 
-- ✅ **CR 702.34a — Flashback exile-on-resolve**
-- ✅ **CR 601.2f — Cost reductions can't take the mana cost below {0},
-
-- ✅ **CR 121.4 / 704.5b — Decking out loses the game**
-
-- ✅ **CR 700.2b — Modal triggered-ability mode chosen at push-time**
-- ✅ **CR 120.3c — Damage to a planeswalker removes loyalty counters**
-- ✅ **CR 613.4b — Layer 7b set-P/T sublayer**
-- ✅ **CR 700.2d — Modal "choose more than one"**
-- ✅ **CR 506.4 — Permanent removed from combat on zone change**
-- ✅ **CR 502.4 — No priority during untap step**
 - 🟡 **CR 614.10 — Skip effects are replacement effects** (push XXVIII
   audit): "An effect that causes a player to skip an event, step,
   phase, or turn is a replacement effect. 'Skip [something]' is the
@@ -2789,16 +2363,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Verity Circle's draw-skip riders depend on a `SkipNextStep` or
   `SkipNextDraw` replacement primitive. Tracked under "Replacement
   Effects" below.
-- ✅ **CR 605.1a — Mana abilities (activated)**
-- ✅ **CR 605.4a — Mana abilities don't go on the stack**
-- ✅ **CR 707.2 — Copy characteristics**
-- ✅ **CR 707.10 — Spell copies**
-- ✅ **CR 707.10a — State-based action**
 - 🟡 **CR 706 — Casting spells**: `cast_spell` covers the main path.
   Gaps: choose-additional-cost ("kicker"/"buyback" alternatives are
   via `alternative_cost`, but only one alt-cost can be active at
   cast time; multi-alt cycles aren't generalized).
-- ✅ **CR 509.1i — Block triggers fire on blocker declaration**
 - 🟡 **CR 702.29 — Cycling** (renumbered from CR 702.21 in the
   20260116 rules edition). The base cycling action ships: a new
   `GameAction::Cycle { card_id }` reads the card's printed
@@ -2835,15 +2403,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 - 🟡 **CR 117.1 — Order of priority**: `pass_priority` walks the
   alive players in seat order. Multi-player APNAP ordering for
   triggers / simultaneous effects is approximated.
-- ✅ **CR 119.4 — Pay-life-only-if-life-≥-cost**
-- ✅ **CR 603.6c — Leaves-the-battlefield abilities check first zone**
-- ✅ **CR 603.10a — Graveyard-leave triggers look back in time**
-- ✅ **CR 121.5 — Put-into-hand is not a draw**
-- ✅ **CR 121.2 — Drawing cards one at a time**
-- ✅ **CR 121.4 — Decking out loses the game**
-- ✅ **CR 122.3 — +1/+1 and -1/-1 counters cancel**
-- ✅ **CR 122.1d — Stun counter prevents next untap**
-- ✅ **CR 122.6a — Counters on enter-with-counters**
 - 🟡 **CR 122.2 — Counters cleared on zone change**: "Counters on
   an object are not retained if that object moves from one zone to
   another." The engine currently **retains** counters across zones
@@ -2859,10 +2418,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `move_card_to`; we should add a per-card-type "preserves counters"
   flag (or a CR 122-strict clear pass that also updates Felisa) in
   a future engine pass.
-- ✅ **CR 122.8 — Counter movement when source has left the
-
-- ✅ **CR 614.12 — Enters-with-counters replacement effects**
-
 - 🟡 **CR 116 — Special Actions** (push modern_decks audit, batch 14,
   claude/modern_decks branch): "Special actions are actions a player
   may take when they have priority that don't use the stack."
@@ -2941,8 +2496,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (Crew 2, promoted from always-creature). Lock-in:
   `cr_702_122_crew_requires_total_power_at_least_n`,
   `cr_301_7_vehicle_is_not_a_creature_until_crewed`).
-
-- ✅ **CR 302 — Creatures**
 
 - 🟡 **CR 701.8 — Destroy** (push modern_decks batch 42 audit,
   claude/modern_decks branch — audit against
@@ -3170,14 +2723,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (redirects positive deltas in `adjust_life`; Silverquill Reproach b209;
   test `cr_614_life_gain_becomes_loss_for_opponent`).
 
-- ✅ **Keyword counters (CR 122.1b)** — wired via `CardInstance.
-  keyword_counters: HashMap<Keyword, u32>` (a dedicated map rather than a
-  `CounterType::Keyword` payload variant). The layer pass in `layers.rs`
-  grants each counted keyword to the permanent; `Effect::AddCounter` /
-  `RemoveCounter` of a keyword route here; snapshots round-trip them;
-  `DoubleCounters` doubles them (`cr_614_16_keyword_counters_are_doubled_*`).
-  `has_keyword` reads them. (This row was stale.)
-
 - ⏳ **Damage-source choice primitive (CR 120.7)** (push
   claude/modern_decks batch 119 — new suggestion, paired with the new
   CR 120.7 audit row). The current `Effect::DealDamage` path threads
@@ -3188,11 +2733,6 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `DecisionKind::ChooseSource` decision-point would unblock these.
   Engine-wide ⏳; low priority since no current STX/SOS/cube card
   needs it.
-
-- ✅ **Vehicle / Crew primitive**. `Keyword::Crew(N)` + `GameAction::Crew`
-  tap untapped creatures totalling power ≥ N to animate a Vehicle into an
-  artifact creature EOT (layer-4 `AddCardType(Creature)`); combat reads the
-  computed view so a crewed Vehicle can attack. (This TODO row was stale.)
 
 - 🟡 **Copy-token primitive** — `Effect::CreateTokenCopyOf { who, count,
   source, extra_creature_types, override_pt }` ships the token-copy half
@@ -4066,21 +3606,6 @@ Fiend Hunter are now handled by the dedicated
 `Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves`
 primitives — see FEATURE_ROADMAP Tier-1 #4.) The former is smaller
 surface but introduces effect-side mutation of ctx.
-
-### Spend-Restricted Mana — ✅ DONE
-Strixhaven's "Spend this mana only to cast an instant or sorcery
-spell" (Hydro-Channeler, Tablet of Discovery's {T}: Add {R}{R}
-ability, Abstract Paintmage's PreCombatMain trigger, Great Hall of
-the Biblioplex, Resonating Lute's land-grant) is now wired. The mana
-pool holds a separate `restricted: Vec<(Color, u32, SpendRestriction)>`
-bucket (kept out of `total()`/`amount()`); `ManaPool::pay_for_spell(cost,
-kind)` folds in the entries whose restriction permits the spell's
-`SpellKind`, draining them ahead of unrestricted mana of the same
-color. The catalog tags mana via `ManaPayload::Restricted(inner,
-restriction)`; the spell-cast path threads the `SpellKind`. Covered by
-`crabomination_base::tests::mana::restricted_*` and
-`tests::sos::{tablet_restricted_mana_*, abstract_paintmage_*,
-great_hall_pay_one_life_*, resonating_lute_grants_lands_*}`.
 
 ### "Move at most one matching card" — `Selector::OneOf`
 Several SOS effects exile/move "a card" from a graveyard, hand, or
@@ -5006,18 +4531,6 @@ resolution time" in the Suggested next-up tasks section.
   `converged_value` onto the resulting `CardInstance` at spell-resolve
   time. Tracked separately.
 
-- ✅ **Card — Wilt in the Heat's death-replacement rider** — "if that
-  creature would die this turn, exile it instead" is now wired via
-  `Effect::ExileIfWouldDieThisTurn { what }`, which records affected
-  permanents in `GameState::dies_to_exile_eot` (cleared at cleanup). The
-  redirect rides the existing finality-counter path in
-  `remove_from_battlefield_to_graveyard` — the single choke point for all
-  deaths (SBA lethal / destroy / sacrifice) — so it correctly spares
-  indestructible creatures and catches deaths from later-this-turn combat
-  or removal. Covered by `tests::sos::wilt_in_the_heat_*`. (The same
-  primitive is reusable for future Path-to-Exile-style "exile instead of
-  destroy" cards.)
-
 - 🟡 **Card — first-class "may play this turn" pipeline** — Suspend
   Aggression / Ark of Hunger / Tablet of Discovery / Practiced
   Scrollsmith / Improvisation Capstone all exile/mill cards then "may
@@ -5484,14 +4997,6 @@ resolution time" in the Suggested next-up tasks section.
   enters_with_counters, keywords, etc.). Promotes 4-5 partial cards
   from 🟡 → ✅ and is a prerequisite for CR 707's audit row promotion.
 
-- ✅ **Spend-restricted mana primitive** — DONE (see "Spend-Restricted
-  Mana — ✅ DONE" above). `ManaPool` gained a `restricted` bucket +
-  `pay_for_spell(cost, kind)`; mana is tagged via
-  `ManaPayload::Restricted`, and `pay_for_spell` walks restricted mana
-  first when the spell's `SpellKind` matches. Finished Hydro-Channeler,
-  Great Hall of the Biblioplex, Resonating Lute, Abstract Paintmage, and
-  Tablet of Discovery.
-
 - ⏳ **`Effect::FlipCoin` + `Decision::CoinFlip` primitive** (push
   modern_decks batch 41 re-raised — CR 705 audit standalone): The
   base coin-flip primitive blocking Karplusan Minotaur, Mana Clash,
@@ -5532,33 +5037,6 @@ resolution time" in the Suggested next-up tasks section.
   damage-*prevention* primitive — Impractical Joke's "damage can't be
   prevented" no-op — is still ⏳; the death-replacement shape Wilt needed
   is done.)
-
-- ✅ **Miracle alt-cost** — DONE. Lorehold, the Historian's "Each instant
-  and sorcery card in your hand has miracle {2}" is wired via
-  `Effect::GrantMiracle { what, cost }`: a CardDrawn/YourControl trigger
-  gated on the first-IS-draw-this-turn stamps an until-end-of-turn
-  `may_play_until` permission **plus** a `CardInstance::granted_alt_cast_cost_eot`
-  of {2}. `cast_from_zone_without_paying` charges that alt-cost before the
-  cast. The same `granted_alt_cast_cost_eot` slot generalizes to the
-  Avacyn Restored miracle cycle. Covered by
-  `tests::sos::lorehold_the_historian_grants_miracle_two_on_first_is_draw`.
-
-- ✅ **Granted flashback (per-instance, EOT)** — DONE. The SOS "Flashback"
-  instant grants `CardInstance::granted_flashback_eot` (= the target's own
-  mana cost) via `Effect::GrantFlashbackThisTurn`; `cast_flashback` reads
-  it through `CardInstance::effective_flashback()`. Covered by
-  `tests::sos::flashback_instant_grants_flashback_on_gy_is_card`.
-
-- ✅ **Granted cascade + `Keyword::CantBeCopied`** — DONE. Quandrix, the
-  Proof's "instant and sorcery spells you cast from your hand have cascade"
-  is a SpellCast/YourControl trigger gated on `Predicate::CastFromHand`
-  (now stamped from the actual cast spell's flag, not the trigger default)
-  + an IS filter, firing `Effect::Cascade { max_mv:
-  ManaValueOf(TriggerSource) }`. Choreographed Sparks's "this spell can't
-  be copied" rider is `Keyword::CantBeCopied`, honored by
-  `Effect::CopySpell`. Covered by
-  `tests::sos::{quandrix_the_proof_grants_cascade_*,
-  quandrix_the_proof_does_not_cascade_*, choreographed_sparks_cant_be_copied}`.
 
 - ⏳ **More STX college expansions** (push modern_decks batch 42
   continuation): With the current Silverquill = 158 cards,

@@ -92,7 +92,7 @@ work is listed below.
 | Shorikai, Genesis Engine | ⏳ | Vehicle-walker hybrid; loots on activate. |
 | Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
 | Carnage Interpreter | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{B}{R} Vampire 4/3 with Trample. ETB makes each opponent discard a random card. (Synthesised body; the real Oracle has more text.) Test: `carnage_interpreter_etb_makes_each_opp_discard`. |
-| Bloodbraid Challenger | ⏳ | Cascade. The `Effect::Cascade`/`shortcut::cascade(mv)` primitive now exists (Bloodbraid Elf, Apex Devastator); this card was left ⏳ only because its exact printed stats could not be Scryfall-verified this run (the api.scryfall.com host is blocked by the environment network policy). |
+| Bloodbraid Challenger | ⏳ | Cascade. The `Effect::Cascade`/`shortcut::cascade(mv)` primitive now exists (Bloodbraid Elf, Apex Devastator); stats are in the Scryfall cache, so this is ready to wire. |
 | Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
 | Torsten, Founder of Benalia | 🟡 | 7/7 Legendary Human Soldier. ETB searches 3 basic lands to battlefield tapped. |
 | Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
@@ -129,7 +129,6 @@ work is listed below.
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
 | Talon Gates of Madara | ⏳ | TBD. |
-| Three Tree City | ✅ | Legendary Land. Enters with 3 charge counters; {T}, remove counter: add any color; sacrifices itself when the last charge is removed (folded into the ability's resolution, like Gemstone Mine). |
 | Trenchpost | 🟡 | Locus Land. {T}: Add {C}{C}. Locus-count scaling omitted. |
 
 ## Engine features needed
@@ -142,7 +141,6 @@ are listed in `DECK_FEATURES.md`.
 | Feature | Status | Cards depending on it |
 |---|---|---|
 | Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Lion Sash (counter-scaled bonus), Nettlecyst, Sword of Body and Mind, Helm of the Host still need dynamic/triggered equip bonuses. |
-| Cycling | ✅ | Engine support complete: `Keyword::Cycling(cost)` + `GameAction::Cycle` (`cycle_card`) pay the cost, discard, draw, and fire `CardCycled`. Catalog cards already use it. The listed cube cards (Aether Spellbomb, Sundering Eruption-adjacent) just aren't added yet. |
 | Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
 | Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm`, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich's attack trigger. Cast-from-top-of-library mid-resolution (Mind's Desire) and energy-gated free cast-from-exile (Amped Raptor) are still ⏳. |
