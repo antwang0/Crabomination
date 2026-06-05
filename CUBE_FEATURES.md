@@ -27,7 +27,7 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Thundertrap Trainer | 🟡 | 2/2 Flash; ETB taps target creature an opponent controls. Body fully wired; the trap/discount text is dropped. |
+| Thundertrap Trainer | 🟡 | {1}{U} 1/2; ETB impulse the top four for noncreature/nonland cards (`RevealTopTakeMatchingToHand`). Offspring {4} dropped; "any number" is take-all-matching. |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
@@ -59,7 +59,6 @@ work is listed below.
 |---|---|---|
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
-| Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |
 

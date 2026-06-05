@@ -342,6 +342,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: energy O-Ring ──
+        static_prison,
         // ── claude/modern_decks: Extort (CR 702.99) ──
         syndic_of_tithes,
         // ── claude/modern_decks: white value/keyword bodies ──
@@ -497,7 +499,6 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         banishing_light,
         seal_of_cleansing,
         dissolve,
-        // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,
         healing_salve,
@@ -1467,6 +1468,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         baloth_prime,
         icetill_explorer,
         mightform_harmonizer,
+        springleaf_parade,
         // ── claude/modern_decks: deathtouch body ──
         gnarlwood_dryad,
         gladecover_scout,

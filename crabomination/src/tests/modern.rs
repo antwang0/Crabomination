@@ -6450,74 +6450,27 @@ fn eternal_witness_etb_returns_graveyard_card_via_auto_target() {
 }
 
 #[test]
-fn static_prison_etb_taps_target() {
-    // ETB taps the target permanent. The X-cost stun-counter clause
-    // also fires now that the engine threads `x_value` from the
-    // resolving spell into the ETB trigger's `EffectContext`.
+fn static_prison_sacrifices_itself_without_energy_to_pay() {
+    use crate::game::TurnStep;
     let mut g = two_player_game();
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.battlefield_find_mut(opp_bear).unwrap().tapped = false;
-
-    let prison = g.add_card_to_hand(0, catalog::static_prison());
-    // X=0 cast, just to exercise the tap path: total {2}{W}.
-    g.players[0].mana_pool.add_colorless(2);
-    g.players[0].mana_pool.add(Color::White, 1);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: prison,
-        target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: Some(0),
-    })
-    .expect("Static Prison castable for {0}{2}{W}");
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let prison = g.add_card_to_battlefield(0, catalog::static_prison());
+    g.fire_self_etb_triggers(prison, 0);
     drain_stack(&mut g);
-
-    assert!(g.battlefield_find(prison).is_some(), "Prison on battlefield");
-    assert!(g.battlefield_find(opp_bear).unwrap().tapped,
-        "Targeted permanent should be tapped on ETB");
-}
-
-#[test]
-fn static_prison_x2_etb_adds_two_stun_counters_to_target() {
-    // Push (modern_decks): Stun counters now land on the TARGET (CR-
-    // correct), not on Static Prison itself. The engine's stun-counter
-    // mechanic (CR 122.1d) consumes one counter per untap step, keeping
-    // the target tapped for X turn cycles.
-    use crate::card::CounterType;
-    let mut g = two_player_game();
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-
-    let prison = g.add_card_to_hand(0, catalog::static_prison());
-    // {X=2}{2}{W} → pay 4 colorless + {W}.
-    g.players[0].mana_pool.add_colorless(4);
-    g.players[0].mana_pool.add(Color::White, 1);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: prison,
-        target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: Some(2),
-    })
-    .expect("Static Prison castable with X=2");
+    assert_eq!(g.players[0].energy, 2, "ETB grants two energy");
+    // First main with energy in pool → pay {E}, Prison stays.
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
     drain_stack(&mut g);
-
-    let target = g.battlefield_find(opp_bear).expect("Bear still on battlefield");
-    assert_eq!(
-        target.counter_count(CounterType::Stun),
-        2,
-        "X=2 should put 2 stun counters on the TARGET (the opp's bear), \
-         not on Static Prison itself"
-    );
-    assert!(target.tapped, "Target should also be tapped");
-    let inst = g.battlefield_find(prison).expect("Prison on battlefield");
-    assert_eq!(
-        inst.counter_count(CounterType::Stun),
-        0,
-        "Static Prison itself should have no stun counters (CR-correct: \
-         counters go on the targeted permanent)"
-    );
+    assert!(g.battlefield_find(prison).is_some(), "paid energy, Prison survives");
+    assert_eq!(g.players[0].energy, 1, "one energy spent");
+    // Drain the rest, then a later upkeep can't pay → Prison is sacrificed and
+    // the exiled creature returns.
+    g.players[0].energy = 0;
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(prison).is_none(), "no energy means it is sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == prey), "exiled creature returns");
 }
 
 #[test]
@@ -16991,28 +16944,20 @@ fn enduring_innocence_returns_as_enchantment_when_it_dies() {
 }
 
 #[test]
-fn thundertrap_trainer_etb_taps_opponent_creature() {
+fn thundertrap_trainer_etb_takes_noncreature_nonland_from_top_four() {
     let mut g = two_player_game();
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Ensure it starts untapped.
-    g.battlefield_find_mut(opp_bear).unwrap().tapped = false;
-
-    let trainer = g.add_card_to_hand(0, catalog::thundertrap_trainer());
-    g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::White, 1);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: trainer,
-        target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Thundertrap Trainer castable");
+    // Top four: a creature, a land, an instant, a sorcery. Only the instant
+    // and sorcery (noncreature, nonland) go to hand; creature + land bottomed.
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::lightning_bolt());      // 4th
+    g.add_card_to_library(0, catalog::sinkhole());            // 3rd (sorcery)
+    g.add_card_to_library(0, catalog::forest());              // 2nd (land)
+    g.add_card_to_library(0, catalog::grizzly_bears());       // top (creature)
+    let id = g.add_card_to_battlefield(0, catalog::thundertrap_trainer());
+    let hand_before = g.players[0].hand.len();
+    g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);
-
-    let bear = g.battlefield.iter().find(|c| c.id == opp_bear).unwrap();
-    assert!(bear.tapped, "Opponent bear should be tapped by Thundertrap Trainer ETB");
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "the instant and sorcery go to hand");
 }
 
 #[test]
@@ -26688,4 +26633,45 @@ fn metamorphosis_fanatic_reanimates_with_lifelink_counter() {
     let reanimated = g.battlefield_find(bear).expect("bear returned to battlefield");
     assert_eq!(reanimated.controller, 0, "under your control");
     assert!(reanimated.has_keyword(&crate::card::Keyword::Lifelink), "lifelink counter grants lifelink");
+}
+
+#[test]
+fn springleaf_parade_makes_x_changelings_that_tap_for_mana() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::springleaf_parade());
+    // {X}{G}{G} with X=2.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("castable for X=2");
+    drain_stack(&mut g);
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Shapeshifter" && c.controller == 0).collect();
+    assert_eq!(tokens.len(), 2, "X=2 → two Shapeshifter tokens");
+    let tok = tokens[0].id;
+    assert!(tokens[0].has_keyword(&crate::card::Keyword::Changeling), "changeling");
+    // The granted mana ability lets a token tap for any color.
+    g.clear_sickness(tok);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tok, ability_index: 0, target: None, x_value: None,
+    }).expect("token mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "token taps for a color");
+}
+
+#[test]
+fn static_prison_exiles_and_gives_energy() {
+    let mut g = two_player_game();
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::static_prison());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == prey), "an opponent permanent is exiled");
+    assert_eq!(g.players[0].energy, 2, "you get two energy");
+    // When it leaves, the exiled creature returns.
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == prey), "exiled card returns when Static Prison leaves");
 }

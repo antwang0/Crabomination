@@ -13289,23 +13289,26 @@ pub fn amped_raptor() -> CardDefinition {
 /// Thundertrap Trainer — {1}{W} Creature — Human Soldier. 2/2. Flash.
 /// "When Thundertrap Trainer enters, tap target creature an opponent
 /// controls." (Synthesised body; ETB tap fully wired.)
+/// Thundertrap Trainer — {1}{U} 1/2. ETB: look at the top four cards, put any
+/// noncreature, nonland cards among them into your hand, rest on the bottom in
+/// a random order. (Offspring {4} is dropped — no Offspring primitive; "any
+/// number" is take-all-matching rather than "up to one".)
 pub fn thundertrap_trainer() -> CardDefinition {
+    use crate::effect::shortcut::etb;
     CardDefinition {
         name: "Thundertrap Trainer",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Otter, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 2,
+        power: 1,
         toughness: 2,
-        keywords: vec![Keyword::Flash],
-        triggered_abilities: vec![etb(Effect::Tap {
-            what: target_filtered(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByOpponent),
-            ),
+        triggered_abilities: vec![etb(Effect::RevealTopTakeMatchingToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            filter: SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
         })],
         ..Default::default()
     }
@@ -17910,6 +17913,52 @@ pub fn metamorphosis_fanatic() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Springleaf Parade — {X}{G}{G} Enchantment. ETB: create X 1/1 colorless
+/// Shapeshifter creature tokens with changeling. Creature tokens you control
+/// have "{T}: Add one mana of any color."
+pub fn springleaf_parade() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility, TokenDefinition};
+    use crate::effect::shortcut::etb;
+    use crate::effect::StaticEffect;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Springleaf Parade",
+        cost: cost(&[x(), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: TokenDefinition {
+                name: "Shapeshifter".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Changeling],
+                card_types: vec![CardType::Creature],
+                ..Default::default()
+            },
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Creature tokens you control have \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::IsToken)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
         ..Default::default()
     }
 }

@@ -3,7 +3,7 @@
 //! "can't-be-countered" rider.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, Effect, EventKind, EventScope, EventSpec,
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec,
     SelectionRequirement, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
@@ -137,49 +137,34 @@ pub fn dovins_veto() -> CardDefinition {
 
 /// Static Prison — `{X}{2}{W}` Enchantment. Static Prison enters with X
 /// stun counters on it. Tap target permanent. At the beginning of each
-/// upkeep, remove a stun counter; while it has stun counters, that
-/// permanent doesn't untap.
-///
-/// Push (modern_decks): the Stun-counter wire **now lands on the
-/// targeted permanent** (was previously stamping the counters on
-/// Static Prison itself, where they had no untap relevance). The
-/// engine's existing Stun-counter mechanic (CR 122.1d) keeps the
-/// target tapped — at each untap step, one stun counter is removed
-/// instead of the target being untapped. So an X=2 Static Prison
-/// taps the target now + keeps it tapped for X turn cycles. The
-/// printed "at the beginning of your upkeep, remove a stun counter"
-/// rider is naturally handled by the engine's stun-counter consume-
-/// on-untap behavior.
+/// Static Prison — {W} Enchantment. ETB: exile target nonland permanent an
+/// opponent controls until this leaves the battlefield, and you get {E}{E}. At
+/// the beginning of your first main phase, sacrifice it unless you pay {E}.
 pub fn static_prison() -> CardDefinition {
-    use crate::mana::ManaSymbol;
-    // Real Oracle: `{X}{2}{W}` Enchantment.
-    let mut prison_cost = cost(&[generic(2), w()]);
-    prison_cost.symbols.insert(0, ManaSymbol::X);
+    use crate::effect::shortcut::etb;
+    use crate::game::types::TurnStep;
     CardDefinition {
         name: "Static Prison",
-        cost: prison_cost,
+        cost: cost(&[w()]),
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
-                    what: target_filtered(SelectionRequirement::Permanent),
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::ExileUntilSourceLeaves {
+                    what: target_filtered(
+                        SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                    return_to: crate::card::ExileReturnZone::Battlefield,
                 },
-                // Stamp X Stun counters on the TARGET, not on the
-                // Prison itself. Each stun counter consumes an untap
-                // in the target's next untap step (CR 122.1d).
-                Effect::AddCounter {
-                    what: target_filtered(SelectionRequirement::Permanent),
-                    kind: CounterType::Stun,
-                    amount: Value::XFromCost,
+                Effect::AddEnergy(Value::Const(2)),
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::PreCombatMain), EventScope::YourControl),
+                effect: Effect::PayEnergyOrElse {
+                    amount: 1,
+                    otherwise: Box::new(Effect::SacrificeSource),
                 },
-            ]),
-        }],
+            },
+        ],
         ..Default::default()
     }
 }
