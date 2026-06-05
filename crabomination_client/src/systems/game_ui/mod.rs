@@ -1806,6 +1806,17 @@ pub fn sync_game_visuals(
     let stack_ids: HashSet<CardId> = cv.stack.iter().filter_map(|item| {
         if let StackItemView::Known(k) = item { Some(k.source) } else { None }
     }).collect();
+    // Sources of *spell* stack items only. A viewer hand card is pulled out to
+    // the stack only when the card itself is a spell on the stack (cast from
+    // hand). A trigger or ability whose source merely happens to be a card in
+    // hand — e.g. Chancellor of the Tangle's opening-hand mana trigger — must
+    // NOT yank the source card out of the hand (it never left), or it strands
+    // mid-table once the trigger resolves.
+    let stack_spell_ids: HashSet<CardId> = cv.stack.iter().filter_map(|item| {
+        if let StackItemView::Known(k) = item {
+            (k.kind == crabomination::net::StackItemKind::Spell).then_some(k.source)
+        } else { None }
+    }).collect();
     let hand_ids: HashSet<CardId> = cv.players[viewer].hand.iter().map(|c| c.id()).collect();
     let bf_ids_by_owner: std::collections::HashMap<usize, HashSet<CardId>> = (0..n_seats)
         .map(|seat| {
@@ -1986,7 +1997,7 @@ pub fn sync_game_visuals(
                     target_rotation: target.rotation,
                     start_scale: transform.scale.x,
                 });
-        } else if stack_ids.contains(&game_id.0) {
+        } else if stack_spell_ids.contains(&game_id.0) {
             if stack_card.is_none() {
                 let idx = cv.stack.iter().position(|item| matches!(item, StackItemView::Known(k) if k.source == game_id.0)).unwrap_or(0);
                 let total = stack_ids.len();
