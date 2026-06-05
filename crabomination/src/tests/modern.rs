@@ -9031,6 +9031,43 @@ fn cloud_of_faeries_untaps_two_lands_on_etb() {
 }
 
 #[test]
+fn gnarled_scarhide_bestows_plus_two_one_and_cant_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::gnarled_scarhide());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastBestow {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bestow onto the bear");
+    drain_stack(&mut g);
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 3), "enchanted creature gets +2/+1");
+    assert!(b.keywords.contains(&Keyword::CantBlock), "and can't block");
+}
+
+#[test]
+fn cordial_vampire_grows_vampires_on_death() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let cordial = g.add_card_to_battlefield(0, catalog::cordial_vampire());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Bolt the bear so SBA dispatches CreatureDied to Cordial Vampire.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cordial).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "a creature death puts a +1/+1 on each Vampire you control");
+}
+
+#[test]
 fn vampire_hexmage_sacrifices_to_strip_counters() {
     use crate::card::CounterType;
     let mut g = two_player_game();

@@ -4008,6 +4008,56 @@ pub fn disfigure() -> CardDefinition {
     }
 }
 
+/// Gnarled Scarhide — {B} Enchantment Creature — Boar 2/1. Can't block.
+/// Bestow {3}{B} (CR 702.103). Enchanted creature gets +2/+1 and can't block.
+pub fn gnarled_scarhide() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Gnarled Scarhide",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        bestow: Some(cost(&[generic(3), b()])),
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 1,
+            keywords: vec![Keyword::CantBlock],
+            scale: None,
+            triggered_abilities: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Cordial Vampire — {B}{B} Creature — Vampire 1/1. Whenever this or another
+/// creature dies, put a +1/+1 counter on each Vampire you control.
+pub fn cordial_vampire() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Cordial Vampire",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vampire Hexmage — {B}{B} Creature — Vampire Shaman 2/1. First strike.
 /// "Sacrifice this creature: Remove all counters from target permanent."
 pub fn vampire_hexmage() -> CardDefinition {

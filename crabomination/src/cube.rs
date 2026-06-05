@@ -1010,6 +1010,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         disfigure,
         vampire_hexmage,
         plagued_rusalka,
+        gnarled_scarhide,
+        cordial_vampire,
         languish,
         grasp_of_darkness,
         smother,
