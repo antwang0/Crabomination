@@ -12840,6 +12840,36 @@ pub fn onward_victory() -> CardDefinition {
     }
 }
 
+/// Frontline Devastator — {3}{R} 3/3 Zombie Minotaur Warrior. Afflict 2
+/// (CR 702.131 — becomes blocked → defending player loses 2 life).
+/// {1}{R}: +1/+0 until end of turn.
+pub fn frontline_devastator() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Frontline Devastator",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Afflict(2)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Wall of Blossoms — {1}{G} Creature 0/4 Plant Wall. Defender. When this
 /// enters, draw a card.
 pub fn wall_of_blossoms() -> CardDefinition {

@@ -1305,6 +1305,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
+        frontline_devastator,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
         // ── modern_decks: red utility creatures ──

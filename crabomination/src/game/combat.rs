@@ -643,6 +643,9 @@ impl GameState {
             let bn = sum_n(&bk, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
             if bn > 0 { pt_deltas.push((b, bn)); }
         }
+        // CR 702.131 — Afflict: a creature that becomes blocked makes the
+        // defending player lose N life. Collected here, applied below.
+        let mut afflict_loss: Vec<(usize, i32)> = vec![];
         for (a, count) in blocked {
             let ak = kws_for(a);
             // Bushido on the attacker (it becomes blocked — once).
@@ -652,6 +655,17 @@ impl GameState {
             let rn = sum_n(&ak, |k| if let Keyword::Rampage(x) = k { Some(*x as i32) } else { None });
             let extra = count.saturating_sub(1) as i32;
             if rn > 0 && extra > 0 { pt_deltas.push((a, rn * extra)); }
+            // Afflict: defending player loses N (fires once on becoming blocked).
+            let af = sum_n(&ak, |k| if let Keyword::Afflict(x) = k { Some(*x as i32) } else { None });
+            if af > 0
+                && let Some(atk) = self.attacking.iter().find(|atk| atk.attacker == a)
+                && let Some(def) = self.defender_for(atk.target)
+            {
+                afflict_loss.push((def, af));
+            }
+        }
+        for (def, n) in afflict_loss {
+            self.adjust_life(def, -n);
         }
 
         // All valid — apply (merge into existing block_map so multiple

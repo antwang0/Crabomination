@@ -6392,6 +6392,27 @@ fn bushido_pumps_attacker_when_blocked() {
 }
 
 #[test]
+fn afflict_drains_defender_when_blocked() {
+    // CR 702.131: an Afflict N attacker that becomes blocked makes the
+    // defending player lose N life (independent of combat damage).
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::frontline_devastator());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    let life_before = g.players[1].life;
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    assert_eq!(g.players[1].life, life_before - 2, "Afflict 2 drained the defender");
+}
+
+#[test]
 fn rampage_pumps_attacker_per_extra_blocker() {
     // CR 702.23: Rampage N gives +N/+N for each blocker beyond the first.
     let mut g = two_player_game();
