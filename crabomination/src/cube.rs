@@ -602,6 +602,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(goldmire_bridge);
         v.push(mortify);
         v.push(silent_clearing);
+        v.push(brightclimb_pathway);
         v.push(bleachbone_verge);
         // ── modern_decks (aura): Gift of Orzhova ──
         v.push(gift_of_orzhova);
@@ -637,6 +638,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(dovins_veto);
         v.push(razortide_bridge);
         v.push(floodfarm_verge);
+        v.push(hengegate_pathway);
         // ── modern_decks-16 ──
         v.push(spell_queller);
     }
@@ -1412,6 +1414,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(thundering_falls);
         v.push(fiery_islet);
         v.push(riverpyre_verge);
+        v.push(riverglide_pathway);
         // ── SOS Prismari (U/R) ──
         v.push(stadium_tidalmage);
         v.push(vibrant_outburst);
@@ -1435,6 +1438,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 102 (RW cube expansion) ──
         // ── modern_decks-16 ──
         v.push(wear_tear);
+        v.push(needleverge_pathway);
     }
     v
 }
@@ -1659,6 +1663,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(talisman_of_curiosity);
         v.push(tanglepool_bridge);
         v.push(hedge_maze);
+        v.push(barkchannel_pathway);
         // ── SOS Quandrix (G/U) ──
         v.push(pterafractyl);
         v.push(fractal_mascot);
