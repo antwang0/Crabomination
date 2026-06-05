@@ -780,6 +780,10 @@ pub enum ManaPayload {
     /// Resonating Lute). Colorless pips in a wrapped payload are added
     /// unrestricted — no current card produces restricted colorless mana.
     Restricted(Box<ManaPayload>, SpendRestriction),
+    /// Add one mana of the color stamped on the source's `chosen_color`
+    /// (Coldsteel Heart, choose-a-color rocks). Falls back to colorless when
+    /// no color was chosen.
+    ChosenColorOfSource,
 }
 
 // ── Event specification (triggers) ───────────────────────────────────────────
@@ -910,6 +914,11 @@ pub enum EventKind {
     /// Wilds Ravager "when this becomes monstrous" triggers). The permanent
     /// is the event subject; matched to `GameEvent::BecameMonstrous`.
     BecameMonstrous,
+    /// CR 107.16 — the controller got one or more {E} (energy counters).
+    /// Fires once per `AddEnergy` resolution ("Whenever you get one or more
+    /// {E}"); the amount is exposed via `Value::TriggerEventAmount`. The
+    /// event subject is the player; matched to `GameEvent::EnergyGained`.
+    EnergyGained,
 }
 
 /// Whose events does this trigger listen for?
@@ -1283,6 +1292,11 @@ pub enum Effect {
     /// `ActivatedAbility` — the player commits by activating, and the
     /// energy is consumed when the ability resolves.
     PayEnergy { amount: u32, then: Box<Effect> },
+    /// "Sacrifice/return this unless you pay {E}…" (CR 107.16). Pays `amount`
+    /// energy if the controller can afford it; otherwise resolves `otherwise`
+    /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when
+    /// able. Lathnu Hellion, Greenbelt Rampager.
+    PayEnergyOrElse { amount: u32, otherwise: Box<Effect> },
 
     // ── Cards / draw / discard / mill ────────────────────────────────────────
     Draw    { who: Selector, amount: Value },
@@ -1501,6 +1515,10 @@ pub enum Effect {
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").
     BecomeChosenColor { what: Selector, duration: Duration },
+    /// The controller chooses a color as the source enters; stamp it onto the
+    /// source's `chosen_color` (CR 614 — Coldsteel Heart, choose-a-color mana
+    /// rocks). Read later by `ManaPayload::ChosenColorOfSource`.
+    ChooseColorForSelf,
     /// Each permanent picked by `what` gains protection from a color of the
     /// controller's choice for `duration` (`Decision::ChooseColor` →
     /// `Keyword::Protection(color)`). Mother of Runes, Giver of Runes, Gods
@@ -1641,6 +1659,10 @@ pub enum Effect {
         #[serde(default)]
         override_pt: Option<(i32, i32)>,
     },
+    /// CR 701.32 — Populate: `who` creates a token that's a copy of a creature
+    /// token they control (their choice; AutoDecider keeps the highest-power
+    /// one). No-op if they control no creature token.
+    Populate { who: PlayerRef },
     /// CR 707.2 — `what` becomes a copy of the permanent resolved by
     /// `source`: its copiable characteristics (name, mana cost, card
     /// types, subtypes, abilities, P/T, loyalty) are overwritten with a
@@ -2364,6 +2386,7 @@ impl Effect {
                     },
                     ManaPayload::Colors(_)
                     | ManaPayload::DevotionOfChosenColor
+                    | ManaPayload::ChosenColorOfSource
                     | ManaPayload::AnyColorOpponentCouldProduce => false,
                 }
             }
@@ -2396,6 +2419,8 @@ impl Effect {
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
             Effect::BecomeChosenColor { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. } => sel_has_target(what),
+            Effect::ChooseColorForSelf => false,
+            Effect::Populate { .. } => false,
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
             | Effect::RemoveCounter { what, amount, .. }
@@ -2510,6 +2535,7 @@ impl Effect {
             Effect::ExileTopAndGrantMayPlay { .. } => false,
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } => then.requires_target(),
+            Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
         }
     }
 

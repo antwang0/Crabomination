@@ -612,3 +612,61 @@ fn cr_701_32_support_two_puts_a_counter_on_each_of_two_targets() {
     assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ── Populate (CR 701.32) ────────────────────────────────────────────────────
+
+#[test]
+fn populate_copies_a_creature_token_you_control() {
+    use crate::card::{CardDefinition, CardType, CreatureType, Subtypes};
+    use crate::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    let token_def = CardDefinition {
+        name: "Beast",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    };
+    let tok = g.add_card_to_battlefield(0, token_def);
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
+    let spell = CardDefinition {
+        name: "Populator",
+        cost: crate::mana::cost(&[crate::mana::generic(1)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Populate { who: PlayerRef::You },
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, spell);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Populate sorcery castable");
+    drain_stack(&mut g);
+    let beasts = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Beast" && c.is_token)
+        .count();
+    assert_eq!(beasts, 2, "populate minted a second copy of the Beast token");
+}
+
+#[test]
+fn populate_is_noop_without_a_creature_token() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::{Effect, PlayerRef};
+    let mut g = two_player_game();
+    let spell = CardDefinition {
+        name: "Populator",
+        cost: crate::mana::cost(&[crate::mana::generic(1)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Populate { who: PlayerRef::You },
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, spell);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.battlefield.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.len(), before, "no token to copy → no-op");
+}

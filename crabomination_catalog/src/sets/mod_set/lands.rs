@@ -310,3 +310,55 @@ pub fn karns_bastion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Verge lands (Foundations / Duskmourn) ──────────────────────────────────
+// "{T}: Add {first color}. {T}: Add {second color}, only if you control a
+// land of either color's basic type." Built via `super::super::verge_land`.
+
+pub fn blazemire_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Blazemire Verge", Color::Black, Color::Red, LandType::Swamp, LandType::Mountain,
+    )
+}
+
+pub fn thornspire_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Thornspire Verge", Color::Red, Color::Green, LandType::Mountain, LandType::Forest,
+    )
+}
+
+pub fn bleachbone_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Bleachbone Verge", Color::White, Color::Black, LandType::Plains, LandType::Swamp,
+    )
+}
+
+pub fn riverpyre_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Riverpyre Verge", Color::Blue, Color::Red, LandType::Island, LandType::Mountain,
+    )
+}
+
+pub fn wastewood_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Wastewood Verge", Color::Black, Color::Green, LandType::Swamp, LandType::Forest,
+    )
+}
+
+pub fn floodfarm_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Floodfarm Verge", Color::White, Color::Blue, LandType::Plains, LandType::Island,
+    )
+}
+
+pub fn gloomlake_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Gloomlake Verge", Color::Blue, Color::Black, LandType::Island, LandType::Swamp,
+    )
+}
+
+pub fn hushwood_verge() -> CardDefinition {
+    super::super::verge_land(
+        "Hushwood Verge", Color::Green, Color::White, LandType::Forest, LandType::Plains,
+    )
+}

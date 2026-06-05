@@ -2730,6 +2730,34 @@ pub fn satyr_wayfinder() -> CardDefinition {
     }
 }
 
+/// Coldsteel Heart — {2} Artifact. Enters tapped; as it enters, choose a
+/// color. `{T}: Add one mana of the chosen color.` Uses the instance-stamped
+/// `chosen_color` (`Effect::ChooseColorForSelf` + `ManaPayload::ChosenColorOfSource`).
+pub fn coldsteel_heart() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Coldsteel Heart",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ChooseColorForSelf,
+                Effect::Tap { what: Selector::This },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::ChosenColorOfSource,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Talisman of Progress — {2} Artifact. "{T}: Add {C}." "{T}: Add {W} or
 /// {U}. Talisman of Progress deals 1 damage to you."
 ///
@@ -2966,6 +2994,59 @@ pub fn talisman_of_creativity() -> CardDefinition {
 pub fn talisman_of_curiosity() -> CardDefinition {
     talisman_cycle("Talisman of Curiosity", Color::Green, Color::Blue)
 }
+
+/// Talisman of Hierarchy — {2} Artifact. WB mirror.
+pub fn talisman_of_hierarchy() -> CardDefinition {
+    talisman_cycle("Talisman of Hierarchy", Color::White, Color::Black)
+}
+
+/// Talisman of Indulgence — {2} Artifact. BR mirror.
+pub fn talisman_of_indulgence() -> CardDefinition {
+    talisman_cycle("Talisman of Indulgence", Color::Black, Color::Red)
+}
+
+/// Talisman of Resilience — {2} Artifact. BG mirror.
+pub fn talisman_of_resilience() -> CardDefinition {
+    talisman_cycle("Talisman of Resilience", Color::Black, Color::Green)
+}
+
+/// Talisman of Impulse — {2} Artifact. RG mirror.
+pub fn talisman_of_impulse() -> CardDefinition {
+    talisman_cycle("Talisman of Impulse", Color::Red, Color::Green)
+}
+
+/// Talisman of Unity — {2} Artifact. GW mirror.
+pub fn talisman_of_unity() -> CardDefinition {
+    talisman_cycle("Talisman of Unity", Color::Green, Color::White)
+}
+
+/// Ravnica signet: {2} Artifact, `{1}, {T}: Add {c1}{c2}`.
+fn signet(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name,
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c1, c2]) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+pub fn azorius_signet() -> CardDefinition { signet("Azorius Signet", Color::White, Color::Blue) }
+pub fn dimir_signet() -> CardDefinition { signet("Dimir Signet", Color::Blue, Color::Black) }
+pub fn rakdos_signet() -> CardDefinition { signet("Rakdos Signet", Color::Black, Color::Red) }
+pub fn gruul_signet() -> CardDefinition { signet("Gruul Signet", Color::Red, Color::Green) }
+pub fn selesnya_signet() -> CardDefinition { signet("Selesnya Signet", Color::Green, Color::White) }
+pub fn orzhov_signet() -> CardDefinition { signet("Orzhov Signet", Color::White, Color::Black) }
+pub fn izzet_signet() -> CardDefinition { signet("Izzet Signet", Color::Blue, Color::Red) }
+pub fn golgari_signet() -> CardDefinition { signet("Golgari Signet", Color::Black, Color::Green) }
+pub fn boros_signet() -> CardDefinition { signet("Boros Signet", Color::Red, Color::White) }
+pub fn simic_signet() -> CardDefinition { signet("Simic Signet", Color::Green, Color::Blue) }
 
 // ── Removal / interaction ────────────────────────────────────────────────────
 

@@ -120,6 +120,30 @@ pub fn darkbore_pathway() -> CardDefinition {
     )
 }
 
+/// Branchloft Pathway // Boulderloft Pathway — G/W MDFC.
+pub fn branchloft_pathway() -> CardDefinition {
+    pathway(
+        "Branchloft Pathway", LandType::Forest, Color::Green,
+        "Boulderloft Pathway", LandType::Plains, Color::White,
+    )
+}
+
+/// Clearwater Pathway // Murkwater Pathway — U/B MDFC.
+pub fn clearwater_pathway() -> CardDefinition {
+    pathway(
+        "Clearwater Pathway", LandType::Island, Color::Blue,
+        "Murkwater Pathway", LandType::Swamp, Color::Black,
+    )
+}
+
+/// Cragcrown Pathway // Timbercrown Pathway — R/G MDFC.
+pub fn cragcrown_pathway() -> CardDefinition {
+    pathway(
+        "Cragcrown Pathway", LandType::Mountain, Color::Red,
+        "Timbercrown Pathway", LandType::Forest, Color::Green,
+    )
+}
+
 // ── Shocklands ───────────────────────────────────────────────────────────────
 //
 // Real Oracle: "As this enters the battlefield, you may pay 2 life. If you
@@ -592,5 +616,45 @@ pub fn creeping_tar_pit() -> CardDefinition {
         3,
         2,
         vec![Keyword::Unblockable],
+    )
+}
+
+/// Hengegate Pathway // Mistgate Pathway — W/U MDFC.
+pub fn hengegate_pathway() -> CardDefinition {
+    pathway(
+        "Hengegate Pathway", LandType::Plains, Color::White,
+        "Mistgate Pathway", LandType::Island, Color::Blue,
+    )
+}
+
+/// Riverglide Pathway // Lavaglide Pathway — U/R MDFC.
+pub fn riverglide_pathway() -> CardDefinition {
+    pathway(
+        "Riverglide Pathway", LandType::Island, Color::Blue,
+        "Lavaglide Pathway", LandType::Mountain, Color::Red,
+    )
+}
+
+/// Barkchannel Pathway // Tidechannel Pathway — G/U MDFC.
+pub fn barkchannel_pathway() -> CardDefinition {
+    pathway(
+        "Barkchannel Pathway", LandType::Forest, Color::Green,
+        "Tidechannel Pathway", LandType::Island, Color::Blue,
+    )
+}
+
+/// Brightclimb Pathway // Grimclimb Pathway — W/B MDFC.
+pub fn brightclimb_pathway() -> CardDefinition {
+    pathway(
+        "Brightclimb Pathway", LandType::Plains, Color::White,
+        "Grimclimb Pathway", LandType::Swamp, Color::Black,
+    )
+}
+
+/// Needleverge Pathway // Pillarverge Pathway — R/W MDFC.
+pub fn needleverge_pathway() -> CardDefinition {
+    pathway(
+        "Needleverge Pathway", LandType::Mountain, Color::Red,
+        "Pillarverge Pathway", LandType::Plains, Color::White,
     )
 }

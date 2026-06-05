@@ -54,7 +54,7 @@ pub enum CreatureType {
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Archon, Aetherborn,
-    Construct, Golem, Myr, Robot,
+    Construct, Golem, Myr, Robot, Hellion,
     Ooze, Plant,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,
@@ -1482,6 +1482,11 @@ pub struct CardInstance {
     /// activated abilities of sources with the chosen name. `None` for the
     /// vast majority of permanents that never name a card.
     pub named_card: Option<String>,
+    /// A color chosen as this permanent entered (CR 614/107.4 — Coldsteel
+    /// Heart, choose-a-color mana rocks). Read by `ManaPayload::
+    /// ChosenColorOfSource` so a `{T}: Add the chosen color` ability taps for
+    /// it. `None` until an `Effect::ChooseColorForSelf` stamps it.
+    pub chosen_color: Option<crate::mana::Color>,
     /// CR 701.38 — players who have goaded this creature. A goaded creature
     /// attacks each combat if able and attacks a player other than a goader
     /// if able, until that goader's next turn. Each goader's entry is
@@ -1559,6 +1564,7 @@ impl CardInstance {
             granted_flashback_eot: None,
             granted_alt_cast_cost_eot: None,
             named_card: None,
+            chosen_color: None,
             goaded_by: Vec::new(),
             monstrous: false,
             adventuring: false,
@@ -1753,6 +1759,10 @@ struct CardInstanceWire {
     /// state; `#[serde(default)]` so older snapshots load as `None`.
     #[serde(default)]
     named_card: Option<String>,
+    /// Chosen color (Coldsteel Heart-style mana rocks). `#[serde(default)]`
+    /// so older snapshots load as `None`.
+    #[serde(default)]
+    chosen_color: Option<crate::mana::Color>,
     /// CR 701.38 goad — players who have goaded this creature.
     /// `#[serde(default)]` so older snapshots load as empty.
     #[serde(default)]
@@ -1811,6 +1821,7 @@ impl serde::Serialize for CardInstance {
             granted_flashback_eot: self.granted_flashback_eot.clone(),
             granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
             named_card: self.named_card.clone(),
+            chosen_color: self.chosen_color,
             goaded_by: self.goaded_by.clone(),
             monstrous: self.monstrous,
             adventuring: self.adventuring,
@@ -1856,6 +1867,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.granted_flashback_eot = wire.granted_flashback_eot;
         c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         c.named_card = wire.named_card;
+        c.chosen_color = wire.chosen_color;
         c.goaded_by = wire.goaded_by;
         c.monstrous = wire.monstrous;
         c.adventuring = wire.adventuring;

@@ -124,15 +124,9 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Blazemire Verge | ⏳ | BR DFC verge. |
-| Thornspire Verge | ⏳ | RG verge. |
-| Bleachbone Verge | ⏳ | WB verge. |
-| Riverpyre Verge | ⏳ | UR verge. |
-| Wastewood Verge | ⏳ | BG verge. |
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
-| Planar Nexus | 🟡 | Land, ETB tapped, `{T}`: Add one mana of any color — a rainbow tapland. The basic-land-type / fetch riders collapse. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
 | Talon Gates of Madara | ⏳ | TBD. |
 | Three Tree City | ✅ | Legendary Land. Enters with 3 charge counters; {T}, remove counter: add any color; sacrifices itself when the last charge is removed (folded into the ability's resolution, like Gemstone Mine). |
@@ -157,13 +151,12 @@ are listed in `DECK_FEATURES.md`.
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
 | Saga lore counters + DFC | ⏳ | The Everflowing Well; future sagas. |
 | Hideaway lands | ⏳ | Shelldock Isle. |
-| Horizon-canopy "pay 1 + life to draw" lands | ⏳ | Horizon Canopy, Sunbaked Canyon, Waterlogged Grove. |
-| Verge / surveil land family expansion | ⏳ | Each color pair's `*verge` and surveil-land entry. |
+| Verge / surveil land family expansion | 🟡 | All five enemy/allied `*verge` lands (Blazemire/Thornspire/Bleachbone/Riverpyre/Wastewood) ship via `verge_land` (conditional second-color mana ability). Horizon-canopy cycle is complete (`horizon_land` helper; all six). Surveil-land expansion still ⏳. |
 | ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Remaining: Gather Specimens (steal-instead), Hushbringer-style trigger suppression. |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | 🟡 | Damping Sphere wired (`AdditionalCostAfterFirstSpell`); Trinisphere needs a "minimum cost" flavor. Elite Spellbinder reuses the existing tax static. |
 | "Cast spells without paying mana" static | ⏳ | Omniscience, Maelstrom Archangel (combat-damage variant), Aluren (free-cast under-3 creatures). |
 | Name-a-card primitive | 🟡 | `Effect::NameCard` + `Decision::NameCard` + `CardInstance.named_card` ship Pithing Needle / Phyrexian Revoker (ETB stamps a name; `activate_ability` suppresses non-mana abilities of matching sources). Same-name exile (Crumble to Dust) is wired via `Effect::ExileSameNameAsTarget`. Remaining consumers: reveal-until-find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy). |
-| Token-copy of permanent | ⏳ | Phantasmal Image, Helm of the Host, Mockingbird, Growing Ranks (populate). |
+| Token-copy of permanent | 🟡 | Populate ✅ (`Effect::Populate`, CR 701.32 — Growing Ranks). `CreateTokenCopyOf` ✅. Remaining: Helm of the Host (continuous copy), Mockingbird/Phantasmal Image (clone-enter, already ✅ via `BecomeCopyOf`). |
 | Multi-pick decisions over revealed library cards | 🟡 | Atraxa Draw-4 stand-in is wired. Reveal-and-sort by card type, Dig Through Time, Mind's Desire all need a richer multi-pick decision. |
 | Investigate + Clue token | 🟡 | Clue tokens ship (`clue_token()`; Tireless Tracker, Lonis create them). **Map tokens** now ship too (`map_token()` — CR 111.10s explore-token: {1},{T},Sac → target creature you control explores; Loot, the Pathfinder mints one). The Investigate keyword-action naming and "sacrifice a Clue" payoff abilities are still ⏳. |
 | Landfall trigger | 🟡 | Bloodghast wired via the new `EventScope::FromYourGraveyard` (graveyard-source `LandPlayed` trigger). Standard battlefield-side landfall (Omnath) still uses the existing `LandPlayed` + `YourControl` path; both are functional. |

@@ -382,3 +382,145 @@ fn aether_hub_etb_gives_one_energy() {
     assert_eq!(g.players[0].energy, 1, "ETB gives {{E}}");
     assert!(g.battlefield_find(id).is_some());
 }
+
+#[test]
+fn aetherborn_marauder_grows_when_you_get_energy() {
+    // CR 107.16 — "Whenever you get one or more {E}" triggers off the new
+    // EventKind::EnergyGained, adding two +1/+1 counters per energy gain.
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::aetherborn_marauder());
+    // Resolve Sage of Shaila's Claim ETB ({E}{E}{E}) to fire one energy gain.
+    let sage = g.add_card_to_hand(0, catalog::sage_of_shailas_claim());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_creature(&mut g, sage);
+    drain_stack(&mut g);
+    let marauder = g.battlefield_find(m).expect("still in play");
+    assert_eq!(
+        marauder.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        2,
+        "two +1/+1 counters from one energy gain",
+    );
+}
+
+#[test]
+fn aetherborn_marauder_does_not_trigger_on_opponent_energy() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::aetherborn_marauder());
+    // Opponent gains energy — YourControl scope must not fire for P0.
+    let sage = g.add_card_to_hand(1, catalog::sage_of_shailas_claim());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sage, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let marauder = g.battlefield_find(m).expect("still in play");
+    assert_eq!(
+        marauder.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0),
+        0,
+        "opponent's energy gain must not grow our Marauder",
+    );
+}
+
+#[test]
+fn lathnu_hellion_survives_upkeep_when_energy_paid() {
+    use crate::game::TurnStep;
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::lathnu_hellion());
+    g.players[0].energy = 2;
+    let mut iters = 0;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 3)
+        && iters < 300
+    {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() { break; }
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(h).is_some(), "paid {{E}}{{E}} → kept");
+    assert_eq!(g.players[0].energy, 0, "energy spent on the upkeep tax");
+}
+
+#[test]
+fn lathnu_hellion_sacrificed_when_energy_unpaid() {
+    use crate::game::TurnStep;
+    let mut g = two_player_game();
+    let h = g.add_card_to_battlefield(0, catalog::lathnu_hellion());
+    g.players[0].energy = 0;
+    let mut iters = 0;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 3)
+        && iters < 300
+    {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() { break; }
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(h).is_none(), "couldn't pay {{E}}{{E}} → sacrificed");
+}
+
+#[test]
+fn greenbelt_rampager_stays_when_energy_recycled() {
+    // ETB nets {E}{E} then pays {E}{E}: AutoDecider keeps it on the battlefield.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::greenbelt_rampager());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_creature(&mut g, id);
+    assert!(g.battlefield_find(id).is_some(), "paid {{E}}{{E}} from the {{E}}{{E}} gained");
+    assert_eq!(g.players[0].energy, 0, "net-zero energy after the ETB");
+}
+
+#[test]
+fn thriving_rhino_pumps_when_energy_paid_on_attack() {
+    let mut g = two_player_game();
+    let r = g.add_card_to_battlefield(0, catalog::thriving_rhino());
+    g.clear_sickness(r);
+    g.players[0].energy = 2;
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: r, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let rhino = g.battlefield_find(r).unwrap();
+    assert_eq!(rhino.power(), 5, "paid {{E}}{{E}} for +2/+2");
+    assert_eq!(g.players[0].energy, 0);
+}
+
+#[test]
+fn harnessed_lightning_gives_energy_when_hitting_a_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::harnessed_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "3 damage killed the 2/2");
+    assert_eq!(g.players[0].energy, 3, "you get {{E}}{{E}}{{E}} for hitting a permanent");
+}
+
+#[test]
+fn harnessed_lightning_to_face_gives_no_energy() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::harnessed_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 3);
+    assert_eq!(g.players[0].energy, 0, "damage to a player grants no energy");
+}

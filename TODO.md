@@ -89,10 +89,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   consumers: Goblin Piledriver / Soldier of the Pantheon (these have other
   riders — protection-from-color is their real evasion), Signal Pest (needs
   Scryfall-verified P/T, firewalled).
-- **Choose-color-on-ETB mana rocks.** Coldsteel Heart / Star Compass enter,
-  choose a color, then tap for it. Needs an ETB `Decision::ChooseColor` that
-  stamps a fixed color onto the tap ability (today only the fixed-color
-  Diamonds and the rainbow `tap_add_any_color` exist).
+- **Choose-color-on-ETB mana rocks — ✅ DONE.** `Effect::ChooseColorForSelf`
+  stamps `CardInstance.chosen_color` at ETB; `ManaPayload::ChosenColorOfSource`
+  taps for it. Coldsteel Heart shipped. Star Compass (basic-land-type gated)
+  can reuse the primitive once its condition is wired.
 - **Unleash bot nuance.** `optional_trigger_beneficial` accepts the Unleash
   +1/+1 counter as pure upside, but the counter disables blocking
   (`Keyword::CantBlock`). A defensive bot should weigh board state before
@@ -2047,7 +2047,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Wear // Tear ships at full fidelity (both halves castable, Fuse
   mode wired, target filters per half).
 
-- ✅ **CR 107 — Numbers and Symbols**
+- ✅ **CR 107 — Numbers and Symbols** (incl. **107.16 Energy {E}**:
+  `Player.energy` + `Effect::AddEnergy`/`PayEnergy`/`PayEnergyOrElse`; the
+  **`EventKind::EnergyGained` trigger** — "whenever you get one or more {E}"
+  — now fires off `GameEvent::EnergyGained` with the amount exposed via
+  `Value::TriggerEventAmount`. Cards: Aetherborn Marauder, Lathnu Hellion,
+  Greenbelt Rampager, plus the existing Kaladesh suite.)
+
+- ✅ **CR 701.32 — Populate** (claude/modern_decks). `Effect::Populate { who }`
+  copies a creature token the player controls (AutoDecider keeps the
+  highest-power one; token doublers apply). Tests:
+  `populate_copies_a_creature_token_you_control`,
+  `populate_is_noop_without_a_creature_token`.
 
 - ✅ **CR 109 — Objects**
 
@@ -3112,23 +3123,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
-- ⏳ **Energy ({E}) follow-ups** (push claude/modern_decks — energy system
-  shipped this run as `Player.energy` + `Effect::AddEnergy`/`PayEnergy`,
-  `sets::kld`). Remaining: (a) **energy-gated mana abilities** — Aether Hub
-  and Servant of the Conduit collapse the "{T}, Pay {E}: Add any color"
-  split because a mana ability's cost has no energy slot; needs an
-  `ActivatedAbility.energy_cost` field (blocked on the 365-literal struct,
-  so it wants a `..Default::default()` migration first). (b) **"pay {E}{E}
-  or sacrifice/bounce" rider** (Lathnu Hellion, Greenbelt Rampager) — a
-  `PayEnergyOrElse { amount, otherwise }` primitive. (c) **EnergyGained
-  trigger event** (Aetherborn Marauder's "whenever you get one or more
-  {E}") — add an `EventKind::EnergyGained`. (d) **damage→energy feedback**
-  (Harnessed Lightning's "you get {E} for each excess damage").
+- 🟡 **Energy ({E}) follow-ups.** (b) **✅ "pay {E}{E} or sacrifice/bounce"
+  rider** — `Effect::PayEnergyOrElse { amount, otherwise }` ships Lathnu
+  Hellion (sac) and Greenbelt Rampager (bounce). (c) **✅ EnergyGained trigger
+  event** — `EventKind::EnergyGained` (CR 107.16) fires "whenever you get one
+  or more {E}"; Aetherborn Marauder wired. (d) **✅ damage→energy feedback** —
+  Harnessed Lightning (deal 3; get {E}{E}{E} if it hit a permanent). Remaining:
+  (a) **energy-gated mana abilities** — Aether Hub / Servant of the Conduit
+  still collapse the "{T}, Pay {E}: Add any color" split (`ActivatedAbility`
+  has no energy-cost slot).
 
-- ⏳ **`ActivatedAbility` builder / `Default`** — the 365 struct literals
-  spell out every field, so adding an ability cost field (energy, etc.)
-  touches all of them. A `Default` impl + `..Default::default()` sweep
-  would unblock cheap cost-field additions.
+- 🟡 **`ActivatedAbility` `..Default::default()` sweep.** `ActivatedAbility`
+  now derives `Default`, and the land/shortcut helpers use
+  `..Default::default()`. Many older struct literals (kld, decks/modern, …)
+  still spell out every field; a mechanical sweep would let an `energy_cost`
+  field be added cheaply (unblocks energy-gated mana abilities).
 
 - ⏳ **Future batch — focus on engine-feature-unlocking cards**: priority
   candidates are Helix Pinnacle (keyword counter), Walking Ballista

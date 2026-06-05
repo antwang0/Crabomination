@@ -3875,6 +3875,7 @@ impl GameState {
                         | crate::effect::EventKind::AttacksAndIsntBlocked
                         | crate::effect::EventKind::LifeGained
                         | crate::effect::EventKind::LifeLost
+                        | crate::effect::EventKind::EnergyGained
                         | crate::effect::EventKind::BecameTarget
                         // Enrage fires once per instance of damage
                         // (CR 702.130a) — fan out across the batch.
@@ -5494,7 +5495,8 @@ fn event_amount(event: &GameEvent) -> u32 {
         GameEvent::LifeGained { amount, .. }
         | GameEvent::LifeLost { amount, .. }
         | GameEvent::DamageDealt { amount, .. }
-        | GameEvent::PoisonAdded { amount, .. } => *amount,
+        | GameEvent::PoisonAdded { amount, .. }
+        | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::CounterAdded { count, .. } => *count,
         _ => 0,
     }

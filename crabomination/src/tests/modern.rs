@@ -17426,6 +17426,62 @@ fn waterlogged_grove_taps_for_green_costing_one_life() {
     assert_eq!(g.players[0].life, life_before - 1, "Should cost 1 life");
 }
 
+// ── Horizon-cycle completion (Fiery Islet / Nurturing Peatland / Silent Clearing) ──
+
+#[test]
+fn fiery_islet_taps_for_blue_costing_one_life() {
+    let mut g = two_player_game();
+    let fi = g.add_card_to_battlefield(0, catalog::fiery_islet());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: fi, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {U}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Blue) > 0);
+    assert_eq!(g.players[0].life, life_before - 1);
+}
+
+#[test]
+fn silent_clearing_sac_draws_a_card() {
+    let mut g = two_player_game();
+    let sc = g.add_card_to_battlefield(0, catalog::silent_clearing());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility { card_id: sc, ability_index: 2, target: None, x_value: None })
+        .expect("sac for draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert!(g.battlefield.iter().all(|c| c.id != sc));
+}
+
+// ── Verge lands (conditional second-color mana ability) ─────────────────────
+
+#[test]
+fn blazemire_verge_taps_for_black_unconditionally() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::blazemire_verge());
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {B}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Black) > 0);
+}
+
+#[test]
+fn blazemire_verge_red_gated_on_swamp_or_mountain() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::blazemire_verge());
+    // No Swamp/Mountain controlled → the red ability is illegal.
+    assert!(g
+        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .is_err());
+    // Controlling a Mountain unlocks it.
+    g.add_card_to_battlefield(0, catalog::mountain());
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .expect("red now allowed");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Red) > 0);
+}
+
 // ── Koma, Cosmos Serpent ────────────────────────────────────────────────────
 
 #[test]
@@ -17487,22 +17543,27 @@ fn exotic_orchard_taps_for_any_color() {
 // ── Master of Death ─────────────────────────────────────────────────────────
 
 #[test]
-fn growing_ranks_creates_centaur_token_on_upkeep() {
+fn growing_ranks_populates_a_token_on_upkeep() {
+    // Growing Ranks populates (CR 701.32): copies a creature token you control.
+    use crate::card::{CardDefinition, CardType, CreatureType, Subtypes};
     use crate::game::types::TurnStep;
     let mut g = two_player_game();
-    let _ranks = g.add_card_to_battlefield(0, catalog::growing_ranks());
-    let bf_before = g.battlefield.len();
+    g.add_card_to_battlefield(0, catalog::growing_ranks());
+    let tok = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Centaur",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Centaur], ..Default::default() },
+        power: 3, toughness: 3, ..Default::default()
+    });
+    g.battlefield_find_mut(tok).unwrap().is_token = true;
     g.active_player_idx = 0;
     g.step = TurnStep::Upkeep;
     g.priority.player_with_priority = 0;
     g.fire_step_triggers(TurnStep::Upkeep);
     drain_stack(&mut g);
-    assert!(g.battlefield.len() > bf_before, "Centaur token should be created");
-    let tok = g.battlefield.iter().find(|c|
-        c.is_token && c.definition.name == "Centaur"
-    ).expect("Centaur token should exist on the battlefield");
-    assert_eq!(tok.power(), 3, "Centaur token should be 3/3");
-    assert_eq!(tok.toughness(), 3, "Centaur token should be 3/3");
+    let centaurs = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Centaur").count();
+    assert_eq!(centaurs, 2, "populate copied the Centaur token");
 }
 
 #[test]
@@ -26127,4 +26188,111 @@ fn thalia_heretic_cathar_taps_opponent_creatures_and_nonbasics() {
     let basic = g.add_card_to_battlefield(1, catalog::island());
     g.fire_self_etb_triggers(basic, 1);
     assert!(!g.battlefield_find(basic).unwrap().tapped, "opp basic land untapped");
+}
+
+// ── Coldsteel Heart (choose-a-color mana rock) ──────────────────────────────
+
+#[test]
+fn coldsteel_heart_enters_tapped_and_taps_for_chosen_color() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Color(Color::Blue)]));
+    let id = g.add_card_to_hand(0, catalog::coldsteel_heart());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let heart = g.battlefield_find(id).expect("resolved onto battlefield");
+    assert_eq!(heart.chosen_color, Some(Color::Blue), "stamped the chosen color");
+    assert!(heart.tapped, "Coldsteel Heart enters tapped");
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for the chosen color");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
+}
+
+#[test]
+fn floodfarm_verge_blue_gated_on_plains_or_island() {
+    let mut g = two_player_game();
+    let v = g.add_card_to_battlefield(0, catalog::floodfarm_verge());
+    // White is unconditional.
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 0, target: None, x_value: None })
+        .expect("white");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::White) > 0);
+    // Blue needs a Plains or Island.
+    g.battlefield_find_mut(v).unwrap().tapped = false;
+    assert!(g
+        .perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .is_err());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility { card_id: v, ability_index: 1, target: None, x_value: None })
+        .expect("blue now allowed");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Blue) > 0);
+}
+
+
+#[test]
+fn new_talismans_tap_for_colorless_and_their_two_colors() {
+    let cases: &[(fn() -> crate::card::CardDefinition, Color, Color)] = &[
+        (catalog::talisman_of_hierarchy, Color::White, Color::Black),
+        (catalog::talisman_of_indulgence, Color::Black, Color::Red),
+        (catalog::talisman_of_resilience, Color::Black, Color::Green),
+        (catalog::talisman_of_impulse, Color::Red, Color::Green),
+        (catalog::talisman_of_unity, Color::Green, Color::White),
+    ];
+    for (factory, c1, c2) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(id);
+        // Colorless ability (index 0).
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, x_value: None }).expect("colorless");
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+        // First color (index 1, costs 1 life).
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        let life = g.players[0].life;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 1, target: None, x_value: None }).expect("c1");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(*c1), 1);
+        assert_eq!(g.players[0].life, life - 1);
+        // Second color (index 2).
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 2, target: None, x_value: None }).expect("c2");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(*c2), 1);
+    }
+}
+
+#[test]
+fn signets_pay_one_and_tap_for_their_two_colors() {
+    let cases: &[(fn() -> crate::card::CardDefinition, Color, Color)] = &[
+        (catalog::azorius_signet, Color::White, Color::Blue),
+        (catalog::dimir_signet, Color::Blue, Color::Black),
+        (catalog::rakdos_signet, Color::Black, Color::Red),
+        (catalog::gruul_signet, Color::Red, Color::Green),
+        (catalog::selesnya_signet, Color::Green, Color::White),
+        (catalog::orzhov_signet, Color::White, Color::Black),
+        (catalog::izzet_signet, Color::Blue, Color::Red),
+        (catalog::golgari_signet, Color::Black, Color::Green),
+        (catalog::boros_signet, Color::Red, Color::White),
+        (catalog::simic_signet, Color::Green, Color::Blue),
+    ];
+    for (factory, c1, c2) in cases {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(0, factory());
+        g.clear_sickness(id);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: 0, target: None, x_value: None }).expect("signet activates");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(*c1), 1, "produced first color");
+        assert_eq!(g.players[0].mana_pool.amount(*c2), 1, "produced second color");
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 0, "spent the {{1}}");
+    }
 }

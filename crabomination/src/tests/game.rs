@@ -6587,3 +6587,52 @@ fn cr_731_is_day_is_night_predicates() {
     assert!(g.evaluate_predicate(&Predicate::IsDay, &ctx));
     assert!(!g.evaluate_predicate(&Predicate::IsNight, &ctx));
 }
+
+#[test]
+fn branchloft_pathway_front_and_back_faces() {
+    // Front (Branchloft / Forest / G) and back (Boulderloft / Plains / W).
+    let mut g = two_player_game();
+    let f = g.add_card_to_hand(0, catalog::branchloft_pathway());
+    g.perform_action(GameAction::PlayLand(f)).expect("front playable");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: f, ability_index: 0, target: None, x_value: None }).expect("front taps for {G}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+
+    let mut g2 = two_player_game();
+    let b = g2.add_card_to_hand(0, catalog::clearwater_pathway());
+    g2.perform_action(GameAction::PlayLandBack(b)).expect("back playable");
+    let card = g2.battlefield_find(b).expect("on battlefield");
+    assert_eq!(card.definition.name, "Murkwater Pathway");
+    g2.perform_action(GameAction::ActivateAbility {
+        card_id: b, ability_index: 0, target: None, x_value: None }).expect("back taps for {B}");
+    assert_eq!(g2.players[0].mana_pool.amount(Color::Black), 1);
+}
+
+#[test]
+fn pathway_cycle_faces_tap_for_their_colors() {
+    // Spot-check the rest of the pathway cycle: front color via PlayLand,
+    // back color via PlayLandBack.
+    let cases: &[(fn() -> crate::card::CardDefinition, Color, &str, Color)] = &[
+        (catalog::hengegate_pathway, Color::White, "Mistgate Pathway", Color::Blue),
+        (catalog::riverglide_pathway, Color::Blue, "Lavaglide Pathway", Color::Red),
+        (catalog::barkchannel_pathway, Color::Green, "Tidechannel Pathway", Color::Blue),
+        (catalog::brightclimb_pathway, Color::White, "Grimclimb Pathway", Color::Black),
+        (catalog::needleverge_pathway, Color::Red, "Pillarverge Pathway", Color::White),
+    ];
+    for (factory, front_color, back_name, back_color) in cases {
+        let mut g = two_player_game();
+        let f = g.add_card_to_hand(0, factory());
+        g.perform_action(GameAction::PlayLand(f)).expect("front playable");
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: f, ability_index: 0, target: None, x_value: None }).expect("front taps");
+        assert_eq!(g.players[0].mana_pool.amount(*front_color), 1);
+
+        let mut g2 = two_player_game();
+        let b = g2.add_card_to_hand(0, factory());
+        g2.perform_action(GameAction::PlayLandBack(b)).expect("back playable");
+        assert_eq!(g2.battlefield_find(b).unwrap().definition.name, *back_name);
+        g2.perform_action(GameAction::ActivateAbility {
+            card_id: b, ability_index: 0, target: None, x_value: None }).expect("back taps");
+        assert_eq!(g2.players[0].mana_pool.amount(*back_color), 1);
+    }
+}

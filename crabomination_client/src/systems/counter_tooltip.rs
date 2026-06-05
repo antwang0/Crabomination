@@ -146,6 +146,24 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Type: {}", p.creature_types.join(" ")));
     }
 
+    // Chosen color for "choose-a-color" mana rocks (Coldsteel Heart): show
+    // which color this source now taps for.
+    if let Some(c) = p.chosen_color {
+        let name = match c {
+            crabomination::mana::Color::White => "White",
+            crabomination::mana::Color::Blue => "Blue",
+            crabomination::mana::Color::Black => "Black",
+            crabomination::mana::Color::Red => "Red",
+            crabomination::mana::Color::Green => "Green",
+        };
+        lines.push(format!("Taps for: {name}"));
+    }
+
+    // Card name chosen by Pithing Needle / Phyrexian Revoker (CR 201.3).
+    if let Some(name) = &p.named_card {
+        lines.push(format!("Naming: {name}"));
+    }
+
     // Loyalty for planeswalkers (separate from counters list since it's
     // the headline number on every walker).
     if p.card_types.contains(&CardType::Planeswalker) {
@@ -655,6 +673,7 @@ mod tests {
             crew_value: 0,
             marked_lethal: false,
             named_card: None,
+            chosen_color: None,
         }
     }
 

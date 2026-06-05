@@ -1305,6 +1305,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayEnergyOrElse { amount, otherwise } => {
+                // CR 107.16 — "sacrifice/return unless you pay {E}…". Pay when
+                // able (AutoDecider keeps the permanent); otherwise resolve the
+                // fallback (sacrifice / bounce).
+                let p = ctx.controller;
+                if self.players[p].energy >= *amount {
+                    self.players[p].energy -= *amount;
+                } else {
+                    self.run_effect(otherwise, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::Draw { who, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
@@ -1708,6 +1721,21 @@ impl GameState {
                         for _ in 0..n {
                             add_one(self, p, *color);
                             events.push(GameEvent::ManaAdded { player: p, color: *color });
+                        }
+                    }
+                    ManaPayload::ChosenColorOfSource => {
+                        // Coldsteel Heart-style: tap for the color stamped at
+                        // ETB. Falls back to colorless if none was chosen.
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        match self.battlefield_find(source).and_then(|c| c.chosen_color) {
+                            Some(c) => {
+                                add_one(self, p, c);
+                                events.push(GameEvent::ManaAdded { player: p, color: c });
+                            }
+                            None => {
+                                self.players[p].mana_pool.add_colorless(1);
+                                events.push(GameEvent::ColorlessManaAdded { player: p });
+                            }
                         }
                     }
                     ManaPayload::AnyOneColor(v) => {
@@ -2457,6 +2485,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ChooseColorForSelf => {
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::mana::Color;
+                let Some(source) = ctx.source else { return Ok(()); };
+                let legal = vec![
+                    Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                ];
+                let color = match self.decider.decide(&Decision::ChooseColor { source, legal }) {
+                    DecisionAnswer::Color(c) => c,
+                    _ => Color::White,
+                };
+                if let Some(c) = self.battlefield_find_mut(source) {
+                    c.chosen_color = Some(color);
+                }
+                Ok(())
+            }
+
             Effect::GrantProtectionFromChosenColor { what, duration } => {
                 // The controller picks a color; each target gains
                 // protection from it for `duration` (EOT today). Mother of
@@ -3046,6 +3091,46 @@ impl GameState {
                 if let Some((p_o, t_o)) = override_pt {
                     def.power = *p_o;
                     def.toughness = *t_o;
+                }
+                for _ in 0..n {
+                    let id = self.next_id();
+                    let mut inst = CardInstance::new(id, def.clone(), p);
+                    inst.controller = p;
+                    inst.is_token = true;
+                    self.battlefield.push(inst);
+                    events.push(GameEvent::TokenCreated { card_id: id });
+                    events.push(GameEvent::PermanentEntered { card_id: id });
+                    self.last_created_token = Some(id);
+                    self.last_created_tokens.push(id);
+                    self.fire_self_etb_triggers(id, p);
+                }
+                Ok(())
+            }
+
+            Effect::Populate { who } => {
+                // CR 701.32 — copy one creature token the player controls.
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Pick the controller's highest-power creature token (AutoDecider
+                // heuristic; deterministic for tests).
+                let pick = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.is_token && c.controller == p && c.definition.is_creature())
+                    .max_by_key(|c| c.power())
+                    .map(|c| c.id);
+                let Some(src_id) = pick else { return Ok(()); };
+                let Some(def) = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == src_id)
+                    .map(|c| (*c.definition).clone())
+                else {
+                    return Ok(());
+                };
+                // Token doublers (Doubling Season / Parallel Lives) apply.
+                let mut n: u32 = 1;
+                for _ in 0..self.token_doublers_for(p) {
+                    n = n.saturating_mul(2);
                 }
                 for _ in 0..n {
                     let id = self.next_id();

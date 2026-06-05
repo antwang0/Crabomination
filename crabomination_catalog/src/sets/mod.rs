@@ -51,6 +51,77 @@ pub fn no_abilities() -> Vec<ActivatedAbility> {
     vec![]
 }
 
+/// Mana ability shorthand: `{T}, Pay N life: Add {color}.` — the horizon-land
+/// / painland cost line. The life is paid up front during activation.
+pub fn tap_pay_life_add(color: Color, life: u32) -> ActivatedAbility {
+    ActivatedAbility {
+        tap_cost: true,
+        life_cost: life,
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![color]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Horizon land (Future Sight / Modern Horizons cycle): two
+/// `{T}, Pay 1 life: Add {color}` abilities plus
+/// `{1}, {T}, Sacrifice this: Draw a card`. No basic land types.
+pub fn horizon_land(name: &'static str, color_a: Color, color_b: Color) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_pay_life_add(color_a, 1),
+            tap_pay_life_add(color_b, 1),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Verge land (Foundations / Duskmourn): `{T}: Add {uncond}` unconditionally,
+/// and `{T}: Add {cond}` only while you control a `type_a` or `type_b` land.
+pub fn verge_land(
+    name: &'static str,
+    uncond: Color,
+    cond: Color,
+    type_a: LandType,
+    type_b: LandType,
+) -> CardDefinition {
+    let gated = ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![cond]),
+        },
+        condition: Some(Predicate::SelectorCountAtLeast {
+            sel: Selector::EachPermanent(
+                SelectionRequirement::HasLandType(type_a)
+                    .or(SelectionRequirement::HasLandType(type_b))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            n: Value::Const(1),
+        }),
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(uncond), gated],
+        ..Default::default()
+    }
+}
+
 // ── Land helpers shared across set modules ───────────────────────────────────
 
 /// Triggered ability: when this permanent enters the battlefield, tap it.
