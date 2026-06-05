@@ -834,6 +834,12 @@ pub struct PermanentView {
     /// case. Populated by `project_permanent`.
     #[serde(default)]
     pub chosen_color: Option<crate::mana::Color>,
+    /// Names of the Auras / Equipment / Fortifications attached to this
+    /// permanent (CR 303 / 301). Lets the client list "Enchanted/Equipped by:
+    /// …" in the tooltip without scanning the whole battlefield. Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub attachments: Vec<String>,
 }
 
 impl PermanentView {

@@ -51,6 +51,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
                         &attacker_ids,
                         &block_map,
                         &state.prevention_shields,
+                        &state.battlefield,
                     )
                 })
                 .collect()
@@ -371,6 +372,7 @@ fn project_permanent(
     attacking: &[CardId],
     block_map: &[(CardId, CardId)],
     prevention_shields: &[crate::game::types::PreventionShield],
+    battlefield: &[CardInstance],
 ) -> PermanentView {
     use crate::game::types::PreventionTarget;
     let cp = computed.iter().find(|c| c.id == card.id);
@@ -466,6 +468,12 @@ fn project_permanent(
         },
         named_card: card.named_card.clone(),
         chosen_color: card.chosen_color,
+        // Auras / Equipment / Fortifications attached to this permanent.
+        attachments: battlefield
+            .iter()
+            .filter(|o| o.attached_to == Some(card.id))
+            .map(|o| o.definition.name.to_string())
+            .collect(),
     }
 }
 

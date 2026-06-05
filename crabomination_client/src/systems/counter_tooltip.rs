@@ -159,6 +159,13 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Taps for: {name}"));
     }
 
+    // Auras / Equipment attached to this permanent (CR 303 / 301): list them
+    // so the player sees what's enchanting/equipping a creature without
+    // hovering each attachment.
+    if !p.attachments.is_empty() {
+        lines.push(format!("Attached: {}", p.attachments.join(", ")));
+    }
+
     // Card name chosen by Pithing Needle / Phyrexian Revoker (CR 201.3).
     if let Some(name) = &p.named_card {
         lines.push(format!("Naming: {name}"));
@@ -674,6 +681,7 @@ mod tests {
             marked_lethal: false,
             named_card: None,
             chosen_color: None,
+            attachments: vec![],
         }
     }
 
@@ -719,6 +727,14 @@ mod tests {
         p.creature_types = vec!["Bear".into()];
         let body = build_tooltip_body(&p).expect("body should render");
         assert!(body.contains("Type: Bear"), "got: {body}");
+    }
+
+    #[test]
+    fn attachments_render_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.attachments = vec!["Gift of Orzhova".into(), "Shuko".into()];
+        let body = build_tooltip_body(&p).expect("body should render");
+        assert!(body.contains("Attached: Gift of Orzhova, Shuko"), "got: {body}");
     }
 
     #[test]
