@@ -13314,6 +13314,46 @@ pub fn spite_malice() -> CardDefinition {
     }
 }
 
+/// Boom // Bust — {1}{R} // {5}{R} Sorcery split (CR 709, no Fuse). Boom
+/// (left) destroys a land you control and a land you don't (two targets);
+/// Bust (right) destroys all lands.
+pub fn boom_bust() -> CardDefinition {
+    CardDefinition {
+        name: "Boom // Bust",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou.negate()),
+                },
+            },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(5), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(SelectionRequirement::Land),
+                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
 /// Frontline Devastator — {3}{R} 3/3 Zombie Minotaur Warrior. Afflict 2
 /// (CR 702.131 — becomes blocked → defending player loses 2 life).
 /// {1}{R}: +1/+0 until end of turn.

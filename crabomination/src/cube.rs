@@ -1315,6 +1315,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         toil_trouble,
         dead_gone,
         pure_simple,
+        boom_bust,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
         // ── modern_decks: red utility creatures ──

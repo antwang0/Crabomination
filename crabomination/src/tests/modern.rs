@@ -16283,6 +16283,48 @@ fn rough_tumble_right_hits_only_fliers() {
 }
 
 #[test]
+fn boom_left_destroys_one_of_each_players_land() {
+    // Boom (left) destroys a land you control and a land you don't.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::mountain());
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    let safe = g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::boom_bust());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None, x_value: None,
+    }).expect("Boom castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(mine).is_none(), "my land destroyed");
+    assert!(g.battlefield_find(theirs).is_none(), "their land destroyed");
+    assert!(g.battlefield_find(safe).is_some(), "untargeted land spared");
+}
+
+#[test]
+fn bust_right_destroys_all_lands() {
+    // Bust (right) destroys every land.
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(0, catalog::mountain());
+    let l2 = g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::boom_bust());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bust castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(l1).is_none() && g.battlefield_find(l2).is_none(), "all lands gone");
+}
+
+#[test]
 fn pure_left_destroys_multicolored_only() {
     // Pure (left) destroys a multicolored permanent but spares a mono one.
     let mut g = two_player_game();
