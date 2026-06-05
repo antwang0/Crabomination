@@ -3338,6 +3338,12 @@ pub enum StaticEffect {
     /// Mindcensor-style draw locks, Spirit of the Labyrinth's `max: 1`
     /// applied to each opponent).
     CapDrawsPerTurn { target: PlayerStaticTarget, max: u32 },
+    /// CR 705.3 — Krark's-Thumb-style coin-flip advantage: while active, each
+    /// coin flip the targeted player makes is replayed an extra time and
+    /// treated as heads if any replay came up heads. Counted (and summed, so
+    /// multiple sources stack) by `coin_flip_advantage_now`, which feeds the
+    /// `Effect::FlipCoin` resolver on top of `Player.coin_flip_advantage`.
+    CoinFlipAdvantage { target: PlayerStaticTarget },
     /// Damping-Sphere-style "lands that tap for more than one mana enter
     /// producing only {C}". Detected at `play_land` time: if any active
     /// `LandsTapColorlessOnly` static is in play, the entering land's

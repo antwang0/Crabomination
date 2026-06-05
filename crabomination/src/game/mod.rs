@@ -1517,6 +1517,27 @@ impl GameState {
         })
     }
 
+    /// CR 705.3 — coin-flip advantage for `seat` from active
+    /// `StaticEffect::CoinFlipAdvantage` permanents (Krark's Thumb). Summed
+    /// so multiple sources stack; added to `Player.coin_flip_advantage` by
+    /// the `Effect::FlipCoin` resolver.
+    pub fn coin_flip_advantage_now(&self, seat: usize) -> u32 {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        self.battlefield.iter().map(|src| {
+            src.definition.static_abilities.iter().filter(|sa| {
+                if let StaticEffect::CoinFlipAdvantage { target } = &sa.effect {
+                    match target {
+                        PlayerStaticTarget::Controller => src.controller == seat,
+                        PlayerStaticTarget::EachOpponent => src.controller != seat,
+                        PlayerStaticTarget::EachPlayer => true,
+                    }
+                } else {
+                    false
+                }
+            }).count() as u32
+        }).sum()
+    }
+
     /// CR 614 — True if a would-be life *gain* by `seat` should be replaced
     /// with an equal life *loss* (Tainted Remedy). Scans the battlefield for
     /// any active `StaticEffect::LifeGainBecomesLoss` whose `target` includes
@@ -5751,6 +5772,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
             // layer effect.
             | StaticEffect::CapDrawsPerTurn { .. }
+            // CoinFlipAdvantage (Krark's Thumb) — consulted dynamically by
+            // the FlipCoin resolver via coin_flip_advantage_now; no layer effect.
+            | StaticEffect::CoinFlipAdvantage { .. }
             // PreventUntap — consulted by `do_untap` (CR 502.3); no layer
             // effect since it gates a turn-based action rather than a
             // characteristic.

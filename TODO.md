@@ -1383,10 +1383,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `cr_705_3_coin_flip_advantage_lets_tails_be_recovered` (advantage=1
   + scripted [false, true] → heads branch fires),
   `cr_705_3_no_advantage_means_one_flip_one_result` (control — no
-  advantage + Bool(false) → tails branch fires). Krark's Thumb-the-
-  card isn't in the catalog yet, but the engine primitive is live;
-  Mana Clash / Karplusan Minotaur / Goblin Goliath all compose against
-  the same fast path without any further engine changes.
+  advantage + Bool(false) → tails branch fires). The advantage can now
+  also be **granted by a battlefield static** —
+  `StaticEffect::CoinFlipAdvantage { target }` + `coin_flip_advantage_now`
+  (summed across sources, added on top of the player field by the FlipCoin
+  resolver), so Krark's Thumb is a one-line catalog entry whenever its
+  printed stats can be verified. Test:
+  `cr_705_3_static_grants_coin_flip_advantage`. Mana Clash / Karplusan
+  Minotaur / Goblin Goliath all compose against the same fast path without
+  any further engine changes.
   Implementation: `Effect::FlipCoin { count, on_heads, on_tails }` at
   `effect.rs`; `Decision::CoinFlip { player }` +
   `DecisionAnswer::Bool(true|false)` in `decision.rs`; the resolver in

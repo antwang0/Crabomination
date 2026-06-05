@@ -3154,3 +3154,47 @@ fn bot_blocks_first_striker_it_outsizes() {
     assert_eq!(blocks, vec![(blocker, attacker)],
         "a 3/3 survives the first-strike 2 and kills the 2/2 first-striker");
 }
+
+#[test]
+fn cr_705_3_static_grants_coin_flip_advantage() {
+    // Krark's-Thumb-style: advantage comes from a battlefield static, not the
+    // Player field. A scripted (tails, heads) flip should resolve as heads.
+    use crate::card::{CardDefinition, CardType, StaticAbility, Supertype};
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::effect::{Effect, PlayerStaticTarget, Selector, StaticEffect, Value};
+
+    let thumb = CardDefinition {
+        name: "Test Thumb",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Coin-flip advantage.",
+            effect: StaticEffect::CoinFlipAdvantage { target: PlayerStaticTarget::Controller },
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, thumb);
+    assert_eq!(g.coin_flip_advantage_now(0), 1, "static grants advantage to its controller");
+    assert_eq!(g.coin_flip_advantage_now(1), 0, "opponent gets none");
+
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true), // the second replay wins
+    ]));
+    let body = Effect::FlipCoin {
+        count: Value::Const(1),
+        on_heads: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+        on_tails: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(5) }),
+    };
+    let src = g.add_card_to_battlefield(0, catalog::island());
+    g.stack.push(crate::game::types::StackItem::Trigger {
+        source: src, controller: 0, effect: Box::new(body), target: None, mode: None,
+        x_value: 0, converged_value: 0, trigger_source: None, mana_spent: 0,
+        event_amount: 0, intervening_if: None,
+    });
+    let life_before = g.players[0].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 5,
+        "static-granted advantage redeems the tails flip");
+}

@@ -607,7 +607,8 @@ impl GameState {
                 // the engine performs the disjunction here.
                 let advantage = self.players.get(ctx.controller)
                     .map(|p| p.coin_flip_advantage)
-                    .unwrap_or(0);
+                    .unwrap_or(0)
+                    + self.coin_flip_advantage_now(ctx.controller);
                 let extra_flips = advantage as usize;
                 for _ in 0..n {
                     let mut heads_seen = false;
