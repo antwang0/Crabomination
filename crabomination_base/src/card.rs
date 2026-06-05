@@ -593,6 +593,11 @@ pub enum SelectionRequirement {
     IsNonbasicLand,
     IsAttacking,
     IsBlocking,
+    /// True when the candidate permanent has an Aura attached to it (CR 303
+    /// "enchanted permanent"). Battlefield-only: scans for any enchantment
+    /// whose `attached_to` points at the candidate. Powers Kestia's
+    /// "whenever an enchanted creature … you control attacks" trigger.
+    IsEnchanted,
     /// True when the candidate creature dealt damage to the ability's
     /// controller this turn (combat or non-combat). Reads the controller's
     /// `Player.creatures_that_damaged_me_this_turn`. Battlefield-only;

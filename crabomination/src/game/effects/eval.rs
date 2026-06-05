@@ -813,6 +813,12 @@ impl GameState {
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
+                    // CR 303 — "enchanted" = an Aura is attached. Equipment also
+                    // sets `attached_to`, so require the attachment be an
+                    // enchantment to exclude it.
+                    R::IsEnchanted => self.battlefield.iter().any(|o| {
+                        o.attached_to == Some(*cid) && o.definition.is_enchantment()
+                    }),
                     // CR 506.5: attacking alone = card is in attacking AND
                     // there is exactly one declared attacker.
                     R::IsAttackingAlone => {
@@ -1038,7 +1044,7 @@ impl GameState {
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone
-            | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn => false,
+            | R::IsSpellOnStack | R::DealtDamageToControllerThisTurn | R::IsEnchanted => false,
         }
     }
 }

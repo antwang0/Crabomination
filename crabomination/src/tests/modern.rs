@@ -26706,10 +26706,49 @@ fn kestia_draws_when_an_enchantment_creature_attacks() {
     g.priority.player_with_priority = 0;
     let hand_before = g.players[0].hand.len();
     // Kestia (an enchantment creature you control) attacks → draw a card.
-    g.declare_attackers(vec![Attack { attacker: kestia, target: AttackTarget::Player(1) }])
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: kestia, target: AttackTarget::Player(1) }]))
         .expect("Kestia attacks");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "attack draws a card");
+}
+
+#[test]
+fn kestia_draws_when_an_enchanted_creature_attacks() {
+    // A vanilla creature wearing an Aura is "enchanted" → Kestia's board-wide
+    // trigger draws when it attacks.
+    let mut g = two_player_game();
+    let _kestia = g.add_card_to_battlefield(0, catalog::kestia_the_cultivator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::gift_of_orzhova());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("enchanted bear attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "enchanted attacker draws");
+}
+
+#[test]
+fn kestia_no_draw_when_a_plain_creature_attacks() {
+    // A vanilla, unenchanted creature attacking does NOT satisfy Kestia.
+    let mut g = two_player_game();
+    let _kestia = g.add_card_to_battlefield(0, catalog::kestia_the_cultivator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("plain bear attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "plain attacker draws nothing");
 }
 
 #[test]

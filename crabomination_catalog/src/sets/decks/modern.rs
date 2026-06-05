@@ -18007,12 +18007,13 @@ pub fn shorikai_genesis_engine() -> CardDefinition {
 }
 
 /// Kestia, the Cultivator — {1}{G}{W}{U} Legendary Enchantment Creature 4/4.
-/// Bestow {3}{G}{W}{U}; enchanted creature gets +4/+4. The printed "whenever an
-/// enchanted creature or enchantment creature you control attacks, draw" is
-/// narrowed to Kestia's own attack (SelfSource) — no "is enchanted" predicate
-/// and the board-wide attack scope isn't reliable yet.
+/// Bestow {3}{G}{W}{U}; enchanted creature gets +4/+4. Whenever an enchanted
+/// creature or enchantment creature you control attacks, draw a card.
 pub fn kestia_the_cultivator() -> CardDefinition {
     use crate::card::{EquipBonus, Supertype};
+    let attacker_is_enchanted = SelectionRequirement::Creature.and(
+        SelectionRequirement::IsEnchanted.or(SelectionRequirement::Enchantment),
+    );
     CardDefinition {
         name: "Kestia, the Cultivator",
         cost: cost(&[generic(1), g(), w(), u()]),
@@ -18024,7 +18025,11 @@ pub fn kestia_the_cultivator() -> CardDefinition {
         bestow: Some(cost(&[generic(3), g(), w(), u()])),
         equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, keywords: vec![] }),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: attacker_is_enchanted,
+                }),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         ..Default::default()

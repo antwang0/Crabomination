@@ -15,12 +15,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Suspend/Plot-adjacent exile-and-recast), and Miracle as a real card-castable
   cost (Metamorphosis Fanatic — only the Lorehold "granted miracle" effect
   exists today, not a `CardDefinition.miracle_cost` field).
-- **`is enchanted` / board-wide attack-trigger gap.** Kestia, the Cultivator's
-  "whenever an enchanted creature or enchantment creature you control attacks"
-  is narrowed to a `SelfSource` attack: there's no "has an Aura attached"
-  `SelectionRequirement`, and an `Attacks` + `EventScope::YourControl` trigger
-  with a `with_filter` did not fire in the unit-test harness when the source
-  was itself the attacker — worth auditing the YourControl attack dispatch.
 - **Card lookups now work offline.** `scripts/.scryfall_cache.json` has been
   expanded from 332 cards to the full Scryfall oracle set (~35.5k cards, every
   unique card keyed by name, with DFC/adventure front-face aliases), so the
