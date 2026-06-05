@@ -972,6 +972,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mistvault_bridge);
         v.push(glimpse_the_unthinkable);
         v.push(far_away);
+        v.push(consign_oblivion);
         v.push(gloomlake_verge);
         v.push(dimir_signet);
         v.push(clearwater_pathway);
@@ -1307,6 +1308,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         zo_zu_the_punisher,
         frontline_devastator,
         rough_tumble,
+        cut_ribbons,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
         // ── modern_decks: red utility creatures ──
@@ -1646,6 +1648,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Poisonous (CR 702.70) ──
         marsh_viper,
+        mouth_feed,
         // ── modern_decks: +1/+1-counter green creatures ──
         avatar_of_the_resolute,
         pelt_collector,

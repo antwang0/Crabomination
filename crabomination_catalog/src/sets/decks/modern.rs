@@ -16,7 +16,7 @@ use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
-use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r, u, w, x};
 
 // ── Cantrips & card selection ────────────────────────────────────────────────
 
@@ -12918,6 +12918,109 @@ pub fn rough_tumble() -> CardDefinition {
             },
             fuse: false,
             aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Cut // Ribbons — {1}{R} // {X}{B}{B} split with Aftermath (CR 702.127).
+/// Cut (left, Sorcery) deals 4 damage to target creature; Ribbons (right,
+/// castable only from the graveyard, then exiled) drains each opponent for X.
+pub fn cut_ribbons() -> CardDefinition {
+    CardDefinition {
+        name: "Cut // Ribbons",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[x(), b(), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::XFromCost,
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Consign // Oblivion — {1}{U} // {4}{B} split with Aftermath (CR 702.127).
+/// Consign (left, Instant) returns target nonland permanent to its owner's
+/// hand; Oblivion (right, castable only from the graveyard, then exiled) makes
+/// target opponent discard two cards.
+pub fn consign_oblivion() -> CardDefinition {
+    CardDefinition {
+        name: "Consign // Oblivion",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(4), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Discard {
+                    who: Selector::Target(0),
+                    amount: Value::Const(2),
+                    random: false,
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Mouth // Feed — {2}{G} // {3}{G} split with Aftermath (CR 702.127). Mouth
+/// (left) makes a 3/3 green Hippo; Feed (right, castable only from the
+/// graveyard, then exiled) draws a card for each creature you control with
+/// power 3 or greater.
+pub fn mouth_feed() -> CardDefinition {
+    CardDefinition {
+        name: "Mouth // Feed",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Hippo".into(),
+                power: 3,
+                toughness: 3,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Hippo],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::count(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(3)),
+                    )),
+                },
+            },
+            fuse: false,
+            aftermath: true,
         })),
         ..Default::default()
     }

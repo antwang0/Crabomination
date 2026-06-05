@@ -16283,6 +16283,62 @@ fn rough_tumble_right_hits_only_fliers() {
 }
 
 #[test]
+fn cut_ribbons_aftermath_drains_each_opponent_for_x() {
+    // Ribbons (aftermath) drains each opponent for X. Cast it from the
+    // graveyard with X=3.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cut_ribbons());
+    let card = g.players[0].remove_from_hand(id).unwrap();
+    g.players[0].graveyard.push(card);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[1].life;
+
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Ribbons castable from graveyard");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, before - 3, "Ribbons drained 3");
+    assert!(g.exile.iter().any(|c| c.id == id), "Ribbons exiled");
+}
+
+#[test]
+fn consign_oblivion_left_bounces_nonland() {
+    // Consign (left) returns a target nonland permanent to its owner's hand.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::consign_oblivion());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Consign castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "to owner's hand");
+}
+
+#[test]
+fn mouth_feed_left_makes_hippo() {
+    // Mouth (left) makes a 3/3 green Hippo.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mouth_feed());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mouth castable");
+    drain_stack(&mut g);
+
+    let hippo = g.battlefield.iter().find(|c| c.definition.name == "Hippo").expect("Hippo token");
+    assert_eq!((hippo.power(), hippo.toughness()), (3, 3));
+}
+
+#[test]
 fn spring_mind_aftermath_from_graveyard_then_exiled() {
     // CR 702.127 — Mind (right half) is castable only from the graveyard,
     // draws two, then is exiled.
