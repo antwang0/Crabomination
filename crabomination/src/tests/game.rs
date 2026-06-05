@@ -6392,9 +6392,9 @@ fn bushido_pumps_attacker_when_blocked() {
 }
 
 #[test]
-fn afflict_drains_defender_when_blocked() {
-    // CR 702.131: an Afflict N attacker that becomes blocked makes the
-    // defending player lose N life (independent of combat damage).
+fn frontline_devastator_afflict_drains_defender_when_blocked() {
+    // Card-wiring check: Frontline Devastator's Afflict 2 (CR 702.131) drains
+    // the defending player when it becomes blocked.
     let mut g = two_player_game();
     let attacker = g.add_card_to_battlefield(0, catalog::frontline_devastator());
     let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -6405,10 +6405,12 @@ fn afflict_drains_defender_when_blocked() {
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
         attacker, target: AttackTarget::Player(1),
     }])).unwrap();
+    drain_stack(&mut g);
     let life_before = g.players[1].life;
     g.step = TurnStep::DeclareBlockers;
     g.priority.player_with_priority = 1;
     g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    drain_stack(&mut g);
     assert_eq!(g.players[1].life, life_before - 2, "Afflict 2 drained the defender");
 }
 

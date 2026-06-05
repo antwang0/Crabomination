@@ -313,9 +313,6 @@ pub enum Keyword {
     Bushido(u32),
     /// Rampage N (CR 702.23) — when this becomes blocked, it gets +N/+N for each blocker beyond the first.
     Rampage(u32),
-    /// Afflict N (CR 702.131) — whenever this creature becomes blocked, the
-    /// defending player loses N life.
-    Afflict(u32),
     Intimidate,
     Skulk,
     /// CR 702.36 — Fear. "This creature can't be blocked except by

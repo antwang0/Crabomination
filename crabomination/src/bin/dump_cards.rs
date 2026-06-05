@@ -90,7 +90,6 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Flanking => "Flanking",
         Keyword::Bushido(_) => "Bushido",
         Keyword::Rampage(_) => "Rampage",
-        Keyword::Afflict(_) => "Afflict",
         Keyword::Ward(_) => "Ward",
         Keyword::Flashback(_) => "Flashback",
         Keyword::FlashbackTap(_) => "Flashback",

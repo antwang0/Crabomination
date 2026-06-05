@@ -12845,6 +12845,7 @@ pub fn onward_victory() -> CardDefinition {
 /// {1}{R}: +1/+0 until end of turn.
 pub fn frontline_devastator() -> CardDefinition {
     use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::afflict;
     CardDefinition {
         name: "Frontline Devastator",
         cost: cost(&[generic(3), r()]),
@@ -12855,7 +12856,7 @@ pub fn frontline_devastator() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Afflict(2)],
+        triggered_abilities: vec![afflict(2)],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1), r()]),
             effect: Effect::PumpPT {
