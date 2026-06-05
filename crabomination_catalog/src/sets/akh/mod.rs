@@ -10,9 +10,9 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     ExileReturnZone, Keyword, Predicate, SelectionRequirement, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{embalm, eternalize, etb, target_filtered};
-use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
-use crate::mana::{cost, b, g, generic, u, w};
+use crate::effect::shortcut::{embalm, eternalize, etb, on_attack, target_filtered};
+use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
+use crate::mana::{cost, b, g, generic, r, u, w};
 
 /// Body helper for a vanilla-ish Embalm/Eternalize creature: stats, creature
 /// types, optional keyword, plus the graveyard-activated token-copy ability.
@@ -229,6 +229,105 @@ pub fn champion_of_wits() -> CardDefinition {
     c
 }
 
+// ── Exert (CR 702.137) ───────────────────────────────────────────────────────
+// The engine auto-exerts an attacking creature with `Keyword::Exert` (it skips
+// its next untap) and fires its SelfSource Attacks trigger as the exert bonus.
+
+/// Tah-Crop Elite — {3}{W} 2/2 Bird Warrior, Flying. Exert as it attacks:
+/// creatures you control get +1/+1 until end of turn.
+pub fn tah_crop_elite() -> CardDefinition {
+    CardDefinition {
+        name: "Tah-Crop Elite",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Exert],
+        triggered_abilities: vec![on_attack(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Glory-Bound Initiate — {1}{W} 3/1 Human Warrior. Exert as it attacks: it
+/// gets +1/+3 and gains lifelink until end of turn.
+pub fn glory_bound_initiate() -> CardDefinition {
+    CardDefinition {
+        name: "Glory-Bound Initiate",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Exert],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Bloodrage Brawler — {1}{R} 4/3 Minotaur Warrior. ETB: discard a card.
+pub fn bloodrage_brawler() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodrage Brawler",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::You,
+            amount: Value::Const(1),
+            random: false,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Nimble-Blade Khenra — {1}{R} 1/3 Jackal Warrior, Prowess.
+pub fn nimble_blade_khenra() -> CardDefinition {
+    CardDefinition {
+        name: "Nimble-Blade Khenra",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jackal, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Prowess],
+        ..Default::default()
+    }
+}
+
 /// Every AKH factory, for snapshot name→factory registration and the cube.
 pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
     &[
@@ -249,5 +348,9 @@ pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
         earthshaker_khenra,
         sinuous_striker,
         champion_of_wits,
+        tah_crop_elite,
+        glory_bound_initiate,
+        bloodrage_brawler,
+        nimble_blade_khenra,
     ]
 }

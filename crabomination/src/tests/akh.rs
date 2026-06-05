@@ -180,3 +180,56 @@ fn akh_embalm_bodies_have_graveyard_ability() {
             "{} has an Embalm/Eternalize graveyard ability", d.name);
     }
 }
+
+fn advance_to(g: &mut GameState, step: TurnStep) {
+    while g.step != step {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+}
+
+/// Tah-Crop Elite's exert attack pumps your team +1/+1 and it won't untap.
+#[test]
+fn tah_crop_elite_exert_pumps_team() {
+    let mut g = two_player_game();
+    let elite = g.add_card_to_battlefield(0, catalog::tah_crop_elite());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(elite);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: elite, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 3), "team +1/+1 from exert");
+    // Exerted: won't untap next untap step.
+    assert!(g.battlefield_find(elite).unwrap().skip_next_untap, "exerted creature skips untap");
+}
+
+/// Glory-Bound Initiate's exert attack gives it +1/+3 and lifelink.
+#[test]
+fn glory_bound_initiate_exert_buffs_self() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let gbi = g.add_card_to_battlefield(0, catalog::glory_bound_initiate());
+    g.clear_sickness(gbi);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: gbi, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(gbi).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "3/1 +1/+3 = 4/4");
+    assert!(cp.keywords.contains(&Keyword::Lifelink), "gains lifelink");
+}
+
+/// Bloodrage Brawler discards a card on ETB.
+#[test]
+fn bloodrage_brawler_discards_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let bb = g.add_card_to_battlefield(0, catalog::bloodrage_brawler());
+    g.fire_self_etb_triggers(bb, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "discards a card on ETB");
+}
