@@ -939,6 +939,54 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Split cards (CR 709): for any hand card with a non-aftermath split,
+    // offer a `CastSplitRight` candidate (the left half is already covered by
+    // the plain `CastSpell` path). Auto-target the right half's effect.
+    for c in state.players[seat].hand.iter() {
+        let Some(split) = c.definition.has_split() else { continue };
+        if split.aftermath {
+            continue;
+        }
+        let (target, additional_targets) = if split.right.effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots(&split.right.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSplitRight {
+            card_id: c.id, target, additional_targets, mode: None, x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
+    // Aftermath (CR 702.127): cast the right half of a split card from the
+    // graveyard. `would_accept` enforces the graveyard-only + timing rules.
+    for c in state.players[seat].graveyard.iter() {
+        let Some(split) = c.definition.has_split().filter(|s| s.aftermath) else { continue };
+        let (target, additional_targets) = if split.right.effect.requires_target() {
+            let (t, extras) =
+                state.auto_targets_for_effect_all_slots(&split.right.effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastAftermath {
+            card_id: c.id, target, additional_targets, mode: None, x_value: None,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Adventure creature (CR 715) and plotted cards (CR 702.170d): cast the
     // creature half / a plotted card from exile. `would_accept` enforces the
     // later-turn + sorcery-speed timing, so this is only offered when legal.

@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Split-card follow-ups (CR 709 shipped this run).** The split primitive
+  (`CardDefinition.split` + `CastSplitRight` / `CastSplitFused` / `CastAftermath`)
+  and the bot/affordance wiring are in. Remaining:
+  - **Client cast UI for the right/fused/aftermath halves.** The
+    `splittable_right_hand` affordance now lights the cyan alt-cast border, but
+    there's no modal to pick *which* half (left vs right vs fuse) — the click
+    path only submits the left (`CastSpell`). Needs a small half-picker, like
+    the MDFC face chooser.
+  - **More split cards.** Easy faithful adds on the primitive: Dusk // Dawn
+    (Dawn needs mass return-from-graveyard), Never // Return (needs targeted
+    graveyard-card exile), Turn // Burn (Turn needs "becomes base 0/1, loses
+    abilities"), Boom // Bust, Hide // Seek.
+  - **Fused targeting** currently assumes each half is single-target (left →
+    `target`, right → `additional_targets[0]`); a fusable card with a
+    multi-target half would need the slot convention generalized.
+
 - **Card primitives deferred this run (claude/modern_decks).** Real cards
   skipped for lack of a primitive — each is a small, reusable addition:
   - **"Whenever this blocks a creature, [affect that creature]"** — a Blocks
