@@ -84,6 +84,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Crew(_) => "Crew",
         Keyword::Saddle(_) => "Saddle",
         Keyword::Casualty(_) => "Casualty",
+        Keyword::Soulbond => "Soulbond",
         Keyword::Annihilator(_) => "Annihilator",
         Keyword::Flanking => "Flanking",
         Keyword::Bushido(_) => "Bushido",

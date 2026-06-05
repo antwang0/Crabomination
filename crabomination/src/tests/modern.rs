@@ -27660,3 +27660,102 @@ fn sword_of_war_and_peace_burns_by_hand_and_gains_life() {
     assert_eq!(g.players[1].life, opp_life - combat - opp_hand, "burned by defender's hand size");
     assert_eq!(g.players[0].life, my_life + my_hand, "gained life by your hand size");
 }
+
+// ── Soulbond (CR 702.46) ─────────────────────────────────────────────────────
+
+/// Wolfir Silverheart pairs with a creature on ETB and gives both +4/+4.
+#[test]
+fn soulbond_wolfir_silverheart_pairs_and_buffs_both() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wolfir = g.add_card_to_hand(0, catalog::wolfir_silverheart());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, wolfir); // ETB pairing auto-resolves
+    assert_eq!(g.battlefield_find(wolfir).unwrap().soulbond_partner, Some(bear));
+    assert_eq!(g.battlefield_find(bear).unwrap().soulbond_partner, Some(wolfir));
+    let cw = g.computed_permanent(wolfir).unwrap();
+    let cb = g.computed_permanent(bear).unwrap();
+    assert_eq!((cw.power, cw.toughness), (8, 8));
+    assert_eq!((cb.power, cb.toughness), (6, 6));
+}
+
+/// Wingcrafter grants flying to both members of its pair.
+#[test]
+fn soulbond_wingcrafter_grants_flying_to_both() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wing = g.add_card_to_hand(0, catalog::wingcrafter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, wing);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+    assert!(g.computed_permanent(wing).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+/// Nightshade Peddler grants deathtouch to both members of its pair.
+#[test]
+fn soulbond_nightshade_peddler_grants_deathtouch() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let peddler = g.add_card_to_hand(0, catalog::nightshade_peddler());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, peddler);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// Hanweir Lancer grants first strike to both members of its pair.
+#[test]
+fn soulbond_hanweir_lancer_grants_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lancer = g.add_card_to_hand(0, catalog::hanweir_lancer());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, lancer);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(g.computed_permanent(lancer).unwrap().keywords.contains(&Keyword::FirstStrike));
+}
+
+/// A Soulbond pair breaks when one member leaves: the bonus and link both clear.
+#[test]
+fn soulbond_pair_breaks_when_partner_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let forcemage = g.add_card_to_hand(0, catalog::trusted_forcemage());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, forcemage);
+    assert_eq!(g.computed_permanent(forcemage).unwrap().power, 3, "paired +1/+1");
+    // Kill the bear; the SBA clears the surviving member's link.
+    g.battlefield_find_mut(bear).unwrap().damage = 99;
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(forcemage).unwrap().soulbond_partner, None);
+    assert_eq!(g.computed_permanent(forcemage).unwrap().power, 2, "bonus gone once unpaired");
+}
+
+/// Deadeye Navigator grants its partner the "{1}{U}: flicker this" activated
+/// ability; activating it exiles and returns the creature.
+#[test]
+fn soulbond_deadeye_navigator_grants_flicker_to_partner() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let deadeye = g.add_card_to_hand(0, catalog::deadeye_navigator());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, deadeye);
+    assert_eq!(g.battlefield_find(bear).unwrap().soulbond_partner, Some(deadeye));
+    // The partner Bear now has one granted activated ability (index 0).
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, x_value: None,
+    }).expect("flicker the partner");
+    drain_stack(&mut g);
+    // It re-enters the battlefield (a Grizzly Bears is still in play).
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "flickered creature returns to the battlefield");
+}

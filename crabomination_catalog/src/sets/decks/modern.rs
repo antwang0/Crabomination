@@ -7,9 +7,9 @@
 //! supplement** section.
 
 use crate::card::{
-    Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword, LandType,
-    SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
-    WardCost,
+    ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect,
+    Keyword, LandType, SelectionRequirement, Selector, SoulbondBonus, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{
@@ -19259,4 +19259,146 @@ pub fn sword_of_war_and_peace() -> CardDefinition {
         },
         Effect::GainLife { who: Selector::You, amount: Value::HandSizeOf(PlayerRef::You) },
     ]))
+}
+
+// ── Soulbond (CR 702.46) ─────────────────────────────────────────────────────
+// Each carries `Keyword::Soulbond` + a `soulbond_bonus` the engine applies to
+// both members of the pair while the link is live (pairing is auto-resolved on
+// ETB; see `GameState::apply_soulbond_pairing`).
+
+/// Wolfir Silverheart — {3}{G}{G} 4/4 Wolf Warrior. Soulbond; each paired
+/// creature gets +4/+4.
+pub fn wolfir_silverheart() -> CardDefinition {
+    CardDefinition {
+        name: "Wolfir Silverheart",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus { power: 4, toughness: 4, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Wingcrafter — {U} 1/1 Human Wizard. Soulbond; both paired creatures have
+/// flying.
+pub fn wingcrafter() -> CardDefinition {
+    CardDefinition {
+        name: "Wingcrafter",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            keywords: vec![Keyword::Flying],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Nightshade Peddler — {1}{G} 1/1 Human Druid. Soulbond; both paired creatures
+/// have deathtouch.
+pub fn nightshade_peddler() -> CardDefinition {
+    CardDefinition {
+        name: "Nightshade Peddler",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            keywords: vec![Keyword::Deathtouch],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Trusted Forcemage — {2}{G} 2/2 Human Shaman. Soulbond; each paired creature
+/// gets +1/+1.
+pub fn trusted_forcemage() -> CardDefinition {
+    CardDefinition {
+        name: "Trusted Forcemage",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus { power: 1, toughness: 1, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Hanweir Lancer — {2}{R} 2/2 Human Knight. Soulbond; both paired creatures
+/// have first strike.
+pub fn hanweir_lancer() -> CardDefinition {
+    CardDefinition {
+        name: "Hanweir Lancer",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            keywords: vec![Keyword::FirstStrike],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Deadeye Navigator — {4}{U}{U} 5/5 Spirit. Soulbond; while paired, each of the
+/// two creatures has "{1}{U}: Exile this creature, then return it to the
+/// battlefield under your control" (a self-flicker that re-triggers ETBs).
+pub fn deadeye_navigator() -> CardDefinition {
+    CardDefinition {
+        name: "Deadeye Navigator",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Soulbond],
+        soulbond_bonus: Some(SoulbondBonus {
+            activated_abilities: vec![ActivatedAbility {
+                mana_cost: cost(&[generic(1), u()]),
+                effect: Effect::Seq(vec![
+                    Effect::Exile { what: Selector::This },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                ]),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
 }

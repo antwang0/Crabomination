@@ -23,7 +23,8 @@ read of the code and should be re-verified before picking up an item.
   Cascade, Cycling, Echo, Cumulative Upkeep, Retrace, Phasing, Dredge,
   Annihilator, Banding, Equip, Fortify, Morph, Megamorph, Prowess, Ward,
   Changeling, Storm, Rebound, Crew, Exert, Shadow, Horsemanship, Intimidate,
-  Skulk, Fear, Unblockable, plus uncounterable riders.
+  Skulk, Fear, Unblockable, Soulbond (CR 702.46 — auto-pairing on ETB, shared
+  P/T / keyword / granted-ability bonus), plus uncounterable riders.
 - **Costs/mana:** colored / generic / colorless / hybrid / mono-hybrid /
   Phyrexian / snow / X symbols; Convoke/Delve generic reduction; Commander
   tax; alternative (pitch) costs.

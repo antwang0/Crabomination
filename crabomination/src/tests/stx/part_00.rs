@@ -3655,6 +3655,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        soulbond_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
         foretell_cost: None,

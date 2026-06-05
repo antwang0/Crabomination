@@ -683,6 +683,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Soulbond (CR 702.46) ──
+        wingcrafter,
+        deadeye_navigator,
         // ── modern_decks: land-scaled dig + storm payoff ──
         consult_the_star_charts,
         minds_desire,
@@ -1204,6 +1207,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Soulbond (CR 702.46) ──
+        hanweir_lancer,
         // ── claude/modern_decks: Riot (CR 702.137) ──
         zhur_taa_goblin,
         frenzied_arynx,
@@ -1514,6 +1519,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Soulbond (CR 702.46) ──
+        wolfir_silverheart,
+        nightshade_peddler,
+        trusted_forcemage,
         // ── modern_decks: begin-combat counter scaling + Plot ──
         ouroboroid,
         // ── modern_decks: Changeling + token Mutavault ──

@@ -4087,6 +4087,21 @@ impl GameState {
                 }
             }
         }
+        // CR 702.46 — Soulbond-granted activated abilities (Deadeye Navigator's
+        // flicker). A paired creature carrying a `soulbond_bonus` with
+        // `activated_abilities` grants them to BOTH itself and its partner.
+        for src in &self.battlefield {
+            let Some(bonus) = &src.definition.soulbond_bonus else { continue };
+            if bonus.activated_abilities.is_empty() {
+                continue;
+            }
+            let Some(partner) = src.soulbond_partner else { continue };
+            if (src.id == card_id || partner == card_id)
+                && self.battlefield.iter().any(|c| c.id == partner)
+            {
+                out.extend(bonus.activated_abilities.iter().cloned());
+            }
+        }
         out
     }
 

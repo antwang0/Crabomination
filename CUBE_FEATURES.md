@@ -25,7 +25,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
 | Mind's Desire | 🟡 | {4}{U}{U} Sorcery, Storm; `Effect::ExileTopAndGrantMayPlay { duration: EndOfThisTurn }` exiles the top card per Storm copy and grants free play (cast via `cast_from_zone_without_paying`). The pre-exile shuffle is omitted. Test: `minds_desire_storm_exiles_top_cards_with_free_play`. |
@@ -106,7 +105,7 @@ are listed in `DECK_FEATURES.md`.
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
 | Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (Amped Raptor) is still ⏳. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
-| Soulbond | ⏳ | Deadeye Navigator. |
+| Soulbond | ✅ | `Keyword::Soulbond` + `CardInstance.soulbond_partner` + `CardDefinition.soulbond_bonus` (P/T, keywords, granted activated abilities). Pairs auto-resolve on ETB (`apply_soulbond_pairing`); the bonus rides both members as continuous effects and breaks on leave. Wolfir Silverheart, Wingcrafter, Nightshade Peddler, Trusted Forcemage, Hanweir Lancer, Deadeye Navigator (granted self-flicker). |
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
 | Saga lore counters + DFC | ⏳ | The Everflowing Well; future sagas. |
 | Hideaway lands | ⏳ | Shelldock Isle. |

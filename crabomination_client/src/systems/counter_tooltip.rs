@@ -532,6 +532,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Cycling(cost) => format!("Cycling {}", cost.summary()),
         K::Flashback(cost) => format!("Flashback {}", cost.summary()),
         K::Convoke => "Convoke".into(),
+        K::Soulbond => "Soulbond".into(),
         K::Persist => "Persist".into(),
         K::Undying => "Undying".into(),
         K::CantBeCountered => "Can't be countered".into(),

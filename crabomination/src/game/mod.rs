@@ -1740,6 +1740,43 @@ impl GameState {
                 });
             }
         }
+        // CR 702.46 — Soulbond. A creature carrying a `soulbond_bonus` that's
+        // paired confers the bonus on BOTH itself and its partner (P/T layer
+        // 7c, keywords layer 6), for as long as both stay on the battlefield.
+        for card in &self.battlefield {
+            let Some(bonus) = &card.definition.soulbond_bonus else { continue };
+            let Some(partner) = card.soulbond_partner else { continue };
+            if !self.battlefield.iter().any(|c| c.id == partner) {
+                continue;
+            }
+            for &id in &[card.id, partner] {
+                if bonus.power != 0 || bonus.toughness != 0 {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![id]),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(
+                            bonus.power,
+                            bonus.toughness,
+                        ),
+                    });
+                }
+                for kw in &bonus.keywords {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(vec![id]),
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw.clone()),
+                    });
+                }
+            }
+        }
         // CR 702.151c — a Reconfigure Equipment isn't a creature while it's
         // attached to a creature. Strip the Creature card type at layer 4
         // (the +1/+1 it confers still scales off its own counters; its equip
@@ -3897,9 +3934,53 @@ impl GameState {
     /// spell-cast, dies, step changes) are skipped here to avoid double-firing.
     /// Everything else (TurnBegins, CardDrawn, LandPlayed, LifeGained, etc.)
     /// gains trigger capability through this path.
+    /// CR 702.46 — when `entered` (a creature) comes onto the battlefield,
+    /// pair it with an eligible unpaired creature its controller controls. The
+    /// "may" is auto-resolved (pairing is value-positive); the partner with
+    /// the lowest CardId is chosen for determinism. A Soulbond creature can
+    /// initiate the pair; a non-Soulbond creature only pairs if its controller
+    /// already has an unpaired Soulbond creature waiting.
+    pub(crate) fn apply_soulbond_pairing(&mut self, entered: CardId) {
+        use crate::card::Keyword;
+        let Some(card) = self.battlefield_find(entered) else { return };
+        if !card.definition.is_creature() || card.soulbond_partner.is_some() {
+            return;
+        }
+        let controller = card.controller;
+        let entered_has_soulbond = card.definition.keywords.contains(&Keyword::Soulbond);
+        let partner = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.id != entered
+                    && c.controller == controller
+                    && c.definition.is_creature()
+                    && c.soulbond_partner.is_none()
+                    && (entered_has_soulbond
+                        || c.definition.keywords.contains(&Keyword::Soulbond))
+            })
+            .map(|c| c.id)
+            .min_by_key(|id| id.0);
+        let Some(p) = partner else { return };
+        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == entered) {
+            c.soulbond_partner = Some(p);
+        }
+        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == p) {
+            c.soulbond_partner = Some(entered);
+        }
+    }
+
     pub(crate) fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
         if events.is_empty() {
             return;
+        }
+        // CR 702.46 — Soulbond pairing. When a creature enters, attempt to pair
+        // it (auto-resolved "may"). Done before trigger dispatch so a paired
+        // creature's bonus is live for any subsequent ETB-trigger evaluation.
+        for e in events {
+            if let GameEvent::PermanentEntered { card_id } = e {
+                self.apply_soulbond_pairing(*card_id);
+            }
         }
         // Event-keyed delayed triggers ("when [card] dies this turn, …").
         // Fire any `WhenCardDies(cid)` whose watched card appears in a

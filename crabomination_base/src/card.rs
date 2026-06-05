@@ -551,6 +551,12 @@ pub enum Keyword {
     /// (Charging Rhino, Spectral Force). At most one blocker may be assigned
     /// to it. Enforced in `declare_blockers` (the inverse of Menace).
     CantBeBlockedByMoreThanOne,
+    /// CR 702.46 — Soulbond. A marker keyword; when this or another creature
+    /// enters while either is unpaired, its controller may pair them. The
+    /// pairing rides `CardInstance.soulbond_partner`, and the bonus each
+    /// paired creature gains is carried in `CardDefinition.soulbond_bonus`.
+    /// Deadeye Navigator, Wolfir Silverheart.
+    Soulbond,
 }
 
 /// Composable filter for valid targets of a spell or ability.
@@ -949,6 +955,11 @@ pub struct CardDefinition {
     /// activate approximation). Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
+    /// CR 702.46 — Soulbond bonus. When `Some`, this card carries the Soulbond
+    /// keyword and, while paired (`CardInstance.soulbond_partner`), confers
+    /// this bonus on BOTH itself and its partner. Defaults to `None`.
+    #[serde(default)]
+    pub soulbond_bonus: Option<SoulbondBonus>,
     /// CR 601.2b/601.2f — additional cost(s) paid as the spell is cast
     /// ("As an additional cost to cast this spell, …"). Paid during
     /// casting, not folded into resolution: the spell can't be cast unless
@@ -1085,6 +1096,25 @@ pub struct EquipBonus {
     /// cycle's combat-damage triggers. Empty for the common static-bonus case.
     #[serde(default)]
     pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
+}
+
+/// CR 702.46 — the bonus each member of a Soulbond pair gains while paired.
+/// Stored on `CardDefinition.soulbond_bonus` of the card that carries the
+/// Soulbond keyword; `gather_continuous_effects` applies it to BOTH paired
+/// creatures while the link is live, and `granted_abilities_for` surfaces
+/// `activated_abilities` on both (Deadeye Navigator's flicker).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SoulbondBonus {
+    /// Power each paired creature gains (layer 7c).
+    pub power: i32,
+    /// Toughness each paired creature gains (layer 7c).
+    pub toughness: i32,
+    /// Keywords each paired creature gains (layer 6).
+    pub keywords: Vec<Keyword>,
+    /// Activated abilities each paired creature gains, surfaced through
+    /// `granted_abilities_for` just like `StaticEffect::GrantActivatedAbility`.
+    #[serde(default)]
+    pub activated_abilities: Vec<crate::effect::ActivatedAbility>,
 }
 
 /// Board-count scaling for an [`EquipBonus`] (CR 613 layer 7c). See
@@ -1433,6 +1463,10 @@ pub struct CardInstance {
     pub toughness_bonus: i32,
     pub counters: HashMap<CounterType, u32>,
     pub attached_to: Option<CardId>,
+    /// CR 702.46 — the creature this one is Soulbond-paired with, if any.
+    /// Either member of a pair points at the other. Cleared when either
+    /// creature leaves the battlefield (SBA in `stack.rs`).
+    pub soulbond_partner: Option<CardId>,
     pub kicked: bool,
     /// CR 702.27 — true if this spell was cast paying its optional Buyback
     /// cost. On resolution the resolver returns the card to its owner's
@@ -1619,6 +1653,7 @@ impl CardInstance {
             toughness_bonus: 0,
             counters,
             attached_to: None,
+            soulbond_partner: None,
             kicked: false,
             bought_back: false,
             bestowed: false,
@@ -1785,6 +1820,10 @@ struct CardInstanceWire {
     toughness_bonus: i32,
     counters: Vec<(CounterType, u32)>,
     attached_to: Option<CardId>,
+    /// CR 702.46 Soulbond partner. `#[serde(default)]` so older snapshots load
+    /// as `None`.
+    #[serde(default)]
+    soulbond_partner: Option<CardId>,
     kicked: bool,
     /// CR 702.27 buyback flag. `#[serde(default)]` so older snapshots load
     /// as `false`.
@@ -1879,6 +1918,7 @@ impl serde::Serialize for CardInstance {
             toughness_bonus: self.toughness_bonus,
             counters: self.counters.iter().map(|(k, v)| (*k, *v)).collect(),
             attached_to: self.attached_to,
+            soulbond_partner: self.soulbond_partner,
             kicked: self.kicked,
             bought_back: self.bought_back,
             bestowed: self.bestowed,
@@ -1929,6 +1969,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.toughness_bonus = wire.toughness_bonus;
         c.counters = wire.counters.into_iter().collect();
         c.attached_to = wire.attached_to;
+        c.soulbond_partner = wire.soulbond_partner;
         c.kicked = wire.kicked;
         c.bought_back = wire.bought_back;
         c.bestowed = wire.bestowed;
