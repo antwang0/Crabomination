@@ -27916,3 +27916,81 @@ fn soulbond_tandem_lookout_partner_draws_on_combat_damage() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1,
         "the unblocked partner draws on combat damage");
 }
+
+/// Mardu Hateblade's `{B}: deathtouch until EOT` grants deathtouch.
+#[test]
+fn mardu_hateblade_grants_deathtouch() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::mardu_hateblade());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("grant deathtouch");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::Deathtouch));
+}
+
+/// War Falcon can't attack with no Knight/Soldier, but can once one is present.
+#[test]
+fn war_falcon_attack_gated_on_knight_or_soldier() {
+    let mut g = two_player_game();
+    let falcon = g.add_card_to_battlefield(0, catalog::war_falcon());
+    g.clear_sickness(falcon);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    assert!(g.declare_attackers(vec![Attack { attacker: falcon, target: AttackTarget::Player(1) }])
+        .is_err(), "no Soldier/Knight → can't attack");
+    // A Soldier on the board satisfies the requirement.
+    let sol = g.add_card_to_battlefield(0, catalog::mardu_hateblade()); // Human Warrior… not soldier
+    let _ = sol;
+    let knight = g.add_card_to_battlefield(0, catalog::silverblade_paladin()); // Human Knight
+    g.clear_sickness(knight);
+    assert!(g.declare_attackers(vec![Attack { attacker: falcon, target: AttackTarget::Player(1) }])
+        .is_ok(), "Knight present → War Falcon may attack");
+}
+
+/// Stromkirk Patrol grows when it connects.
+#[test]
+fn stromkirk_patrol_grows_on_combat_damage() {
+    let mut g = two_player_game();
+    let pat = g.add_card_to_battlefield(0, catalog::stromkirk_patrol());
+    g.clear_sickness(pat);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: pat, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..12 {
+        if g.battlefield_find(pat).map(|c| c.counter_count(CounterType::PlusOnePlusOne)).unwrap_or(0) > 0 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(pat).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Boros Recruit is a {R/W} 1/1 with first strike, castable with either pip.
+#[test]
+fn boros_recruit_first_strike_hybrid() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::boros_recruit());
+    g.players[0].mana_pool.add(Color::Red, 1); // pay the {R/W} with red
+    cast(&mut g, id);
+    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Bloodrock Cyclops must attack when able.
+#[test]
+fn bloodrock_cyclops_must_attack() {
+    let mut g = two_player_game();
+    let cy = g.add_card_to_battlefield(0, catalog::bloodrock_cyclops());
+    g.clear_sickness(cy);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    // Declaring no attackers is illegal while a MustAttack creature can attack.
+    assert!(g.declare_attackers(vec![]).is_err(),
+        "Bloodrock Cyclops must be declared as an attacker");
+}

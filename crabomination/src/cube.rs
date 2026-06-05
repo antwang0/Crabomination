@@ -365,6 +365,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Soulbond (CR 702.95) ──
         silverblade_paladin,
         nearheath_pilgrim,
+        // ── simple keyword bodies ──
+        mardu_hateblade,
+        war_falcon,
+        boros_recruit,
         // ── modern_decks: energy O-Ring + card-advantage vehicle ──
         static_prison,
         shorikai_genesis_engine,
@@ -926,6 +930,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         khenra_eternal,
         // ── Fabricate (CR 702.122) ──
         weaponcraft_enthusiast,
+        // ── combat-damage value body ──
+        stromkirk_patrol,
         // ── modern_decks: ETB reanimator with a lifelink counter ──
         metamorphosis_fanatic,
         // ── modern_decks: artifacts-matter Esper commander ──
@@ -1224,6 +1230,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         hammer_dropper,
         // ── Provoke (CR 702.39) ──
         crested_craghorn,
+        // ── simple keyword body ──
+        bloodrock_cyclops,
         // ── claude/modern_decks: Riot (CR 702.137) ──
         zhur_taa_goblin,
         frenzied_arynx,

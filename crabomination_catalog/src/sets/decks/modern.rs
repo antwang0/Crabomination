@@ -19594,3 +19594,107 @@ pub fn tandem_lookout() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Simple keyword bodies (cube filler) ──────────────────────────────────────
+
+/// Boros Recruit — {R/W} 1/1 Goblin Soldier with First strike.
+pub fn boros_recruit() -> CardDefinition {
+    CardDefinition {
+        name: "Boros Recruit",
+        cost: cost(&[crate::mana::hybrid(Color::Red, Color::White)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        ..Default::default()
+    }
+}
+
+/// Stromkirk Patrol — {4}{B} 4/3 Vampire Soldier. Whenever it deals combat
+/// damage to a player, put a +1/+1 counter on it.
+pub fn stromkirk_patrol() -> CardDefinition {
+    CardDefinition {
+        name: "Stromkirk Patrol",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mardu Hateblade — {W} 1/1 Human Warrior. `{B}: gains deathtouch until EOT`.
+pub fn mardu_hateblade() -> CardDefinition {
+    CardDefinition {
+        name: "Mardu Hateblade",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// War Falcon — {W} 2/1 Bird with Flying. Can't attack unless you control a
+/// Knight or a Soldier.
+pub fn war_falcon() -> CardDefinition {
+    CardDefinition {
+        name: "War Falcon",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::CanAttackOnlyIfYouControl(Box::new(
+                SelectionRequirement::HasCreatureType(CreatureType::Knight)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Soldier)),
+            )),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Bloodrock Cyclops — {2}{R} 3/3 Cyclops that attacks each combat if able.
+pub fn bloodrock_cyclops() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodrock Cyclops",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cyclops], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::MustAttack],
+        ..Default::default()
+    }
+}
