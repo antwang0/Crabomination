@@ -391,6 +391,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: white value/aggro creatures ──
         solemn_recruit,
+        fairgrounds_warden,
         knight_exemplar,
         archangel_of_thune,
         wingmate_roc,
@@ -1300,6 +1301,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         zo_zu_the_punisher,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
+        // ── modern_decks: red utility creatures ──
+        manic_vandal,
+        goblin_cratermaker,
         // ── modern_decks: artifacts-matter aggro ──
         inventors_apprentice,
         // ── Eternalize (CR 702.91) ──

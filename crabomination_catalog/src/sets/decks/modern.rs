@@ -12000,6 +12000,87 @@ pub fn grim_haruspex() -> CardDefinition {
     }
 }
 
+/// Manic Vandal — {2}{R} 2/2 Human Warrior. When it enters, destroy target
+/// artifact. (M11)
+pub fn manic_vandal() -> CardDefinition {
+    CardDefinition {
+        name: "Manic Vandal",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Artifact),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fairgrounds Warden — {2}{W} 1/3 Dwarf Soldier. When it enters, exile target
+/// creature an opponent controls until this creature leaves the battlefield.
+/// (KLD)
+pub fn fairgrounds_warden() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Fairgrounds Warden",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Goblin Cratermaker — {1}{R} 2/2 Goblin Warrior. `{1}, Sacrifice this:
+/// choose one — deal 2 damage to target creature; or destroy target colorless
+/// nonland permanent.` (ELD)
+pub fn goblin_cratermaker() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Goblin Cratermaker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::ChooseMode(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(2),
+                },
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Colorless
+                            .and(SelectionRequirement::Nonland),
+                    ),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hidden Herbalists — {1}{G} 2/2 Human Druid. Revolt — when it enters, if a
 /// permanent left the battlefield under your control this turn, add {G}{G}. (AER)
 pub fn hidden_herbalists() -> CardDefinition {

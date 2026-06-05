@@ -28505,6 +28505,50 @@ fn solemn_recruit_grows_on_revolt_end_step() {
         "Revolt end step adds a +1/+1 counter");
 }
 
+#[test]
+fn manic_vandal_destroys_an_artifact_on_etb() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let van = g.add_card_to_hand(0, catalog::manic_vandal());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    cast(&mut g, van);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "ETB destroys the artifact");
+}
+
+#[test]
+fn fairgrounds_warden_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let warden = g.add_card_to_hand(0, catalog::fairgrounds_warden());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    cast(&mut g, warden);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim exiled");
+    let wid = g.battlefield.iter().find(|c| c.definition.name == "Fairgrounds Warden").unwrap().id;
+    g.remove_from_battlefield_to_graveyard(wid);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == victim), "victim returns when Warden leaves");
+}
+
+#[test]
+fn goblin_cratermaker_pings_a_creature() {
+    let mut g = two_player_game();
+    let crater = g.add_card_to_battlefield(0, catalog::goblin_cratermaker());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crater, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("sac for mode 1 (2 damage)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "2 damage kills the 2/2");
+    assert!(g.battlefield_find(crater).is_none(), "Cratermaker sacrificed itself");
+}
+
 /// Silverblade Paladin's Soulbond grants double strike to both members.
 #[test]
 fn soulbond_silverblade_paladin_grants_double_strike() {
