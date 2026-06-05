@@ -852,6 +852,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(razortide_bridge);
         // ── modern_decks-16 ──
         v.push(spell_queller);
+        // ── modern_decks: Jeskai Flurry (copy-second-spell) ──
+        v.push(shiko_and_narset_unified);
     }
     if pair_contains(pair, Color::Black) {
         v.push(marauding_mako);

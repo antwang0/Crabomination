@@ -26839,3 +26839,34 @@ fn backup_death_greeters_champion_self_counter() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "self backup counter");
     assert!(c.has_keyword(&Keyword::DoubleStrike));
 }
+
+#[test]
+fn shiko_flurry_copies_targeted_second_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::shiko_and_narset_unified());
+    g.active_player_idx = 0;
+    // First spell of the turn (no target).
+    let m = g.add_card_to_hand(0, catalog::memnite());
+    cast(&mut g, m);
+    // Second spell targets a player → Flurry copies it (AutoDecider keeps target).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let before = g.players[1].life;
+    cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.players[1].life, before - 6, "Flurry copies the bolt → 3+3 damage");
+}
+
+#[test]
+fn shiko_flurry_draws_on_nontargeted_second_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::shiko_and_narset_unified());
+    g.active_player_idx = 0;
+    let drawn = g.add_card_to_library(0, catalog::island());
+    let m1 = g.add_card_to_hand(0, catalog::memnite());
+    cast(&mut g, m1);
+    // Second spell has no target → Flurry draws instead of copying.
+    let m2 = g.add_card_to_hand(0, catalog::memnite());
+    cast(&mut g, m2);
+    assert!(g.players[0].hand.iter().any(|c| c.id == drawn),
+        "no-target second spell draws a card");
+}

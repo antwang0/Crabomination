@@ -18102,3 +18102,41 @@ pub fn maelstrom_nexus() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Shiko and Narset, Unified — {1}{U}{R}{W} Legendary 4/4 Human Spirit Dragon.
+/// Flying, vigilance. Flurry — whenever you cast your second spell each turn,
+/// copy it if it targets a permanent or player (you may choose new targets);
+/// otherwise draw a card.
+pub fn shiko_and_narset_unified() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Shiko and Narset, Unified",
+        cost: cost(&[generic(1), u(), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Spirit, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(2) },
+            ),
+            effect: Effect::If {
+                cond: Predicate::Any(vec![
+                    Predicate::CastSpellTargetsMatch(SelectionRequirement::Permanent),
+                    Predicate::CastSpellTargetsMatch(SelectionRequirement::Player),
+                ]),
+                then: Box::new(Effect::CopySpellMayChooseTargets {
+                    what: Selector::TriggerSource,
+                    count: Value::Const(1),
+                }),
+                else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
