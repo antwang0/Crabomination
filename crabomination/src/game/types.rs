@@ -957,4 +957,6 @@ pub enum GameError {
     TargetHasWard(CardId),
     #[error("Card {0:?} is not an Equipment you can equip")]
     NotEquipment(CardId),
+    #[error("Not enough energy to pay this ability's {{E}} cost")]
+    InsufficientEnergy,
 }

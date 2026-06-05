@@ -189,6 +189,7 @@ pub fn benthic_biomancer() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), u()]),
             effect: Effect::If {
                 cond: crate::card::Predicate::Not(Box::new(
@@ -231,6 +232,7 @@ pub fn merfolk_skydiver() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), u()]),
             effect: Effect::If {
                 cond: crate::card::Predicate::Not(Box::new(
@@ -273,6 +275,7 @@ pub fn pteramander() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(7)]),
             effect: crate::effect::shortcut::adapt(4),
             ..Default::default()
@@ -296,6 +299,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
         keywords: vec![Keyword::Hexproof, Keyword::Defender],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -435,6 +439,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -542,6 +547,7 @@ pub fn ranger_captain_of_eos() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::CantCastNoncreatureThisTurn {
@@ -580,6 +586,7 @@ pub fn cathar_commando() -> CardDefinition {
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Destroy {
@@ -621,6 +628,7 @@ pub fn haywire_mite() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Seq(vec![
@@ -826,6 +834,7 @@ pub fn bloodtithe_harvester() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::DealDamage {
@@ -986,6 +995,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::GrantKeyword {
@@ -1035,6 +1045,7 @@ pub fn grim_lavamancer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[r()]),
             effect: Effect::DealDamage {
@@ -1132,6 +1143,7 @@ pub fn seal_of_cleansing() -> CardDefinition {
         cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             sac_cost: true,
             effect: Effect::Destroy {
                 what: target_filtered(
@@ -1441,6 +1453,7 @@ pub fn elvish_archdruid() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -1470,6 +1483,7 @@ pub fn priest_of_titania() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -1823,6 +1837,7 @@ pub fn nessian_asp() -> CardDefinition {
         power: 4,
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(6), g()]),
             effect: Effect::Monstrosity { n: Value::Const(4) },
             ..Default::default()
@@ -1864,6 +1879,7 @@ pub fn llanowar_visionary() -> CardDefinition {
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
@@ -2126,6 +2142,7 @@ pub fn siege_gang_commander() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), r()]),
             sac_other_filter: Some((
                 SelectionRequirement::HasCreatureType(CreatureType::Goblin),
@@ -2182,6 +2199,7 @@ pub fn fertilid() -> CardDefinition {
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), g()]),
             condition: Some(crate::effect::Predicate::ValueAtLeast(
                 Value::CountersOn {
@@ -2259,6 +2277,7 @@ pub fn spike_feeder() -> CardDefinition {
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             // "Remove a +1/+1 counter" is the cost — gate on having one so
             // the lifegain can't fire off an empty creature.
             condition: Some(crate::effect::Predicate::ValueAtLeast(
@@ -2466,6 +2485,7 @@ pub fn simian_spirit_guide() -> CardDefinition {
         toughness: 2,
         // Exile this card from your hand: Add {R}.
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             effect: add_mana(vec![Color::Red]),
             from_hand: true,
             exile_self_cost: true,
@@ -2524,6 +2544,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
         keywords: vec![Keyword::Indestructible],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), w()]),
             effect: Effect::GrantKeyword {
@@ -2704,6 +2725,7 @@ pub fn frenzied_arynx() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![crate::effect::shortcut::riot()],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(3), r(), g()]),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -2794,6 +2816,7 @@ pub fn mogg_fanatic() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             sac_cost: true,
             effect: Effect::DealDamage { to: target_any(), amount: Value::Const(1) },
             ..Default::default()
@@ -2817,6 +2840,7 @@ pub fn spectral_sailor() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(3), u()]),
             tap_cost: true,
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -3018,6 +3042,7 @@ pub fn rootwater_hunter() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             effect: Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
@@ -3245,6 +3270,7 @@ pub fn ember_hauler() -> CardDefinition {
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(2)]),
             sac_cost: true,
             effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
@@ -4294,6 +4320,7 @@ pub fn rishadan_port() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -4303,6 +4330,7 @@ pub fn rishadan_port() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Tap {
@@ -4404,6 +4432,7 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
@@ -4499,6 +4528,7 @@ pub fn candelabra_of_tawnos() -> CardDefinition {
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[crate::mana::x()]),
             effect: Effect::Untap {
@@ -4639,6 +4669,7 @@ pub fn basking_broodscale() -> CardDefinition {
             ..Default::default()
         },
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             sac_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
@@ -4824,6 +4855,7 @@ pub fn ramos_dragon_engine() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -5214,6 +5246,7 @@ pub fn prodigal_pyromancer() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: deal(1, target_any()),
@@ -5269,6 +5302,7 @@ pub fn spore_frog() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::PreventAllCombatDamageThisTurn,
@@ -6030,6 +6064,7 @@ pub fn burnished_hart() -> CardDefinition {
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(3)]),
             sac_cost: true,
             effect: fetch,
@@ -6055,6 +6090,7 @@ pub fn doom_whisperer() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             life_cost: 2,
             effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
             ..Default::default()
@@ -6142,6 +6178,7 @@ pub fn steel_overseer() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             effect: Effect::AddCounter {
                 what: Selector::EachPermanent(
@@ -6657,6 +6694,7 @@ pub fn viscera_seer() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
@@ -6824,6 +6862,7 @@ fn tapper_1_1(name: &'static str, types: Vec<CreatureType>) -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[w()]),
             effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
@@ -6971,6 +7010,7 @@ pub fn palladium_myr() -> CardDefinition {
         power: 2,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,

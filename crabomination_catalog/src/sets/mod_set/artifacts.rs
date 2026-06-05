@@ -59,6 +59,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -112,6 +113,7 @@ pub fn millstone() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Mill {
@@ -169,6 +171,7 @@ pub fn mind_stone() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -186,6 +189,7 @@ pub fn mind_stone() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             },
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Draw {
@@ -249,6 +253,7 @@ pub fn aether_spellbomb() -> CardDefinition {
         activated_abilities: vec![
             // {U}, Sacrifice this: Return target creature to its owner's hand.
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: false,
                 mana_cost: cost(&[u()]),
                 effect: Effect::Move {
@@ -267,6 +272,7 @@ pub fn aether_spellbomb() -> CardDefinition {
             },
             // {1}, Sacrifice this: Draw a card.
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: false,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -320,6 +326,7 @@ pub fn zuran_orb() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::GainLife {
@@ -370,6 +377,7 @@ pub fn soul_conduit() -> CardDefinition {
         cost: cost(&[generic(6)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(6)]),
             sorcery_speed: true,
@@ -399,6 +407,7 @@ pub fn chromatic_star() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::AddMana {
@@ -469,6 +478,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
         activated_abilities: vec![
             // {T}: target opponent exiles a card from their graveyard.
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Move {
@@ -491,6 +501,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
             },
             // {2}, {T}, Sac: Each player exiles their graveyard, you draw.
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::Seq(vec![
@@ -559,6 +570,7 @@ pub fn cankerbloom() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[g()]),
             effect: Effect::Seq(vec![
@@ -624,6 +636,7 @@ pub fn fellwar_stone() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -678,6 +691,7 @@ pub fn monument_to_endurance() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::PumpPT {
@@ -734,6 +748,7 @@ pub fn contagion_clasp() -> CardDefinition {
             },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(4)]),
             effect: Effect::Proliferate,
@@ -750,6 +765,7 @@ pub fn throne_of_geth() -> CardDefinition {
         cost: cost(&[generic(1)]),
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             sac_cost: true,
             effect: Effect::Proliferate,
@@ -773,6 +789,7 @@ pub fn walking_ballista() -> CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 condition: Some(Predicate::ValueAtLeast(
                     Value::CountersOn {
                         what: Box::new(Selector::This),
@@ -791,6 +808,7 @@ pub fn walking_ballista() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: cost(&[generic(4)]),
                 effect: Effect::AddCounter {
                     what: Selector::This,
@@ -818,6 +836,7 @@ pub fn triskelion() -> CardDefinition {
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             condition: Some(Predicate::ValueAtLeast(
                 Value::CountersOn {
                     what: Box::new(Selector::This),
@@ -869,6 +888,7 @@ pub fn hangarback_walker() -> CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::AddCounter {
@@ -944,6 +964,7 @@ pub fn arcbound_ravager() -> CardDefinition {
         },
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             sac_other_filter: Some((SelectionRequirement::Artifact, 1)),
             effect: Effect::AddCounter {
                 what: Selector::This,
@@ -1031,6 +1052,7 @@ pub fn hedron_archive() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
@@ -1039,6 +1061,7 @@ pub fn hedron_archive() -> CardDefinition {
                 ..Default::default()
             },
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
@@ -1062,6 +1085,7 @@ fn enters_tapped_trigger() -> TriggeredAbility {
 /// Tap-for-mana ability shorthand (no mana cost).
 fn tap_for(pool: ManaPayload) -> ActivatedAbility {
     ActivatedAbility {
+        energy_cost: 0,
         tap_cost: true,
         effect: Effect::AddMana { who: PlayerRef::You, pool },
         ..Default::default()
@@ -1109,6 +1133,7 @@ pub fn prophetic_prism() -> CardDefinition {
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::AddMana {

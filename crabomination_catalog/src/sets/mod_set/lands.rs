@@ -245,6 +245,7 @@ pub fn darksteel_citadel() -> CardDefinition {
         keywords: vec![Keyword::Indestructible],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -301,6 +302,7 @@ pub fn karns_bastion() -> CardDefinition {
         activated_abilities: vec![
             tap_add_colorless(),
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::new(vec![crate::mana::ManaSymbol::Generic(4)]),
                 effect: Effect::Proliferate,

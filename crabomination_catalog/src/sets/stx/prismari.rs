@@ -16106,6 +16106,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[]),
                 effect: Effect::AddMana {
@@ -16125,6 +16126,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 self_counter_cost_reduction: None,
             },
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::Seq(vec![

@@ -259,6 +259,7 @@ pub fn gemstone_mine() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -340,6 +341,7 @@ pub fn gemstone_caverns() -> CardDefinition {
         activated_abilities: vec![
             // {T}: Add {C}.
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -358,6 +360,7 @@ pub fn gemstone_caverns() -> CardDefinition {
             },
             // {T}, Remove a luck counter: Add one mana of any color.
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::If {
@@ -439,6 +442,7 @@ pub fn cavern_of_souls() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -502,6 +506,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
         activated_abilities: vec![
             tap_add(Color::Blue),
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2), u()]),
                 effect: Effect::Seq(vec![
@@ -558,6 +563,7 @@ fn manland(
 ) -> CardDefinition {
     use crate::card::CreatureType;
     let animate = ActivatedAbility {
+        energy_cost: 0,
         tap_cost: false,
         mana_cost: animate_cost,
         effect: Effect::BecomeCreature {

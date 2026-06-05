@@ -710,6 +710,7 @@ impl GameState {
                 .cloned()
                 .collect();
             kept.push(crate::card::ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: crate::mana::ManaCost::default(),
                 effect: crate::effect::Effect::AddMana {
@@ -4017,6 +4018,7 @@ impl GameState {
                 _ => continue,
             };
             out.push(crate::effect::ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: crate::effect::PlayerRef::You,
@@ -4333,6 +4335,13 @@ impl GameState {
             return Err(GameError::InsufficientLife);
         }
 
+        // Pre-flight {E} gate (CR 107.16): reject cleanly when the controller
+        // lacks the energy. Mirrors the mana/life pre-pay checks; the spend
+        // happens after tap/mana/life succeed.
+        if ability.energy_cost > 0 && self.players[p].energy < ability.energy_cost {
+            return Err(GameError::InsufficientEnergy);
+        }
+
         // Pre-flight exile-other-from-gy gate: confirm `count` graveyard
         // cards matching the cost's filter exist, *excluding* the source
         // itself for graveyard activations where source_in_gy is true.
@@ -4482,6 +4491,13 @@ impl GameState {
                 player: p,
                 amount: ability.life_cost,
             });
+        }
+
+        // Spend the {E} cost (CR 107.16). Tap/mana/life are committed; the
+        // pre-flight gate above guaranteed sufficient energy. Like the
+        // `Effect::PayEnergy` spend path, no event is emitted.
+        if ability.energy_cost > 0 {
+            self.players[p].energy = self.players[p].energy.saturating_sub(ability.energy_cost);
         }
 
         let mut events = auto_mana_events;

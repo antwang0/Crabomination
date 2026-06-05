@@ -461,6 +461,7 @@ pub fn spell_satchel() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[]),
                 effect: Effect::AddMana {
@@ -479,6 +480,7 @@ pub fn spell_satchel() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             },
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 effect: Effect::Move {
@@ -1542,6 +1544,7 @@ pub fn hall_of_oracles() -> CardDefinition {
         activated_abilities: vec![
             super::super::tap_add_colorless(),
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::AddCounter {
@@ -1727,6 +1730,7 @@ pub fn letter_of_acceptance() -> CardDefinition {
         activated_abilities: vec![
             super::super::tap_add_colorless(),
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::Draw {
@@ -2347,6 +2351,7 @@ pub fn reckless_amplimancer() -> CardDefinition {
         // {X}: +X/+X EOT, where X = the mana spent on this activation
         // (`Value::XFromCost` reads `ActivateAbility.x_value`).
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[crate::mana::ManaSymbol::X]),
             effect: Effect::PumpPT {
                 what: Selector::This,

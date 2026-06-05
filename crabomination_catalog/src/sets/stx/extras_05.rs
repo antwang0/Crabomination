@@ -2303,6 +2303,7 @@ pub fn lorehold_wand() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2), r()]),
             effect: Effect::DealDamage {
@@ -2776,6 +2777,7 @@ pub fn witherbloom_ritualist() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b(), g()]),
             effect: Effect::Seq(vec![
@@ -3052,6 +3054,7 @@ pub fn witherbloom_channeler() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -3070,6 +3073,7 @@ pub fn witherbloom_channeler() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             },
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Drain {

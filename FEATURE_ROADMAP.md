@@ -268,8 +268,9 @@ feature; sweep card-batch by card-batch.
   `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`
   + HUD chip; bot spends surplus via `pick_energy_payoff`. Wired the
   Kaladesh set (`sets::kld`: Longtusk Cub, Bristling Hydra, Dynavolt Tower,
-  Aether Swooper, Glimmer of Genius, …). ⏳ remaining: energy-gated *mana*
-  abilities (Aether Hub / Servant collapse the {E}-mana split). ⏳ Experience
+  Aether Swooper, Glimmer of Genius, …). Energy-gated *mana* abilities now
+  ship via `ActivatedAbility.energy_cost` (Aether Hub's `{T}: Add {C}` +
+  `{T}, Pay {E}: Add any color`, Servant of the Conduit). ⏳ Experience
   counters,
   ✅ Poison/Toxic (`Keyword::Toxic(N)` adds N poison on combat damage,
   CR 702.180c; 10-poison loss SBA wired),

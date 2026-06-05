@@ -519,6 +519,7 @@ pub fn strixhaven_mage_hunter() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: ManaCost::default(),
             tap_cost: true,
             sac_cost: false,
@@ -1052,6 +1053,7 @@ pub fn quandrix_counterstudent() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), g(), u()]),
             tap_cost: true,
             sac_cost: false,
@@ -1644,6 +1646,7 @@ pub fn strixhaven_banner() -> CardDefinition {
         activated_abilities: vec![
             // {T}: Add one mana of any color.
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 sac_cost: false,
@@ -1663,6 +1666,7 @@ pub fn strixhaven_banner() -> CardDefinition {
             },
             // {2}, {T}, Sacrifice this artifact: Draw a card.
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 sac_cost: true,
@@ -1812,6 +1816,7 @@ pub fn strixhaven_pupil() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_cost: false,
@@ -2040,6 +2045,7 @@ pub fn strixhaven_crucible() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_cost: false,

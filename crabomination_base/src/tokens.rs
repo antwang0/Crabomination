@@ -96,6 +96,7 @@ pub fn food_token() -> TokenDefinition {
         },
         // {2}, {T}, Sacrifice this artifact: Gain 3 life.
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost {
                 symbols: vec![ManaSymbol::Generic(2)],
@@ -134,6 +135,7 @@ pub fn treasure_token() -> TokenDefinition {
         },
         // {T}, Sacrifice this artifact: Add one mana of any color.
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -161,6 +163,7 @@ pub fn treasure_token() -> TokenDefinition {
 pub fn goldspan_treasure_token() -> TokenDefinition {
     TokenDefinition {
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -198,6 +201,7 @@ pub fn blood_token() -> TokenDefinition {
         // Discard isn't expressible as a cost yet, so it lives in the
         // resolution sequence; AutoDecider picks the first hand card.
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost {
                 symbols: vec![ManaSymbol::Generic(1)],
@@ -357,6 +361,7 @@ pub fn map_token() -> TokenDefinition {
             ..Default::default()
         },
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost { symbols: vec![ManaSymbol::Generic(1)] },
             effect: Effect::Explore {
@@ -389,6 +394,7 @@ pub fn clue_token() -> TokenDefinition {
         },
         // {2}, Sacrifice this artifact: Draw a card.
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost {
                 symbols: vec![ManaSymbol::Generic(2)],

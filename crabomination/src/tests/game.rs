@@ -4278,6 +4278,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
     use crate::mana::{Color, ManaCost};
 
     let mana_ability = ActivatedAbility {
+        energy_cost: 0,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::AddMana {
@@ -4299,6 +4300,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
     // Noop — what matters is that it's not a mana ability so the
     // downgrade preserves it.
     let sac_ability = ActivatedAbility {
+        energy_cost: 0,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::Noop,

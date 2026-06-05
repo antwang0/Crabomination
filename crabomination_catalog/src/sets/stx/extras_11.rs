@@ -2487,6 +2487,7 @@ pub fn witherbloom_harvester_b119() -> CardDefinition {
         power: 3,
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             sorcery_speed: true,

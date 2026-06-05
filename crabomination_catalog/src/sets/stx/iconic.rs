@@ -1559,6 +1559,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(1), r()]),
             effect: exile_top_may_play_effect.clone(),
@@ -1643,6 +1644,7 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Draw {

@@ -94,6 +94,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Untap {

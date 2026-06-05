@@ -355,6 +355,7 @@ pub fn witherbloom_bonesplitter_b123() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[b()]),
             effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -1850,6 +1851,7 @@ pub fn opposition() -> CardDefinition {
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_other_filter: Some(SelectionRequirement::Creature), from_hand: false,
             effect: Effect::Tap {
                 what: target_filtered(

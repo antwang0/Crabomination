@@ -19,6 +19,7 @@ use crate::mana::{b, cost, g, generic, r, u, ManaCost};
 /// by activating and the energy is consumed on resolution.
 fn pay_energy_counter(amount: u32) -> ActivatedAbility {
     ActivatedAbility {
+        energy_cost: 0,
         tap_cost: false,
         mana_cost: ManaCost::default(),
         effect: Effect::PayEnergy {
@@ -181,10 +182,8 @@ pub fn glint_sleeve_siphoner() -> CardDefinition {
     }
 }
 
-/// Aether Hub — Land. When it enters, you get {E}. {T}: Add one mana of any
-/// color. (The printed "{T}: Add {C}" / "{T}, Pay {E}: Add any color" split
-/// collapses to a single any-color tap — energy can't gate a mana ability
-/// in this engine.)
+/// Aether Hub — Land. When it enters, you get {E}. `{T}: Add {C}.`
+/// `{T}, Pay {E}: Add one mana of any color.`
 pub fn aether_hub() -> CardDefinition {
     use crate::effect::shortcut::etb;
     use crate::effect::ManaPayload;
@@ -194,34 +193,31 @@ pub fn aether_hub() -> CardDefinition {
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(1)))],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                energy_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }
 
 /// Servant of the Conduit — {1}{G} 2/2 Elf Druid. When it enters, you get
-/// {E}{E}. {T}: Add one mana of any color. (The printed "{T}, Pay {E}: Add
-/// one mana of any color" collapses to a free tap — energy can't gate a
-/// mana ability in this engine; the ETB energy is faithful.)
+/// {E}{E}. `{T}, Pay {E}: Add one mana of any color.`
 pub fn servant_of_the_conduit() -> CardDefinition {
     use crate::effect::shortcut::etb;
     use crate::effect::ManaPayload;
@@ -238,23 +234,12 @@ pub fn servant_of_the_conduit() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            mana_cost: ManaCost::default(),
+            energy_cost: 1,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::AnyOneColor(Value::Const(1)),
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-            sac_other_filter: None,
-            tap_other_filter: None,
-            from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -272,6 +257,7 @@ pub fn dynavolt_tower() -> CardDefinition {
         subtypes: Subtypes::default(),
         triggered_abilities: vec![magecraft(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(5)]),
             effect: Effect::PayEnergy {
@@ -431,6 +417,7 @@ pub fn woodweavers_puzzleknot() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![etb(payoff())],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: payoff(),
@@ -465,6 +452,7 @@ pub fn glassblowers_puzzleknot() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![etb(payoff())],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: payoff(),

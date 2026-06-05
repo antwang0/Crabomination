@@ -12,6 +12,7 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
     let filter = SelectionRequirement::HasLandType(type_a)
         .or(SelectionRequirement::HasLandType(type_b));
     ActivatedAbility {
+        energy_cost: 0,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::Seq(vec![

@@ -139,6 +139,7 @@ pub fn lightning_berserker() -> CardDefinition {
         power: 1,
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[r()]),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -252,6 +253,7 @@ pub fn bloodsoaked_champion() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::CantBlock],
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Move {
                 what: Selector::This,

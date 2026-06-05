@@ -2681,10 +2681,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Hellion (sac) and Greenbelt Rampager (bounce). (c) **✅ EnergyGained trigger
   event** — `EventKind::EnergyGained` (CR 107.16) fires "whenever you get one
   or more {E}"; Aetherborn Marauder wired. (d) **✅ damage→energy feedback** —
-  Harnessed Lightning (deal 3; get {E}{E}{E} if it hit a permanent). Remaining:
-  (a) **energy-gated mana abilities** — Aether Hub / Servant of the Conduit
-  still collapse the "{T}, Pay {E}: Add any color" split (`ActivatedAbility`
-  has no energy-cost slot).
+  Harnessed Lightning (deal 3; get {E}{E}{E} if it hit a permanent). (a)
+  **✅ energy-gated mana abilities** — `ActivatedAbility.energy_cost` (CR
+  107.16) gates an ability on {E}, spent up front like the mana/life
+  pre-pay; Aether Hub (`{T}: Add {C}` + `{T}, Pay {E}: Add any color`) and
+  Servant of the Conduit are now faithful. The affordance/bot paths gate via
+  `would_accept`, so unpayable energy abilities are auto-excluded.
 
 - 🟡 **`ActivatedAbility` `..Default::default()` sweep.** `ActivatedAbility`
   now derives `Default`, and the land/shortcut helpers use

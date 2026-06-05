@@ -344,6 +344,7 @@ pub fn burrog_banemaker() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::PumpPT {
@@ -386,6 +387,7 @@ pub fn noxious_newt() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -426,6 +428,7 @@ pub fn mindful_biomancer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(2), g()]),
             effect: Effect::PumpPT {
@@ -744,6 +747,7 @@ pub fn shattered_acolyte() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Destroy {
@@ -792,6 +796,7 @@ pub fn summoned_dromedary() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), w()]),
             effect: Effect::Move {
@@ -1293,6 +1298,7 @@ pub fn teachers_pest() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[b(), g()]),
             effect: Effect::Move {
@@ -1499,6 +1505,7 @@ pub fn hardened_academic() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -1808,6 +1815,7 @@ pub fn charging_strifeknight() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -2389,6 +2397,7 @@ pub fn eternal_student() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::CreateToken {
@@ -2439,6 +2448,7 @@ pub fn postmortem_professor() -> CardDefinition {
         keywords: vec![Keyword::CantBlock],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Move {
@@ -2721,6 +2731,7 @@ pub fn topiary_lecturer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -2837,6 +2848,7 @@ pub fn sundering_archaic() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::new(vec![generic(2)]),
             effect: Effect::Move {
@@ -2950,6 +2962,7 @@ pub fn hydro_channeler() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -2970,6 +2983,7 @@ pub fn hydro_channeler() -> CardDefinition {
             tap_other_filter: None, from_hand: false,
             },
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::AddMana {
@@ -3057,6 +3071,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(4), g()]),
             effect: Effect::Seq(vec![
@@ -4088,6 +4103,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Seq(vec![
@@ -4403,6 +4419,7 @@ pub fn rubble_rouser() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -4822,6 +4839,7 @@ pub fn stone_docent() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[w()]),
             effect: Effect::Seq(vec![
@@ -4894,6 +4912,7 @@ pub fn page_loose_leaf() -> CardDefinition {
         activated_abilities: vec![
             tap_add_colorless(),
             ActivatedAbility {
+                energy_cost: 0,
                 tap_cost: false,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Seq(vec![
@@ -5212,6 +5231,7 @@ pub fn nita_forum_conciliator() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Seq(vec![

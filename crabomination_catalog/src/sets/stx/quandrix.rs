@@ -77,6 +77,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), g(), u()]),
             effect: Effect::AddCounter {
@@ -692,6 +693,7 @@ pub fn dragonsguard_elite() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(3), g()]),
             effect: Effect::PumpPT {
@@ -747,6 +749,7 @@ pub fn quandrix_crystallizer() -> CardDefinition {
         keywords: vec![Keyword::Hexproof],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2), g(), u()]),
             effect: Effect::AddCounter {
@@ -2112,6 +2115,7 @@ pub fn quandrix_aether_adept() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: ManaCost::default(),
             tap_cost: true,
             sac_cost: false,
@@ -6629,6 +6633,7 @@ pub fn quandrix_mistwarden() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[]),
             tap_cost: true,
             sac_cost: false,
@@ -13937,6 +13942,7 @@ pub fn quandrix_geomant_b202() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(2), g(), u()]),
             tap_cost: false,
             effect: Effect::AddCounter {

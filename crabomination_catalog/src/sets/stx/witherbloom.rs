@@ -595,6 +595,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[]),
             effect: Effect::AddMana {
@@ -876,6 +877,7 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b(), g()]),
             // Sac a Pest you control (`filter` constrains the picker) and
@@ -2458,6 +2460,7 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), b()]),
             tap_cost: false,
             sac_cost: false,
@@ -4465,6 +4468,7 @@ pub fn witherbloom_mireguide() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 sac_cost: false,
@@ -4483,6 +4487,7 @@ pub fn witherbloom_mireguide() -> CardDefinition {
                 tap_other_filter: None, from_hand: false,
             },
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 sac_cost: false,
@@ -5361,6 +5366,7 @@ pub fn witherbloom_pestwarden() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), b()]),
             tap_cost: false,
             sac_cost: false,
@@ -9183,6 +9189,7 @@ pub fn pest_conservator() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), g()]),
             tap_cost: false,
             once_per_turn: false,
@@ -16331,6 +16338,7 @@ pub fn witherbloom_cauldronist_b143() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b(), g()]),
             effect: Effect::Drain {
@@ -18750,6 +18758,7 @@ pub fn witherbloom_mossglobe_b154() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 effect: Effect::AddMana {
@@ -18759,6 +18768,7 @@ pub fn witherbloom_mossglobe_b154() -> CardDefinition {
                 ..ActivatedAbility::default()
             },
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 effect: Effect::AddMana {
@@ -18768,6 +18778,7 @@ pub fn witherbloom_mossglobe_b154() -> CardDefinition {
                 ..ActivatedAbility::default()
             },
             ActivatedAbility {
+                energy_cost: 0,
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 sac_cost: true,
@@ -18905,6 +18916,7 @@ pub fn witherbloom_pestbinder_b154() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), b()]),
             tap_cost: false,
             sac_other_filter: Some((
@@ -19839,6 +19851,7 @@ pub fn witherbloom_sapling_b155() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(1), b(), g()]),
             tap_cost: false,
             sac_cost: false,
@@ -23389,6 +23402,7 @@ pub fn witherbloom_sapsprite_b171() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b(), g()]),
             effect: drain(2),
@@ -23904,6 +23918,7 @@ pub fn pest_druid_b191() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             sac_cost: false,
@@ -27951,6 +27966,7 @@ pub fn witherbloom_cultivator_b202() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: ManaCost::default(),
             tap_cost: true,
             effect: add_mana(vec![Color::Green]),
@@ -28246,6 +28262,7 @@ pub fn witherbloom_tutor_b203() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(2), g()]),
             tap_cost: true,
             effect: Effect::Search {

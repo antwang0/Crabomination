@@ -3678,6 +3678,16 @@ pub struct ActivatedAbility {
     /// Defaults to false via `#[serde(default)]`.
     #[serde(default)]
     pub from_hand: bool,
+    /// Optional {E} (energy) cost (CR 107.16). When > 0, the activator must
+    /// have at least this many energy counters; they're spent up front during
+    /// activation, mirroring the mana/life pre-pay gate. Powers the
+    /// energy-gated mana abilities of Aether Hub and Servant of the Conduit
+    /// (`{T}, Pay {E}: Add one mana of any color`).
+    ///
+    /// Defaults to 0 via `#[serde(default)]` so existing literal
+    /// initialisations pick up the new field automatically.
+    #[serde(default)]
+    pub energy_cost: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -3821,6 +3831,7 @@ pub mod shortcut {
             effect: StaticEffect::GrantActivatedAbility {
                 applies_to: Selector::EachPermanent(filter),
                 ability: ActivatedAbility {
+                    energy_cost: 0,
                     tap_cost: true,
                     effect: add_any_one_color(1),
                     ..Default::default()
@@ -3842,6 +3853,7 @@ pub mod shortcut {
             effect: StaticEffect::GrantActivatedAbility {
                 applies_to: Selector::EachPermanent(filter),
                 ability: ActivatedAbility {
+                    energy_cost: 0,
                     tap_cost: true,
                     effect: Effect::AddMana {
                         who: PlayerRef::You,
@@ -4565,6 +4577,7 @@ pub mod shortcut {
     /// creature attacked this turn, and only once each turn.
     pub fn boast(cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
         ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost,
             effect,
             once_per_turn: true,
@@ -4577,6 +4590,7 @@ pub mod shortcut {
     /// ability that grows the source to monstrous once.
     pub fn monstrosity(cost: crate::mana::ManaCost, n: i32) -> ActivatedAbility {
         ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost,
             effect: Effect::Monstrosity { n: Value::Const(n) },
             sorcery_speed: true,
@@ -5498,6 +5512,7 @@ pub mod shortcut {
     pub fn outlast(mana_cost: crate::mana::ManaCost) -> ActivatedAbility {
         use crate::card::CounterType;
         ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost,
             sorcery_speed: true,

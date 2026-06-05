@@ -1312,6 +1312,7 @@ pub fn waker_of_waves() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(2), u(), u()]),
             effect: Effect::Seq(vec![
@@ -2026,6 +2027,7 @@ pub fn witchs_cauldron() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             // Approximate "sacrifice a creature" as part of the effect
@@ -2161,6 +2163,7 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Draw {
@@ -3021,6 +3024,7 @@ pub fn sungrass_egg() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::AddMana {

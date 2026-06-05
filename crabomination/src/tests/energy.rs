@@ -524,3 +524,55 @@ fn harnessed_lightning_to_face_gives_no_energy() {
     assert_eq!(g.players[1].life, p1_life - 3);
     assert_eq!(g.players[0].energy, 0, "damage to a player grants no energy");
 }
+
+#[test]
+fn aether_hub_colorless_ability_needs_no_energy() {
+    // Ability 0 — `{T}: Add {C}` — works with zero energy.
+    let mut g = two_player_game();
+    let hub = g.add_card_to_battlefield(0, catalog::aether_hub());
+    g.clear_sickness(hub);
+    g.players[0].energy = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hub, ability_index: 0, target: None, x_value: None,
+    }).expect("colorless tap needs no energy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    assert_eq!(g.players[0].energy, 0);
+}
+
+#[test]
+fn aether_hub_any_color_ability_is_energy_gated() {
+    // Ability 1 — `{T}, Pay {E}: Add one mana of any color` — rejected with
+    // no energy, succeeds (and spends {E}) with one.
+    let mut g = two_player_game();
+    let hub = g.add_card_to_battlefield(0, catalog::aether_hub());
+    g.clear_sickness(hub);
+    g.players[0].energy = 0;
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: hub, ability_index: 1, target: None, x_value: None,
+    });
+    assert!(matches!(err, Err(GameError::InsufficientEnergy)), "no energy → rejected");
+    assert!(!g.battlefield_find(hub).unwrap().tapped, "rejected activation didn't tap");
+
+    g.players[0].energy = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hub, ability_index: 1, target: None, x_value: None,
+    }).expect("activatable with 1 energy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "spent the {{E}}");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "added one mana of any color");
+}
+
+#[test]
+fn servant_of_the_conduit_mana_ability_spends_energy() {
+    let mut g = two_player_game();
+    let servant = g.add_card_to_battlefield(0, catalog::servant_of_the_conduit());
+    g.clear_sickness(servant);
+    g.players[0].energy = 2;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: servant, ability_index: 0, target: None, x_value: None,
+    }).expect("activatable with energy");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 1, "spent one {{E}} of two");
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}

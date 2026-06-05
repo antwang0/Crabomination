@@ -1991,6 +1991,7 @@ pub fn witherbloom_loremage() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(2), b(), g()]),
             effect: Effect::Move {
@@ -2279,6 +2280,7 @@ pub fn witherbloom_apothecary() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             // {1}, Sacrifice another creature: drain 1 from each opponent.
@@ -2403,6 +2405,7 @@ pub fn prismari_painter() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![

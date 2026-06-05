@@ -1437,6 +1437,7 @@ mod tests {
         use crate::effect::{ActivatedAbility, Effect};
         use crate::mana::{cost, b, generic, r, w, u, x};
         let ab = ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2), w(), u(), b(), r()]),
             effect: Effect::Noop,
@@ -1460,6 +1461,7 @@ mod tests {
             "label uses single-letter MTG abbreviations, not Debug names: {label}");
 
         let ab_x = ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: cost(&[x()]),
             effect: Effect::Noop,
@@ -1487,6 +1489,7 @@ mod tests {
         use crate::mana::{cost, generic};
         // Mind Stone's draw ability: {1}, {T}, sac → Draw 1.
         let ab = ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Noop,
@@ -1508,6 +1511,7 @@ mod tests {
 
         // Lotus Petal: {T}, sac → add any one color. No mana cost.
         let petal = ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[]),
             effect: Effect::Noop,
@@ -1534,6 +1538,7 @@ mod tests {
         use crate::effect::{ActivatedAbility, Effect};
         // "{T}, Sacrifice a creature: ..." (a sac-outlet).
         let sac_outlet = ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             sac_other_filter: Some((R::Creature.and(R::ControlledByYou), 1)),
             ..Default::default()
@@ -1543,6 +1548,7 @@ mod tests {
 
         // "Tap an untapped creature you control: ..." (a tap-outlet).
         let tap_outlet = ActivatedAbility {
+            energy_cost: 0,
             tap_other_filter: Some(R::Creature.and(R::Untapped)),
             effect: Effect::Noop,
             ..Default::default()
@@ -1554,6 +1560,7 @@ mod tests {
 
         // Plural sac count.
         let sac_two = ActivatedAbility {
+            energy_cost: 0,
             sac_other_filter: Some((R::Artifact, 2)),
             ..Default::default()
         };

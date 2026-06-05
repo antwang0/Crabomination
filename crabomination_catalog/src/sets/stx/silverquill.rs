@@ -315,6 +315,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -589,6 +590,7 @@ pub fn selfless_glyphweaver() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::GrantKeyword {
@@ -2762,6 +2764,7 @@ pub fn inkling_sage() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(2), w(), b()]),
             tap_cost: false,
             sac_cost: false,
@@ -14083,6 +14086,7 @@ pub fn silverquill_lectern_b160() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: drain(1),
@@ -18508,6 +18512,7 @@ pub fn silverquill_mausoleum_b203() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
+            energy_cost: 0,
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             effect: drain(1),
