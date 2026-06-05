@@ -21,8 +21,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   as an `Effect::PayEnergy` paid *at resolution* with `energy_cost: 0`, so
   they're technically activatable with no energy (the resolve no-ops). Now
   that `ActivatedAbility.energy_cost` exists, convert these to a true cost
-  (gated up front), and teach the bot's `pick_energy_payoff` to recognise
-  `energy_cost`-bearing abilities (it matches `Effect::PayEnergy` today).
+  (gated up front). The bot's `pick_energy_payoff` now recognises both the
+  `energy_cost`-bearing form and the resolve-time `Effect::PayEnergy` rider —
+  remaining work is migrating the card definitions onto the real cost.
 
 - **Energy-pay-to-cast-from-exile (Amped Raptor).** Needs a `MayPlay
   Permission` alt-cost slot ("cast without paying mana cost by paying {E}{E}")

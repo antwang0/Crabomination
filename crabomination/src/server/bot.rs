@@ -1084,12 +1084,23 @@ fn pick_energy_payoff(state: &GameState, seat: usize) -> Option<GameAction> {
     }
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
-            let Effect::PayEnergy { amount, .. } = &ab.effect else { continue };
+            // The energy can be modeled either as a real activation cost
+            // (`ActivatedAbility.energy_cost`, the up-front-gated form) or as a
+            // resolve-time `Effect::PayEnergy` rider. Match either so the bot
+            // fires Longtusk Cub-style `{E}{E}{E}: +1/+1` payoffs regardless of
+            // which shape the card uses.
+            let amount = if ab.energy_cost > 0 {
+                ab.energy_cost
+            } else if let Effect::PayEnergy { amount, .. } = &ab.effect {
+                *amount
+            } else {
+                continue;
+            };
             let is_pure = !ab.tap_cost
                 && !ab.sac_cost
                 && ab.mana_cost.symbols.is_empty()
                 && ab.life_cost == 0;
-            if !is_pure || state.players[seat].energy < *amount {
+            if !is_pure || state.players[seat].energy < amount {
                 continue;
             }
             let action = GameAction::ActivateAbility {
@@ -1836,6 +1847,36 @@ mod tests {
         // With too little energy the bot leaves it alone.
         g.players[0].energy = 1;
         assert!(pick_energy_payoff(&g, 0).is_none(), "won't activate without enough energy");
+    }
+
+    /// The bot also recognises the real-cost energy form
+    /// (`ActivatedAbility.energy_cost`), not just resolve-time `PayEnergy`.
+    #[test]
+    fn bot_spends_energy_on_real_cost_form() {
+        use crate::card::{ActivatedAbility, CardDefinition, CardType, CounterType};
+        let mut g = two_player_game();
+        let def = CardDefinition {
+            name: "Energy Engine",
+            card_types: vec![CardType::Creature],
+            power: 1,
+            toughness: 1,
+            activated_abilities: vec![ActivatedAbility {
+                energy_cost: 2,
+                effect: Effect::AddCounter {
+                    what: crate::effect::Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: crate::effect::Value::Const(1),
+                },
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, def);
+        g.clear_sickness(id);
+        g.players[0].energy = 2;
+        assert!(pick_energy_payoff(&g, 0).is_some(), "bot fires the energy_cost-gated payoff");
+        g.players[0].energy = 1;
+        assert!(pick_energy_payoff(&g, 0).is_none(), "and only when it can afford it");
     }
 
     /// Mulligan heuristic: ship a 1-land seven, keep a 3-land seven, and

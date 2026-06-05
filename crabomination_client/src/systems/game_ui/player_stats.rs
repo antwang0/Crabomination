@@ -444,9 +444,13 @@ pub fn update_player_stats_chips(
                 .join(" ");
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
         }
-        // CR 724 monarch — crown badge on the current monarch's row.
+        // CR 724 monarch — a plain crown when the viewer holds it, otherwise a
+        // crown tagged with whoever currently does, so the table always knows
+        // where the monarchy sits (and who to attack to steal it back).
         if p.is_monarch {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, "👑".to_string());
+        } else if let Some(king) = cv.players.iter().find(|q| q.is_monarch) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, format!("👑 {}", king.name));
         }
         // CR 700.6 city's blessing — surfaced once the viewer is blessed.
         if p.has_city_blessing {
