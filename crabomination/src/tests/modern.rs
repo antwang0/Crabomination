@@ -26512,3 +26512,27 @@ fn railway_brawler_pumps_entering_creatures_by_their_power() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "entering 2/2 got X=2 counters");
 }
+
+#[test]
+fn springleaf_parade_makes_x_changelings_that_tap_for_mana() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::springleaf_parade());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("castable with X=2");
+    drain_stack(&mut g);
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Shapeshifter" && c.controller == 0)
+        .map(|c| c.id).collect();
+    assert_eq!(tokens.len(), 2, "created X=2 Shapeshifter tokens");
+    // Each token has the granted "{T}: Add one mana of any color."
+    let tok = tokens[0];
+    g.clear_sickness(tok);
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tok, ability_index: 0, target: None, x_value: None,
+    }).expect("token taps for any color");
+    assert_eq!(g.players[0].mana_pool.total() - before, 1, "token produced one mana");
+}

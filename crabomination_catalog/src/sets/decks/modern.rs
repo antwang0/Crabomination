@@ -17609,3 +17609,36 @@ pub fn railway_brawler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Springleaf Parade — {X}{G}{G} Enchantment. ETB create X 1/1 colorless
+/// Shapeshifter tokens with changeling. Creature tokens you control have
+/// "{T}: Add one mana of any color."
+pub fn springleaf_parade() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::etb;
+    let shifter = TokenDefinition {
+        name: "Shapeshifter".to_string(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Changeling],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Springleaf Parade",
+        cost: cost(&[crate::mana::x(), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: shifter,
+        })],
+        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color(
+            SelectionRequirement::IsToken
+                .and(SelectionRequirement::Creature)
+                .and(SelectionRequirement::ControlledByYou),
+        )],
+        ..Default::default()
+    }
+}

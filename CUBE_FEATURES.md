@@ -66,7 +66,6 @@ work is listed below.
 | Baloth Prime | ⏳ | TBD. |
 | Icetill Explorer | ⏳ | TBD. |
 | Mightform Harmonizer | ⏳ | TBD. |
-| Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |
 

@@ -1466,6 +1466,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: cube maybeboard (counters-matter) ──
         ouroboroid,
         railway_brawler,
+        springleaf_parade,
         // ── Undying aggro ──
         strangleroot_geist,
         // ── classic core-set bodies (claude/modern_decks) ──
