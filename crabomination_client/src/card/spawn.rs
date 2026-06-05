@@ -88,7 +88,7 @@ pub fn init_shared_assets(
     // One graveyard pile per seat. Hidden until non-empty.
     for seat in 0..n_seats {
         let pos = graveyard_position(seat, viewer_seat, n_seats);
-        let rot = back_face_rotation(seat, viewer_seat);
+        let rot = back_face_rotation(seat, viewer_seat, n_seats);
         commands
             .spawn((
                 Mesh3d(card_mesh_handle.clone()),

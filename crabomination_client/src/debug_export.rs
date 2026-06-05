@@ -164,6 +164,7 @@ mod tests {
             priority: 0,
             step: TurnStep::PreCombatMain,
             turn: 1,
+            permanents_to_graveyard_this_turn: 0,
             players: vec![PlayerView {
                 seat: 0,
                 name: "Alice".into(),
@@ -194,6 +195,8 @@ mod tests {
                 devotion: [0; 5],
                 is_monarch: false,
                 has_city_blessing: false,
+                commander_damage_taken: vec![],
+                team: 0,
             }],
             battlefield: vec![],
             stack: vec![],

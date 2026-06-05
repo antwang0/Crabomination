@@ -240,6 +240,71 @@ fn spawn_life_badge(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, life:
         });
 }
 
+// ── Commander damage (CR 903.10a) ─────────────────────────────────────────────
+
+/// Shorten a commander's name for the compact HUD chip: take the part
+/// before the first comma (so "Atraxa, Praetors' Voice" → "Atraxa") and
+/// cap the length with an ellipsis so a long legendary name can't blow out
+/// the row. Pure helper.
+pub(super) fn commander_short_name(name: &str) -> String {
+    let head = name.split(',').next().unwrap_or(name).trim();
+    if head.chars().count() > 14 {
+        let mut s: String = head.chars().take(13).collect();
+        s.push('…');
+        s
+    } else {
+        head.to_string()
+    }
+}
+
+/// `(background, text)` for a commander-damage chip, graded by proximity to
+/// the CR 903.10a lethal threshold of 21 from a single commander. Tracked
+/// quietly while low, ambers as it climbs, and goes danger-red once a single
+/// extra hit from a typical commander could be lethal. Pure helper.
+fn commander_damage_style(amount: u32) -> (Color, Color) {
+    match amount {
+        0..=10 => (Color::srgba(0.30, 0.18, 0.18, 1.0), theme::ACCENT_GOLD),
+        11..=17 => (Color::srgba(0.40, 0.26, 0.10, 1.0), Color::srgb(1.0, 0.80, 0.42)),
+        _ => (Color::srgb(0.52, 0.12, 0.12), theme::TEXT_PRIMARY),
+    }
+}
+
+/// Spawn one commander-damage chip — `⚔ <commander> N/21` — styled by how
+/// close the tally is to the lethal threshold. Its own spawn fn (rather than
+/// a `StatChipKind`) since the colour depends on the running amount, mirroring
+/// [`spawn_life_badge`].
+fn spawn_commander_damage_chip(
+    parent: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
+    entry: &crabomination::net::CommanderDamageEntry,
+) {
+    let (bg, fg) = commander_damage_style(entry.amount);
+    parent
+        .spawn((
+            Node {
+                padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            BackgroundColor(bg),
+            Pickable::IGNORE,
+        ))
+        .with_children(|chip| {
+            chip.spawn((
+                Text::new(format!(
+                    "\u{2694} {} {}/21",
+                    commander_short_name(&entry.source_name),
+                    entry.amount
+                )),
+                ui_fonts.tf(12.0),
+                TextColor(fg),
+                Pickable::IGNORE,
+            ));
+        });
+}
+
 // ── Seat-stamp + targeting outline ───────────────────────────────────────────
 
 /// Patch the viewer's `PlayerHudPanel.seat` to match the current
@@ -403,6 +468,12 @@ pub fn update_player_stats_chips(
         spawn_avatar(row, &ui_fonts, p.seat, &p.name);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
         spawn_life_badge(row, &ui_fonts, p.life);
+        // CR 903.10a commander damage taken — surfaced right next to life
+        // since 21 from a single commander is its own loss condition. Only
+        // present in Commander games (the vec is empty otherwise).
+        for entry in &p.commander_damage_taken {
+            spawn_commander_damage_chip(row, &ui_fonts, entry);
+        }
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
         spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
@@ -654,8 +725,13 @@ pub fn update_opponent_stats_rows(
                     flex_direction: FlexDirection::Row,
                     align_items: AlignItems::Center,
                     column_gap: Val::Px(4.0),
-                    flex_wrap: FlexWrap::Wrap,
-                    row_gap: Val::Px(2.0),
+                    // A wrapping flex row with `align_items: Stretch` on the
+                    // parent column collapses to zero auto-height under taffy
+                    // (the whole panel rendered empty). Keep each opponent on a
+                    // single non-wrapping line with a guaranteed height; an
+                    // over-long row overflows left (the panel is right-anchored)
+                    // rather than vanishing.
+                    min_height: Val::Px(26.0),
                     padding: UiRect::axes(Val::Px(4.0), Val::Px(2.0)),
                     border: UiRect::all(Val::Px(2.0)),
                     ..default()
@@ -673,6 +749,10 @@ pub fn update_opponent_stats_rows(
                 spawn_avatar(row, &ui_fonts, p.seat, &p.name);
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
                 spawn_life_badge(row, &ui_fonts, p.life);
+                // CR 903.10a commander damage taken — see the viewer row.
+                for entry in &p.commander_damage_taken {
+                    spawn_commander_damage_chip(row, &ui_fonts, entry);
+                }
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
                 spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
@@ -842,7 +922,7 @@ pub fn animate_life_flash(
 
 #[cfg(test)]
 mod tests {
-    use super::{deck_chip_kind, storm_chip_visible, StatChipKind};
+    use super::{commander_damage_style, commander_short_name, deck_chip_kind, storm_chip_visible, StatChipKind};
 
     #[test]
     fn storm_chip_hidden_until_second_spell() {
@@ -856,5 +936,36 @@ mod tests {
     fn deck_chip_warns_only_when_low() {
         assert!(matches!(deck_chip_kind(3), StatChipKind::DeckLow));
         assert!(matches!(deck_chip_kind(4), StatChipKind::Deck));
+    }
+
+    #[test]
+    fn commander_name_drops_title_after_comma() {
+        assert_eq!(commander_short_name("Atraxa, Praetors' Voice"), "Atraxa");
+        assert_eq!(commander_short_name("Krenko, Mob Boss"), "Krenko");
+    }
+
+    #[test]
+    fn commander_name_truncates_long_single_word() {
+        // No comma, longer than the 14-char cap → ellipsised.
+        let out = commander_short_name("Gishath Sun of Tyrants Extra");
+        assert!(out.ends_with('…'), "expected ellipsis, got {out}");
+        assert!(out.chars().count() <= 14, "too long: {out}");
+    }
+
+    #[test]
+    fn commander_name_short_unchanged() {
+        assert_eq!(commander_short_name("Ghave"), "Ghave");
+    }
+
+    #[test]
+    fn commander_damage_style_escalates_with_amount() {
+        // The danger-red tier (18+, one swing from lethal) must differ from
+        // the quietly-tracked low tier so the player gets a clear warning.
+        let (low_bg, _) = commander_damage_style(3);
+        let (mid_bg, _) = commander_damage_style(14);
+        let (high_bg, _) = commander_damage_style(20);
+        assert_ne!(low_bg, mid_bg);
+        assert_ne!(mid_bg, high_bg);
+        assert_ne!(low_bg, high_bg);
     }
 }

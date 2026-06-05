@@ -18,12 +18,41 @@ use crate::MainCamera;
 use crate::card::{BattlefieldCard, CardHovered};
 use crate::systems::kb_cursor::KeyboardSelected;
 
-/// Fixed "home" camera position (matches the spawn in `main::setup`).
+/// Default "home" camera position for 1-/2-player tables (matches the spawn
+/// in `main::setup`).
 const CAM_HOME_POS: Vec3 = Vec3::new(0.0, 32.0, 14.0);
+/// Pulled-back home pose for 3+ player tables, so the wider two-per-side
+/// seating fits in frame.
+const CAM_HOME_POS_MULTI: Vec3 = Vec3::new(0.0, 44.0, 20.0);
 /// Fraction of the home distance used when zoomed (smaller = closer).
 const CAM_ZOOM_SCALE: f32 = 0.45;
 /// Lerp rate toward the target pose (per second, exponential approach).
 const CAM_LERP_SPEED: f32 = 7.0;
+
+/// Current camera "home" pose, adjusted by [`adjust_camera_home_for_seats`]
+/// based on the player count. A resource (not a const) so the pulled-back
+/// multiplayer pose can take effect once the first view arrives.
+#[derive(Resource)]
+pub struct CameraHome(pub Vec3);
+
+impl Default for CameraHome {
+    fn default() -> Self {
+        Self(CAM_HOME_POS)
+    }
+}
+
+/// Pull the camera home pose back for 3+ player tables so the wider
+/// two-per-side seating fits in frame; keep the historical pose for 1v1.
+pub fn adjust_camera_home_for_seats(
+    view: Res<crate::net_plugin::CurrentView>,
+    mut home: ResMut<CameraHome>,
+) {
+    let Some(cv) = &view.0 else { return };
+    let desired = if cv.players.len() > 2 { CAM_HOME_POS_MULTI } else { CAM_HOME_POS };
+    if home.0 != desired {
+        home.0 = desired;
+    }
+}
 
 /// Last computed focus point, held across frames so the zoom stays put
 /// when the cursor briefly leaves the table (e.g. drifts over a UI
@@ -53,11 +82,13 @@ pub fn camera_zoom(
     // the mouse happens to be over). Picking the kb card deterministically
     // keeps the zoom focus from stuttering between them.
     kb_selected_bf: Query<&GlobalTransform, (With<BattlefieldCard>, With<KeyboardSelected>)>,
+    home_pose: Res<CameraHome>,
     mut camera: Query<(&mut Transform, &Camera), With<MainCamera>>,
 ) {
     let Ok((mut cam_xform, camera)) = camera.single_mut() else { return };
 
-    let home = Transform::from_translation(CAM_HOME_POS).looking_at(Vec3::ZERO, Vec3::Y);
+    let home_pos = home_pose.0;
+    let home = Transform::from_translation(home_pos).looking_at(Vec3::ZERO, Vec3::Y);
 
     let ctrl_held =
         keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
@@ -74,7 +105,7 @@ pub fn camera_zoom(
             zoom.focus = point;
         }
         // (else: keep the previously stored focus)
-        let pos = zoom.focus + CAM_HOME_POS * CAM_ZOOM_SCALE;
+        let pos = zoom.focus + home_pos * CAM_ZOOM_SCALE;
         Transform::from_translation(pos).looking_at(zoom.focus, Vec3::Y)
     } else {
         home

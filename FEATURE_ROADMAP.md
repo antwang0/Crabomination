@@ -577,6 +577,11 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
   reorder, bottom).
 - ⏳ Confirm **London mulligan** bottoming + scry-on-keep.
 - ⏳ **Floating life deltas** + per-turn life-history graph.
+- ✅ **Commander-damage HUD readout** (CR 903.10a) — `PlayerView.
+  commander_damage_taken` (projected in `server::view`) drives a per-source
+  `⚔ <commander> N/21` chip next to each player's life in the stat strip,
+  graded amber→red as it nears the 21-from-a-single-commander loss. Only
+  present in Commander games.
 - ⏳ **Hand sorting / auto-tap preferences / "play tapped land" prompt**.
 - ⏳ **Reminder text & rules tooltips** on keywords; **oracle text panel**.
 - ⏳ **Hotkey legend / help overlay**; remappable keys.

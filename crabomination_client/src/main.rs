@@ -56,6 +56,7 @@ use systems::game_ui::{
     animate_phase_banner, trigger_phase_banner, PhaseBannerTracker,
     animate_life_flash, trigger_life_flash, LifeFlashTracker,
     update_combat_preview_panel,
+    position_log_below_opponents,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
     update_player_stats_chips, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
@@ -96,6 +97,16 @@ fn main() {
         .collect::<Vec<_>>()
         .windows(2)
         .find_map(|w| (w[0] == "--load-state").then(|| std::path::PathBuf::from(&w[1])));
+
+    // CLI: `--play <format>` boots straight into a local-bot match of the
+    // given format (e.g. `--play commander` for the 4-player FFA), skipping
+    // the menu. Handy for verifying format-specific layouts.
+    let play_format_arg: Option<menu::MatchFormat> = std::env::args()
+        .skip(1)
+        .collect::<Vec<_>>()
+        .windows(2)
+        .find_map(|w| (w[0] == "--play").then(|| menu::MatchFormat::from_cli(&w[1])))
+        .flatten();
 
     // Preload card images for every card the player could possibly see —
     // the demo (Modern) decks and the full cube card universe. Cube
@@ -289,6 +300,7 @@ fn main() {
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .init_resource::<systems::game_ui::SurrenderConfirm>()
         .insert_resource(menu::CliBootHint(load_state_arg))
+        .insert_resource(menu::CliBootFormat(play_format_arg))
         .add_systems(Startup, setup)
         .add_systems(Startup, maximize_window)
         // Resolution-driven hand zoom + 2-D UI scale — both run every
@@ -411,6 +423,7 @@ fn main() {
                 update_mana_pips,
                 update_opponent_stats_rows,
                 update_opponent_panel_tint,
+                position_log_below_opponents,
                 update_hint,
                 update_phase_chart,
                 update_log_text,
@@ -507,7 +520,11 @@ fn main() {
         // Hold-Ctrl camera zoom onto the cursor / highlighted card.
         .add_systems(
             Update,
-            crate::systems::camera_zoom::camera_zoom
+            (
+                crate::systems::camera_zoom::adjust_camera_home_for_seats,
+                crate::systems::camera_zoom::camera_zoom,
+            )
+                .chain()
                 .run_if(in_state(AppState::InGame)),
         )
         .add_systems(
@@ -553,6 +570,7 @@ fn main() {
         // init it too so no entry path can leave it missing.
         .init_resource::<systems::game_over::ActiveMatchFormat>()
         .init_resource::<systems::camera_zoom::CameraZoom>()
+        .init_resource::<systems::camera_zoom::CameraHome>()
         .add_systems(
             Update,
             (
