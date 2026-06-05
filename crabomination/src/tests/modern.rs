@@ -26913,3 +26913,19 @@ fn mutable_explorer_makes_tapped_mutavault_token() {
     assert!(mv.tapped, "Mutavault token enters tapped");
     assert!(mv.is_token);
 }
+
+#[test]
+fn teval_loses_life_equal_to_cast_spell_mana_value() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let teval = g.add_card_to_battlefield(0, catalog::teval_arbiter_of_virtue());
+    assert!(g.battlefield_find(teval).unwrap().has_keyword(&Keyword::Flying));
+    g.active_player_idx = 0;
+    let life_before = g.players[0].life;
+    // Cast a 2-MV spell → lose 2 life.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bears);
+    assert_eq!(g.players[0].life, life_before - 2, "lose life = cast spell's mana value");
+}

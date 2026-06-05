@@ -87,7 +87,7 @@ work is listed below.
 | Geyadrone Dihada | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 3-loyalty Planeswalker. **+1**: Each opp loses 1 + you draw 1 (the "if you have less life than an opp, reset loyalty" rider drops — no loyalty-set primitive). **-3**: Threaten — `GainControl(EOT) + Untap + GrantKeyword(Haste, EOT)`. **-7**: Each opp loses half their life rounded up (`Effect::LoseHalfLife`, faithful); card stays 🟡 only for the +1 loyalty-reset rider. Tests: `geyadrone_dihada_plus_one_drains_each_opponent_for_one`, `geyadrone_dihada_minus_three_steals_creature`, `geyadrone_dihada_minus_seven_halves_opponent_life`. |
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |
-| Teval, Arbiter of Virtue | ⏳ | TBD. |
+| Teval, Arbiter of Virtue | 🟡 | {2}{B}{G}{U} 6/6 Spirit Dragon, flying + lifelink + "lose life equal to each cast spell's mana value". The "spells you cast have delve" static grant is engine-wide ⏳ and dropped. Test: `teval_loses_life_equal_to_cast_spell_mana_value`. |
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
 | Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
 | Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |

@@ -18214,3 +18214,31 @@ pub fn mutable_explorer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Teval, Arbiter of Virtue — {2}{B}{G}{U} Legendary 6/6 Spirit Dragon. Flying,
+/// lifelink. Whenever you cast a spell, you lose life equal to its mana value.
+/// (The "spells you cast have delve" static is engine-wide ⏳ and dropped.)
+pub fn teval_arbiter_of_virtue() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Teval, Arbiter of Virtue",
+        cost: cost(&[generic(2), b(), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        ..Default::default()
+    }
+}
