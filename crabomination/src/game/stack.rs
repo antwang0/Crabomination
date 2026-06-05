@@ -103,12 +103,19 @@ impl GameState {
             next = TurnStep::EndCombat;
         }
 
+        // CR 505.1b — additional combat phase. When the active player leaves
+        // End of Combat with a banked extra phase, loop back to Begin Combat
+        // (a fresh combat) instead of advancing to the postcombat main.
+        if self.step == TurnStep::EndCombat && self.additional_combat_phases > 0 {
+            self.additional_combat_phases -= 1;
+            next = TurnStep::BeginCombat;
+        }
+
         // CR 511.2 — "Effects that last 'until end of combat' expire at the
-        // end of the combat phase." When we leave the EndCombat step (the
-        // last step of the combat phase) sweep any `UntilEndOfCombat`
-        // continuous effects so they don't bleed into the post-combat
-        // main phase.
-        if self.step == TurnStep::EndCombat && !next.is_combat_phase() {
+        // end of the combat phase." Sweep `UntilEndOfCombat` continuous
+        // effects whenever we leave EndCombat — including into an additional
+        // combat phase, since each combat phase has its own end.
+        if self.step == TurnStep::EndCombat {
             self.expire_end_of_combat_effects();
             self.revert_temporary_control(&[crate::effect::Duration::EndOfCombat]);
             let mut cleanup = self.process_attacking_token_cleanup();
@@ -1064,6 +1071,9 @@ impl GameState {
         // CR 702.143b — foretold-this-turn cards become castable next turn.
         self.foretold_this_turn.clear();
         self.plotted_this_turn.clear();
+        // CR 505.1b — discard any unconsumed additional combat phases so they
+        // don't bleed into the next turn (e.g. the turn ended before combat).
+        self.additional_combat_phases = 0;
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;

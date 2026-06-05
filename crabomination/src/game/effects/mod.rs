@@ -5182,6 +5182,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::AdditionalCombatPhase { count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                self.additional_combat_phases =
+                    self.additional_combat_phases.saturating_add(n);
+                Ok(())
+            }
+
             Effect::WinGame { who } => {
                 // CR 104.2a — "you win the game". Resolve `who` to a single
                 // player and eliminate every other (non-eliminated) player.

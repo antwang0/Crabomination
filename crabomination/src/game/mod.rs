@@ -360,6 +360,13 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
+    /// CR 505.1b — additional combat phases banked for the active player.
+    /// `Effect::AdditionalCombatPhase` increments this; when the active
+    /// player leaves the End of Combat step with it set, the turn loops back
+    /// to Begin Combat (decrementing) instead of advancing to the postcombat
+    /// main. Reset at cleanup so it can't bleed into the next turn.
+    #[serde(default)]
+    pub(crate) additional_combat_phases: u32,
     /// CR 614.9 / 615 — creatures whose combat damage is prevented in both
     /// directions for the rest of the turn (Maze of Ith: "prevent all combat
     /// damage that would be dealt to and dealt by that creature"). The combat
@@ -550,6 +557,7 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
+            additional_combat_phases: self.additional_combat_phases,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
@@ -627,6 +635,7 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             prevent_combat_damage_this_turn: false,
+            additional_combat_phases: 0,
             combat_damage_prevented_creatures: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,

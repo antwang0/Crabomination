@@ -2099,6 +2099,16 @@ pub enum Effect {
     /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
     /// -7 coin-flip emblem.
     TakeExtraTurn { who: PlayerRef, count: Value },
+    /// CR 505.1b — "there is an additional combat phase after this one."
+    /// Banks `count` onto `GameState.additional_combat_phases`; when the
+    /// active player leaves the End of Combat step with the counter set, the
+    /// turn loops back to Begin Combat (a fresh combat phase) instead of
+    /// advancing to the postcombat main. Built for combat-phase activated
+    /// extra-combat effects (Hellkite Charger, Aggravated Assault while in
+    /// combat), usually paired with an `Untap` so creatures can attack again.
+    /// Main-phase-cast "after this main phase, an additional combat + main"
+    /// sorceries (Relentless Assault) aren't supported yet — see TODO.md.
+    AdditionalCombatPhase { count: Value },
     /// CR 114 — "[Player] gets an emblem with '[triggered abilities]'."
     /// Appends an `Emblem` (named after its source) to the player's
     /// emblem zone. Emblems never leave; their triggered abilities fire
@@ -2514,6 +2524,7 @@ impl Effect {
             Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
+            Effect::AdditionalCombatPhase { count } => value_has_target(count),
             Effect::CreateEmblem { who, .. } => player_has_target(who),
             Effect::CreateTokenCopyOf { who, count, source, .. } => {
                 player_has_target(who) || value_has_target(count) || sel_has_target(source)

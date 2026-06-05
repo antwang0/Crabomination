@@ -16,6 +16,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `oracle_cards` bulk and merges, preserving curated entries). Remaining card
   work: land monarch / Ascend / day-night payoff cards (the engine now
   supports all three) plus the long tail in `CUBE_FEATURES.md`.
+- **Additional combat phase — main-phase variant (CR 505.1b).** The
+  combat-phase loop ships (`Effect::AdditionalCombatPhase` +
+  `GameState.additional_combat_phases`; Hellkite Charger-style combat-only
+  activation re-loops Begin Combat at End of Combat). Still ⏳: main-phase
+  sorceries that read "after this main phase, there is an additional combat
+  phase followed by an additional main phase" (Relentless Assault, Aggravated
+  Assault) — these need the extra combat (and main) inserted after the
+  *current main phase*, not the End of Combat loop. Likely a small phase-queue
+  on `GameState` consulted at both the main-phase and combat-phase exits.
 - **Daybound / Nightbound DFC transform** (CR 702.145). The day/night game
   state + the CR 502.2 transition now ship (`GameState.day_night`,
   `Effect::BecomeDay`/`BecomeNight`, `Predicate::IsDay`/`IsNight`); what

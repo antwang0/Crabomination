@@ -762,3 +762,56 @@ fn cr_724_is_monarch_predicate() {
     assert!(g.evaluate_predicate(&Predicate::IsMonarch { who: PlayerRef::You }, &ctx));
     assert!(!g.evaluate_predicate(&Predicate::IsMonarch { who: PlayerRef::EachOpponent }, &ctx));
 }
+
+// ── CR 505.1b additional combat phase ─────────────────────────────────────────
+
+#[test]
+fn cr_505_1b_additional_combat_phase_lets_attacker_strike_twice() {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Effect, Selector, Value};
+    // A Hellkite-Charger-style body: `{0}: Untap this; additional combat
+    // phase.` Activated during combat, it untaps the (now-tapped) attacker
+    // and loops the turn back to a fresh combat.
+    let charger = CardDefinition {
+        name: "Test Charger",
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Seq(vec![
+                Effect::Untap { what: Selector::This, up_to: None },
+                Effect::AdditionalCombatPhase { count: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, charger);
+    g.clear_sickness(atk);
+    let start = g.players[1].life;
+
+    // First combat: attack, then activate the extra-combat ability.
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack 1");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: atk, ability_index: 0, target: None, x_value: None,
+    }).expect("extra-combat ability");
+    drain_stack(&mut g);
+    // Walk out of the first combat — End of Combat loops back to Begin Combat.
+    advance_to(&mut g, TurnStep::BeginCombat);
+
+    // Second combat: the untapped attacker strikes again.
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack 2");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+
+    assert_eq!(g.players[1].life, start - 6, "attacker dealt 3 in each of two combats");
+    assert_eq!(g.additional_combat_phases, 0, "the banked phase was consumed");
+}
