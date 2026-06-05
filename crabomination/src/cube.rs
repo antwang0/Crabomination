@@ -1306,6 +1306,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
         frontline_devastator,
+        rough_tumble,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
         // ── modern_decks: red utility creatures ──
@@ -1874,6 +1875,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(lush_portico);
         v.push(torsten_founder_of_benalia);
         v.push(wax_wane);
+        v.push(alive_well);
         v.push(horizon_canopy);
         v.push(hushwood_verge);
         v.push(talisman_of_unity);

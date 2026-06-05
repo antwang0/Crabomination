@@ -12840,6 +12840,89 @@ pub fn onward_victory() -> CardDefinition {
     }
 }
 
+/// Alive // Well — {3}{G} // {W} Sorcery split with Fuse (CR 709 / 702.102).
+/// Alive (left) makes a 3/3 green Centaur; Well (right) gains 2 life for each
+/// creature you control.
+pub fn alive_well() -> CardDefinition {
+    CardDefinition {
+        name: "Alive // Well",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Centaur".into(),
+                power: 3,
+                toughness: 3,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Centaur],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Times(
+                        Box::new(Value::Const(2)),
+                        Box::new(Value::CreatureCountControlledBy(PlayerRef::You)),
+                    ),
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Rough // Tumble — {1}{R} // {5}{R} Sorcery split (CR 709, no Fuse). Rough
+/// (left) deals 2 damage to each creature without flying; Tumble (right) deals
+/// 6 damage to each creature with flying.
+pub fn rough_tumble() -> CardDefinition {
+    CardDefinition {
+        name: "Rough // Tumble",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+            ),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            }),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(5), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                    ),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::Const(6),
+                    }),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
 /// Frontline Devastator — {3}{R} 3/3 Zombie Minotaur Warrior. Afflict 2
 /// (CR 702.131 — becomes blocked → defending player loses 2 life).
 /// {1}{R}: +1/+0 until end of turn.

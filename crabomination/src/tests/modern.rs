@@ -16241,6 +16241,48 @@ fn stand_deliver_right_bounces_permanent() {
 }
 
 #[test]
+fn alive_well_fused_makes_token_and_gains_life() {
+    // Fused: Alive makes a 3/3 Centaur; Well gains 2 life per creature you
+    // control (after the Centaur enters, that's at least 1 creature).
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::alive_well());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("fused cast");
+    drain_stack(&mut g);
+
+    let centaur = g.battlefield.iter().find(|c| c.definition.name == "Centaur").expect("Centaur token");
+    assert_eq!((centaur.power(), centaur.toughness()), (3, 3));
+    // Left (Alive) resolves first, so the Centaur is on the field for Well.
+    assert_eq!(g.players[0].life, life_before + 2, "gained 2 per creature (1 Centaur)");
+}
+
+#[test]
+fn rough_tumble_right_hits_only_fliers() {
+    // Tumble (right) deals 6 to each creature with flying; grounded creatures
+    // are untouched.
+    let mut g = two_player_game();
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 no flying
+    let id = g.add_card_to_hand(0, catalog::rough_tumble());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tumble castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(flier).is_none(), "flier took 6 and died");
+    assert!(g.battlefield_find(ground).is_some(), "grounded creature untouched");
+}
+
+#[test]
 fn spring_mind_aftermath_from_graveyard_then_exiled() {
     // CR 702.127 — Mind (right half) is castable only from the graveyard,
     // draws two, then is exiled.
