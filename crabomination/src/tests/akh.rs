@@ -233,3 +233,50 @@ fn bloodrage_brawler_discards_on_etb() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand - 1, "discards a card on ETB");
 }
+
+/// Open Fire deals 3 to any target.
+#[test]
+fn open_fire_deals_three() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let of = g.add_card_to_hand(0, catalog::open_fire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: of, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Open Fire");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 bear dies to 3 damage");
+}
+
+/// Gideon's Reproach only hits an attacking or blocking creature.
+#[test]
+fn gideons_reproach_requires_attacker_or_blocker() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gr = g.add_card_to_hand(0, catalog::gideons_reproach());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Idle creature is not a legal target.
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: gr, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None });
+    assert!(res.is_err(), "idle creature isn't attacking/blocking");
+}
+
+/// Cast Out flashes in and exiles a permanent until it leaves.
+#[test]
+fn cast_out_exiles_until_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let co = g.add_card_to_hand(0, catalog::cast_out());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: co, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Cast Out");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear exiled by Cast Out");
+}

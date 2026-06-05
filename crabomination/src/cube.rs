@@ -419,6 +419,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Exert (CR 702.137) ──
         tah_crop_elite,
         glory_bound_initiate,
+        // ── flash O-Ring + combat removal ──
+        cast_out,
+        gideons_reproach,
         // ── white value/aggro bodies ──
         palace_sentinels,
         knight_of_the_white_orchid,
@@ -1272,9 +1275,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Eternalize (CR 702.91) ──
         earthshaker_khenra,
-        // ── aggressive red bodies ──
+        // ── aggressive red bodies + burn ──
         bloodrage_brawler,
         nimble_blade_khenra,
+        open_fire,
         // ── Soulbond (CR 702.95) ──
         hanweir_lancer,
         // ── Mentor (CR 702.134) ──

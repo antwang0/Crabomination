@@ -10,7 +10,7 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     ExileReturnZone, Keyword, Predicate, SelectionRequirement, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{embalm, eternalize, etb, on_attack, target_filtered};
+use crate::effect::shortcut::{embalm, eternalize, etb, on_attack, target_any, target_filtered};
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{cost, b, g, generic, r, u, w};
 
@@ -328,6 +328,58 @@ pub fn nimble_blade_khenra() -> CardDefinition {
     }
 }
 
+// ── Spells / enchantments ────────────────────────────────────────────────────
+
+/// Cast Out — {3}{W} Enchantment, Flash. ETB: exile target nonland permanent an
+/// opponent controls until this leaves. Cycling {W}.
+pub fn cast_out() -> CardDefinition {
+    CardDefinition {
+        name: "Cast Out",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash, Keyword::Cycling(cost(&[w()]))],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Permanent
+                    .and(SelectionRequirement::Nonland)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Open Fire — {2}{R} Instant. Deal 3 damage to any target.
+pub fn open_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Open Fire",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Gideon's Reproach — {1}{W} Instant. Deal 4 damage to target attacking or
+/// blocking creature.
+pub fn gideons_reproach() -> CardDefinition {
+    CardDefinition {
+        name: "Gideon's Reproach",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(
+                    SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                ),
+            ),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
 /// Every AKH factory, for snapshot name→factory registration and the cube.
 pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
     &[
@@ -352,5 +404,8 @@ pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
         glory_bound_initiate,
         bloodrage_brawler,
         nimble_blade_khenra,
+        cast_out,
+        open_fire,
+        gideons_reproach,
     ]
 }
