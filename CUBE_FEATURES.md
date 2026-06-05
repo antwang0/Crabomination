@@ -28,7 +28,7 @@ work is listed below.
 |---|---|---|
 | Thundertrap Trainer | 🟡 | {1}{U} 1/2; ETB impulse the top four for noncreature/nonland cards (`RevealTopTakeMatchingToHand`). Offspring {4} dropped; "any number" is take-all-matching. |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
-| Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
+| Consult the Star Charts | 🟡 | {1}{U} Instant, Kicker {1}{U}; look at top X (X = lands you control) via `LookPickToHand { count: CountOf(lands), rest_to_graveyard: false }`, put one into hand, rest to bottom. The kicked "put two" needs a take-N look effect and is dropped. Test: `consult_the_star_charts_digs_x_equal_to_lands`. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
 | Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |

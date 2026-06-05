@@ -18439,3 +18439,25 @@ pub fn leyline_of_the_guildpact() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Consult the Star Charts — {1}{U} Instant. Kicker {1}{U}. Look at the top X
+/// cards of your library (X = lands you control), put one into your hand, and
+/// the rest on the bottom in a random order. (The kicked "put two instead"
+/// rider needs a take-N look effect and is dropped — kicked == unkicked here.)
+pub fn consult_the_star_charts() -> CardDefinition {
+    CardDefinition {
+        name: "Consult the Star Charts",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), u()]))],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+            ))),
+            rest_to_graveyard: false,
+            pick_filter: None,
+        },
+        ..Default::default()
+    }
+}

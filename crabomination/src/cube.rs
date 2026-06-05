@@ -662,6 +662,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: land-scaled dig ──
+        consult_the_star_charts,
         // ── modern_decks: draw-matters +1/+1 payoff ──
         profts_eidetic_memory,
         // ── modern_decks: artifacts-matter token maker ──

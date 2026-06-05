@@ -27032,3 +27032,21 @@ fn leyline_of_the_guildpact_makes_your_lands_all_basic_types() {
     let abilities = g.effective_mana_abilities(forest);
     assert!(abilities.len() >= 5, "taps for all five colors, got {}", abilities.len());
 }
+
+#[test]
+fn consult_the_star_charts_digs_x_equal_to_lands() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Three lands → look at top three.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let want = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(want))]));
+    let id = g.add_card_to_hand(0, catalog::consult_the_star_charts());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert!(g.players[0].hand.iter().any(|c| c.id == want),
+        "picks the chosen card from the top three into hand");
+}
