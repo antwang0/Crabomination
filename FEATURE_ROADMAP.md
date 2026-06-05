@@ -149,7 +149,13 @@ read of the code and should be re-verified before picking up an item.
   `Attach`/`LastCreatedToken`) — Nettlecyst. **Parity value check**
   (`Predicate::ValueIsOdd` — Sab-Sunen's odd-counter draw). **Token Mutavault**
   (a land token with `{T}: Add {C}` + a `BecomeCreature` animate ability —
-  Mutable Explorer).
+  Mutable Explorer). **Parity attack/block gate**
+  (`Keyword::CantAttackOrBlockUnlessEvenCounters` — Sab-Sunen). **Take-N look**
+  (`LookPickToHand.take` — Consult the Star Charts kicked). **Equipment-granted
+  triggered abilities** (`EquipBonus.triggered_abilities`, CR 702.6e — Sword of
+  Body and Mind / Feast and Famine / War and Peace's combat riders).
+  **Reconfigure** (`Keyword::Reconfigure`, CR 702.151 — Lion Sash). **Remove all
+  counters** (`Effect::RemoveAllCounters` — Vampire Hexmage).
 
 ---
 
@@ -304,7 +310,9 @@ feature; sweep card-batch by card-batch.
   spell on cast via `copy_stack_spell`; Cut of the Profits),
   ✅ Connive (`shortcut::connive` — CR 702.158, draw/discard +
   +1/+1-per-nonland via `Selector::DiscardedThisResolution`; Quandrix
-  Cryptomancer), ⏳ Backup,
+  Cryptomancer), ✅ Backup (CR 702.164 — `shortcut::backup` /
+  `backup_with`; ETB +N/+N + granted keywords *and* triggered abilities to a
+  backed-up other creature; Conclave Sledge-Captain, Bola Slinger),
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ✅ Plot (CR 702.170 —
   `CardDefinition.plot_cost` + `GameState.{plotted_cards,plotted_this_turn}`
   + `GameAction::Plot` / `CastPlotted`: exile face-up for the plot cost, cast
@@ -312,7 +320,9 @@ feature; sweep card-batch by card-batch.
   ✅ Saddle (CR 702.171 — `Keyword::Saddle(n)` + `CardInstance.saddled` +
   `GameAction::Saddle` + `shortcut::attacks_while_saddled`; Stingerback
   Terror), ⏳ Gift,
-  ⏳ Offspring, ⏳ Impending, ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
+  ✅ Offspring (CR 702.166 — `Keyword::Offspring(cost)` reuses the Kicker
+  pipeline; `SpellWasKicked` gates an ETB 1/1 token-copy; Thundertrap Trainer),
+  ⏳ Impending, ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
   `GameAction::Ninjutsu` — declare-blockers special action that returns an
   unblocked attacker and swaps the ninja in tapped + attacking; Fallen
   Shinobi), ⏳ Embalm/Eternalize.
