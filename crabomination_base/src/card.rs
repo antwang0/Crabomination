@@ -49,6 +49,7 @@ pub enum CreatureType {
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith,
     Drake, Griffin, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
+    Jackal,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat,
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,

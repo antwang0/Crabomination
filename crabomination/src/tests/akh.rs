@@ -108,3 +108,75 @@ fn angel_of_sanctions_exiles_until_it_leaves() {
     g.check_state_based_actions();
     assert!(g.battlefield.iter().any(|c| c.id == bear), "bear returns when Angel leaves");
 }
+
+/// Timeless Witness returns a card from your graveyard to hand on ETB.
+#[test]
+fn timeless_witness_returns_card_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let wit = g.add_card_to_battlefield(0, catalog::timeless_witness());
+    g.fire_self_etb_triggers(wit, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "Bolt returned to hand");
+}
+
+/// Sunscourge Champion gains life equal to its power on ETB.
+#[test]
+fn sunscourge_champion_gains_life_equal_to_power() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let champ = g.add_card_to_battlefield(0, catalog::sunscourge_champion());
+    g.fire_self_etb_triggers(champ, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gains 2 life (its power)");
+}
+
+/// Sinuous Striker's {U}: +1/-1 pump resolves.
+#[test]
+fn sinuous_striker_pumps_plus_one_minus_one() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::sinuous_striker());
+    g.clear_sickness(s);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, x_value: None })
+        .expect("activate {U} pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(s).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 1), "2/2 +1/-1 = 3/1");
+}
+
+/// Earthshaker Khenra's ETB makes a low-power creature unable to block.
+#[test]
+fn earthshaker_khenra_stops_a_blocker() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, power 2
+    let khenra = g.add_card_to_battlefield(0, catalog::earthshaker_khenra());
+    g.fire_self_etb_triggers(khenra, 0);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::CantBlock), "bear can't block this turn");
+}
+
+/// Every vanilla Embalm/Eternalize body has correct stats and a graveyard
+/// token-copy activated ability.
+#[test]
+fn akh_embalm_bodies_have_graveyard_ability() {
+    let cases: &[(fn() -> crate::card::CardDefinition, i32, i32)] = &[
+        (catalog::unwavering_initiate, 3, 2),
+        (catalog::steadfast_sentinel, 2, 3),
+        (catalog::aven_initiate, 3, 2),
+        (catalog::proven_combatant, 1, 1),
+        (catalog::tah_crop_skirmisher, 2, 1),
+        (catalog::honored_hydra, 6, 6),
+        (catalog::dreamstealer, 1, 2),
+        (catalog::oketras_attendant, 3, 3),
+    ];
+    for (f, p, t) in cases {
+        let d = f();
+        assert_eq!((d.power, d.toughness), (*p, *t), "{} stats", d.name);
+        assert!(d.activated_abilities.iter().any(|a| a.from_graveyard && a.exile_self_cost),
+            "{} has an Embalm/Eternalize graveyard ability", d.name);
+    }
+}

@@ -171,6 +171,64 @@ pub fn angel_of_sanctions() -> CardDefinition {
     c
 }
 
+/// Earthshaker Khenra — {1}{R} 2/1 Jackal Warrior, Haste. ETB: target creature
+/// with power ≤ this creature's power can't block this turn. Eternalize
+/// {4}{R}{R}. (The "≤ its power" filter is fixed at the printed power 2.)
+pub fn earthshaker_khenra() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::mana::r;
+    let mut c = akh_body("Earthshaker Khenra", cost(&[generic(1), r()]),
+        vec![CreatureType::Jackal, CreatureType::Warrior], 2, 1,
+        vec![Keyword::Haste], eternalize(cost(&[generic(4), r(), r()])));
+    c.triggered_abilities = vec![etb(Effect::GrantKeyword {
+        what: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+        ),
+        keyword: Keyword::CantBlock,
+        duration: Duration::EndOfTurn,
+    })];
+    c
+}
+
+/// Sinuous Striker — {2}{U} 2/2 Snake Warrior. {U}: +1/-1 until end of turn.
+/// Eternalize {3}{U}{U}. (The Eternalize "discard a card" additional cost is
+/// dropped.)
+pub fn sinuous_striker() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    let mut c = akh_body("Sinuous Striker", cost(&[generic(2), u()]),
+        vec![CreatureType::Snake, CreatureType::Warrior], 2, 2,
+        vec![], eternalize(cost(&[generic(3), u(), u()])));
+    c.activated_abilities.insert(0, ActivatedAbility {
+        mana_cost: cost(&[u()]),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    });
+    c
+}
+
+/// Champion of Wits — {2}{U} 2/1 Snake Wizard. ETB: you may draw cards equal to
+/// its power, then discard two. Eternalize {5}{U}{U} (token is 4/4, so it draws
+/// four).
+pub fn champion_of_wits() -> CardDefinition {
+    let mut c = akh_body("Champion of Wits", cost(&[generic(2), u()]),
+        vec![CreatureType::Snake, CreatureType::Wizard], 2, 1,
+        vec![], eternalize(cost(&[generic(5), u(), u()])));
+    c.triggered_abilities = vec![etb(Effect::MayDo {
+        description: "Draw cards equal to power, then discard two".into(),
+        body: Box::new(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::PowerOf(Box::new(Selector::This)) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ])),
+    })];
+    c
+}
+
 /// Every AKH factory, for snapshot name→factory registration and the cube.
 pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
     &[
@@ -188,5 +246,8 @@ pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
         oketras_attendant,
         anointer_priest,
         angel_of_sanctions,
+        earthshaker_khenra,
+        sinuous_striker,
+        champion_of_wits,
     ]
 }

@@ -732,6 +732,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         aven_initiate,
         proven_combatant,
         tah_crop_skirmisher,
+        sinuous_striker,
+        champion_of_wits,
         // ── Soulbond (CR 702.95) ──
         wingcrafter,
         deadeye_navigator,
@@ -1265,6 +1267,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Eternalize (CR 702.91) ──
+        earthshaker_khenra,
         // ── Soulbond (CR 702.95) ──
         hanweir_lancer,
         // ── Mentor (CR 702.134) ──
