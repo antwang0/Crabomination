@@ -26950,3 +26950,26 @@ fn sab_sunen_draws_two_on_odd_counter_main_phase() {
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     assert_eq!(g.players[0].hand.len(), hand1, "even counter count draws nothing");
 }
+
+#[test]
+fn nettlecyst_living_weapon_scales_germ_by_artifacts_and_enchantments() {
+    let mut g = two_player_game();
+    // An extra artifact + a (non-Aura) enchantment already on the battlefield.
+    g.add_card_to_battlefield(0, catalog::memnite()); // artifact creature
+    g.add_card_to_battlefield(0, catalog::maelstrom_nexus()); // enchantment
+    let id = g.add_card_to_hand(0, catalog::nettlecyst());
+    g.players[0].mana_pool.add_colorless(3);
+    // Cast Nettlecyst → living-weapon ETB mints a Germ and attaches.
+    cast(&mut g, id);
+    let germ = g.battlefield.iter()
+        .find(|c| c.definition.name == "Phyrexian Germ" && c.controller == 0)
+        .expect("living weapon mints a Germ");
+    assert_eq!(g.battlefield_find(id).unwrap().attached_to, Some(germ.id),
+        "Nettlecyst attaches to its Germ");
+    // Artifacts/enchantments you control: Memnite + Nettlecyst (artifacts) +
+    // Maelstrom Nexus (enchantment) = 3 → Germ is 3/3.
+    let cp = g.compute_battlefield();
+    let g_cp = cp.iter().find(|c| c.id == germ.id).unwrap();
+    assert_eq!((g_cp.power, g_cp.toughness), (3, 3),
+        "Germ scales +1/+1 per artifact/enchantment you control");
+}

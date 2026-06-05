@@ -1695,7 +1695,22 @@ impl GameState {
             if !self.battlefield.iter().any(|c| c.id == target) {
                 continue;
             }
-            if bonus.power != 0 || bonus.toughness != 0 {
+            // Flat bonus plus optional board-scaled bonus (Nettlecyst: +1/+1
+            // for each artifact/enchantment the Equipment's controller controls).
+            let (mut bp, mut bt) = (bonus.power, bonus.toughness);
+            if let Some(scale) = &bonus.scale {
+                let n = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == card.controller
+                            && self.evaluate_requirement_on_card(&scale.filter, c, card.controller)
+                    })
+                    .count() as i32;
+                bp += n * scale.per_power;
+                bt += n * scale.per_toughness;
+            }
+            if bp != 0 || bt != 0 {
                 all_effects.push(ContinuousEffect {
                     timestamp: card.id.0 as u64,
                     source: card.id,
@@ -1703,10 +1718,7 @@ impl GameState {
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
                     duration: EffectDuration::WhileSourceOnBattlefield,
-                    modification: Modification::ModifyPowerToughness(
-                        bonus.power,
-                        bonus.toughness,
-                    ),
+                    modification: Modification::ModifyPowerToughness(bp, bt),
                 });
             }
             for kw in &bonus.keywords {

@@ -455,6 +455,24 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   (Pyrokinesis, the STX Outburst/Snow Day cycle), escalate (Collective
   Brutality), multi-player choice (Indulgent Tormentor) — or are synthesized
   bodies whose exact text should be re-derived from the Scryfall cache.
+- **Remaining ⏳ cube cards are each blocked on a distinct new subsystem.**
+  After this run's clean adds (Kestia, Brightglass, Korvold, Maelstrom Nexus,
+  Conclave, Death-Greeter's, Shiko, Parallax Dementia, Mutable Explorer, Teval,
+  Sab-Sunen), the rest of the missing list maps 1:1 to a sizable engine feature,
+  grouped here so the next run can pick a subsystem and clear several at once:
+  **dynamic/scaling equip bonus + Reconfigure + Living weapon** (Lion Sash,
+  Nettlecyst, Sword of Body and Mind, Helm of the Host); **face-down permanents
+  / manifest dread** (Hauntwoods Shrieker, Concealing Curtains); **Mutate**
+  (Mutated Cultist + others); **ETB-control replacement** (Gather Specimens);
+  **clone-many / continuous copy** (Mirrorform); **borrow activated abilities
+  from graveyard/exile** (Necrotic Ooze, Agatha's Soul Cauldron); **cast-from-
+  graveyard engine** (Muldrotha, The Gitrog Monster); **Saga + lore counters**
+  (The Everflowing Well, Rediscover the Way); **Hideaway** (Shelldock Isle);
+  **Storm cast-from-top** (Mind's Desire); **Companion** (Zirda); **DFC //
+  Land** (Sink into Stupor, Unholy Annex); **phasing system** (Talon Gates);
+  **all-colors / all-land-types static** (Leyline of the Guildpact);
+  **tempting-offer multiplayer choice** (Tempt with Bunnies); **`LookPickToHand`
+  take-N** (Consult the Star Charts); **parity attack-gate** (Sab-Sunen → ✅).
 - **Flashback with an additional cost** — ✅ done this run.
   `flashback_additional_cost_for_name` (name-keyed, the `dynamic_pt_for_name`
   idiom) + `cast_flashback` validation/payment; `AdditionalCastCost::

@@ -65,7 +65,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
-| Nettlecyst | ⏳ | Living-equipment + token. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
 | Helm of the Host | ⏳ | Equipment that token-copies on attack. |
 | The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
@@ -109,7 +108,7 @@ are listed in `DECK_FEATURES.md`.
 
 | Feature | Status | Cards depending on it |
 |---|---|---|
-| Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Lion Sash (counter-scaled bonus), Nettlecyst, Sword of Body and Mind, Helm of the Host still need dynamic/triggered equip bonuses. |
+| Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus now ships via `EquipBonus.scale` (`EquipScale { filter, per_power, per_toughness }`) — Nettlecyst (living weapon + "+1/+1 per artifact/enchantment you control") ✅. Lion Sash (counter-on-self scaled bonus + Reconfigure), Sword of Body and Mind, Helm of the Host still need counter-scaled / triggered equip bonuses. |
 | Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
 | Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm`, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich's attack trigger. Cast-from-top-of-library mid-resolution (Mind's Desire) and energy-gated free cast-from-exile (Amped Raptor) are still ⏳. |

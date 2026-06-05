@@ -1050,6 +1050,22 @@ pub struct EquipBonus {
     pub toughness: i32,
     /// Keywords granted to the equipped creature (layer 6).
     pub keywords: Vec<Keyword>,
+    /// Optional board-count scaling (CR 613 layer 7c): the attached creature
+    /// gets an additional `per_power`/`per_toughness` for each permanent
+    /// matching `filter` the source's controller controls, on top of the flat
+    /// `power`/`toughness` (Nettlecyst — "+1/+1 for each artifact and/or
+    /// enchantment you control"). `None` for the common static-bonus case.
+    #[serde(default)]
+    pub scale: Option<EquipScale>,
+}
+
+/// Board-count scaling for an [`EquipBonus`] (CR 613 layer 7c). See
+/// `EquipBonus.scale`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EquipScale {
+    pub filter: SelectionRequirement,
+    pub per_power: i32,
+    pub per_toughness: i32,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by

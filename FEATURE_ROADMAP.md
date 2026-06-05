@@ -143,6 +143,13 @@ read of the code and should be re-verified before picking up an item.
   (copy-your-second-spell-if-it-targets via `CopySpellMayChooseTargets` else
   draw — Shiko and Narset). **Aura "when this leaves" → enchanted creature**
   (`AttachedTo` last-known-info, CR 603.10 — Parallax Dementia's destroy-on-leave).
+  **Board-scaled equip bonus** (`EquipBonus.scale` / `EquipScale`, layer 7c —
+  the attached creature gets +P/+T per matching permanent the controller
+  controls) + **living weapon** (ETB mint-a-Germ-and-attach via `CreateToken` +
+  `Attach`/`LastCreatedToken`) — Nettlecyst. **Parity value check**
+  (`Predicate::ValueIsOdd` — Sab-Sunen's odd-counter draw). **Token Mutavault**
+  (a land token with `{T}: Add {C}` + a `BecomeCreature` animate ability —
+  Mutable Explorer).
 
 ---
 

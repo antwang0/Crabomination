@@ -311,6 +311,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks-17 ──
         lightning_greaves,
         stonecoil_serpent,
+        // ── modern_decks: living weapon + board-scaled equip bonus ──
+        nettlecyst,
         // ── Push XXIV (session 8) — colorless cube additions ──
         phyrexian_revoker,
         solemn_simulacrum,

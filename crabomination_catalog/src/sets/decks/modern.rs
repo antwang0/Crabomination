@@ -12220,8 +12220,7 @@ pub fn gift_of_orzhova() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Flying, Keyword::Lifelink],
-        }),
+            keywords: vec![Keyword::Flying, Keyword::Lifelink], scale: None }),
         ..Default::default()
     }
 }
@@ -12501,8 +12500,7 @@ pub fn rancor() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 0,
-            keywords: vec![Keyword::Trample],
-        }),
+            keywords: vec![Keyword::Trample], scale: None }),
         ..Default::default()
     }
 }
@@ -12605,7 +12603,7 @@ fn simple_aura(
                 filter: SelectionRequirement::Creature,
             },
         },
-        equipped_bonus: Some(crate::card::EquipBonus { power, toughness, keywords }),
+        equipped_bonus: Some(crate::card::EquipBonus { power, toughness, keywords, scale: None }),
         ..Default::default()
     }
 }
@@ -14313,8 +14311,7 @@ pub fn lightning_greaves() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 0,
             toughness: 0,
-            keywords: vec![Keyword::Haste, Keyword::Shroud],
-        }),
+            keywords: vec![Keyword::Haste, Keyword::Shroud], scale: None }),
         ..Default::default()
     }
 }
@@ -14339,8 +14336,7 @@ pub fn bonesplitter() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 0,
-            keywords: vec![],
-        }),
+            keywords: vec![], scale: None }),
         ..Default::default()
     }
 }
@@ -14365,8 +14361,7 @@ pub fn shuko() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 0,
-            keywords: vec![],
-        }),
+            keywords: vec![], scale: None }),
         ..Default::default()
     }
 }
@@ -14390,8 +14385,7 @@ pub fn lavaspur_boots() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Haste],
-        }),
+            keywords: vec![Keyword::Haste], scale: None }),
         ..Default::default()
     }
 }
@@ -18013,7 +18007,7 @@ pub fn kestia_the_cultivator() -> CardDefinition {
         power: 4,
         toughness: 4,
         bestow: Some(cost(&[generic(3), g(), w(), u()])),
-        equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, keywords: vec![] }),
+        equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, keywords: vec![], scale: None }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -18158,7 +18152,7 @@ pub fn parallax_dementia() -> CardDefinition {
             what: Selector::This,
             to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
         },
-        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 2, keywords: vec![] }),
+        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 2, keywords: vec![], scale: None }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
             effect: Effect::DestroyNoRegen {
@@ -18281,6 +18275,49 @@ pub fn sab_sunen_luxa_embodied() -> CardDefinition {
                 },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Nettlecyst — {3} Artifact — Equipment. Living weapon (ETB: create a 0/0
+/// black Phyrexian Germ token, then attach this to it). Equipped creature gets
+/// +1/+1 for each artifact and/or enchantment you control. Equip {2}.
+pub fn nettlecyst() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus, EquipScale, TokenDefinition};
+    use crate::effect::shortcut::etb;
+    let germ = TokenDefinition {
+        name: "Phyrexian Germ".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Nettlecyst",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 0,
+            toughness: 0,
+            keywords: vec![],
+            scale: Some(EquipScale {
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                per_power: 1,
+                per_toughness: 1,
+            }),
+        }),
+        // Living weapon (CR 702.91): mint a Germ and attach on ETB.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
+            Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
+        ]))],
         ..Default::default()
     }
 }
