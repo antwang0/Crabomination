@@ -7,7 +7,8 @@
 //! copy keeps the original's color.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Subtypes,
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    ExileReturnZone, Keyword, Predicate, SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::{embalm, eternalize, etb, target_filtered};
 use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
@@ -127,6 +128,49 @@ pub fn dreamstealer() -> CardDefinition {
         vec![Keyword::Menace], eternalize(cost(&[generic(5), b(), b()])))
 }
 
+/// Oketra's Attendant — {3}{W}{W} 3/3 Bird Soldier, Flying. Cycling {2}.
+/// Embalm {3}{W}{W}.
+pub fn oketras_attendant() -> CardDefinition {
+    akh_body("Oketra's Attendant", cost(&[generic(3), w(), w()]),
+        vec![CreatureType::Bird, CreatureType::Soldier], 3, 3,
+        vec![Keyword::Flying, Keyword::Cycling(cost(&[generic(2)]))],
+        embalm(cost(&[generic(3), w(), w()])))
+}
+
+/// Anointer Priest — {1}{W} 1/3 Human Cleric. Whenever a creature token you
+/// control enters, gain 1 life. Embalm {3}{W}.
+pub fn anointer_priest() -> CardDefinition {
+    let mut c = akh_body("Anointer Priest", cost(&[generic(1), w()]),
+        vec![CreatureType::Human, CreatureType::Cleric], 1, 3,
+        vec![], embalm(cost(&[generic(3), w()])));
+    c.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::IsToken),
+            }),
+        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+    }];
+    c
+}
+
+/// Angel of Sanctions — {3}{W}{W} 3/4 Angel, Flying. ETB: exile target nonland
+/// permanent an opponent controls until this leaves. Embalm {5}{W}.
+pub fn angel_of_sanctions() -> CardDefinition {
+    let mut c = akh_body("Angel of Sanctions", cost(&[generic(3), w(), w()]),
+        vec![CreatureType::Angel], 3, 4,
+        vec![Keyword::Flying], embalm(cost(&[generic(5), w()])));
+    c.triggered_abilities = vec![etb(Effect::ExileUntilSourceLeaves {
+        what: target_filtered(
+            SelectionRequirement::Permanent
+                .and(SelectionRequirement::Nonland)
+                .and(SelectionRequirement::ControlledByOpponent),
+        ),
+        return_to: ExileReturnZone::Battlefield,
+    })];
+    c
+}
+
 /// Every AKH factory, for snapshot name→factory registration and the cube.
 pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
     &[
@@ -141,5 +185,8 @@ pub fn all_akh_card_factories() -> &'static [crate::CardFactory] {
         timeless_witness,
         sunscourge_champion,
         dreamstealer,
+        oketras_attendant,
+        anointer_priest,
+        angel_of_sanctions,
     ]
 }

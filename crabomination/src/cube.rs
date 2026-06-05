@@ -413,6 +413,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         unwavering_initiate,
         steadfast_sentinel,
         sunscourge_champion,
+        oketras_attendant,
+        anointer_priest,
+        angel_of_sanctions,
         // ── white value/aggro bodies ──
         palace_sentinels,
         knight_of_the_white_orchid,
