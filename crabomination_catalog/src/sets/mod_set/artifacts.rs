@@ -165,6 +165,26 @@ pub fn millstone() -> CardDefinition {
 /// Both abilities are wired: the first is a vanilla mana ability, the
 /// second uses the new `sac_cost` field on `ActivatedAbility` so paying
 /// the cost sacrifices Mind Stone before the Draw resolves.
+/// Springleaf Drum — {1} Artifact. "{T}, Tap an untapped creature you
+/// control: Add one mana of any color." A creature-tap mana rock.
+pub fn springleaf_drum() -> CardDefinition {
+    CardDefinition {
+        name: "Springleaf Drum",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_other_filter: Some(SelectionRequirement::Creature),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 pub fn mind_stone() -> CardDefinition {
     use crate::card::Selector;
     CardDefinition {

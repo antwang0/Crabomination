@@ -251,6 +251,26 @@ fn tar_snare_kills_a_two_two() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 → -2 toughness → dies");
 }
 
+/// Springleaf Drum taps a creature for one mana of any color.
+#[test]
+fn springleaf_drum_taps_a_creature_for_mana() {
+    let mut g = two_player_game();
+    let drum = g.add_card_to_battlefield(0, catalog::springleaf_drum());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drum, ability_index: 0, target: None, x_value: None,
+    }).expect("drum taps a creature for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "one mana produced");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "the creature is tapped as a cost");
+}
+
+/// Breaker of Armies carries the all-must-block keyword (CR 509.1c).
+#[test]
+fn breaker_of_armies_has_all_must_block() {
+    assert!(catalog::breaker_of_armies().keywords.contains(&crate::card::Keyword::AllMustBlock));
+}
+
 /// Reality Hemorrhage is a Devoid burn instant dealing 2.
 #[test]
 fn reality_hemorrhage_deals_two_and_is_colorless() {

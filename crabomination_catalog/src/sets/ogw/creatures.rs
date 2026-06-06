@@ -57,6 +57,21 @@ pub fn mist_intruder() -> CardDefinition {
     }
 }
 
+/// Breaker of Armies — {8} 10/8 colorless Eldrazi. All creatures able to
+/// block it do so (CR 509.1c — `Keyword::AllMustBlock`).
+pub fn breaker_of_armies() -> CardDefinition {
+    CardDefinition {
+        name: "Breaker of Armies",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 10,
+        toughness: 8,
+        keywords: vec![Keyword::AllMustBlock],
+        ..Default::default()
+    }
+}
+
 /// Eldrazi Devastator — {8} 8/9 colorless Eldrazi. Trample. (Naturally
 /// colorless from its generic-only cost — no Devoid keyword needed.)
 pub fn eldrazi_devastator() -> CardDefinition {
