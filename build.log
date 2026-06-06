@@ -1,0 +1,24 @@
+   Compiling syn v2.0.114
+   Compiling serde_core v1.0.228
+   Compiling libc v0.2.180
+   Compiling serde v1.0.228
+   Compiling getrandom v0.4.2
+   Compiling zmij v1.0.19
+   Compiling rand_core v0.10.0
+   Compiling cpufeatures v0.3.0
+   Compiling serde_json v1.0.149
+   Compiling chacha20 v0.10.0
+   Compiling itoa v1.0.17
+   Compiling memchr v2.8.0
+   Compiling link-section v0.18.1
+   Compiling linktime-proc-macro v0.2.0
+   Compiling rand v0.10.1
+   Compiling socket2 v0.6.3
+   Compiling ctor v1.0.7
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v2.0.18
+   Compiling thiserror v2.0.18
+   Compiling crabomination_base v0.1.0 (/home/user/Crabomination/crabomination_base)
+   Compiling crabomination_catalog v0.1.0 (/home/user/Crabomination/crabomination_catalog)
+   Compiling crabomination v0.1.0 (/home/user/Crabomination/crabomination)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 49.31s

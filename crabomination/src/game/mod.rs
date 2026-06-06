@@ -5434,6 +5434,27 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                     None => vec![],
                 }
             }
+            StaticEffect::GrantAllColors { applies_to } => {
+                use crate::mana::Color;
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetColors(vec![
+                            Color::White,
+                            Color::Blue,
+                            Color::Black,
+                            Color::Red,
+                            Color::Green,
+                        ]),
+                    }],
+                    None => vec![],
+                }
+            }
             StaticEffect::EntersTapped { .. }
             | StaticEffect::ExtraLandPerTurn
             | StaticEffect::CostReduction { .. }

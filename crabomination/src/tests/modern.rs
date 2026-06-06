@@ -28096,6 +28096,20 @@ fn leyline_of_the_guildpact_makes_your_lands_all_basic_types() {
 }
 
 #[test]
+fn leyline_of_the_guildpact_makes_your_permanents_all_colors() {
+    let mut g = two_player_game();
+    // A colorless artifact-ish body: a plain Forest is mono-green; with the
+    // Leyline it should read as all five colors.
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::leyline_of_the_guildpact());
+    let cp = g.compute_battlefield();
+    let f = cp.iter().find(|c| c.id == forest).unwrap();
+    for col in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        assert!(f.colors.contains(&col), "your land is now {col:?}");
+    }
+}
+
+#[test]
 fn consult_the_star_charts_digs_x_equal_to_lands() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();

@@ -20387,9 +20387,9 @@ pub fn lion_sash() -> CardDefinition {
     }
 }
 
-/// Leyline of the Guildpact — {W}{U}{B}{R}{G} Enchantment. Lands you control
-/// are every basic land type (so they tap for any color). The "your permanents
-/// are all colors" half and the opening-hand Leyline rider are dropped.
+/// Leyline of the Guildpact — {W}{U}{B}{R}{G} Enchantment. Permanents you
+/// control are all colors and your lands are every basic land type (so they
+/// tap for any color). The opening-hand Leyline rider is dropped.
 pub fn leyline_of_the_guildpact() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -20397,14 +20397,22 @@ pub fn leyline_of_the_guildpact() -> CardDefinition {
         name: "Leyline of the Guildpact",
         cost: cost(&[w(), u(), b(), r(), g()]),
         card_types: vec![CardType::Enchantment],
-        static_abilities: vec![StaticAbility {
-            description: "Lands you control are every basic land type.",
-            effect: StaticEffect::GrantAllBasicLandTypes {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-                ),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Lands you control are every basic land type.",
+                effect: StaticEffect::GrantAllBasicLandTypes {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                },
             },
-        }],
+            StaticAbility {
+                description: "Permanents you control are all colors.",
+                effect: StaticEffect::GrantAllColors {
+                    applies_to: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                },
+            },
+        ],
         ..Default::default()
     }
 }

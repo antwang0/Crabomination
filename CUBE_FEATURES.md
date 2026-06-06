@@ -78,7 +78,6 @@ work is listed below.
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
 | Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
 | Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |
-| Leyline of the Guildpact | 🟡 | {W}{U}{B}{R}{G} Enchantment; "lands you control are every basic land type" via new `StaticEffect::GrantAllBasicLandTypes` (layer-4 `SetLandTypes` → intrinsic any-color mana). The "your permanents are all colors" half and the opening-hand Leyline rider are dropped. Test: `leyline_of_the_guildpact_makes_your_lands_all_basic_types`. |
 
 ### Lands
 
