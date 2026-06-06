@@ -125,6 +125,24 @@ pub fn cultivator_drone() -> CardDefinition {
     }
 }
 
+/// Culling Drone — {1}{B} 2/2 Eldrazi Drone. Devoid, Ingest.
+pub fn culling_drone() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![ingest()],
+        ..drone("Culling Drone", cost(&[generic(1), b()]), 2, 2)
+    }
+}
+
+/// Benthic Infiltrator — {2}{U} 1/4 Eldrazi Drone. Devoid, Ingest, can't
+/// be blocked.
+pub fn benthic_infiltrator() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Unblockable],
+        triggered_abilities: vec![ingest()],
+        ..drone("Benthic Infiltrator", cost(&[generic(2), u()]), 1, 4)
+    }
+}
+
 /// Maw of Kozilek — {3}{R} 2/5 Eldrazi Drone. Devoid, {C}: +2/-2 EOT.
 pub fn maw_of_kozilek() -> CardDefinition {
     use crate::card::ActivatedAbility;

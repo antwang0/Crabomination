@@ -268,6 +268,46 @@ fn vile_aggregate_power_scales_with_colorless_creatures() {
     assert_eq!(g.computed_permanent(id).unwrap().power, 3, "3 colorless creatures");
 }
 
+/// Benthic Infiltrator can't be blocked and ingests; Culling Drone ingests.
+#[test]
+fn benthic_infiltrator_is_unblockable_and_ingests() {
+    let b = catalog::benthic_infiltrator();
+    assert!(b.keywords.contains(&crate::card::Keyword::Unblockable));
+    assert!(b.keywords.contains(&crate::card::Keyword::Devoid));
+    // Both carry the Ingest combat trigger.
+    assert_eq!(catalog::culling_drone().triggered_abilities.len(), 1);
+}
+
+/// Murderous Compulsion destroys a tapped creature but not an untapped one.
+#[test]
+fn murderous_compulsion_only_hits_tapped() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::murderous_compulsion());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "tapped creature destroyed");
+    assert!(matches!(
+        catalog::murderous_compulsion().keywords[0],
+        crate::card::Keyword::Madness(_)
+    ));
+}
+
+/// Sweep Away bounces a creature to its owner's hand.
+#[test]
+fn sweep_away_bounces_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sweep_away());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "off battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "back in owner's hand");
+}
+
 /// Maw of Kozilek's {C} ability gives +2/-2 until end of turn.
 #[test]
 fn maw_of_kozilek_pumps_plus_two_minus_two() {

@@ -1,8 +1,38 @@
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
-use crate::effect::shortcut::{deal, pump_target, target, target_filtered};
+use crate::effect::shortcut::{deal, pump_target, return_target_to_hand, target, target_filtered};
 use crate::effect::{Effect, PlayerRef, Value};
-use crate::mana::{b, colorless, cost, g, generic, r};
+use crate::mana::{ManaCost, b, colorless, cost, g, generic, r, u};
 use crabomination_base::tokens::eldrazi_scion_token;
+
+/// Murderous Compulsion — {1}{B} Sorcery. Destroy target tapped creature.
+/// Madness {1}{B} (CR 702.35).
+pub fn murderous_compulsion() -> CardDefinition {
+    CardDefinition {
+        name: "Murderous Compulsion",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Madness(ManaCost::new(vec![generic(1), b()]))],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sweep Away — {2}{U} Instant. Return target creature to its owner's hand.
+/// (The attacking-only "put it on top of its library instead" rider is
+/// dropped — modal post-bounce choice not modeled.)
+pub fn sweep_away() -> CardDefinition {
+    CardDefinition {
+        name: "Sweep Away",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: return_target_to_hand(),
+        ..Default::default()
+    }
+}
 
 /// Warping Wail — {1}{C} Devoid Instant. Choose one — exile target creature
 /// with power or toughness 1 or less; counter target sorcery; or create a
