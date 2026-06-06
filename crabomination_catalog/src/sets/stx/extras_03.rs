@@ -13,7 +13,7 @@ use crate::card::{
     Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
     SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{etb, etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 
@@ -2380,6 +2380,27 @@ pub fn grim_bounty() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+    }
+}
+
+/// Coiling Oracle — {G}{U} 1/1 Elf Druid. ETB: reveal the top card of your
+/// library; if it's a land, put it onto the battlefield, otherwise into your
+/// hand.
+pub fn coiling_oracle() -> CardDefinition {
+    CardDefinition {
+        name: "Coiling Oracle",
+        cost: cost(&[g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::RevealTopLandToBattlefieldElseHand {
+            who: PlayerRef::You,
+        })],
+        ..Default::default()
     }
 }
 

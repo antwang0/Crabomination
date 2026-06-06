@@ -1027,6 +1027,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Monstrosity { .. } => "Monstrosity",
         Effect::MoveCounter { .. } => "Move counters",
         Effect::RevealTopCard { .. } => "Reveal top card",
+        Effect::RevealTopLandToBattlefieldElseHand { .. } => "Reveal top; land to play else hand",
         Effect::RollDie { .. } => "Roll die",
         Effect::IfRevealFromHand { .. } => "Reveal from hand",
         Effect::DiminishCreaturesExceptChosenType { .. } => "Diminish creatures",

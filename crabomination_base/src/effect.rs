@@ -2058,6 +2058,11 @@ pub enum Effect {
     /// it stays on top. Chaos Warp.
     RevealTopPutPermanentOntoBattlefield { who: PlayerRef },
 
+    /// Reveal the top card of `who`'s library; if it's a land, put it onto the
+    /// battlefield (untapped). Otherwise put it into their hand. Coiling
+    /// Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
+    RevealTopLandToBattlefieldElseHand { who: PlayerRef },
+
     /// Reveal the top `count` cards of the controller's library; an opponent
     /// chooses one of them, which goes to the controller's hand. Each
     /// remaining revealed card is exiled, gaining `counter` if `Some`.

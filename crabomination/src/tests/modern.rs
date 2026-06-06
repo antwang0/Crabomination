@@ -30568,3 +30568,29 @@ fn play_land_from_graveyard_rejected_without_static() {
     assert!(g.perform_action(GameAction::PlayLandFromGraveyard(land)).is_err(),
         "no Crucible → can't play lands from graveyard");
 }
+
+// ── Coiling Oracle (RevealTopLandToBattlefieldElseHand) ────────────────────
+
+#[test]
+fn coiling_oracle_puts_revealed_land_onto_battlefield() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let land = g.add_card_to_library(0, catalog::forest());
+    let oracle = g.add_card_to_battlefield(0, catalog::coiling_oracle());
+    g.fire_self_etb_triggers(oracle, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == land), "revealed land enters the battlefield");
+    assert!(!g.players[0].library.iter().any(|c| c.id == land), "land left the library");
+}
+
+#[test]
+fn coiling_oracle_puts_revealed_nonland_into_hand() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let spell = g.add_card_to_library(0, catalog::lightning_bolt());
+    let oracle = g.add_card_to_battlefield(0, catalog::coiling_oracle());
+    g.fire_self_etb_triggers(oracle, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spell), "revealed nonland goes to hand");
+    assert!(!g.battlefield.iter().any(|c| c.id == spell), "nonland does not enter the battlefield");
+}

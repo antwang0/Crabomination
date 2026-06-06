@@ -288,6 +288,7 @@ impl Effect {
             }
             Effect::RevealTopAndDrawIf { who, .. }
             | Effect::RevealTopCard { who }
+            | Effect::RevealTopLandToBattlefieldElseHand { who }
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }

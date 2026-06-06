@@ -2009,6 +2009,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks push: new GU cards ──
         v.push(koma_cosmos_serpent);
         v.push(waterlogged_grove);
+        // ── claude/modern_decks: RevealTopLandToBattlefieldElseHand ramp ──
+        v.push(coiling_oracle);
     }
     if pair_contains(pair, Color::Black) {
         v.push(darkmoss_bridge);
