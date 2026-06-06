@@ -374,13 +374,21 @@ impl GameState {
         match dest {
             ZoneDest::Hand(who) => {
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);
-                let p = self.resolve_player(who, &ctx).unwrap_or(default_player);
+                // `OwnerOfMoved` routes the card to *its own* owner (per-card
+                // board-bounce — Aetherize / Evacuation).
+                let p = match who {
+                    PlayerRef::OwnerOfMoved => card.owner,
+                    _ => self.resolve_player(who, &ctx).unwrap_or(default_player),
+                };
                 card.controller = p;
                 self.players[p].hand.push(card);
             }
             ZoneDest::Library { who, pos } => {
                 let ctx = EffectContext::for_spell(default_player, None, 0, 0);
-                let p = self.resolve_player(who, &ctx).unwrap_or(default_player);
+                let p = match who {
+                    PlayerRef::OwnerOfMoved => card.owner,
+                    _ => self.resolve_player(who, &ctx).unwrap_or(default_player),
+                };
                 match pos {
                     LibraryPosition::Top => self.players[p].library.insert(0, card),
                     LibraryPosition::Bottom => self.players[p].library.push(card),

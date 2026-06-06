@@ -5100,6 +5100,45 @@ fn upheaval_returns_all_permanents_to_hands() {
 }
 
 #[test]
+fn aetherize_returns_attackers_to_their_owners_hands() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    let id = g.add_card_to_hand(0, catalog::aetherize());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Aetherize castable");
+    drain_stack(&mut g);
+    // Only the attacker bounced (to its owner); the non-attacking blocker stays.
+    assert!(g.players[0].hand.iter().any(|c| c.id == attacker), "attacker → owner's hand");
+    assert!(g.battlefield_find(blocker).is_some(), "non-attacker untouched");
+}
+
+#[test]
+fn evacuation_returns_all_creatures_to_owners() {
+    let mut g = two_player_game();
+    let p0_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let p1_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::evacuation());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Evacuation castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == p0_bear), "P0 bear → P0 hand");
+    assert!(g.players[1].hand.iter().any(|c| c.id == p1_bear), "P1 bear → P1 hand");
+}
+
+#[test]
 fn rakshasas_bargain_pays_4_life_and_draws_4() {
     let mut g = two_player_game();
     for _ in 0..5 {

@@ -947,6 +947,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // pass on the new 3-cap version.
         paradoxical_outcome,
         upheaval,
+        aetherize,
+        evacuation,
         force_of_will,
         force_of_negation,
         consign_to_memory,

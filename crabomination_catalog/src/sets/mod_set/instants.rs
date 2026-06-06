@@ -1446,3 +1446,36 @@ pub fn sheoldreds_edict() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aetherize — {3}{U} Instant. "Return all attacking creatures to their
+/// owner's hand." Each attacker routes to *its own* owner via
+/// `ZoneDest::Hand(OwnerOfMoved)`.
+pub fn aetherize() -> CardDefinition {
+    CardDefinition {
+        name: "Aetherize",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
+        ..Default::default()
+    }
+}
+
+/// Evacuation — {3}{U}{U} Instant. "Return all creatures to their owners'
+/// hands."
+pub fn evacuation() -> CardDefinition {
+    CardDefinition {
+        name: "Evacuation",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
+        ..Default::default()
+    }
+}

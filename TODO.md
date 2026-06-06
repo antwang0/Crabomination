@@ -8,12 +8,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Board-bounce to each card's owner (Aetherize / Evacuation).** `Move` to
-  `ZoneDest::Hand` resolves the destination player once from the spell's ctx,
-  so a multi-target "return all attacking creatures to their owners' hands"
-  can't route each card to its own owner. Add an owner-of-moved-card player
-  ref (or special-case `Hand` to default to `card.owner`, mirroring the
-  `Graveyard` arm) and ship Aetherize / Evacuation / AEther Gale.
+- ✅ **Board-bounce to each card's owner (Aetherize / Evacuation).** Shipped
+  via `PlayerRef::OwnerOfMoved`, resolved per-card in `place_card_in_dest`, so
+  a single `Move { what: EachPermanent, to: Hand(OwnerOfMoved) }` routes each
+  card to its own owner. Ships Aetherize / Evacuation. (AEther Gale's "six
+  *target* nonland permanents" still needs a multi-target prompt.)
 - **Evoke Incarnation faithfulness (MH2).** Subtlety's ETB targets any
   `IsSpellOnStack` rather than only creature/planeswalker spells (no
   card-type-on-stack filter yet). Endurance's "up to one target player"

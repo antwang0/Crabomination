@@ -37,6 +37,12 @@ pub enum PlayerRef {
     ActivePlayer,
     /// The owner of a selected entity.
     OwnerOf(Box<Selector>),
+    /// The owner of the card currently being moved (resolved per-card by
+    /// `place_card_in_dest`). Lets one `Move`/`Search` route *each* card to
+    /// its own owner — "return all attacking creatures to their owners'
+    /// hands" (Aetherize, Evacuation). Has no meaning outside a placement
+    /// context, where it resolves to `None`.
+    OwnerOfMoved,
     /// The controller of a selected entity.
     ControllerOf(Box<Selector>),
     /// The player who triggered the event (for triggered abilities).

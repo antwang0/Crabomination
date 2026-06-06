@@ -6106,6 +6106,8 @@ impl GameState {
                     }
                     _ => None,
                 }),
+            // Resolved per-card inside `place_card_in_dest`; meaningless here.
+            PlayerRef::OwnerOfMoved => None,
             PlayerRef::ControllerOf(sel) => self
                 .resolve_selector(sel, ctx)
                 .into_iter()
