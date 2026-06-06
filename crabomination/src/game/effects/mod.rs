@@ -1520,7 +1520,10 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Scry { who, amount } | Effect::Surveil { who, amount } | Effect::LookAtTop { who, amount } => {
+            Effect::Scry { who, amount }
+            | Effect::Surveil { who, amount }
+            | Effect::LookAtTop { who, amount }
+            | Effect::RearrangeTop { who, amount } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
@@ -1556,11 +1559,10 @@ impl GameState {
                 }
 
                 let decision = Decision::Scry { player: p, cards: peek.clone() };
-                let is_surveil = matches!(effect, Effect::Surveil { .. });
-                let pending_state = if is_surveil {
-                    PendingEffectState::SurveilPeeked { count: actual, player: p }
-                } else {
-                    PendingEffectState::ScryPeeked { count: actual, player: p }
+                let pending_state = match effect {
+                    Effect::Surveil { .. } => PendingEffectState::SurveilPeeked { count: actual, player: p },
+                    Effect::RearrangeTop { .. } => PendingEffectState::RearrangePeeked { count: actual, player: p },
+                    _ => PendingEffectState::ScryPeeked { count: actual, player: p },
                 };
 
                 // If the acting player wants UI input, suspend — the outer

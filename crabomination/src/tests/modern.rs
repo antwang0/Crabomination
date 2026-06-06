@@ -795,6 +795,54 @@ fn ponder_resolves_and_draws_a_card() {
 }
 
 #[test]
+fn index_rearranges_top_five_all_stay_on_top() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Library top→down: a, b (plus filler). Swap them; both must stay on top.
+    let b = g.add_card_to_library(0, catalog::plains());
+    let a = g.add_card_to_library(0, catalog::forest());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
+        kept_top: vec![b, a], // put b on top, then a
+        bottom: vec![],
+    }]));
+    let id = g.add_card_to_hand(0, catalog::index());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    // No card was bottomed — library size unchanged and the chosen order holds.
+    assert_eq!(g.players[0].library.len(), lib_before, "rearrange never bottoms");
+    assert_eq!(g.players[0].library[0].id, b, "b is now on top");
+    assert_eq!(g.players[0].library[1].id, a, "a is second");
+}
+
+#[test]
+fn spire_owl_etb_rearranges_top_four() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    // AutoDecider keeps the peeked order; the ETB resolves without bottoming.
+    g.add_card_to_battlefield(0, catalog::spire_owl());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before, "owl ETB rearranges, never mills");
+    let owl = g.battlefield.iter().find(|c| c.definition.name == "Spire Owl").unwrap();
+    assert!(owl.definition.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn sage_owl_is_a_flying_etb_rearranger() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    g.add_card_to_battlefield(0, catalog::sage_owl());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before);
+    let owl = g.battlefield.iter().find(|c| c.definition.name == "Sage Owl").unwrap();
+    assert!(owl.definition.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
 fn manamorphose_adds_two_mana_and_draws_a_card() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());

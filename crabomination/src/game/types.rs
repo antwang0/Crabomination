@@ -557,6 +557,10 @@ pub(crate) enum ResumeContext {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PendingEffectState {
     ScryPeeked { count: usize, player: usize },
+    /// Look at the top `count` cards and put them back on top in any order
+    /// (Index, Spire Owl). Unlike Scry, no card may be bottomed — every
+    /// peeked card returns to the top in the chosen order.
+    RearrangePeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
     SearchPending { player: usize, to: crate::effect::ZoneDest },
     /// CR 701.45 — suspended on a `Decision::Learn`. The resume step reads

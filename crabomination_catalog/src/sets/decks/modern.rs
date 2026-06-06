@@ -21,25 +21,58 @@ use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r
 // ── Cantrips & card selection ────────────────────────────────────────────────
 
 /// Ponder — {U} Sorcery. Look at the top three cards of your library, then
-/// put them back in any order. You may shuffle. Then draw a card.
-///
-/// Approximation: `Scry 3 + Draw 1` (Scry's "top or bottom" picks substitute
-/// for the "any order + may shuffle" decision; the gameplay-relevant outcome
-/// — taking the best one of the top three on the next draw — is preserved).
+/// put them back in any order, then draw a card. (The "you may shuffle" rider
+/// is dropped.)
 pub fn ponder() -> CardDefinition {
     CardDefinition {
         name: "Ponder",
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+            Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(3) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
+        ..Default::default()
+    }
+}
+
+/// Index — {U} Sorcery. Look at the top five cards of your library, then put
+/// them back in any order.
+pub fn index() -> CardDefinition {
+    CardDefinition {
+        name: "Index",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(5) },
+        ..Default::default()
+    }
+}
+
+/// Spire Owl — {1}{U} 1/1 Bird with flying. ETB: look at the top four cards
+/// of your library, then put them back in any order.
+pub fn spire_owl() -> CardDefinition {
+    owl_rearranger("Spire Owl")
+}
+
+/// Sage Owl — {1}{U} 1/1 Bird with flying. ETB: look at the top four cards of
+/// your library, then put them back in any order.
+pub fn sage_owl() -> CardDefinition {
+    owl_rearranger("Sage Owl")
+}
+
+fn owl_rearranger(name: &'static str) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::RearrangeTop {
+            who: PlayerRef::You,
+            amount: Value::Const(4),
+        })],
         ..Default::default()
     }
 }
