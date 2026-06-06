@@ -8090,3 +8090,61 @@ pub fn fleecemane_lion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ignoble Hierarch — {G} 0/1 Goblin Shaman. Exalted. {T}: Add {B}, {R}, or {G}.
+pub fn ignoble_hierarch() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Ignoble Hierarch",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::exalted()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(
+                    vec![crate::mana::Color::Black, crate::mana::Color::Red, crate::mana::Color::Green],
+                    Value::Const(1),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elves of Deep Shadow — {G} 1/1 Elf Druid. "{T}: Add {B}. This creature
+/// deals 1 damage to you."
+pub fn elves_of_deep_shadow() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Elves of Deep Shadow",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![crate::mana::Color::Black]),
+                },
+                Effect::DealDamage { to: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

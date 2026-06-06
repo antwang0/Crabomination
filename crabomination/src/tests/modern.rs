@@ -32452,3 +32452,33 @@ fn fleecemane_lion_monstrous_grants_hexproof_indestructible() {
     assert!(c1.keywords.contains(&Keyword::Hexproof), "monstrous → hexproof");
     assert!(c1.keywords.contains(&Keyword::Indestructible), "monstrous → indestructible");
 }
+
+// ── Mana dorks (this branch) ────────────────────────────────────────────────
+
+#[test]
+fn ignoble_hierarch_taps_for_jund_and_has_exalted() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::ignoble_hierarch());
+    g.clear_sickness(id);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("mana ability");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "tapped for a chosen Jund color");
+    assert!(!catalog::ignoble_hierarch().triggered_abilities.is_empty(),
+        "has an exalted trigger");
+}
+
+#[test]
+fn elves_of_deep_shadow_taps_for_black_and_pings_you() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::elves_of_deep_shadow());
+    g.clear_sickness(id);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "added black");
+    assert_eq!(g.players[0].life, life - 1, "dealt 1 damage to you");
+}
