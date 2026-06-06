@@ -238,7 +238,7 @@ pub fn spawn_decision_ui(
     }
 
     match wire {
-        DecisionWire::Scry { cards, .. } => {
+        DecisionWire::Scry { cards, mode, .. } => {
             if state.scry.is_empty() {
                 state.scry = cards.iter().map(|(id, _)| (*id, false)).collect();
             }
@@ -250,7 +250,7 @@ pub fn spawn_decision_ui(
                 .iter()
                 .map(|(id, bottom)| (*id, name_map[id].to_string(), *bottom))
                 .collect();
-            spawn_scry_modal(&mut commands, &asset_server, &ui_fonts, &ordered);
+            spawn_scry_modal(&mut commands, &asset_server, &ui_fonts, &ordered, *mode);
         }
         DecisionWire::SearchLibrary { candidates, .. } => {
             state.search_selected = None;
@@ -338,7 +338,16 @@ fn spawn_scry_modal(
     asset_server: &AssetServer,
     ui_fonts: &UiFonts,
     ordered: &[(CardId, String, bool)],
+    mode: crabomination::decision::ScryMode,
 ) {
+    use crabomination::decision::ScryMode;
+    // The label and prompt the second bucket gets depends on the mode: Scry
+    // bottoms, Surveil mills, Rearrange keeps everything on top (no toggle).
+    let (verb, second_bucket): (&str, Option<&str>) = match mode {
+        ScryMode::Scry => ("Scry", Some("Bottom")),
+        ScryMode::Surveil => ("Surveil", Some("Graveyard")),
+        ScryMode::Rearrange => ("Rearrange top", None),
+    };
     let root = commands
         .spawn((
             Node {
@@ -375,10 +384,14 @@ fn spawn_scry_modal(
 
     let n = ordered.len();
     commands.entity(panel).with_children(|panel| {
+        let prompt = match second_bucket {
+            Some(bucket) => format!(
+                "{verb} {n}: click card to toggle {bucket}  ·  ← → to reorder  ·  left = top of library"
+            ),
+            None => format!("{verb} {n}: ← → to reorder  ·  left = top of library"),
+        };
         panel.spawn((
-            Text::new(format!(
-                "Scry {n}: click card to toggle Bottom  ·  ← → to reorder  ·  left = top of library"
-            )),
+            Text::new(prompt),
             ui_fonts.tf(16.0),
             TextColor(theme::TEXT_PRIMARY),
         ));
@@ -403,7 +416,13 @@ fn spawn_scry_modal(
                         ..default()
                     })
                     .with_children(|col| {
-                        col.spawn((
+                        // Rearrange has no second bucket, so the tile isn't a
+                        // toggle — it only shows the card and its top-position.
+                        let tile_label = match second_bucket {
+                            Some(bucket) if *is_bottom => bucket,
+                            _ => "Top",
+                        };
+                        let mut tile = col.spawn((
                             Button,
                             Node {
                                 flex_direction: FlexDirection::Column,
@@ -413,10 +432,16 @@ fn spawn_scry_modal(
                                 align_items: AlignItems::Center,
                                 ..default()
                             },
-                            BackgroundColor(if *is_bottom { theme::BUTTON_SELECTED_BG } else { MODAL_TILE_BG }),
-                            ScryToggleButton { card_id: *card_id },
-                        ))
-                        .with_children(|cb| {
+                            BackgroundColor(if *is_bottom && second_bucket.is_some() {
+                                theme::BUTTON_SELECTED_BG
+                            } else {
+                                MODAL_TILE_BG
+                            }),
+                        ));
+                        if second_bucket.is_some() {
+                            tile.insert(ScryToggleButton { card_id: *card_id });
+                        }
+                        tile.with_children(|cb| {
                             cb.spawn((
                                 ImageNode { image: texture, ..default() },
                                 Node {
@@ -427,7 +452,7 @@ fn spawn_scry_modal(
                                 Pickable::IGNORE,
                             ));
                             cb.spawn((
-                                Text::new(if *is_bottom { "Bottom" } else { "Top" }),
+                                Text::new(tile_label),
                                 ui_fonts.tf(14.0),
                                 TextColor(theme::TEXT_PRIMARY),
                                 Pickable::IGNORE,

@@ -1558,7 +1558,12 @@ impl GameState {
                     return Ok(());
                 }
 
-                let decision = Decision::Scry { player: p, cards: peek.clone() };
+                let scry_mode = match effect {
+                    Effect::Surveil { .. } => crate::decision::ScryMode::Surveil,
+                    Effect::RearrangeTop { .. } => crate::decision::ScryMode::Rearrange,
+                    _ => crate::decision::ScryMode::Scry,
+                };
+                let decision = Decision::Scry { player: p, cards: peek.clone(), mode: scry_mode };
                 let pending_state = match effect {
                     Effect::Surveil { .. } => PendingEffectState::SurveilPeeked { count: actual, player: p },
                     Effect::RearrangeTop { .. } => PendingEffectState::RearrangePeeked { count: actual, player: p },
