@@ -428,6 +428,7 @@ pub fn fractal_hatchling_b119() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1), g(), u()]),
             effect: Effect::AddCounter {
@@ -1560,6 +1561,7 @@ pub fn witherbloom_cultivator_b120() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             effect: drain(1),
@@ -1662,6 +1664,7 @@ pub fn pest_cultmaster_b121() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Draw {
@@ -1717,6 +1720,7 @@ pub fn witherbloom_sapdrinker_b121() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::PumpPT {
@@ -1773,6 +1777,7 @@ pub fn witherbloom_bonechanter_b121() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::PumpPT {
@@ -1829,6 +1834,7 @@ pub fn pest_ringleader_b121() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: drain(2),
@@ -1882,6 +1888,7 @@ pub fn witherbloom_reaper_b121() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::GrantKeyword {
@@ -1953,6 +1960,7 @@ pub fn pest_cultcaller_b122() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[b()]),
             effect: drain(1),
@@ -2060,6 +2068,7 @@ pub fn witherbloom_composter_b122() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Seq(vec![

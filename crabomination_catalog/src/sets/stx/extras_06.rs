@@ -82,6 +82,7 @@ pub fn prismari_bauble() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Draw {
@@ -314,6 +315,7 @@ pub fn silverquill_pen() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2), w(), b()]),
             effect: Effect::Drain {
@@ -1881,6 +1883,7 @@ pub fn witherbloom_wand() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2), b(), g()]),
             effect: Effect::Drain {

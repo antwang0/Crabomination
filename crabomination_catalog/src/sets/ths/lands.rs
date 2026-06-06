@@ -14,6 +14,7 @@ pub fn nykthos_shrine_to_nyx() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
@@ -23,6 +24,7 @@ pub fn nykthos_shrine_to_nyx() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::AddMana {

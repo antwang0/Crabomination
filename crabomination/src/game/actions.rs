@@ -845,6 +845,7 @@ impl GameState {
                 .collect();
             kept.push(crate::card::ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: crate::mana::ManaCost::default(),
                 effect: crate::effect::Effect::AddMana {
@@ -4357,6 +4358,7 @@ impl GameState {
             };
             out.push(crate::effect::ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 effect: Effect::AddMana {
                     who: crate::effect::PlayerRef::You,
@@ -4794,6 +4796,30 @@ impl GameState {
             None
         };
 
+        // Pre-flight discard-cost gate (CR 602.5b "Discard a [filter] card:").
+        // Confirm `count` matching cards in the activator's hand; pick the
+        // lowest-CMC matches so higher-value cards stay. Discarded after
+        // payment succeeds. Fauna Shaman, Survival of the Fittest.
+        let discard_picks: Vec<CardId> = if let Some((filter, count)) =
+            ability.discard_cost.as_ref()
+        {
+            let count = *count as usize;
+            let mut picks: Vec<(CardId, i32)> = self.players[p]
+                .hand
+                .iter()
+                .filter(|c| c.id != card_id)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| (c.id, c.definition.cost.cmc() as i32))
+                .collect();
+            if picks.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            picks.sort_by_key(|(_, cmc)| *cmc);
+            picks.into_iter().take(count).map(|(cid, _)| cid).collect()
+        } else {
+            Vec::new()
+        };
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -4976,6 +5002,13 @@ impl GameState {
             events.push(GameEvent::PermanentSacrificed { card_id: other_cid, who: sac_who });
             let mut die_evs = self.remove_to_graveyard_with_triggers(other_cid);
             events.append(&mut die_evs);
+        }
+
+        // Discard-as-cost (CR 602.5b): with tap/mana/life paid, discard each
+        // cost-picked hand card (validated via the `discard_picks` pre-flight).
+        // Fauna Shaman's "Discard a creature card:" cost runs here.
+        for cid in discard_picks {
+            self.discard_card(p, cid, &mut events);
         }
 
         // Tap-another-as-cost (CR 602.5b): with tap/mana/life paid, tap the

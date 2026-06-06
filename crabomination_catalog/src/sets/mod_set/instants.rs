@@ -1268,6 +1268,7 @@ pub fn mother_of_runes() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::GrantProtectionFromChosenColor {
                 what: target_filtered(

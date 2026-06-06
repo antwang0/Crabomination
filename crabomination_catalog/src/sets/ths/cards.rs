@@ -77,6 +77,7 @@ pub fn voyaging_satyr() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::Untap { what: target_filtered(SelectionRequirement::Land), up_to: None },
             ..Default::default()

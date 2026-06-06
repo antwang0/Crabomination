@@ -43,6 +43,7 @@ pub fn cauldron_of_essence() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(1), b(), g()]),
             effect: Effect::Move {
@@ -99,6 +100,7 @@ pub fn diary_of_dreams() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(5)]),
             effect: Effect::Draw {
@@ -163,6 +165,7 @@ pub fn tablet_of_discovery() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -181,6 +184,7 @@ pub fn tablet_of_discovery() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -244,6 +248,7 @@ pub fn potioners_trove() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -262,6 +267,7 @@ pub fn potioners_trove() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::GainLife {
@@ -317,6 +323,7 @@ pub fn resonating_lute() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Draw {
@@ -377,6 +384,7 @@ pub fn ark_of_hunger() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![

@@ -538,6 +538,7 @@ pub fn strixhaven_mage_hunter() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: ManaCost::default(),
             tap_cost: true,
             sac_cost: false,
@@ -1092,6 +1093,7 @@ pub fn quandrix_counterstudent() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1), g(), u()]),
             tap_cost: true,
             sac_cost: false,
@@ -1709,6 +1711,7 @@ pub fn strixhaven_banner() -> CardDefinition {
             // {T}: Add one mana of any color.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 sac_cost: false,
@@ -1729,6 +1732,7 @@ pub fn strixhaven_banner() -> CardDefinition {
             // {2}, {T}, Sacrifice this artifact: Draw a card.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: cost(&[generic(2)]),
                 tap_cost: true,
                 sac_cost: true,
@@ -1885,6 +1889,7 @@ pub fn strixhaven_pupil() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_cost: false,
@@ -2124,6 +2129,7 @@ pub fn strixhaven_crucible() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_cost: false,

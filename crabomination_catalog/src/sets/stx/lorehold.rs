@@ -126,6 +126,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2), r(), w()]),
             effect: Effect::PumpPT {
@@ -551,6 +552,7 @@ pub fn lorehold_excavation() -> CardDefinition {
             tap_add(Color::White),
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2), r(), w()]),
                 effect: Effect::Seq(vec![
@@ -2568,6 +2570,7 @@ pub fn lorehold_phoenix() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[r(), w()]),
             tap_cost: false,
             sac_cost: false,
@@ -3266,6 +3269,7 @@ pub fn spirit_conduit() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[r()]),
             tap_cost: true,
             sac_cost: false,
@@ -4767,6 +4771,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 sac_cost: false,
@@ -4786,6 +4791,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: ManaCost::default(),
                 tap_cost: true,
                 sac_cost: false,
@@ -4805,6 +4811,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: cost(&[generic(3), r(), w()]),
                 tap_cost: true,
                 sac_cost: true,
@@ -5567,6 +5574,7 @@ pub fn lorehold_pyromaster() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(2), r(), w()]),
             tap_cost: true,
             sac_cost: false,
@@ -14606,6 +14614,7 @@ pub fn lorehold_stoneglyph_b129() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[r(), w()]),
             effect: Effect::DealDamage {
@@ -26039,6 +26048,7 @@ pub fn lorehold_sparkscholar_b178() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(3), r()]),
             effect: Effect::DealDamage {

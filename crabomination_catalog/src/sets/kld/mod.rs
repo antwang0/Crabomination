@@ -20,6 +20,7 @@ use crate::mana::{b, cost, g, generic, r, u, ManaCost};
 fn pay_energy_counter(amount: u32) -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: false,
         mana_cost: ManaCost::default(),
         effect: Effect::PayEnergy {
@@ -205,6 +206,7 @@ pub fn aether_hub() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 energy_cost: 1,
+                discard_cost: None,
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
                     pool: ManaPayload::AnyOneColor(Value::Const(1)),
@@ -235,6 +237,7 @@ pub fn servant_of_the_conduit() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             energy_cost: 1,
+            discard_cost: None,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::AnyOneColor(Value::Const(1)),
@@ -258,6 +261,7 @@ pub fn dynavolt_tower() -> CardDefinition {
         triggered_abilities: vec![magecraft(Effect::AddEnergy(Value::Const(2)))],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(5)]),
             effect: Effect::PayEnergy {
@@ -418,6 +422,7 @@ pub fn woodweavers_puzzleknot() -> CardDefinition {
         triggered_abilities: vec![etb(payoff())],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: payoff(),
@@ -453,6 +458,7 @@ pub fn glassblowers_puzzleknot() -> CardDefinition {
         triggered_abilities: vec![etb(payoff())],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: payoff(),

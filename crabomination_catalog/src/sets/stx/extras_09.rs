@@ -812,6 +812,7 @@ pub fn strixhaven_sanctum() -> CardDefinition {
             tap_add_colorless(),
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::Surveil {
@@ -945,6 +946,7 @@ pub fn mystic_slate() -> CardDefinition {
             // {T}: Scry 1.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Scry {
@@ -965,6 +967,7 @@ pub fn mystic_slate() -> CardDefinition {
             // {2}, {T}: Draw a card. Sorcery speed.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
                 effect: Effect::Draw {
@@ -1160,6 +1163,7 @@ pub fn bramble_brewer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(3), b(), g()]),
             // Sacrifice another creature as a proper activation cost.
@@ -1385,6 +1389,7 @@ pub fn lorehold_cathedral() -> CardDefinition {
             tap_add(Color::White),
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(3), r(), w()]),
                 // Cast-time targeter sees graveyard cards because
@@ -2019,6 +2024,7 @@ pub fn witherbloom_reanimist() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2), b(), g()]),
             // Target-filter walks all zones for the candidate; the gy
@@ -2347,6 +2353,7 @@ pub fn strixhaven_reservoir() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -2366,6 +2373,7 @@ pub fn strixhaven_reservoir() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 effect: Effect::Draw {
@@ -2702,6 +2710,7 @@ pub fn quandrix_loremind() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(3), g(), u()]),
             effect: Effect::Draw {
@@ -2975,6 +2984,7 @@ pub fn lorehold_bookburner() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[r(), w()]),
             effect: Effect::DealDamage {
@@ -3220,6 +3230,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(3), g(), u()]),
             effect: Effect::Seq(vec![
@@ -3437,6 +3448,7 @@ pub fn strixhaven_vault() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Draw {

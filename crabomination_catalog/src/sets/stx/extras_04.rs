@@ -119,6 +119,7 @@ pub fn sneaky_snacker() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2), b()]),
             effect: Effect::Move {
@@ -391,6 +392,7 @@ pub fn pilgrim_of_the_ages() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Search {
@@ -776,6 +778,7 @@ pub fn ember_anvil() -> CardDefinition {
             super::super::tap_add(Color::White),
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 effect: Effect::Search {
@@ -1444,6 +1447,7 @@ pub fn lorehold_excavator() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2), r(), w()]),
             effect: Effect::DealDamage {
@@ -2599,6 +2603,7 @@ pub fn conjurers_bauble() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1)]),
             tap_cost: false,
             sac_cost: true,

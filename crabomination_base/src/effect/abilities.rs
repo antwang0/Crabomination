@@ -550,6 +550,18 @@ pub struct ActivatedAbility {
     /// initialisations pick up the new field automatically.
     #[serde(default)]
     pub energy_cost: u32,
+    /// Optional cost: discard `count` cards from the activator's hand
+    /// matching this filter (CR 602.5b "Discard a [filter] card:" cost
+    /// lines). Mirrors `sac_other_filter`/`exile_other_filter` but moves
+    /// from hand → graveyard. Used by Fauna Shaman (`{G}, {T}, Discard a
+    /// creature card: …`), Survival of the Fittest, etc. Applied after
+    /// tap/mana/life payments succeed but before the effect resolves. The
+    /// auto-picker takes the lowest-CMC matching hand card. Rejected with
+    /// `GameError::SelectionRequirementViolated` when nothing matches.
+    ///
+    /// Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub discard_cost: Option<(SelectionRequirement, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

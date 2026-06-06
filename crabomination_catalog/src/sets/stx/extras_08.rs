@@ -363,6 +363,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: mc(&[generic(1), r(), w()]),
             tap_cost: true,
             sac_cost: false,
@@ -456,6 +457,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: mc(&[generic(1), b(), g()]),
             tap_cost: true,
             sac_cost: false,
@@ -809,6 +811,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: mc(&[generic(2), b(), g()]),
             tap_cost: false,
             sac_cost: true,
@@ -963,6 +966,7 @@ pub fn quandrix_schematist() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: mc(&[generic(2), g(), u()]),
             tap_cost: false,
             sac_cost: false,
@@ -1451,6 +1455,7 @@ pub fn quandrix_calligrapher() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: mc(&[generic(2), g(), u()]),
             sac_cost: false,
@@ -1573,6 +1578,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: mc(&[generic(1)]),
             sac_cost: false,
@@ -1760,6 +1766,7 @@ pub fn quandrix_geologist() -> CardDefinition {
             tap_add(Color::Blue),
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: mc(&[]),
                 sac_cost: false,
@@ -3822,6 +3829,7 @@ pub fn witherbloom_brewer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {

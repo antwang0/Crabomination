@@ -100,6 +100,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: deal(1, target()),
@@ -245,6 +246,7 @@ pub fn birds_of_paradise() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -340,6 +342,7 @@ pub fn samite_healer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::PreventNextDamage {
@@ -639,6 +642,7 @@ pub fn royal_assassin() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::Destroy {
                 what: target_filtered(
@@ -691,6 +695,7 @@ pub fn goblin_balloon_brigade() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[r()]),
             effect: Effect::GrantKeyword {
                 what: Selector::This,
@@ -708,6 +713,7 @@ pub fn goblin_balloon_brigade() -> CardDefinition {
 fn pump_one_zero(cost_syms: &[crate::mana::ManaSymbol]) -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         mana_cost: cost(cost_syms),
         effect: Effect::PumpPT {
             what: Selector::This,
@@ -725,6 +731,7 @@ fn pump_one_zero(cost_syms: &[crate::mana::ManaSymbol]) -> ActivatedAbility {
 fn pump_nn(cost_syms: &[crate::mana::ManaSymbol], n: i32) -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         mana_cost: cost(cost_syms),
         effect: Effect::PumpPT {
             what: Selector::This,
@@ -872,6 +879,7 @@ pub fn gorilla_chieftain() -> CardDefinition {
     let mut c = body("Gorilla Chieftain", &[generic(2), g()], vec![CreatureType::Ape], 3, 3, vec![]);
     c.activated_abilities = vec![ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         mana_cost: cost(&[generic(1), g()]),
         effect: Effect::Regenerate { what: Selector::This },
         ..Default::default()

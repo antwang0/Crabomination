@@ -2213,6 +2213,7 @@ mod tests {
             toughness: 1,
             activated_abilities: vec![ActivatedAbility {
                 energy_cost: 2,
+                discard_cost: None,
                 effect: Effect::AddCounter {
                     what: crate::effect::Selector::This,
                     kind: CounterType::PlusOnePlusOne,

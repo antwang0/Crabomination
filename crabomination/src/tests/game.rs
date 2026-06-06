@@ -4321,6 +4321,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
 
     let mana_ability = ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::AddMana {
@@ -4343,6 +4344,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
     // downgrade preserves it.
     let sac_ability = ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::Noop,

@@ -11,6 +11,7 @@ use crate::mana::{Color, ManaCost};
 pub fn tap_add(color: Color) -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         effect: Effect::AddMana {
             who: PlayerRef::You,
@@ -26,6 +27,7 @@ pub fn tap_add(color: Color) -> ActivatedAbility {
 pub fn tap_add_any_color() -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         effect: Effect::AddMana {
             who: PlayerRef::You,
@@ -41,6 +43,7 @@ pub fn tap_add_any_color() -> ActivatedAbility {
 pub fn tap_add_colorless() -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         effect: Effect::AddMana {
             who: PlayerRef::You,
@@ -79,6 +82,7 @@ pub fn painland(name: &'static str, color_a: Color, color_b: Color) -> CardDefin
 pub fn tap_pay_life_add(color: Color, life: u32) -> ActivatedAbility {
     ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         life_cost: life,
         effect: Effect::AddMana {
@@ -102,6 +106,7 @@ pub fn horizon_land(name: &'static str, color_a: Color, color_b: Color) -> CardD
             tap_pay_life_add(color_b, 1),
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 sac_cost: true,
                 mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
@@ -124,6 +129,7 @@ pub fn verge_land(
 ) -> CardDefinition {
     let gated = ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         effect: Effect::AddMana {
             who: PlayerRef::You,

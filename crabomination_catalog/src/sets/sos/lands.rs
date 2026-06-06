@@ -25,6 +25,7 @@ fn school_land(
     use super::super::tap_add;
     let surveil = ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: cost(&[generic(2), surveil_pips[0], surveil_pips[1]]),
         effect: Effect::Surveil {
@@ -148,6 +149,7 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     // activation if controller would drop to 0 life.
     let pay_life_for_any = ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::AddMana {
@@ -204,6 +206,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
     // definition has a back face (a "prepare spell").
     let prepare_target = ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: cost(&[generic(3)]),
         effect: Effect::AddCounter {

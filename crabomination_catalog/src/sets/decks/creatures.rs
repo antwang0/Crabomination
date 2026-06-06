@@ -189,6 +189,7 @@ pub fn griselbrand() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             // "Pay 7 life: Draw seven cards."
@@ -237,6 +238,7 @@ pub fn psychic_frog() -> CardDefinition {
             // "Discard a card: Put a +1/+1 counter on Psychic Frog."
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 effect: Effect::Seq(vec![
                     Effect::Discard {
                         who: Selector::You,
@@ -254,6 +256,7 @@ pub fn psychic_frog() -> CardDefinition {
             // "Exile three cards from your graveyard: gains flying EOT."
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 effect: Effect::Seq(vec![
                     Effect::Move {
                         what: Selector::take(

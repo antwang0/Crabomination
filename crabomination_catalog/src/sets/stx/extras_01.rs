@@ -108,6 +108,7 @@ pub fn star_pupils_papers() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::AddCounter {
@@ -577,6 +578,7 @@ pub fn soothsayer_adept() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2), u()]),
             effect: Effect::Surveil {
@@ -735,6 +737,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -877,6 +880,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Seq(vec![
@@ -1719,6 +1723,7 @@ pub fn manifold_key() -> CardDefinition {
             // {1}, {T}: Target creature can't be blocked this turn.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::GrantKeyword {
@@ -1740,6 +1745,7 @@ pub fn manifold_key() -> CardDefinition {
             // {T}: Untap target artifact.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Untap {
@@ -2390,6 +2396,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Draw {
@@ -2754,6 +2761,7 @@ pub fn dueling_coach() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2), w()]),
             effect: Effect::ForEach {

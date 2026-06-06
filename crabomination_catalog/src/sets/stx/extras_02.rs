@@ -2791,6 +2791,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Draw {
@@ -2982,6 +2983,7 @@ pub fn heirloom_mirror() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -3001,6 +3003,7 @@ pub fn heirloom_mirror() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(3)]),
                 effect: Effect::Draw {
@@ -3575,6 +3578,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[]),
             effect: Effect::Seq(vec![

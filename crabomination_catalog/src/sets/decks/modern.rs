@@ -301,6 +301,7 @@ pub fn lotus_bloom() -> CardDefinition {
         keywords: vec![Keyword::Suspend(3, ManaCost::default())],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             sac_cost: true,
             effect: Effect::AddMana {
@@ -647,6 +648,7 @@ pub fn goldhound() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
@@ -765,6 +767,7 @@ pub fn thermo_alchemist() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
             ..Default::default()
@@ -1048,6 +1051,7 @@ pub fn paradise_druid() -> CardDefinition {
         keywords: vec![Keyword::Hexproof],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
@@ -1362,6 +1366,7 @@ pub fn putrid_imp() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             // "Discard a card: This creature gains menace until end of turn."
@@ -1505,6 +1510,7 @@ pub fn karakas() -> CardDefinition {
             // {T}: Add {W}.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -1524,6 +1530,7 @@ pub fn karakas() -> CardDefinition {
             // {T}: Return target legendary creature to its owner's hand.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Move {
@@ -1769,6 +1776,7 @@ pub fn lotus_petal() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -1810,6 +1818,7 @@ pub fn tormods_crypt() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Move {
@@ -1859,6 +1868,7 @@ pub fn mishras_bauble() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -1945,6 +1955,7 @@ pub fn qasali_pridemage() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::Destroy {
@@ -1990,6 +2001,7 @@ pub fn greater_good() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -2064,6 +2076,7 @@ pub fn bojuka_bog() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -2131,6 +2144,7 @@ pub fn goblin_bombardment() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -2182,6 +2196,7 @@ pub fn wasteland() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -2200,6 +2215,7 @@ pub fn wasteland() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Destroy {
@@ -2242,6 +2258,7 @@ pub fn strip_mine() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -2260,6 +2277,7 @@ pub fn strip_mine() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Destroy {
@@ -2600,6 +2618,7 @@ pub fn fanatic_of_rhonas() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[g()]),
             effect: Effect::AddMana {
@@ -2676,6 +2695,7 @@ pub fn orcish_lumberjack() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -2756,6 +2776,7 @@ pub fn elvish_spirit_guide() -> CardDefinition {
         // Exile this card from your hand: Add {G}.
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             effect: add_mana(vec![Color::Green]),
             from_hand: true,
             exile_self_cost: true,
@@ -2816,6 +2837,7 @@ pub fn coldsteel_heart() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
@@ -2841,6 +2863,7 @@ pub fn talisman_of_progress() -> CardDefinition {
     use crate::card::ActivatedAbility;
     let make_color = |color: Color| ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::Seq(vec![
@@ -2876,6 +2899,7 @@ pub fn talisman_of_progress() -> CardDefinition {
             // {T}: Add {C}.
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -2907,6 +2931,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
     use crate::card::ActivatedAbility;
     let make_color = |color: Color| ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::Seq(vec![
@@ -2938,6 +2963,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -2998,6 +3024,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
     use crate::card::ActivatedAbility;
     let make_color = |color: Color| ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         tap_cost: true,
         mana_cost: ManaCost::default(),
         effect: Effect::Seq(vec![
@@ -3029,6 +3056,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -3104,6 +3132,7 @@ fn signet(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![c1, c2]) },
@@ -4582,6 +4611,7 @@ pub fn thrashing_brontodon() -> CardDefinition {
         toughness: 4,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,
             effect: Effect::Destroy {
@@ -5444,6 +5474,7 @@ pub fn sakura_tribe_elder() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: search_to_battlefield(SelectionRequirement::IsBasicLand, true),
@@ -5644,6 +5675,7 @@ pub fn elvish_mystic() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -5994,6 +6026,7 @@ pub fn wild_mongrel() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -6114,6 +6147,7 @@ pub fn glimmerpost() -> CardDefinition {
         },
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -6165,6 +6199,7 @@ pub fn cloudpost() -> CardDefinition {
         },
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -6208,6 +6243,7 @@ pub fn lotus_field() -> CardDefinition {
         keywords: vec![Keyword::Hexproof],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -6244,6 +6280,7 @@ pub fn evolving_wilds() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Search {
@@ -6364,6 +6401,7 @@ pub fn coalition_relic() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -6382,6 +6420,7 @@ pub fn coalition_relic() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddCounter {
@@ -6497,6 +6536,7 @@ pub fn carrion_feeder() -> CardDefinition {
         keywords: vec![Keyword::CantBlock],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::AddCounter {
                 what: Selector::This,
@@ -6589,6 +6629,7 @@ pub fn nantuko_husk() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -6618,6 +6659,7 @@ pub fn bloodthrone_vampire() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -6848,6 +6890,7 @@ pub fn krark_clan_ironworks() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             // The "sacrifice an artifact" cost folds into the resolved
@@ -6982,6 +7025,7 @@ pub fn ghost_vacuum() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
             effect: Effect::Move {
@@ -7936,6 +7980,7 @@ pub fn elvish_reclaimer() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Search {
@@ -7987,6 +8032,7 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -8267,6 +8313,7 @@ pub fn pentad_prism() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -8553,6 +8600,7 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::Search {
                 who: PlayerRef::You,
@@ -8812,6 +8860,7 @@ pub fn krenko_mob_boss() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
@@ -8878,6 +8927,7 @@ pub fn goblin_trashmaster() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::Destroy {
                 what: crate::effect::shortcut::target_filtered(SelectionRequirement::Artifact),
@@ -8968,6 +9018,7 @@ pub fn skirk_prospector() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
                 pool: ManaPayload::Colors(vec![Color::Red]),
@@ -9137,6 +9188,7 @@ pub fn goblin_sledder() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             effect: Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(1),
@@ -9169,6 +9221,7 @@ pub fn mogg_raider() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             effect: Effect::PumpPT {
                 what: Selector::This,
                 power: Value::Const(1),
@@ -9199,6 +9252,7 @@ pub fn bloodlust_inciter() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -9291,6 +9345,7 @@ pub fn merfolk_looter() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -9464,6 +9519,7 @@ pub fn selfless_spirit() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_cost: true,
             effect: Effect::GrantKeyword {
                 what: each_your_creature(),
@@ -9896,6 +9952,7 @@ pub fn mortuary_mire() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -9932,6 +9989,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
@@ -9950,6 +10008,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Seq(vec![
@@ -10139,6 +10198,7 @@ pub fn seal_of_fire() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![crate::effect::ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_cost: true,
             effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
             ..Default::default()
@@ -10561,6 +10621,7 @@ pub fn werewolf_pack_leader() -> CardDefinition {
         }],
         activated_abilities: vec![crate::effect::ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(3), g(), g()]),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
@@ -11253,6 +11314,7 @@ pub fn pernicious_deed() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[ManaSymbol::X]),
             effect: Effect::ForEach {
@@ -11310,6 +11372,7 @@ pub fn wall_of_roots() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -11415,6 +11478,7 @@ pub fn phyrexian_reclamation() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(1), b()]),
             effect: Effect::Move {
@@ -11594,6 +11658,7 @@ pub fn yavimaya_elder() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2), g()]),
             effect: Effect::Draw {
@@ -14095,6 +14160,7 @@ pub fn stillmoon_cavalier() -> CardDefinition {
     use crate::effect::Duration;
     let activated = |mana: ManaCost, kw: Keyword| ActivatedAbility {
         energy_cost: 0,
+        discard_cost: None,
         mana_cost: mana,
         effect: Effect::GrantKeyword {
             what: Selector::This,
@@ -14141,6 +14207,7 @@ pub fn wishclaw_talisman() -> CardDefinition {
         enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::RemoveCounter {
@@ -14263,6 +14330,7 @@ pub fn drudge_skeletons() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost { symbols: vec![crate::mana::ManaSymbol::Colored(Color::Black)] },
             effect: Effect::Regenerate { what: Selector::This },
@@ -14320,6 +14388,7 @@ pub fn will_o_the_wisp() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost { symbols: vec![crate::mana::ManaSymbol::Colored(Color::Black)] },
             effect: Effect::Regenerate { what: Selector::This },
@@ -14357,6 +14426,7 @@ pub fn wall_of_bone() -> CardDefinition {
         keywords: vec![Keyword::Defender],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost { symbols: vec![crate::mana::ManaSymbol::Colored(Color::Black)] },
             effect: Effect::Regenerate { what: Selector::This },
@@ -14474,6 +14544,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 mana_cost: ManaCost::default(),
                 effect: Effect::Move {
@@ -14493,6 +14564,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: false,
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::Seq(vec![
@@ -14941,6 +15013,7 @@ pub fn golgari_grave_troll() -> CardDefinition {
         // {T}, Remove four +1/+1 counters: Regenerate this creature.
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             condition: Some(Predicate::ValueAtLeast(
                 Value::CountersOn {
@@ -15449,6 +15522,7 @@ pub fn helix_pinnacle() -> CardDefinition {
         max_counters_of_kind: Some((CounterType::Charge, 100)),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[x()]),
             tap_cost: false,
             sac_cost: false,
@@ -15499,6 +15573,7 @@ fn treasure_token() -> TokenDefinition {
         subtypes: Subtypes::default(),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -15631,6 +15706,7 @@ pub fn magda_brazen_outlaw() -> CardDefinition {
         // Dragon card, put it onto the battlefield, then shuffle.
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_other_filter: Some((
                 SelectionRequirement::Artifact
                     .and(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Treasure)),
@@ -15872,6 +15948,7 @@ pub fn basking_rootwalla() -> CardDefinition {
         keywords: vec![Keyword::Madness(ManaCost::default())],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Green)]),
             effect: Effect::PumpPT {
@@ -15914,6 +15991,7 @@ pub fn blazing_rootwalla() -> CardDefinition {
         keywords: vec![Keyword::Madness(ManaCost::default())],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)]),
             effect: Effect::PumpPT {
                 what: Selector::This,
@@ -15998,6 +16076,7 @@ pub fn cunning_sparkmage() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
             ..Default::default()
@@ -16189,6 +16268,7 @@ pub fn brindle_boar() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_cost: true,
             effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
             ..Default::default()
@@ -16461,6 +16541,7 @@ pub fn parallax_nexus() -> CardDefinition {
         keywords: vec![Keyword::Fading(5)],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             effect: Effect::Discard {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(1),
@@ -16484,6 +16565,7 @@ pub fn parallax_tide() -> CardDefinition {
         keywords: vec![Keyword::Fading(5)],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             effect: Effect::ExileUntilSourceLeaves {
                 what: target_filtered(SelectionRequirement::Land),
                 return_to: ExileReturnZone::BattlefieldTapped,
@@ -16776,6 +16858,7 @@ pub fn coveted_jewel() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -16940,6 +17023,7 @@ pub fn the_mightstone_and_weakstone() -> CardDefinition {
         )],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -16974,6 +17058,7 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: cost(&[generic(2), crate::mana::hybrid(Color::Green, Color::Blue)]),
             effect: Effect::Seq(vec![
@@ -17069,6 +17154,7 @@ pub fn planar_nexus() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
@@ -17369,6 +17455,7 @@ pub fn maze_of_ith() -> CardDefinition {
         card_types: vec![CardType::Land],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Untap {
@@ -17424,6 +17511,7 @@ pub fn three_tree_city() -> CardDefinition {
         })],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
@@ -17655,6 +17743,7 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
         toughness: 1,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: Effect::Search {
@@ -17690,6 +17779,7 @@ pub fn scavenging_ooze() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[g()]),
             effect: Effect::Seq(vec![
@@ -17744,6 +17834,7 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[phyrexian(Color::Green), phyrexian(Color::Green)]),
             effect: Effect::AddCounter {
                 what: Selector::This,
@@ -17928,6 +18019,7 @@ pub fn fanatical_firebrand() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             sac_cost: true,
             effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
@@ -18738,6 +18830,7 @@ pub fn rosethorn_acolyte() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: ManaCost::default(),
             effect: add_any_one_color(1),
@@ -19466,6 +19559,7 @@ pub fn nihil_spellbomb() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Move {
@@ -19480,6 +19574,7 @@ pub fn nihil_spellbomb() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: cost(&[b()]),
                 sac_cost: true,
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -19502,6 +19597,7 @@ pub fn pyrite_spellbomb() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
@@ -19509,6 +19605,7 @@ pub fn pyrite_spellbomb() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: cost(&[r()]),
                 sac_cost: true,
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -19530,6 +19627,7 @@ pub fn seal_of_removal() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             sac_cost: true,
             effect: Effect::Move {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -19577,6 +19675,7 @@ pub fn sylvan_spellbomb() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Search {
@@ -19588,6 +19687,7 @@ pub fn sylvan_spellbomb() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: cost(&[g()]),
                 sac_cost: true,
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -19611,6 +19711,7 @@ pub fn horizon_spellbomb() -> CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 tap_cost: true,
                 sac_cost: true,
                 effect: Effect::Search {
@@ -19622,6 +19723,7 @@ pub fn horizon_spellbomb() -> CardDefinition {
             },
             ActivatedAbility {
                 energy_cost: 0,
+                discard_cost: None,
                 mana_cost: cost(&[w()]),
                 sac_cost: true,
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
@@ -19643,6 +19745,7 @@ pub fn expedition_map() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(2)]),
             tap_cost: true,
             sac_cost: true,
@@ -21112,6 +21215,7 @@ pub fn executioners_capsule() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1), b()]),
             sac_cost: true,
             effect: Effect::Destroy {
@@ -21301,6 +21405,7 @@ pub fn soul_snare() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1)]),
             sac_cost: true,
             effect: Effect::Exile {

@@ -112,6 +112,7 @@ pub fn nylea_god_of_the_hunt() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(3), g()]),
             effect: Effect::GrantKeyword {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -135,6 +136,7 @@ pub fn thassa_god_of_the_sea() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1), u()]),
             effect: Effect::GrantKeyword {
                 what: target_filtered(
@@ -169,6 +171,7 @@ pub fn erebos_god_of_the_dead() -> CardDefinition {
         ],
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1), b()]),
             life_cost: 2,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
@@ -211,6 +214,7 @@ pub fn spear_of_heliod() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(1), w(), w()]),
             effect: Effect::Destroy {
@@ -239,6 +243,7 @@ pub fn whip_of_erebos() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: true,
             mana_cost: cost(&[generic(2), b(), b()]),
             effect: Effect::Seq(vec![
@@ -276,6 +281,7 @@ pub fn hammer_of_purphoros() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1), r()]),
             sorcery_speed: true,
             sac_other_filter: Some((SelectionRequirement::Land, 1)),

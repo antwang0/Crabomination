@@ -95,6 +95,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Untap {

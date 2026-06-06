@@ -120,6 +120,7 @@ pub fn vigean_graftmage() -> CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1), u()]),
             effect: Effect::Untap {
                 what: target_filtered(
@@ -150,6 +151,7 @@ pub fn helium_squirter() -> CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         activated_abilities: vec![ActivatedAbility {
             energy_cost: 0,
+            discard_cost: None,
             mana_cost: cost(&[generic(1)]),
             effect: Effect::GrantKeyword {
                 what: target_filtered(

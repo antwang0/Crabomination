@@ -32197,3 +32197,76 @@ fn mist_raven_bounces_a_creature_on_etb() {
     assert!(g.battlefield_find(victim).is_none(), "the bear was bounced");
     assert!(g.players[1].hand.iter().any(|c| c.id == victim), "bear is back in its owner's hand");
 }
+
+// ── Spellseeker / Mystic Snake / Fauna Shaman (this branch) ─────────────────
+
+/// Spellseeker's ETB tutors an instant/sorcery with MV ≤ 2 into hand.
+#[test]
+fn spellseeker_etb_fetches_cheap_instant() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // {R}, MV 1
+    g.add_card_to_library(0, catalog::grizzly_bears()); // creature — not a legal fetch
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bolt))]));
+    let ss = g.add_card_to_battlefield(0, catalog::spellseeker());
+    g.fire_self_etb_triggers(ss, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "fetched the cheap instant to hand");
+}
+
+/// Mystic Snake's ETB counters a spell on the stack.
+#[test]
+fn mystic_snake_etb_counters_target_spell() {
+    let mut g = two_player_game();
+    // P1 casts a spell on their own main phase; it sits on the stack.
+    g.active_player_idx = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bears on stack");
+    // P0's Mystic Snake enters and counters it.
+    let snake = g.add_card_to_battlefield(0, catalog::mystic_snake());
+    g.fire_self_etb_triggers(snake, 0);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears),
+        "the countered spell goes to its owner's graveyard");
+    assert!(!g.battlefield.iter().any(|c| c.id == bears), "it never resolved");
+}
+
+/// Fauna Shaman discards a creature card (as cost) to tutor a creature to hand.
+#[test]
+fn fauna_shaman_discards_creature_to_tutor_creature() {
+    let mut g = two_player_game();
+    let shaman = g.add_card_to_battlefield(0, catalog::fauna_shaman());
+    g.clear_sickness(shaman);
+    let pitch = g.add_card_to_hand(0, catalog::grizzly_bears()); // creature to discard
+    let target = g.add_card_to_library(0, catalog::serra_angel()); // creature to fetch
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target))]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shaman, ability_index: 0, target: None, x_value: None,
+    }).expect("Fauna Shaman activates");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch),
+        "the discarded creature is in the graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.id == target),
+        "the tutored creature is in hand");
+}
+
+/// Fauna Shaman can't activate with no creature card to discard.
+#[test]
+fn fauna_shaman_requires_a_creature_to_discard() {
+    let mut g = two_player_game();
+    let shaman = g.add_card_to_battlefield(0, catalog::fauna_shaman());
+    g.clear_sickness(shaman);
+    g.add_card_to_hand(0, catalog::lightning_bolt()); // not a creature
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: shaman, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(r.is_err(), "activation rejected with no creature card to discard");
+}
