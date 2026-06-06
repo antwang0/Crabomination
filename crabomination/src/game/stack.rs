@@ -1061,23 +1061,23 @@ impl GameState {
         // down to the maximum hand size." `Player.max_hand_size` is `None`
         // for "no maximum hand size" effects (skip entirely) and `Some(n)`
         // otherwise (discard down to `n`).
-        if let Some(max) = self.players[active].max_hand_size {
-            if self.players[active].hand.len() > max {
-                if self.players[active].wants_ui {
-                    let excess = (self.players[active].hand.len() - max) as u32;
-                    self.set_cleanup_discard_decision(active, excess);
-                    return true;
-                }
-                let mut cleanup_events = Vec::new();
-                while self.players[active].hand.len() > max {
-                    let Some(cid) = self.players[active].hand.first().map(|c| c.id) else {
-                        break;
-                    };
-                    self.discard_card(active, cid, &mut cleanup_events);
-                }
-                if !cleanup_events.is_empty() {
-                    self.dispatch_triggers_for_events(&cleanup_events);
-                }
+        if let Some(max) = self.players[active].max_hand_size
+            && self.players[active].hand.len() > max
+        {
+            if self.players[active].wants_ui {
+                let excess = (self.players[active].hand.len() - max) as u32;
+                self.set_cleanup_discard_decision(active, excess);
+                return true;
+            }
+            let mut cleanup_events = Vec::new();
+            while self.players[active].hand.len() > max {
+                let Some(cid) = self.players[active].hand.first().map(|c| c.id) else {
+                    break;
+                };
+                self.discard_card(active, cid, &mut cleanup_events);
+            }
+            if !cleanup_events.is_empty() {
+                self.dispatch_triggers_for_events(&cleanup_events);
             }
         }
 

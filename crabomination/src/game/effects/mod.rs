@@ -3647,7 +3647,7 @@ impl GameState {
                     // 3. Ascending power (lowest first as tiebreaker).
                     candidates.sort_by_key(|c| {
                         let primary = if *by_power {
-                            -(c.power() as i32)
+                            -c.power()
                         } else {
                             -(c.definition.cost.cmc() as i32)
                         };
