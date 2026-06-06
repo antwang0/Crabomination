@@ -277,6 +277,17 @@ pub fn exalted() -> TriggeredAbility {
     }
 }
 
+/// CR 509.1 — "Whenever this creature blocks a creature, `body`." A
+/// `Blocks / SelfSource` trigger; `body` typically operates on
+/// `Selector::BlockedAttacker` (the creature this is blocking) — Wall of
+/// Frost.
+pub fn blocks(body: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+        effect: body,
+    }
+}
+
 /// Battalion shortcut (ability word): "Whenever this creature and at
 /// least two other creatures attack, `body`." An `Attacks / SelfSource`
 /// trigger gated on `Predicate::AttackingWithAtLeast(3)`.

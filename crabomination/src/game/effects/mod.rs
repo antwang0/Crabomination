@@ -5413,6 +5413,13 @@ impl GameState {
                 .into_iter()
                 .collect(),
             Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
+            Selector::BlockedAttacker => ctx
+                .source
+                .and_then(|blocker| self.block_map.get(&blocker).copied())
+                .filter(|aid| self.battlefield.iter().any(|c| c.id == *aid))
+                .map(EntityRef::Permanent)
+                .into_iter()
+                .collect(),
             Selector::ChoiceResult(_) => vec![], // TODO when decision loop lands
             Selector::LastCreatedToken => self
                 .last_created_token

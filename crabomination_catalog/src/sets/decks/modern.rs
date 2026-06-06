@@ -22051,3 +22051,26 @@ pub fn legion_warboss() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wall of Frost — {1}{U}{U} 0/7 Wall with Defender. Whenever it blocks a
+/// creature, that creature doesn't untap during its controller's next untap
+/// step (a Stun counter, CR 701.46a / 122.1d).
+pub fn wall_of_frost() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::blocks;
+    CardDefinition {
+        name: "Wall of Frost",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 7,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![blocks(Effect::AddCounter {
+            what: Selector::BlockedAttacker,
+            kind: CounterType::Stun,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}

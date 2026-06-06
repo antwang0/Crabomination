@@ -776,6 +776,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: blue staples ──
         mental_note,
         flusterstorm,
+        wall_of_frost,
         // ── modern_decks: land-scaled dig + storm payoff ──
         consult_the_star_charts,
         minds_desire,

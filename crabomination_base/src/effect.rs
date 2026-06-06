@@ -105,6 +105,10 @@ pub enum Selector {
     TargetFiltered { slot: u8, filter: SelectionRequirement },
     /// The object that caused this trigger (attacker, dying creature, etc).
     TriggerSource,
+    /// CR 509.1 — the attacker the source permanent is currently blocking.
+    /// Resolves via `GameState.block_map[source]`. Used by "whenever this
+    /// blocks a creature, [affect that creature]" triggers (Wall of Frost).
+    BlockedAttacker,
     /// The player/object that answered a pending decision.
     ChoiceResult(u8),
 

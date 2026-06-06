@@ -26,11 +26,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 - **Card primitives deferred this run (claude/modern_decks).** Real cards
   skipped for lack of a primitive — each is a small, reusable addition:
-  - **"Whenever this blocks a creature, [affect that creature]"** — a Blocks
-    trigger that binds the *blocked attacker* as the effect target (the
-    "doesn't untap" half is already covered by a Stun counter) — Wall of Frost.
-  - **Rearrange-top-N** (look at top N, reorder, all stay on top — distinct
-    from Scry which can bottom) — Spire Owl, Index.
+  - ✅ **"Whenever this blocks a creature, [affect that creature]"** — shipped
+    via `effect::shortcut::blocks` + `Selector::BlockedAttacker` (resolves
+    `block_map[source]`); Wall of Frost stuns the creature it blocks
+    (`wall_of_frost_stuns_the_creature_it_blocks`).
+  - ✅ **Rearrange-top-N** (look at top N, reorder, all stay on top — distinct
+    from Scry which can bottom) — `Effect::RearrangeTop`; ships Index, Spire
+    Owl, Sage Owl, and makes Ponder faithful. Tests in `modern.rs`.
   - **Protection-from-each-color as one keyword/state** (Metalcraft-gated
     multi-protection) — Etched Champion.
   - **Skyclave-Apparition-style "exile until leaves, then owner makes an X/X"**
@@ -1180,7 +1182,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ("blocks", "blocks a creature", "becomes blocked", "becomes blocked
   by a creature", "blocks/blocked by N creatures") — 🟡 ✅ for the
   basic per-blocker emission (each `BlockerDeclared` event fires one
-  trigger per ability, matching 509.3a's once-per-blocker rule). The
+  trigger per ability, matching 509.3a's once-per-blocker rule). A
+  "blocks a creature, [affect that creature]" body can now bind the
+  blocked attacker via `Selector::BlockedAttacker` (resolves
+  `block_map[source]`) + `shortcut::blocks` — Wall of Frost
+  (`wall_of_frost_stuns_the_creature_it_blocks`). The
   "blocks two or more creatures" multi-target counting (509.3e) is
   exercised via per-creature trigger emission rather than per-batch
   accumulation; functionally correct for single-creature blockers but
@@ -1545,9 +1551,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (d) **105.3** — ✅
   (`Effect::BecomeChosenColor` registers a layer-5 `SetColors`
   continuous effect for the chosen mono color; Wild Mongrel ("becomes
-  the color of your choice until end of turn"). The layer system's
-  `Modification::{AddColor,SetColors,LoseAllColors}` back it. Type-line
-  rewrite riders (Kasmina's Transmutation et al.) remain doc-tracked.)
+  the color of your choice until end of turn"). Static "is all colors"
+  ships via `StaticEffect::GrantAllColors` (layer-5 `SetColors([WUBRG])`)
+  — Leyline of the Guildpact's color half (CR 105.2c), test
+  `leyline_of_the_guildpact_makes_your_permanents_all_colors`. The layer
+  system's `Modification::{AddColor,SetColors,LoseAllColors}` back them.
+  Type-line rewrite riders (Kasmina's Transmutation et al.) remain
+  doc-tracked.)
   (e) **105.4** "Choose a color" decisions exclude multicolored /
   colorless — ✅ (`Decision::ChooseColor { legal }` offers exactly the
   five mono colors; `DecisionAnswer::Color`. Used by `BecomeChosenColor`
@@ -1733,10 +1743,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   used by `Predicate::ValueAtLeast(LibrarySizeOf, _)` for empty-library
   gates).
   (d) **401.4** — ✅ (controlled reorders go through `Decision::Scry`;
-  mass `ShuffleGraveyardIntoLibrary` and the "put the rest on the
-  bottom in a random order" riders randomise via `rand::rng()`.
-  `Effect::RevealTopTakeOnePerType` (Atraxa) shuffles its bottomed
-  leftovers per CR 401.4.)
+  `Effect::RearrangeTop` (Index, Spire Owl, Sage Owl, Ponder) reuses the
+  same decision but returns *every* peeked card to the top in the chosen
+  order — the "look at top N, put back in any order" instruction, distinct
+  from Scry's top/bottom split. Mass `ShuffleGraveyardIntoLibrary` and the
+  "put the rest on the bottom in a random order" riders randomise via
+  `rand::rng()`. `Effect::RevealTopTakeOnePerType` (Atraxa) shuffles its
+  bottomed leftovers per CR 401.4.)
   (e) **401.5** — 🟡 (the engine has no `play_with_top_revealed`
   flag yet; cards like Future Sight, Vance's Blasting Cannons, Bolas's
   Citadel are doc-tracked in CUBE_FEATURES.md. The simpler subset —
