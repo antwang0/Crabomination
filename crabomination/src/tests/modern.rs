@@ -29826,3 +29826,86 @@ fn mask_of_memory_draws_two_discards_one() {
     }
     assert_eq!(g.players[0].hand.len(), hand + 1, "draw two, discard one → net +1");
 }
+
+#[test]
+fn careful_study_draws_two_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::careful_study());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let before = g.players[0].hand.len(); // includes Careful Study itself
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    // -1 (cast) +2 (draw) -2 (discard) = net -1 vs before.
+    assert_eq!(g.players[0].hand.len(), before - 1);
+    assert!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count() >= 1
+        || g.players[0].graveyard.len() >= 2, "discarded two cards");
+}
+
+#[test]
+fn ancient_stirrings_finds_a_colorless_card() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let rock = g.add_card_to_library(0, catalog::mind_stone()); // colorless artifact
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(rock))]));
+    let id = g.add_card_to_hand(0, catalog::ancient_stirrings());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == rock), "took the colorless card");
+}
+
+#[test]
+fn condemn_tucks_attacker_and_gains_life() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // P1 attacker (2/2). Mark it attacking.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking.push(crate::game::types::Attack {
+        attacker: bear,
+        target: crate::game::types::AttackTarget::Player(0),
+    });
+    let lib_before = g.players[1].library.len();
+    let p1_life = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::condemn());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "attacker left the battlefield");
+    assert_eq!(g.players[1].library.len(), lib_before + 1, "tucked to library");
+    assert_eq!(g.players[1].library.last().unwrap().id, bear, "on the bottom");
+    assert_eq!(g.players[1].life, p1_life + 2, "controller gained life = toughness");
+}
+
+#[test]
+fn arbor_elf_untaps_a_forest() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(forest).unwrap().tapped = true;
+    let elf = g.add_card_to_battlefield(0, catalog::arbor_elf());
+    g.clear_sickness(elf);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elf, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(forest)), x_value: None,
+    }).expect("Arbor Elf untaps a Forest");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(forest).unwrap().tapped, "Forest untapped");
+}
+
+#[test]
+fn scrapheap_scrounger_returns_itself_exiling_a_creature() {
+    let mut g = two_player_game();
+    let scrap = g.add_card_to_graveyard(0, catalog::scrapheap_scrounger());
+    let fodder = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scrap, ability_index: 0, target: None, x_value: None,
+    }).expect("Scrapheap recursion");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == scrap), "Scrapheap returned to hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == fodder), "exiled a creature as cost");
+}

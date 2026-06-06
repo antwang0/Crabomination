@@ -21806,3 +21806,115 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: small cube staples on existing primitives ──────────────────
+
+/// Careful Study — {U} Sorcery. Draw two cards, then discard two cards.
+pub fn careful_study() -> CardDefinition {
+    CardDefinition {
+        name: "Careful Study",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ancient Stirrings — {G} Sorcery. Look at the top five cards of your library.
+/// You may reveal a colorless card from among them and put it into your hand.
+/// Put the rest on the bottom of your library in a random order.
+pub fn ancient_stirrings() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Stirrings",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Colorless),
+            take: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Condemn — {W} Instant. Put target attacking creature on the bottom of its
+/// owner's library. Its controller gains life equal to its toughness.
+pub fn condemn() -> CardDefinition {
+    CardDefinition {
+        name: "Condemn",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::IsAttacking),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Arbor Elf — {G} 1/1 Elf Druid. `{T}: Untap target Forest.`
+pub fn arbor_elf() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    CardDefinition {
+        name: "Arbor Elf",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Untap {
+                what: target_filtered(SelectionRequirement::HasLandType(LandType::Forest)),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Scrapheap Scrounger — {2} 3/2 Artifact Creature — Construct. Can't block.
+/// `{1}, Exile a creature card from your graveyard: Return this from your
+/// graveyard to your hand. Activate only as a sorcery.`
+pub fn scrapheap_scrounger() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Scrapheap Scrounger",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::CantBlock],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            from_graveyard: true,
+            sorcery_speed: true,
+            exile_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
