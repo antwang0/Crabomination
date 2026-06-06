@@ -427,6 +427,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // landcycling (modern_decks)
         daru_lancer,
+        // classic batch (modern_decks)
+        demystify,
         // ── modern_decks: aggro / lifegain supplement ──
         loam_lion,
         ajanis_pridemate,
@@ -850,6 +852,12 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mist_raven,
         // tap-down-target-player's-board (modern_decks)
         sleep,
+        // landcycling (modern_decks)
+        shoreline_ranger,
+        // classic batch (modern_decks)
+        befuddle,
+        coral_barrier,
+        rishadan_airship,
         // aura-anchored untap-prevention (modern_decks)
         claustrophobia,
         dehydration,
@@ -1138,6 +1146,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mark_of_the_vampire,
         // modal removal gated on "no counters" (modern_decks)
         heartless_act,
+        // landcycling (modern_decks)
+        twisted_abomination,
+        // classic batch (modern_decks)
+        weakness,
+        soul_feast,
         champion_of_the_perished,
         falkenrath_noble,
         carrier_thrall,
@@ -1500,6 +1513,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         crimson_wisps,
         wild_slash,
         hammerhand,
+        // landcycling (modern_decks)
+        skirk_marauder,
+        // classic batch (modern_decks)
+        lava_axe,
         // ── modern_decks: red beaters batch 2 ──
         canyon_minotaur,
         brazen_scourge,

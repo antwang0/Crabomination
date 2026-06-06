@@ -33379,20 +33379,118 @@ fn heartless_act_mode_one_removes_counters() {
         "counters removed");
 }
 
-/// Wirewood Guardian's Forestcycling discards it and fetches a Forest to hand
-/// (CR 702.29e).
+/// Landcycling discards the card and fetches a land of the named basic type to
+/// hand, leaving non-lands in the library (CR 702.29e). Covers all five types.
 #[test]
-fn forestcycling_fetches_a_forest() {
+fn landcycling_fetches_the_named_basic_land() {
+    let cases: &[(Factory, Factory, &str)] = &[
+        (catalog::wirewood_guardian as Factory, catalog::forest as Factory, "Forest"),
+        (catalog::daru_lancer as Factory, catalog::plains as Factory, "Plains"),
+        (catalog::shoreline_ranger as Factory, catalog::island as Factory, "Island"),
+        (catalog::twisted_abomination as Factory, catalog::swamp as Factory, "Swamp"),
+        (catalog::skirk_marauder as Factory, catalog::mountain as Factory, "Mountain"),
+    ];
+    for &(cycler, land, land_name) in cases {
+        let mut g = two_player_game();
+        g.add_card_to_library(0, land());
+        g.add_card_to_library(0, catalog::grizzly_bears()); // non-land decoy
+        let id = g.add_card_to_hand(0, cycler());
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::Landcycle { card_id: id }).expect("landcycle");
+        assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "{land_name}: discarded");
+        assert!(g.players[0].hand.iter().any(|c| c.definition.name == land_name),
+            "fetched a {land_name}");
+        assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
+            "{land_name}: non-land left in library");
+    }
+}
+
+/// Soul Feast drains the target player for 4 and gains the caster 4 life.
+#[test]
+fn soul_feast_drains_four() {
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::forest());
-    g.add_card_to_library(0, catalog::grizzly_bears()); // non-land decoy
-    let id = g.add_card_to_hand(0, catalog::wirewood_guardian());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    let id = g.add_card_to_hand(0, catalog::soul_feast());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, l1 - 4, "target lost 4");
+    assert_eq!(g.players[0].life, l0 + 4, "caster gained 4");
+}
+
+/// Lava Axe deals 5 to a player.
+#[test]
+fn lava_axe_burns_face_for_five() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lava_axe());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, 15, "5 damage to the dome");
+}
+
+/// Demystify destroys an enchantment (and isn't castable at a creature).
+#[test]
+fn demystify_destroys_an_enchantment() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    let id = g.add_card_to_hand(0, catalog::demystify());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, id, Target::Permanent(aura));
+    assert!(g.battlefield_find(aura).is_none(), "enchantment destroyed");
+}
+
+/// Befuddle shrinks a creature's power by 4 until end of turn and cantrips.
+#[test]
+fn befuddle_shrinks_power_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::befuddle());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert_eq!(g.computed_permanent(bear).unwrap().power, -2, "2 - 4 = -2 power");
+}
+
+/// Coral Barrier enters as a 1/3 defender and mints a 1/1 Squid on ETB.
+#[test]
+fn coral_barrier_makes_a_squid() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::coral_barrier());
+    g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::Landcycle { card_id: id }).expect("landcycle");
-    // The cycler is in the graveyard.
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded");
-    // A Forest is now in hand; the decoy stays in the library.
-    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "fetched a Forest");
-    assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
-        "non-land left in library");
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Coral Barrier castable");
+    drain_stack(&mut g);
+    let body = g.battlefield_find(id).unwrap();
+    assert_eq!((body.power(), body.toughness()), (1, 3));
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Squid"),
+        "a Squid token entered");
+}
+
+/// Rishadan Airship is a 2/3 flyer that can't block.
+#[test]
+fn rishadan_airship_flies_and_cant_block() {
+    use crate::card::Keyword;
+    let def = catalog::rishadan_airship();
+    assert_eq!((def.power, def.toughness), (2, 3));
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::CantBlock));
+}
+
+/// Weakness shrinks the enchanted creature by -2/-1.
+#[test]
+fn weakness_shrinks_the_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::weakness());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (0, 1), "2/2 becomes 0/1");
 }

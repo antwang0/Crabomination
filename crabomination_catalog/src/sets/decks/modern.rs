@@ -25223,3 +25223,165 @@ pub fn daru_lancer() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Skirk Marauder — {3}{R} 2/1 Goblin. Mountaincycling {2}. (Onslaught's
+/// morph rider is dropped; the body + Mountaincycling are faithful.)
+pub fn skirk_marauder() -> CardDefinition {
+    CardDefinition {
+        name: "Skirk Marauder",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Mountain)],
+        ..Default::default()
+    }
+}
+
+/// Twisted Abomination — {5}{B} 5/3 Zombie Mutant. Swampcycling {2}. (The
+/// "{B}: Regenerate" ability is dropped; body + Swampcycling are faithful.)
+pub fn twisted_abomination() -> CardDefinition {
+    CardDefinition {
+        name: "Twisted Abomination",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Mutant],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Swamp)],
+        ..Default::default()
+    }
+}
+
+/// Shoreline Ranger — {5}{U} 3/4 Bird Soldier with flying. Islandcycling {2}.
+pub fn shoreline_ranger() -> CardDefinition {
+    CardDefinition {
+        name: "Shoreline Ranger",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Island),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Weakness — {B} Aura. Enchanted creature gets -2/-1.
+pub fn weakness() -> CardDefinition {
+    simple_aura("Weakness", cost(&[b()]), -2, -1, vec![])
+}
+
+/// Soul Feast — {3}{B}{B} Sorcery. Target player loses 4 life and you gain 4.
+pub fn soul_feast() -> CardDefinition {
+    CardDefinition {
+        name: "Soul Feast",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Drain {
+            from: target_filtered(SelectionRequirement::Player),
+            to: Selector::You,
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Lava Axe — {4}{R} Sorcery. Deals 5 damage to target player or planeswalker.
+pub fn lava_axe() -> CardDefinition {
+    CardDefinition {
+        name: "Lava Axe",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}
+
+/// Demystify — {W} Instant. Destroy target enchantment.
+pub fn demystify() -> CardDefinition {
+    CardDefinition {
+        name: "Demystify",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+        ..Default::default()
+    }
+}
+
+/// Befuddle — {1}{U} Instant. Target creature gets -4/-0 until end of turn.
+/// Draw a card.
+pub fn befuddle() -> CardDefinition {
+    CardDefinition {
+        name: "Befuddle",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-4),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Coral Barrier — {2}{U} 1/3 Wall with defender. ETB: create a 1/1 blue Squid.
+pub fn coral_barrier() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Coral Barrier",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Squid".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Blue],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Squid], ..Default::default() },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Rishadan Airship — {3}{U} 2/3 flyer that can't block.
+pub fn rishadan_airship() -> CardDefinition {
+    CardDefinition {
+        name: "Rishadan Airship",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        ..Default::default()
+    }
+}
