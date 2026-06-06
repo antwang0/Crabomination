@@ -81,6 +81,8 @@ pub enum CreatureType {
     Otter, Detective,
     // Cube expansion (Collector Ouphe).
     Ouphe,
+    // MKM / LCI expansion (Spyglass Siren).
+    Siren,
     // Enchantment creature subtype (Enduring Innocence).
     Glimmer,
     // Ninjutsu creature subtype (Fallen Shinobi, etc.).

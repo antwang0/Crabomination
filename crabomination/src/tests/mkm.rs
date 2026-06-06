@@ -169,3 +169,169 @@ fn discover_decline_puts_card_in_hand() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bears), "declined → went to hand");
 }
+
+// ── Investigate / Map tokens ─────────────────────────────────────────────────
+
+/// Deduce draws a card and investigates (mints a Clue token).
+#[test]
+fn deduce_draws_and_investigates() {
+    let mut g = two_player_game();
+    let drawn = g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::deduce());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Deduce");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == drawn), "drew the top card");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Clue"),
+        "investigated → Clue token",
+    );
+}
+
+/// Novice Inspector investigates on enter.
+#[test]
+fn novice_inspector_investigates_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::novice_inspector());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Novice Inspector");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "ETB Clue token");
+}
+
+/// Spyglass Siren makes a Map token on enter.
+#[test]
+fn spyglass_siren_makes_map_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spyglass_siren());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Spyglass Siren");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Map"), "ETB Map token");
+}
+
+/// Izoni collects evidence on enter and makes two Spider tokens.
+#[test]
+fn izoni_collects_evidence_for_spiders() {
+    let mut g = two_player_game();
+    // Graveyard fodder MV ≥ 4 (two MV-2 bears + a Bolt → ≥ 4).
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_hand(0, catalog::izoni_center_of_the_web());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Izoni");
+    drain_stack(&mut g);
+    let spiders = g.battlefield.iter().filter(|c| c.definition.name == "Spider").count();
+    assert_eq!(spiders, 2, "collected evidence → two Spider tokens");
+}
+
+/// Trumpeting Carnosaur is a 7/6 trampler that discovers 5 on enter.
+#[test]
+fn trumpeting_carnosaur_discovers_five() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt()); // MV 1 ≤ 5
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let id = g.add_card_to_hand(0, catalog::trumpeting_carnosaur());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Trumpeting Carnosaur");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Trample));
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "discover 5 → declined to hand");
+}
+
+// ── More MKM cards ───────────────────────────────────────────────────────────
+
+/// Cold Case Cracker investigates when it dies.
+#[test]
+fn cold_case_cracker_investigates_on_death() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::cold_case_cracker());
+    drain_stack(&mut g);
+    // Kill it with a Bolt.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the Cracker");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "Cracker died");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Clue"), "death → Clue token");
+}
+
+/// Not on My Watch exiles an attacking creature.
+#[test]
+fn not_on_my_watch_exiles_attacker() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).expect("attack");
+    // P0 responds with the instant.
+    let id = g.add_card_to_hand(0, catalog::not_on_my_watch());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(attacker)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Not on My Watch");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "attacker exiled");
+    assert!(g.exile.iter().any(|c| c.id == attacker), "attacker is in exile");
+}
+
+/// Person of Interest suspects itself and makes a Detective token.
+#[test]
+fn person_of_interest_suspects_self_and_makes_detective() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::person_of_interest());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Person of Interest");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).unwrap().suspected, "suspected itself");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Detective"), "made a Detective");
+}
+
+/// Get a Leg Up pumps +1/+1 per creature you control and grants reach.
+#[test]
+fn get_a_leg_up_pumps_per_creature_and_grants_reach() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 creatures controlled
+    drain_stack(&mut g);
+    let id = g.add_card_to_hand(0, catalog::get_a_leg_up());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Get a Leg Up");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(a).unwrap();
+    assert_eq!(cp.power, 4, "2/2 base + (2 creatures) = 4 power");
+    assert!(cp.keywords.contains(&Keyword::Reach), "gained reach");
+}

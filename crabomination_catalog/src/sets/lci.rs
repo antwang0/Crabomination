@@ -5,8 +5,9 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Keyword, Subtypes, Value,
 };
 use crate::effect::shortcut::etb;
-use crate::effect::Effect;
-use crate::mana::{cost, generic, r};
+use crate::effect::{Effect, PlayerRef};
+use crate::game::effects::map_token;
+use crate::mana::{cost, generic, r, u};
 
 /// Geological Appraiser — {2}{R}{R} 3/2 Human Artificer. "When this enters,
 /// if you cast it, discover 3." (The "if you cast it" gate is approximated as
@@ -43,6 +44,29 @@ pub fn trumpeting_carnosaur() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![etb(Effect::Discover { n: Value::Const(5) })],
+        ..Default::default()
+    }
+}
+
+/// Spyglass Siren — {U} 1/1 Siren Pirate with flying. "When this enters,
+/// create a Map token." (Map tokens ship via `map_token()`.)
+pub fn spyglass_siren() -> CardDefinition {
+    CardDefinition {
+        name: "Spyglass Siren",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Siren, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: map_token(),
+        })],
         ..Default::default()
     }
 }
