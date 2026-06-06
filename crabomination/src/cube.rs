@@ -1386,6 +1386,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         staggershock,
         // CR 705.2 coin-flip-off burn.
         mana_clash,
+        // Attack-trigger tokens + firebreathing aggro.
+        hanweir_garrison,
+        pyre_charger,
         empty_the_warrens,
         burning_inquiry,
         desperate_ritual,

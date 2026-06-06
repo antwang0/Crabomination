@@ -31046,3 +31046,37 @@ fn penumbra_wurm_leaves_a_wurm_token_when_it_dies() {
         .expect("Wurm token created on death");
     assert!(tok.definition.keywords.contains(&Keyword::Trample), "token has trample");
 }
+
+// ── Hanweir Garrison / Pyre Charger ────────────────────────────────────────
+
+#[test]
+fn hanweir_garrison_makes_two_attacking_tokens() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let garrison = g.add_card_to_battlefield(0, catalog::hanweir_garrison());
+    g.clear_sickness(garrison);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: garrison, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    let tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Human").collect();
+    assert_eq!(tokens.len(), 2, "two Human tokens created");
+    assert!(tokens.iter().all(|c| c.tapped), "tokens are tapped and attacking");
+}
+
+#[test]
+fn pyre_charger_firebreathing_pumps_power() {
+    let mut g = two_player_game();
+    let pc = g.add_card_to_battlefield(0, catalog::pyre_charger());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pc, ability_index: 0, target: None, x_value: None,
+    }).expect("firebreathing activates");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(pc).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 1), "1/1 + 1/0");
+}

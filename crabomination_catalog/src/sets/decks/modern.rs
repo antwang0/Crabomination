@@ -19820,6 +19820,72 @@ pub fn tendrils_of_corruption() -> CardDefinition {
     }
 }
 
+/// Hanweir Garrison — {2}{R} 2/3 Human Soldier. "Whenever this attacks,
+/// create two 1/1 red Human creature tokens that are tapped and attacking."
+pub fn hanweir_garrison() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let human = TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Hanweir Garrison",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: human,
+                cleanup: crate::effect::AttackingTokenCleanup::None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pyre Charger — {R}{R} 1/1 Elemental Warrior, Haste. "{R}: This creature
+/// gets +1/+0 until end of turn."
+pub fn pyre_charger() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Pyre Charger",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Obstinate Baloth — {2}{G}{G} 4/4 Beast. "When this enters, you gain 4
 /// life." (The discard-to-battlefield clause is dropped.)
 pub fn obstinate_baloth() -> CardDefinition {
