@@ -7305,6 +7305,93 @@ pub fn cabal_ritual() -> CardDefinition {
     }
 }
 
+/// Boreal Druid — {G} 1/1 Creature — Elf Druid. {T}: Add {C}.
+pub fn boreal_druid() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Boreal Druid",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf, CreatureType::Druid], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Avacyn's Pilgrim — {1}{W} 1/1 Creature — Human Monk Cleric. {T}: Add {W}.
+pub fn avacyns_pilgrim() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Avacyn's Pilgrim",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Monk, CreatureType::Cleric], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::White]) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Portable Hole — {W} Artifact. When it enters, exile target nonland permanent
+/// an opponent controls with mana value 2 or less until it leaves the
+/// battlefield (CR 603.6e linked exile).
+pub fn portable_hole() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Portable Hole",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::ControlledByOpponent
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land)))
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Giver of Runes — {W} 1/2 Creature — Kor Cleric. {T}: Another target creature
+/// you control gains protection from the color of your choice until end of turn.
+/// (The "or from colorless" option is approximated as a color choice.)
+pub fn giver_of_runes() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Giver of Runes",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Kor, CreatureType::Cleric], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantProtectionFromChosenColor {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Exclude — {2}{U} Instant. Counter target creature spell, then draw a card.
 pub fn exclude() -> CardDefinition {
     CardDefinition {

@@ -30063,6 +30063,51 @@ fn uro_escaped_stays_gains_life_and_draws() {
 }
 
 #[test]
+fn mana_dorks_tap_for_their_color() {
+    let mut g = two_player_game();
+    let bd = g.add_card_to_battlefield(0, catalog::boreal_druid());
+    let ap = g.add_card_to_battlefield(0, catalog::avacyns_pilgrim());
+    g.clear_sickness(bd);
+    g.clear_sickness(ap);
+    g.perform_action(GameAction::ActivateAbility { card_id: bd, ability_index: 0, target: None, x_value: None })
+        .expect("Boreal Druid taps");
+    g.perform_action(GameAction::ActivateAbility { card_id: ap, ability_index: 0, target: None, x_value: None })
+        .expect("Avacyn's Pilgrim taps");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "Boreal Druid added {{C}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1, "Avacyn's Pilgrim added {{W}}");
+}
+
+#[test]
+fn portable_hole_exiles_cheap_permanent_until_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_hand(0, catalog::portable_hole());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear exiled under Portable Hole");
+    // Destroy the Hole → the bear returns.
+    let _ = g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear returns when the Hole leaves");
+}
+
+#[test]
+fn giver_of_runes_grants_protection_to_another_creature() {
+    let mut g = two_player_game();
+    let giver = g.add_card_to_battlefield(0, catalog::giver_of_runes());
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(giver);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: giver, ability_index: 0, target: Some(Target::Permanent(ally)), x_value: None })
+        .expect("Giver targets another creature");
+    drain_stack(&mut g);
+    // Can't target itself.
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: giver, ability_index: 0, target: Some(Target::Permanent(giver)), x_value: None });
+    assert!(err.is_err(), "Giver of Runes can't target itself");
+}
+
+#[test]
 fn exclude_counters_creature_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());

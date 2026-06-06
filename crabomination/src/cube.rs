@@ -396,6 +396,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: cube staples ──
         condemn,
         beacon_of_immortality,
+        portable_hole,
+        giver_of_runes,
+        avacyns_pilgrim,
 
         // ── modern_decks: white value/aggro creatures ──
         solemn_recruit,
@@ -1780,6 +1783,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         violent_outburst,
         birds_of_paradise,
         noble_hierarch,
+        boreal_druid,
         sylvan_caryatid,
         summoners_pact,
         natures_claim,
