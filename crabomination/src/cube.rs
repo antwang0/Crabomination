@@ -846,6 +846,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         coral_eel,
         horned_turtle,
         mist_raven,
+        // tap-down-target-player's-board (modern_decks)
+        sleep,
         // ── Evoke Incarnation (MH2) ──
         subtlety,
         // ── unblocked-draw snake + tempo illusions ──
@@ -1484,6 +1486,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sedge_troll,
         furnace_whelp,
         scorch_spitter,
+        // color-set / ferocious burn (modern_decks)
+        crimson_wisps,
+        wild_slash,
         // ── modern_decks: red beaters batch 2 ──
         canyon_minotaur,
         brazen_scourge,

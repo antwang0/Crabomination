@@ -33222,3 +33222,60 @@ fn patchwork_automaton_grows_on_artifact_cast() {
     assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 1,
         "gained a +1/+1 counter when an artifact spell was cast");
 }
+
+/// Sleep taps every creature the target player controls and stuns them all
+/// (skip-next-untap via a Stun counter).
+#[test]
+fn sleep_taps_and_stuns_all_target_player_creatures() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let own = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sleep());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Player(1));
+    for c in [a, b] {
+        let r = g.battlefield_find(c).unwrap();
+        assert!(r.tapped, "opponent creature tapped");
+        assert_eq!(r.counter_count(CounterType::Stun), 1, "stun counter applied");
+    }
+    let mine = g.battlefield_find(own).unwrap();
+    assert!(!mine.tapped && mine.counter_count(CounterType::Stun) == 0,
+        "our own creature is untouched");
+}
+
+/// Crimson Wisps grants haste, makes the target red until end of turn, and
+/// cantrips.
+#[test]
+fn crimson_wisps_grants_haste_and_red_and_draws() {
+    use crate::card::Keyword;
+    use crate::mana::Color as C;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+    let id = g.add_card_to_hand(0, catalog::crimson_wisps());
+    let hand_before = g.players[0].hand.len(); // includes Wisps itself
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Haste), "gained haste");
+    assert!(cp.colors.contains(&C::Red), "became red");
+    // Wisps left hand (−1), draw refilled (+1): net hand size unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before, "cantripped");
+}
+
+/// Wild Slash deals 2 damage; with a power-4+ creature out, it also flips the
+/// "damage can't be prevented this turn" flag (Ferocious).
+#[test]
+fn wild_slash_ferocious_locks_out_prevention() {
+    let mut g = two_player_game();
+    // A 5/5 satisfies Ferocious.
+    g.add_card_to_battlefield(0, catalog::grizzled_outrider());
+    let id = g.add_card_to_hand(0, catalog::wild_slash());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, 18, "2 damage dealt");
+    assert!(g.damage_cant_be_prevented_this_turn, "ferocious set the no-prevent flag");
+}

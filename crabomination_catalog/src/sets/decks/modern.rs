@@ -25025,3 +25025,79 @@ pub fn highborn_ghoul() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Crimson Wisps — {R} Instant. Target creature gains haste until end of turn
+/// and becomes red until end of turn. Draw a card.
+pub fn crimson_wisps() -> CardDefinition {
+    CardDefinition {
+        name: "Crimson Wisps",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeColor {
+                what: Selector::Target(0),
+                colors: vec![Color::Red],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sleep — {2}{U}{U} Sorcery. Tap all creatures target player controls. Those
+/// creatures don't untap during that player's next untap step (modeled via a
+/// stun counter — CR 122.1c).
+pub fn sleep() -> CardDefinition {
+    CardDefinition {
+        name: "Sleep",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            Effect::AddCounter {
+                what: Selector::ControlledBy {
+                    who: PlayerRef::Target(0),
+                    filter: SelectionRequirement::Creature,
+                },
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wild Slash — {R} Instant. Ferocious — If you control a creature with power
+/// 4 or greater, damage can't be prevented this turn. Wild Slash deals 2
+/// damage to any target.
+pub fn wild_slash() -> CardDefinition {
+    CardDefinition {
+        name: "Wild Slash",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::PowerAtLeast(4)),
+                )),
+                then: Box::new(Effect::DamageCantBePreventedThisTurn),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}

@@ -155,6 +155,11 @@ pub enum Selector {
     EachMatching { zone: ZoneRef, filter: SelectionRequirement },
     /// All permanents on the battlefield matching `filter`.
     EachPermanent(SelectionRequirement),
+    /// All battlefield permanents controlled by `who` matching `filter`.
+    /// The player-relative sibling of `EachPermanent` — lets one effect
+    /// touch every permanent a *targeted* player controls (Sleep: tap +
+    /// stun all creatures target player controls).
+    ControlledBy { who: PlayerRef, filter: SelectionRequirement },
     /// The single creature `ctx.controller` controls with the least
     /// toughness (first in battlefield order on a tie). Resolves to an
     /// empty set when the controller has no creatures. Powers Bolster
@@ -1665,6 +1670,11 @@ pub enum Effect {
     /// controller's choice for `duration` (CR 105 / layer 5 SetColors).
     /// Wild Mongrel ("becomes the color of your choice until end of turn").
     BecomeChosenColor { what: Selector, duration: Duration },
+    /// Each permanent picked by `what` becomes exactly `colors` (replacing
+    /// its colors) for `duration` (CR 105 / layer-5 `SetColors`). The
+    /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes
+    /// red"), Crimson Wisps-style color set without a player choice.
+    BecomeColor { what: Selector, colors: Vec<crate::mana::Color>, duration: Duration },
     /// The controller chooses a color as the source enters; stamp it onto the
     /// source's `chosen_color` (CR 614 — Coldsteel Heart, choose-a-color mana
     /// rocks). Read later by `ManaPayload::ChosenColorOfSource`.

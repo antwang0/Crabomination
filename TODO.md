@@ -8,16 +8,19 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Ferocious damage-can't-be-prevented rider (Wild Slash).** Need a
-  `Predicate` for "you control a creature with power ≥ N" to gate a
-  `DamageCantBePreventedThisTurn` rider before the burn; ship Wild Slash,
-  Temur Battle Rage-adjacent ferocious payoffs.
-- **Tap-down-target-player's-creatures (Sleep).** Need a selector for
-  "creatures controlled by Target(0) player" so a single spell can tap +
-  stun all of one player's creatures (Sleep, Sunscour-style).
-- **Color-change EOT (Crimson Wisps).** "Target creature becomes red until
-  end of turn" — no one-shot layer-5 color set; the haste/cantrip halves are
-  trivial once a `SetColorThisTurn` effect exists.
+- ✅ **Ferocious damage-can't-be-prevented rider (Wild Slash).** Shipped via
+  `If(SelectorExists(EachPermanent(Creature ∧ ControlledByYou ∧
+  PowerAtLeast(4))))` gating `DamageCantBePreventedThisTurn` — no new
+  predicate needed (the `And`-composed requirement already expresses
+  "you control a creature with power ≥ N"). Future Temur ferocious payoffs
+  reuse the same gate.
+- ✅ **Tap-down-target-player's-creatures (Sleep).** Shipped via
+  `Selector::ControlledBy { who, filter }` (player-relative `EachPermanent`)
+  + a synthesized player-target slot in `target_filter_for_slot`. Sleep taps
+  + stuns every creature target player controls.
+- ✅ **Color-change EOT (Crimson Wisps).** Shipped via `Effect::BecomeColor`
+  (fixed-color layer-5 `SetColors`, sibling of `BecomeChosenColor`). Crimson
+  Wisps grants haste + becomes red + cantrips.
 - **Aura that grants +N/+N and a keyword (Untamed Hunger).** Confirm the
   Aura-attach + `equipped_bonus`-style stat/keyword grant path covers a plain
   creature Aura (not just Equipment/bestow); then ship a small Aura batch

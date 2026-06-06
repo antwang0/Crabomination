@@ -2753,6 +2753,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeColor { what, colors, duration } => {
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: AffectedPermanents::Specific(vec![cid]),
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetColors(colors.clone()),
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ChooseColorForSelf => {
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::mana::Color;
@@ -5811,6 +5830,16 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
                 .map(|c| EntityRef::Permanent(c.id))
                 .collect(),
+
+            Selector::ControlledBy { who, filter } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.controller == p)
+                    .filter(|c| self.evaluate_requirement_static(filter, &Target::Permanent(c.id), ctx.controller, ctx.source))
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
 
             // CR 701.21 — the controller's least-toughness creature.
             Selector::LeastToughnessYouControl => self

@@ -13,6 +13,17 @@ use super::*;
 /// `BecomeCreature` deliberately targets *non*-creatures and is excluded.)
 static IMPLICIT_CREATURE_TARGET: SelectionRequirement = SelectionRequirement::Creature;
 
+/// Player restriction synthesized for the player slot referenced by a
+/// `Selector::ControlledBy { who: PlayerRef::Target(n) }` — the spell targets
+/// a player and then acts on the permanents that player controls (Sleep).
+static IMPLICIT_PLAYER_TARGET: SelectionRequirement = SelectionRequirement::Player;
+
+/// `Some(&Player)` when `what` is `ControlledBy { who: Target(n) }` for `slot`.
+fn implicit_player_for_slot(what: &Selector, slot: u8) -> Option<&'static SelectionRequirement> {
+    matches!(what, Selector::ControlledBy { who: PlayerRef::Target(n), .. } if *n == slot)
+        .then_some(&IMPLICIT_PLAYER_TARGET)
+}
+
 /// `Some(&Creature)` when `what` is any bare numbered target (slot-agnostic —
 /// used for the "primary" target filter).
 fn implicit_creature_if_bare_target(what: &Selector) -> Option<&'static SelectionRequirement> {
@@ -54,6 +65,7 @@ impl Effect {
                 Selector::TopOfLibrary { who, .. }
                 | Selector::BottomOfLibrary { who, .. }
                 | Selector::CardsInZone { who, .. }
+                | Selector::ControlledBy { who, .. }
                 | Selector::Player(who) => player_has_target(who),
                 _ => false,
             }
@@ -234,6 +246,7 @@ impl Effect {
             }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
             Effect::BecomeChosenColor { what, .. }
+            | Effect::BecomeColor { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. } => sel_has_target(what),
             Effect::ChooseColorForSelf => false,
             Effect::Populate { .. } => false,
@@ -1016,14 +1029,15 @@ impl Effect {
                 | Effect::GrantFlashbackThisTurn { what }
                 | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
-                | Effect::Tap { what }
-                | Effect::Untap { what, .. }
                 | Effect::CounterSpell { what }
                 | Effect::CounterSpellToZone { what, .. }
                 | Effect::CounterAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
+                Effect::Tap { what } | Effect::Untap { what, .. } => {
+                    sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
+                }
                 Effect::PumpPT { what, .. } | Effect::SetBasePT { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_creature_for_slot(what, slot))
                 }
