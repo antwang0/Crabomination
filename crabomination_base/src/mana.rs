@@ -852,6 +852,21 @@ impl ManaPool {
         }
     }
 
+    /// Saturating inverse of [`absorb`](Self::absorb) over the plain colour /
+    /// colorless buckets — used to lift out "protected" floating mana (the
+    /// off-colour excess the player chose to keep) before paying a cost from
+    /// freshly-tapped sources, then `absorb` it back afterward. Snow / restricted
+    /// buckets are left untouched (protected pools only carry plain mana).
+    pub fn remove_pool(&mut self, other: &ManaPool) {
+        self.white = self.white.saturating_sub(other.white);
+        self.blue = self.blue.saturating_sub(other.blue);
+        self.black = self.black.saturating_sub(other.black);
+        self.red = self.red.saturating_sub(other.red);
+        self.green = self.green.saturating_sub(other.green);
+        self.colorless = self.colorless.saturating_sub(other.colorless);
+        self.snow = self.snow.min(self.total());
+    }
+
     fn slot(&self, color: Color) -> &u32 {
         match color {
             Color::White => &self.white,

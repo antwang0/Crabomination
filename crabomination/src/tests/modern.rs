@@ -1846,6 +1846,45 @@ fn cast_auto_spends_floating_mana_when_it_is_the_only_source() {
     assert!(g.battlefield.iter().any(|c| c.id == bear), "Grizzly Bears resolved");
 }
 
+/// CR 601.2g — the prompt concerns only the *off-colour excess* float, not the
+/// pip-matching part. Casting {3}{G} (Aberrant Manawurm) with {R}{G} floating
+/// asks only about the {R}; declining keeps the {R} but still spends the {G}
+/// float on the {G} pip (taps 3 lands for the generic, not 4).
+#[test]
+fn float_confirm_offers_only_off_colour_excess() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].mana_pool.add(Color::Red, 1); // off-colour excess
+    g.players[0].mana_pool.add(Color::Green, 1); // matches the {G} pip
+    let forests: Vec<_> = (0..4)
+        .map(|_| g.add_card_to_battlefield(0, catalog::forest()))
+        .collect();
+    let wurm = g.add_card_to_hand(0, catalog::aberrant_manawurm()); // {3}{G}
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: wurm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast suspends for the float-spend confirmation");
+
+    let pd = g.pending_decision.as_ref().expect("a float-spend confirmation is pending");
+    let crate::decision::Decision::OptionalTrigger { description, .. } = &pd.decision else {
+        panic!("expected an OptionalTrigger float prompt");
+    };
+    assert!(description.contains("{R}"), "prompt should mention the excess {{R}}: {description}");
+    assert!(!description.contains("{G}"), "prompt must NOT offer the pip-matching {{G}}: {description}");
+
+    // Decline: keep the {R}; the {G} float still pays the {G} pip; 3 Forests
+    // pay the {3} (not 4).
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(false)))
+        .expect("decline spending the excess");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "excess {{R}} kept");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 0, "{{G}} float spent on its pip");
+    let tapped = forests.iter().filter(|f| g.battlefield_find(**f).unwrap().tapped).count();
+    assert_eq!(tapped, 3, "only 3 Forests tapped for the generic");
+    assert!(g.battlefield.iter().any(|c| c.id == wurm), "Aberrant Manawurm resolved");
+}
+
 /// Coveted Jewel changes hands when an opponent's creature attacks its
 /// controller, and untaps under the new controller (CR 800.4 control flip).
 #[test]

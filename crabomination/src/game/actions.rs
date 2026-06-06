@@ -2134,7 +2134,7 @@ impl GameState {
             && delve_cards.is_empty()
             && self.float_spend_is_optional(p, &cost, spell_kind)
         {
-            let float_summary = self.players[p].mana_pool.summary();
+            let float_summary = self.protectable_float(p, &cost).summary();
             let name = card.definition.name;
             self.players[p].hand.push(card);
             // Replay the exact cast variant (kicker / buyback / bestow survive).
@@ -2152,7 +2152,7 @@ impl GameState {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
-                        "Spend floating mana ({float_summary}) to cast {name}? (No taps lands instead)"
+                        "Spend leftover floating mana ({float_summary}) to cast {name}? (No keeps it and taps lands)"
                     ),
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
@@ -2926,13 +2926,13 @@ impl GameState {
             && !cost.symbols.is_empty()
             && self.float_spend_is_optional(p, &cost, crate::mana::SpellKind::Other)
         {
-            let float_summary = self.players[p].mana_pool.summary();
+            let float_summary = self.protectable_float(p, &cost).summary();
             let name = card.definition.name;
             self.pending_decision = Some(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
-                        "Spend floating mana ({float_summary}) to flashback {name}? (No taps lands instead)"
+                        "Spend leftover floating mana ({float_summary}) to flashback {name}? (No keeps it and taps lands)"
                     ),
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
@@ -3851,14 +3851,14 @@ impl GameState {
             && !mana_cost.symbols.is_empty()
             && self.float_spend_is_optional(p, &mana_cost, crate::mana::SpellKind::Other)
         {
-            let float_summary = self.players[p].mana_pool.summary();
+            let float_summary = self.protectable_float(p, &mana_cost).summary();
             let name = card.definition.name;
             self.players[p].hand.push(card);
             self.pending_decision = Some(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
-                        "Spend floating mana ({float_summary}) to cast {name}? (No taps lands instead)"
+                        "Spend leftover floating mana ({float_summary}) to cast {name}? (No keeps it and taps lands)"
                     ),
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
@@ -4276,12 +4276,47 @@ impl GameState {
         self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, crate::mana::SpellKind::Other, None)
     }
 
-    /// CR 601.2g — would paying `cost` for `payer` spend pre-existing floating
-    /// mana *optionally*? True iff the player has floating mana AND the cost is
-    /// fully payable from untapped sources WITHOUT it — i.e. the engine would
-    /// otherwise auto-spend float the player could have kept. Drives the
-    /// "spend floating mana, or tap lands?" confirmation. The check dry-runs a
-    /// full auto-tap on a clone with the float removed.
+    /// CR 601.2g — the pre-existing floating mana that paying `cost` would sweep
+    /// onto the *generic* portion: the player's pool minus the mana that matches
+    /// the cost's colored / `{C}` pips (which they'd spend on those pips anyway).
+    /// This "excess" is the only float that's discretionary — what the spend
+    /// confirmation is actually about ("keep your leftover {R}, or spend it?").
+    pub(crate) fn protectable_float(
+        &self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+    ) -> crate::mana::ManaPool {
+        use crate::mana::{Color, ManaPool, ManaSymbol};
+        let pool = &self.players[payer].mana_pool;
+        let mut colored_need: std::collections::HashMap<Color, u32> = std::collections::HashMap::new();
+        let mut colorless_need = 0u32;
+        for s in &cost.symbols {
+            match s {
+                ManaSymbol::Colored(c) => *colored_need.entry(*c).or_default() += 1,
+                ManaSymbol::Colorless(n) => colorless_need += *n,
+                _ => {}
+            }
+        }
+        let mut protected = ManaPool::default();
+        for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            let excess = pool.amount(c).saturating_sub(*colored_need.get(&c).unwrap_or(&0));
+            if excess > 0 {
+                protected.add(c, excess);
+            }
+        }
+        let cl_excess = pool.colorless_amount().saturating_sub(colorless_need);
+        if cl_excess > 0 {
+            protected.add_colorless(cl_excess);
+        }
+        protected
+    }
+
+    /// CR 601.2g — should paying `cost` for `payer` prompt "spend your leftover
+    /// floating mana, or tap lands?" True iff there's *excess* float (off the
+    /// cost's colored pips), the cost has a generic portion that would consume
+    /// it, AND the cost is still payable while keeping that excess (so spending
+    /// it was avoidable, not the only legal source). Pip-matching float is never
+    /// in question — it's spent on its pip regardless.
     pub(crate) fn float_spend_is_optional(
         &self,
         payer: usize,
@@ -4289,46 +4324,33 @@ impl GameState {
         kind: crate::mana::SpellKind,
     ) -> bool {
         use crate::mana::ManaSymbol;
-        use std::collections::HashMap;
-        let pool = &self.players[payer].mana_pool;
-        if pool.total() == 0 {
+        // Prefilled pool: if the floating mana already covers the *whole* cost,
+        // the player arranged it deliberately (e.g. via the manual-tap flow) —
+        // pay from it directly, no prompt. This is distinct from the partial
+        // case below (Aberrant Manawurm {3}{G} with {R}{G} floating doesn't
+        // cover the cost, so it still prompts about the excess).
+        if self.players[payer].mana_pool.clone().pay_for_spell(cost, kind).is_ok() {
             return false;
         }
-        // If the floating pool already covers the *whole* cost, the player has
-        // arranged their mana — pay from it via the fast path, no prompt (this
-        // is the deliberate "prefilled pool" behaviour). The confirmation is
-        // only for *partial* float that auto-tap would otherwise sweep up.
-        if pool.clone().pay_for_spell(cost, kind).is_ok() {
+        let protected = self.protectable_float(payer, cost);
+        if protected.total() == 0 {
+            return false; // no discretionary float — only pip-matching mana
+        }
+        // Excess is only swept up by a generic ({N}) portion; with none, it just
+        // stays floating and there's nothing to ask about.
+        let generic_need: u32 = cost
+            .symbols
+            .iter()
+            .map(|s| if let ManaSymbol::Generic(n) = s { *n } else { 0 })
+            .sum();
+        if generic_need == 0 {
             return false;
         }
-        // (1) Would the GENERIC portion of the cost eat pre-existing float?
-        // Float that matches a *colored* pip is mana the player would spend on
-        // that pip anyway (and usually tapped deliberately for this cast), so
-        // it isn't the "wasteful" case. We only flag float consumed by the
-        // generic / {C} part — exactly where a land could have paid instead.
-        let mut colored_need: HashMap<crate::mana::Color, u32> = HashMap::new();
-        let mut generic_need = 0u32;
-        for s in &cost.symbols {
-            match s {
-                ManaSymbol::Colored(c) => *colored_need.entry(*c).or_default() += 1,
-                ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => generic_need += *n,
-                _ => {}
-            }
-        }
-        // Float left over after each colored pip consumes its matching colour.
-        let mut float_left = pool.total();
-        for (c, need) in &colored_need {
-            float_left = float_left.saturating_sub((*need).min(pool.amount(*c)));
-        }
-        if float_left.min(generic_need) == 0 {
-            return false; // float only pays colored pips (or none) — not wasteful
-        }
-        // (2) Could the cost be paid entirely from untapped sources WITHOUT the
-        // float? If so, spending the float was avoidable (not the only legal
-        // source, CR 601.2g) → the player should choose. Dry-run a full
-        // auto-tap on a clone with the float removed.
+        // Can the cost be paid while *keeping* the excess (remove it, pay from
+        // the remaining pip-matching float + freshly-tapped sources)? If so, the
+        // excess wasn't forced — offer the choice. Dry-run on a clone.
         let mut probe = self.clone();
-        probe.players[payer].mana_pool.empty();
+        probe.players[payer].mana_pool.remove_pool(&protected);
         let snap = probe.snapshot_payment_state(payer);
         probe
             .try_pay_after_snapshot_mode(payer, cost, snap, false, kind, None)
@@ -4369,24 +4391,29 @@ impl GameState {
         spend_float: Option<bool>,
     ) -> Result<PaymentReceipt, GameError> {
         if forced_only {
-            // "Keep my floating mana": pay from freshly-tapped sources, then
-            // restore the protected float. We only reach here after the cast
-            // confirmed sources can cover the cost (see `float_spend_is_optional`),
-            // so the source pay normally succeeds; if it somehow can't, restore
-            // the float and fall through to spending it (it was forced after all).
+            // "Keep my leftover floating mana": lift out only the *excess*
+            // float (the off-pip mana that would hit the generic), pay the cost
+            // from the remaining pip-matching float + freshly-tapped sources,
+            // then restore the excess. Pip-matching float is still spent on its
+            // pip (auto-tap accounts for the pool). We only reach here after the
+            // cast confirmed this is payable (see `float_spend_is_optional`); if
+            // it somehow can't, restore the excess and fall through to spending
+            // it (it was forced after all).
             if spend_float == Some(false) {
-                let float = self.players[payer].mana_pool.clone();
-                self.players[payer].mana_pool.empty();
-                let src_snapshot = self.snapshot_payment_state(payer);
-                match self.try_pay_after_snapshot_mode(payer, cost, src_snapshot, false, kind, None) {
-                    Ok(mut receipt) => {
-                        self.players[payer].mana_pool.absorb(&float);
-                        receipt.pool_before.absorb(&float);
-                        return Ok(receipt);
-                    }
-                    Err(_) => {
-                        self.players[payer].mana_pool.absorb(&float);
-                        // fall through to the normal (float-spending) path
+                let protected = self.protectable_float(payer, cost);
+                if protected.total() > 0 {
+                    self.players[payer].mana_pool.remove_pool(&protected);
+                    let src_snapshot = self.snapshot_payment_state(payer);
+                    match self.try_pay_after_snapshot_mode(payer, cost, src_snapshot, false, kind, None) {
+                        Ok(mut receipt) => {
+                            self.players[payer].mana_pool.absorb(&protected);
+                            receipt.pool_before.absorb(&protected);
+                            return Ok(receipt);
+                        }
+                        Err(_) => {
+                            self.players[payer].mana_pool.absorb(&protected);
+                            // fall through to the normal (float-spending) path
+                        }
                     }
                 }
             }
@@ -5470,7 +5497,7 @@ impl GameState {
             && !effective_mana_cost.symbols.is_empty()
             && self.float_spend_is_optional(p, &effective_mana_cost, crate::mana::SpellKind::Other)
         {
-            let float_summary = self.players[p].mana_pool.summary();
+            let float_summary = self.protectable_float(p, &effective_mana_cost).summary();
             let name = self
                 .battlefield_find(card_id)
                 .map(|c| c.definition.name)
@@ -5479,7 +5506,7 @@ impl GameState {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
                     description: format!(
-                        "Spend floating mana ({float_summary}) to activate {name}? (No taps lands instead)"
+                        "Spend leftover floating mana ({float_summary}) to activate {name}? (No keeps it and taps lands)"
                     ),
                 },
                 resume: crate::game::types::ResumeContext::ActionFloatConfirm {
