@@ -3111,6 +3111,179 @@ fn cleanup_step_no_op_when_hand_at_or_below_max_per_cr_514_1() {
     );
 }
 
+/// CR 514.1 — a `wants_ui` player chooses which cards to discard at
+/// cleanup: the discard-down surfaces as an interactive `Decision::Discard`
+/// rather than dumping the head of the hand, and the chosen cards (not the
+/// first N) land in the graveyard.
+#[test]
+fn cleanup_discard_lets_ui_player_choose_which_cards() {
+    use crate::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    // 10 distinct cards so we can pick from the back of the hand and prove
+    // the choice (not a head dump) is honored.
+    let mut ids = Vec::new();
+    for _ in 0..10 {
+        ids.push(g.add_card_to_hand(0, catalog::island()));
+    }
+    assert_eq!(g.active_player_idx, 0);
+    let gy_before = g.players[0].graveyard.len();
+
+    // Pass priority through Cleanup; the over-max hand suspends on a Discard.
+    g.step = TurnStep::Cleanup;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let pd = g
+        .pending_decision
+        .as_ref()
+        .expect("over-max hand should suspend on a Discard decision");
+    let Decision::Discard { player, count, hand } = &pd.decision else {
+        panic!("expected Decision::Discard, got {:?}", pd.decision);
+    };
+    assert_eq!(*player, 0);
+    assert_eq!(*count, 3, "must discard down to the maximum hand size of 7");
+    assert_eq!(hand.len(), 10, "the whole hand is offered to choose from");
+
+    // Choose the LAST three cards (a head dump would have taken the first).
+    let chosen: Vec<_> = ids[7..10].to_vec();
+    g.submit_decision(DecisionAnswer::Discard(chosen.clone()))
+        .expect("discard choice accepted");
+
+    assert!(g.pending_decision.is_none(), "cleanup resolved");
+    assert_eq!(g.players[0].hand.len(), 7, "hand reduced to maximum");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3);
+    for cid in &chosen {
+        assert!(
+            g.players[0].graveyard.iter().any(|c| c.id == *cid),
+            "the chosen card {cid:?} was discarded"
+        );
+    }
+    // The first seven cards were kept, proving the choice was honored.
+    for cid in &ids[0..7] {
+        assert!(
+            g.players[0].hand.iter().any(|c| c.id == *cid),
+            "unchosen card {cid:?} stayed in hand"
+        );
+    }
+    // Cleanup finished: the turn advanced off seat 0.
+    assert_ne!(g.active_player_idx, 0, "turn passed after cleanup");
+}
+
+/// CR 514.1 — if a `wants_ui` player under-discards (answers with too few
+/// cards), the decision is re-posed until they're back at the maximum.
+#[test]
+fn cleanup_discard_reprompts_on_under_discard() {
+    use crate::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut ids = Vec::new();
+    for _ in 0..9 {
+        ids.push(g.add_card_to_hand(0, catalog::island()));
+    }
+
+    g.step = TurnStep::Cleanup;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // Must discard 2; answer with only 1 — expect a re-prompt for the rest.
+    g.submit_decision(DecisionAnswer::Discard(vec![ids[0]]))
+        .expect("partial discard accepted");
+    let pd = g
+        .pending_decision
+        .as_ref()
+        .expect("under-discard should re-pose the decision");
+    let Decision::Discard { count, .. } = &pd.decision else {
+        panic!("expected a follow-up Discard, got {:?}", pd.decision);
+    };
+    assert_eq!(*count, 1, "one card still over the maximum");
+
+    g.submit_decision(DecisionAnswer::Discard(vec![ids[1]]))
+        .expect("final discard accepted");
+    assert!(g.pending_decision.is_none());
+    assert_eq!(g.players[0].hand.len(), 7);
+    assert_ne!(g.active_player_idx, 0, "turn passed after cleanup");
+}
+
+/// CR 514.1 — discard down to, never past, the maximum: an oversized answer
+/// (more ids than the excess) only discards down to the limit.
+#[test]
+fn cleanup_discard_caps_at_the_excess() {
+    use crate::decision::DecisionAnswer;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut ids = Vec::new();
+    for _ in 0..9 {
+        ids.push(g.add_card_to_hand(0, catalog::island()));
+    }
+
+    g.step = TurnStep::Cleanup;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    // Excess is 2, but answer with 5 ids — only 2 should actually be pitched.
+    g.submit_decision(DecisionAnswer::Discard(ids[0..5].to_vec()))
+        .expect("oversized discard answer accepted");
+    assert!(g.pending_decision.is_none(), "cleanup finished, not re-posed");
+    assert_eq!(g.players[0].hand.len(), 7, "discarded exactly down to the max");
+    assert_eq!(g.players[0].graveyard.len(), 2);
+}
+
+/// CR 402.2b — `Effect::SetMaxHandSize` sets a specific numeric maximum
+/// (Null Profusion's "your maximum hand size is zero"), and the cleanup
+/// step then enforces *that* number rather than the default seven.
+#[test]
+fn set_max_hand_size_effect_caps_cleanup_discard() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    // A free sorcery: "your maximum hand size is 2."
+    let sorc = CardDefinition {
+        name: "Profusion Test",
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SetMaxHandSize { who: Selector::You, size: Value::Const(2) },
+        ..Default::default()
+    };
+    let id = g.add_card_to_hand(0, sorc);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("free sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].max_hand_size, Some(2), "maximum hand size set to 2");
+
+    // Pile up a hand and run cleanup (non-UI: deterministic head dump down to
+    // the new maximum).
+    for _ in 0..5 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    g.step = TurnStep::Cleanup;
+    g.do_cleanup();
+    assert_eq!(g.players[0].hand.len(), 2, "cleanup discards down to the custom max");
+}
+
+/// A custom numeric maximum is honored on the interactive (UI) discard path
+/// too: the surfaced `Decision::Discard` asks for the right excess.
+#[test]
+fn cleanup_discard_ui_respects_custom_max() {
+    use crate::decision::Decision;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].max_hand_size = Some(1);
+    for _ in 0..4 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    g.step = TurnStep::Cleanup;
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let pd = g.pending_decision.as_ref().expect("over-max hand suspends");
+    let Decision::Discard { count, .. } = &pd.decision else {
+        panic!("expected Decision::Discard");
+    };
+    assert_eq!(*count, 3, "discard down to the custom maximum of 1 (4 − 1)");
+}
+
 /// Brush Off can be cast at {1}{U} (alt cost) when it targets an
 /// instant or sorcery on the stack — verified by P0 alt-casting Brush
 /// Off on P1's Lightning Bolt.

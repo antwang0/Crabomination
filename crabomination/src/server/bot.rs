@@ -106,6 +106,21 @@ impl Bot for RandomBot {
                     crate::decision::Decision::ChooseCards { candidates, max, .. } => {
                         decide_choose_cards(state, seat, candidates, *max)
                     }
+                    // A self-discard (cleanup over max hand size, rummaging, a
+                    // discard cost): every offered card is in our own hand and
+                    // we're the one choosing. Unlike AutoDecider (which dumps
+                    // the head of the hand — possibly our best spell), shed the
+                    // least useful cards. Inquisition-style "choose from an
+                    // opponent's hand" Discards fail the own-hand guard and
+                    // fall through to AutoDecider unchanged.
+                    crate::decision::Decision::Discard { player, count, hand }
+                        if *player == seat
+                            && hand.iter().all(|(id, _)| {
+                                state.players[seat].hand.iter().any(|c| c.id == *id)
+                            }) =>
+                    {
+                        decide_self_discard(state, seat, hand, *count)
+                    }
                     other => AutoDecider.decide(other),
                 };
                 return Some(GameAction::SubmitDecision(answer));
@@ -627,6 +642,48 @@ fn decide_choose_cards(
         .take(max as usize)
         .collect();
     DecisionAnswer::Cards(chosen)
+}
+
+/// Bot heuristic for a self-discard (cleanup discard-to-hand-size, rummaging,
+/// a discard cost): shed the `count` least useful cards so the bot keeps its
+/// cheap, castable spells. Surplus lands go first once the bot is no longer
+/// mana-light; otherwise the most expensive spells (least likely to be cast
+/// soon) are pitched. Ties keep hand order.
+fn decide_self_discard(
+    state: &GameState,
+    seat: usize,
+    hand: &[(crate::card::CardId, String)],
+    count: u32,
+) -> crate::decision::DecisionAnswer {
+    use crate::decision::DecisionAnswer;
+    // Lands already in play: once we have plenty, extra lands in hand are the
+    // first thing to pitch; while still mana-light, keep them.
+    let lands_in_play = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_land())
+        .count();
+    // Score each offered card — LOWER is pitched sooner.
+    let mut scored: Vec<(i64, crate::card::CardId)> = hand
+        .iter()
+        .filter_map(|(id, _)| {
+            let card = state.players[seat].hand.iter().find(|c| c.id == *id)?;
+            let score = if card.definition.is_land() {
+                // Surplus lands are worth the least; a land we still need is
+                // worth the most.
+                if lands_in_play >= 5 { -100 } else { 1_000 }
+            } else {
+                // Among spells, keep the cheap (castable) ones; pitch the
+                // most expensive first.
+                -(card.definition.cost.cmc() as i64)
+            };
+            Some((score, *id))
+        })
+        .collect();
+    scored.sort_by_key(|(s, _)| *s);
+    let discard: Vec<crate::card::CardId> =
+        scored.iter().take(count as usize).map(|(_, id)| *id).collect();
+    DecisionAnswer::Discard(discard)
 }
 
 fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
@@ -1928,6 +1985,61 @@ mod tests {
         let id = g.add_card_to_battlefield(0, def);
         assert!(!optional_trigger_beneficial(&g, id, "you may pay"),
             "a MayPay whose body costs the bot 3 life is declined");
+    }
+
+    fn generic_spell(name: &'static str, cmc: u32) -> CardDefinition {
+        use crate::card::{CardType, Subtypes};
+        CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(),
+            power: 1,
+            toughness: 1,
+            cost: crate::mana::cost(&[crate::mana::generic(cmc)]),
+            ..Default::default()
+        }
+    }
+
+    /// Self-discard heuristic pitches the priciest spell (least likely to be
+    /// cast soon), not the head of the hand, when the bot isn't flooded.
+    #[test]
+    fn bot_self_discard_pitches_priciest_spell() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let pricey = g.add_card_to_hand(0, generic_spell("Pricey", 6));
+        let cheap = g.add_card_to_hand(0, generic_spell("Cheap", 1));
+        // Offer both; head dump would take `pricey` (first), but so should the
+        // heuristic here — make the cheap card the head to prove it's a real
+        // choice rather than a head dump.
+        let hand = vec![
+            (cheap, "Cheap".to_string()),
+            (pricey, "Pricey".to_string()),
+        ];
+        let DecisionAnswer::Discard(ids) = decide_self_discard(&g, 0, &hand, 1) else {
+            panic!("expected a Discard answer");
+        };
+        assert_eq!(ids, vec![pricey], "the most expensive spell is pitched");
+    }
+
+    /// When flooded (≥5 lands in play), a surplus land is pitched before a
+    /// keepable cheap spell.
+    #[test]
+    fn bot_self_discard_pitches_surplus_land_when_flooded() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        for _ in 0..5 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        let land = g.add_card_to_hand(0, catalog::island());
+        let spell = g.add_card_to_hand(0, generic_spell("Cheap", 1));
+        let hand = vec![
+            (spell, "Cheap".to_string()),
+            (land, "Island".to_string()),
+        ];
+        let DecisionAnswer::Discard(ids) = decide_self_discard(&g, 0, &hand, 1) else {
+            panic!("expected a Discard answer");
+        };
+        assert_eq!(ids, vec![land], "a flooded bot pitches the surplus land");
     }
 
     /// Free, fixed-payload mana rocks like Sol Ring should be picked up by

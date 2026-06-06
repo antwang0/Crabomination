@@ -16,7 +16,7 @@
 //!    save under the **back** name's filename so the runtime can load
 //!    it via [`card_back_face_asset_path`].
 //! 3. On `exact` failure, fall back to `fuzzy` once before giving up
-//!    â€” this catches cards whose Scryfall display name has
+//!    -- this catches cards whose Scryfall display name has
 //!    apostrophe / quote / set-symbol punctuation we'd otherwise
 //!    miss-encode.
 //!
@@ -58,7 +58,7 @@ pub enum CardImage {
     },
     /// Token (Clue / Treasure / Food / Blood / Bird / Citizen /
     /// Faerie / Giant). Fetched via Scryfall's search endpoint
-    /// (`q=is:token+t:<name>`) since `cards/named?exact=Clue` 404s â€”
+    /// (`q=is:token+t:<name>`) since `cards/named?exact=Clue` 404s --
     /// "Clue" isn't a card name, it's a token type. Saved under
     /// `cards/<name>.png` so the runtime asset loader serves it
     /// when `Effect::CreateToken` adds a new token to the
@@ -88,7 +88,7 @@ impl CardImage {
     /// Whether the prefetcher should skip this image silently because
     /// it's not a real Scryfall printing. Tokens are *real* on
     /// Scryfall (just queried via `is:token`), so they aren't
-    /// fictional â€” the cardback placeholder is reserved for
+    /// fictional -- the cardback placeholder is reserved for
     /// genuinely-invented cards.
     fn is_fictional(&self) -> bool {
         match self {
@@ -100,8 +100,8 @@ impl CardImage {
 }
 
 /// Card names that don't exist on Scryfall and should be skipped by
-/// the prefetcher. Engine-invented MDFCs only â€” tokens are now
-/// fetched via the real Scryfall token-search path (`is:token+t:â€¦`)
+/// the prefetcher. Engine-invented MDFCs only -- tokens are now
+/// fetched via the real Scryfall token-search path (`is:token+t:...`)
 /// in [`download_token_image`].
 const FICTIONAL_CARDS: &[&str] = &[
     "Sundering Eruption",
@@ -120,7 +120,7 @@ fn is_fictional(name: &str) -> bool {
 
 /// Ensure card images exist locally for every entry in `specs`.
 /// Blocks until done. Idempotent: existing files are skipped, fresh
-/// downloads are rate-limited to â‰¤10 req/s per Scryfall's guidance.
+/// downloads are rate-limited (and retried with backoff on HTTP 429) per Scryfall's guidance.
 ///
 /// Cards with no Scryfall art — engine-invented synthesized cards, MDFC
 /// backs that 404, etc. — get a generated **white card carrying the
@@ -128,9 +128,49 @@ fn is_fictional(name: &str) -> bool {
 /// something to serve and doesn't spam `Path not found`. These are a few
 /// KB each (vs. the 10 MB cardback copy this used to stamp, which bloated
 /// `cards/` by tens of GB).
+/// Manifest (under `assets/cards/`) listing the stored filenames of cards
+/// Scryfall has no fetchable art for, so the prefetcher skips them on
+/// subsequent runs. Delete it to force a re-check (e.g. after a card is
+/// added to Scryfall).
+const UNAVAILABLE_MANIFEST: &str = ".unavailable.txt";
+
+/// Load the negative-cache manifest into a set of filenames. Missing /
+/// unreadable file → empty set (every card gets re-checked).
+fn load_unavailable(cards_dir: &Path) -> std::collections::HashSet<String> {
+    fs::read_to_string(cards_dir.join(UNAVAILABLE_MANIFEST))
+        .map(|s| {
+            s.lines()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// Append `filename` to the negative-cache manifest. Best-effort: a write
+/// failure just means the card is re-checked next launch.
+fn mark_unavailable(cards_dir: &Path, filename: &str) {
+    use std::io::Write;
+    if let Ok(mut f) = fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(cards_dir.join(UNAVAILABLE_MANIFEST))
+    {
+        let _ = writeln!(f, "{filename}");
+    }
+}
+
 pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
     let cards_dir = assets_dir.join("cards");
     fs::create_dir_all(&cards_dir).expect("failed to create assets/cards/ directory");
+
+    // Negative cache: card names Scryfall has already told us it can't serve
+    // (404 / 422). Loaded from `cards/.unavailable.txt` so a doomed card
+    // isn't re-requested on every launch — that repeated, pointless traffic
+    // is what trips Scryfall's rate limiter (the 429 cascades). Keyed by the
+    // stored filename, which is unique per fetch.
+    let mut unavailable_set = load_unavailable(&cards_dir);
 
     // Tallies for a one-line summary instead of per-card spam. The audit
     // catalog contains ~3500 synthesised STX cards that aren't on Scryfall;
@@ -151,27 +191,33 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
             fictional += 1;
             continue;
         }
+        if unavailable_set.contains(&spec.filename()) {
+            // Known-missing from a previous run — skip the doomed request.
+            unavailable += 1;
+            continue;
+        }
 
-        println!("Downloading card image: {}â€¦", spec.label());
+        println!("Downloading card image: {}...", spec.label());
         match download_card_image(spec) {
             Ok(bytes) => {
                 fs::write(&path, &bytes).expect("failed to write card image");
                 println!("  Saved to {}", path.display());
                 downloaded += 1;
             }
-            Err(e) => {
-                // 404s are expected here: the audit catalog holds many
-                // synthesised STX cards with clean, real-looking names we
-                // can't pre-filter, so they only reveal themselves as "not
-                // found" on the first prefetch. No file is written — the
-                // runtime `CardPlaceholderReader` serves a placeholder for
-                // the missing path. A per-card error line here is the flood.
-                let is_404 = e
-                    .downcast_ref::<LookupError>()
-                    .is_some_and(|le| matches!(le, LookupError::NotFound));
-                if !is_404 {
-                    eprintln!("  Failed to download {}: {e}", spec.label());
-                }
+            // Definitively no art on Scryfall (404 or 422). Negative-cache it
+            // so future launches skip it; the runtime `CardPlaceholderReader`
+            // serves a name placeholder for the missing path. Suppressed from
+            // the log — these are expected for the synthesised audit cards.
+            Err(LookupError::NotFound) | Err(LookupError::Unavailable) => {
+                let fname = spec.filename();
+                mark_unavailable(&cards_dir, &fname);
+                unavailable_set.insert(fname);
+                unavailable += 1;
+            }
+            // Transient (network / persistent rate-limit). Not cached, so it's
+            // retried next launch; surface it since it may be actionable.
+            Err(LookupError::Other(msg)) => {
+                eprintln!("  Failed to download {}: {msg}", spec.label());
                 unavailable += 1;
             }
         }
@@ -380,7 +426,7 @@ pub fn card_back_face_asset_path(name: &str) -> String {
     format!("cards/{}", card_back_face_filename(name))
 }
 
-fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
     match spec {
         CardImage::Token { name } => download_token_image(name),
         spec => {
@@ -392,18 +438,18 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, Box<dyn std::error::
                 CardImage::Token { .. } => unreachable!("handled above"),
             };
             match try_lookup("exact", lookup_name, face_param) {
-                Ok(bytes) => Ok(bytes),
-                Err(LookupError::NotFound) => {
-                    try_lookup("fuzzy", lookup_name, face_param).map_err(Into::into)
-                }
-                Err(e) => Err(e.into()),
+                // Only an exact 404 is worth a fuzzy retry. A 422
+                // (`Unavailable`, e.g. no back face) won't be fixed by
+                // fuzzing the name, so don't spend a second request on it.
+                Err(LookupError::NotFound) => try_lookup("fuzzy", lookup_name, face_param),
+                other => other,
             }
         }
     }
 }
 
 /// Tokens (Clue / Treasure / Bird / etc.) aren't card names on
-/// Scryfall â€” they're identified by `is:token` plus a type filter.
+/// Scryfall -- they're identified by `is:token` plus a type filter.
 /// Two-step fetch:
 ///
 /// 1. `cards/search?q=is%3Atoken+t%3A<name>` returns a JSON list of
@@ -412,33 +458,41 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, Box<dyn std::error::
 ///    download the actual image bytes.
 ///
 /// Scryfall returns the token regardless of which set it came from,
-/// so `unique=art` is plenty â€” we don't care about printing variants.
-fn download_token_image(token_name: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+/// so `unique=art` is plenty -- we don't care about printing variants.
+fn download_token_image(token_name: &str) -> Result<Vec<u8>, LookupError> {
     let search_url = format!(
         "https://api.scryfall.com/cards/search?unique=art&q=is%3Atoken+t%3A{}",
         urlenccode(token_name),
     );
-    let body = ureq::get(&search_url)
-        .call()?
-        .into_body()
-        .read_to_string()?;
-    let parsed: serde_json::Value = serde_json::from_str(&body)?;
+    let body = scryfall_get_bytes(&search_url)?;
+    let parsed: serde_json::Value =
+        serde_json::from_slice(&body).map_err(|e| LookupError::Other(e.to_string()))?;
+    // No printing for this token type — treat as unavailable (placeholder),
+    // not a transient error, so it's negative-cached.
     let first = parsed["data"]
         .as_array()
         .and_then(|a| a.first())
-        .ok_or_else(|| format!("no token result for {token_name:?}"))?;
+        .ok_or(LookupError::Unavailable)?;
     let img_url = first["image_uris"]["png"]
         .as_str()
         .or_else(|| first["image_uris"]["large"].as_str())
         .or_else(|| first["image_uris"]["normal"].as_str())
-        .ok_or_else(|| format!("token {token_name:?} has no image_uris"))?;
-    let bytes = ureq::get(img_url).call()?.into_body().read_to_vec()?;
-    Ok(bytes)
+        .ok_or(LookupError::Unavailable)?;
+    scryfall_get_bytes(img_url)
 }
 
 #[derive(Debug)]
 enum LookupError {
+    /// HTTP 404 — the card name isn't on Scryfall. The caller may retry with
+    /// a fuzzy match before giving up.
     NotFound,
+    /// HTTP 4xx other than 404 (chiefly 422 — e.g. asking for the back face
+    /// of a single-faced or invented card). The request can't be served;
+    /// don't fuzzy-retry. Like `NotFound`, this is a *definitive* "no art",
+    /// so the prefetcher negative-caches it.
+    Unavailable,
+    /// Transient failure (network error, or a 429 / 5xx that persisted past
+    /// the retry budget). Not negative-cached — retried on the next launch.
     Other(String),
 }
 
@@ -446,6 +500,7 @@ impl std::fmt::Display for LookupError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LookupError::NotFound => write!(f, "not found on Scryfall"),
+            LookupError::Unavailable => write!(f, "no fetchable image on Scryfall"),
             LookupError::Other(msg) => write!(f, "{msg}"),
         }
     }
@@ -462,24 +517,68 @@ fn try_lookup(
         "https://api.scryfall.com/cards/named?{matcher}={}&format=image&version=png{face_param}",
         urlenccode(lookup_name),
     );
-    let response = match ureq::get(&url).call() {
-        Ok(r) => r,
-        // ureq reports 404 as a body-bearing status error; bubble that
-        // out as `NotFound` so the caller can decide whether to retry
-        // with `fuzzy`. All other errors (network, 5xx, parse failure)
-        // are terminal.
-        Err(err) => {
-            let msg = err.to_string();
-            if msg.contains("status: 404") || msg.contains("404 Not Found") {
-                return Err(LookupError::NotFound);
+    scryfall_get_bytes(&url)
+}
+
+/// Identify the client to Scryfall. Their API guidelines ask every caller to
+/// send a descriptive `User-Agent` (anonymous traffic is rate-limited more
+/// aggressively, which is the usual source of the 429 cascades).
+const SCRYFALL_USER_AGENT: &str =
+    concat!("Crabomination/", env!("CARGO_PKG_VERSION"), " (card-image prefetch)");
+
+/// How many times to retry a single request that comes back rate-limited
+/// (HTTP 429) or with a transient 5xx before giving up on that card. Kept
+/// small so a persistently-limited card doesn't stall startup (3 tries =
+/// 0.5+1+2 = 3.5s); the negative cache stops doomed cards being re-requested
+/// at all on later launches, which is what actually relieves the rate limit.
+const MAX_RATE_LIMIT_RETRIES: u32 = 3;
+
+/// GET `url` from Scryfall and return the response body bytes, sending the
+/// required identifying headers and retrying with exponential backoff on a
+/// 429 (rate limit) or 5xx (transient server error). A 404 maps to
+/// `NotFound` so the caller can fall back to a fuzzy lookup; other errors are
+/// terminal. Without the retry a single 429 used to fail every remaining card
+/// in the batch — Scryfall rate-limits the *whole* run once it trips.
+fn scryfall_get_bytes(url: &str) -> Result<Vec<u8>, LookupError> {
+    let mut attempt = 0u32;
+    loop {
+        match ureq::get(url)
+            .header("User-Agent", SCRYFALL_USER_AGENT)
+            .header("Accept", "*/*")
+            .call()
+        {
+            Ok(response) => {
+                return response
+                    .into_body()
+                    .read_to_vec()
+                    .map_err(|e| LookupError::Other(e.to_string()));
             }
-            return Err(LookupError::Other(msg));
+            Err(ureq::Error::StatusCode(404)) => return Err(LookupError::NotFound),
+            // 429 / 5xx — transient. Back off and retry within the budget;
+            // give up as `Other` (not negative-cached) once exhausted.
+            Err(ureq::Error::StatusCode(code)) if code == 429 || (500..=599).contains(&code) => {
+                if attempt >= MAX_RATE_LIMIT_RETRIES {
+                    return Err(LookupError::Other(format!(
+                        "http status: {code} (persisted past {MAX_RATE_LIMIT_RETRIES} retries)"
+                    )));
+                }
+                attempt += 1;
+                // 0.5s, 1s, 2s — gives Scryfall's limiter time to refill.
+                let wait = Duration::from_millis(500u64 << (attempt - 1));
+                eprintln!(
+                    "  HTTP {code} (rate limited); retry {attempt}/{MAX_RATE_LIMIT_RETRIES} after {}ms",
+                    wait.as_millis()
+                );
+                thread::sleep(wait);
+            }
+            // Any other 4xx (notably 422 — no back face, malformed request):
+            // the request can't be served, so it's definitively unavailable.
+            Err(ureq::Error::StatusCode(code)) if (400..=499).contains(&code) => {
+                return Err(LookupError::Unavailable);
+            }
+            Err(e) => return Err(LookupError::Other(e.to_string())),
         }
-    };
-    response
-        .into_body()
-        .read_to_vec()
-        .map_err(|e| LookupError::Other(e.to_string()))
+    }
 }
 
 /// Percent-encode a card name for use in a Scryfall URL query parameter.
@@ -621,6 +720,31 @@ mod tests {
             "fictional card must NOT get a placeholder file on disk: {}",
             path.display(),
         );
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn unavailable_manifest_round_trips() {
+        use std::fs;
+        let tmp = std::env::temp_dir().join(format!(
+            "crab-scryfall-unavail-{}",
+            std::process::id(),
+        ));
+        let cards = tmp.join("cards");
+        let _ = fs::remove_dir_all(&tmp);
+        fs::create_dir_all(&cards).expect("temp setup");
+
+        // Empty / missing manifest → empty set.
+        assert!(load_unavailable(&cards).is_empty());
+
+        mark_unavailable(&cards, "strixhaven_spawner.png");
+        mark_unavailable(&cards, "lightning_bolt_back.png");
+        // Re-loading sees both entries, regardless of order.
+        let set = load_unavailable(&cards);
+        assert!(set.contains("strixhaven_spawner.png"));
+        assert!(set.contains("lightning_bolt_back.png"));
+        assert_eq!(set.len(), 2);
+
         let _ = fs::remove_dir_all(&tmp);
     }
 

@@ -223,6 +223,25 @@ pub struct GameState {
     pub(crate) attacking: Vec<Attack>,
     /// Blocker → attacker mapping for the current combat.
     pub(crate) block_map: HashMap<CardId, CardId>,
+    /// CR 510.1c — the active player's chosen blocker order for each attacker
+    /// that has multiple blockers, gathered (and cached) before combat damage
+    /// is applied so the choice can suspend for a `wants_ui` player. Read by
+    /// `resolve_combat_damage_with_filter`; reset per damage step and cleared
+    /// at combat end. `#[serde(skip)]` — transient, like `pending_decision`'s
+    /// resume context (a mid-combat snapshot can't resume anyway).
+    #[serde(skip, default)]
+    pub(crate) combat_damage_order: HashMap<CardId, Vec<CardId>>,
+    /// CR 510.1c-d — the active player's chosen combat-damage assignment
+    /// `(blocker, amount)` for each multi-blocker attacker. Gathered alongside
+    /// `combat_damage_order`. `#[serde(skip)]` for the same reason.
+    #[serde(skip, default)]
+    pub(crate) combat_damage_assignment: HashMap<CardId, Vec<(CardId, u32)>>,
+    /// Which damage step (`FirstStrikeDamage` / `CombatDamage`) the cached
+    /// combat-damage choices above belong to. Lets the gather pass reset the
+    /// caches once when moving from the first-strike step to the regular step,
+    /// without wiping them on a mid-step decision resume.
+    #[serde(skip, default)]
+    pub(crate) combat_damage_plan_step: Option<TurnStep>,
     /// Set to true once `declare_blockers` has been called during the current DeclareBlockers step.
     pub(crate) blockers_declared: bool,
     /// Skip the draw on the very first turn (turn 1, first player).
@@ -547,6 +566,9 @@ impl Clone for GameState {
             next_id: self.next_id,
             attacking: self.attacking.clone(),
             block_map: self.block_map.clone(),
+            combat_damage_order: self.combat_damage_order.clone(),
+            combat_damage_assignment: self.combat_damage_assignment.clone(),
+            combat_damage_plan_step: self.combat_damage_plan_step,
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
@@ -624,6 +646,9 @@ impl GameState {
             next_id: 1,
             attacking: Vec::new(),
             block_map: HashMap::new(),
+            combat_damage_order: HashMap::new(),
+            combat_damage_assignment: HashMap::new(),
+            combat_damage_plan_step: None,
             blockers_declared: false,
             // Multiplayer (3+) doesn't skip the first draw — only the 2-player
             // starting player does.
@@ -4328,6 +4353,62 @@ impl GameState {
                 self.push_pending_trigger(pending, target);
                 self.drain_trigger_queue(remaining);
                 vec![]
+            }
+            ResumeContext::CleanupDiscard { player } => {
+                // CR 514.1 — apply the player's chosen discards, then resume
+                // the rest of cleanup and the step advance.
+                let ids = match &answer {
+                    DecisionAnswer::Discard(ids) => ids.clone(),
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                };
+                let mut evs = Vec::new();
+                for id in ids {
+                    // CR 514.1 — discard down to, never past, the maximum.
+                    // Once the hand is back at the limit, ignore any further
+                    // ids so a buggy/hostile client can't force an
+                    // over-discard with an oversized answer.
+                    let over = self.players[player]
+                        .max_hand_size
+                        .is_some_and(|max| self.players[player].hand.len() > max);
+                    if !over {
+                        break;
+                    }
+                    if self.players[player].hand.iter().any(|c| c.id == id) {
+                        self.discard_card(player, id, &mut evs);
+                    }
+                }
+                if !evs.is_empty() {
+                    self.dispatch_triggers_for_events(&evs);
+                }
+                // Under-discard (the answer pitched too few): re-pose the
+                // decision until the hand is back at the maximum.
+                if let Some(max) = self.players[player].max_hand_size
+                    && self.players[player].hand.len() > max
+                {
+                    let excess = (self.players[player].hand.len() - max) as u32;
+                    self.set_cleanup_discard_decision(player, excess);
+                    return Ok(evs);
+                }
+                self.finish_cleanup();
+                return self.advance_step(evs);
+            }
+            ResumeContext::CombatDamage { player: _, attacker, kind } => {
+                // CR 510.1c-d — cache the answered ordering/assignment choice,
+                // then re-enter the current damage step. It re-runs the (now
+                // cached) gather and either suspends on the next choice or
+                // applies all combat damage. Mirrors the pass_priority combat
+                // arms (give priority + dispatch triggers) on completion.
+                self.apply_combat_decision_answer(attacker, kind, &answer);
+                let evs = match self.step {
+                    TurnStep::FirstStrikeDamage => self.resolve_first_strike_damage()?,
+                    TurnStep::CombatDamage => self.resolve_combat()?,
+                    _ => Vec::new(),
+                };
+                if self.pending_decision.is_none() {
+                    self.give_priority_to_active();
+                    self.dispatch_triggers_for_events(&evs);
+                }
+                return Ok(evs);
             }
         };
         let mut sba = self.check_state_based_actions();

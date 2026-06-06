@@ -1613,8 +1613,8 @@ fn triskaidekaphile_etb_draws_a_card_and_lifts_max_hand_size() {
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::triskaidekaphile());
     let hand_before = g.players[0].hand.len();
-    let max_before = g.players[0].no_maximum_hand_size;
-    assert!(!max_before, "default max-hand-size flag is false");
+    let max_before = g.players[0].max_hand_size;
+    assert_eq!(max_before, Some(7), "default max hand size is seven");
 
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(1);
@@ -1624,8 +1624,8 @@ fn triskaidekaphile_etb_draws_a_card_and_lifts_max_hand_size() {
     .expect("Triskaidekaphile castable for {1}{U}{U}");
     drain_stack(&mut g);
 
-    assert!(g.players[0].no_maximum_hand_size,
-        "Triskaidekaphile ETB should flip the no-max-hand-size flag");
+    assert_eq!(g.players[0].max_hand_size, None,
+        "Triskaidekaphile ETB should remove the maximum hand size");
     // Hand: -1 (cast) + 1 (ETB draw) = 0 net.
     assert_eq!(g.players[0].hand.len(), hand_before);
     assert!(g.battlefield.iter().any(|c| c.id == id),

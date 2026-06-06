@@ -695,6 +695,77 @@ fn cr_510_1c_trample_overflow_to_player() {
     assert_eq!(g.players[1].life, p1_life - 2, "CR 510.1c: 2 damage tramples over");
 }
 
+/// CR 510.1c-d — a `wants_ui` attacking player chooses, via interactive
+/// `pending_decision`s, the order its blockers take damage and how its power
+/// is divided. Here a 3/3 splits across two 2/2 blockers: by ordering the
+/// second-declared blocker first, the player kills *it* (and leaves the
+/// first alive), which the engine's default CardId-order split would not do.
+#[test]
+fn cr_510_1c_ui_player_orders_and_assigns_combat_damage() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::decision::{Decision, DecisionAnswer};
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let beater = CardDefinition {
+        name: "Three Three",
+        card_types: vec![CardType::Creature],
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    };
+    let atk = g.add_card_to_battlefield(0, beater);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // lower CardId
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // higher CardId
+    g.clear_sickness(atk);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)]))
+        .expect("double block");
+    drain_stack(&mut g);
+
+    // Pass priority into the combat damage step — it suspends on the order
+    // decision instead of auto-splitting.
+    while g.pending_decision.is_none() {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+        assert!(!g.is_game_over());
+    }
+    let pd = g.pending_decision.as_ref().expect("combat suspends on ordering");
+    let Decision::CombatDamageOrder { attacker, blockers } = &pd.decision else {
+        panic!("expected CombatDamageOrder, got {:?}", pd.decision);
+    };
+    assert_eq!(*attacker, atk);
+    assert_eq!(blockers.len(), 2);
+    // Order b2 (declared second) ahead of b1 so it takes lethal first.
+    g.submit_decision(DecisionAnswer::DamageOrder(vec![b2, b1]))
+        .expect("order accepted");
+
+    // Now it suspends on the assignment decision.
+    let pd = g.pending_decision.as_ref().expect("combat suspends on assignment");
+    let Decision::AssignCombatDamage { attacker_power, blockers, .. } = &pd.decision else {
+        panic!("expected AssignCombatDamage, got {:?}", pd.decision);
+    };
+    assert_eq!(*attacker_power, 3);
+    assert_eq!(blockers.first().map(|(id, _, _)| *id), Some(b2),
+        "the chosen order puts b2 first");
+    // Assign lethal (2) to b2, the remaining 1 to b1.
+    g.submit_decision(DecisionAnswer::CombatDamageAssignment(vec![(b2, 2), (b1, 1)]))
+        .expect("assignment accepted");
+    drain_stack(&mut g);
+
+    assert!(g.pending_decision.is_none(), "combat fully resolved");
+    assert!(g.battlefield_find(b2).is_none(), "b2 was assigned lethal and died");
+    assert!(g.battlefield_find(b1).is_some(), "b1 only took 1 and survived");
+}
+
 /// CR 702.85b (Cascade): the exile walk stops at the first nonland card
 /// with mana value *strictly less* than the cascading spell's. A card whose
 /// MV equals the cascade MV is not a valid hit — it's exiled past and

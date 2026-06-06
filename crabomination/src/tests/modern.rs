@@ -27420,7 +27420,7 @@ fn profts_eidetic_memory_etb_draws_and_grants_no_max_hand() {
     g.fire_self_etb_triggers(id, 0);
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "ETB draws one");
-    assert!(g.players[0].no_maximum_hand_size, "no maximum hand size");
+    assert_eq!(g.players[0].max_hand_size, None, "no maximum hand size");
 }
 
 #[test]

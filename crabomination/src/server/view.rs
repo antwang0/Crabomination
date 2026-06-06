@@ -315,7 +315,7 @@ fn project_player(
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
         spells_cast_this_turn: player.spells_cast_this_turn,
-        no_maximum_hand_size: player.no_maximum_hand_size,
+        max_hand_size: player.max_hand_size,
         // Command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since
         // it already carries name / cost / types / target hints,

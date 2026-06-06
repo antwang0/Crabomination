@@ -717,6 +717,11 @@ impl GameState {
             kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
         };
         let mut events = self.resolve_combat_damage_with_filter(&computed, fs_or_ds, fs_or_ds)?;
+        // Suspended on a `wants_ui` player's combat-damage choice — no damage
+        // has been dealt yet; `submit_decision` re-enters this step.
+        if self.pending_decision.is_some() {
+            return Ok(events);
+        }
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
         events.push(GameEvent::FirstStrikeDamageResolved);
@@ -735,11 +740,18 @@ impl GameState {
         let mut events =
             self.resolve_combat_damage_with_filter(&computed, regular_or_ds, regular_or_ds)?;
 
+        // Suspended on a `wants_ui` player's combat-damage choice — no damage
+        // dealt yet; combat is not torn down. `submit_decision` re-enters.
+        if self.pending_decision.is_some() {
+            return Ok(events);
+        }
+
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
 
         self.attacking.clear();
         self.block_map.clear();
+        self.clear_combat_damage_plan();
         self.blockers_declared = false;
         // CR 702.39 — provoke's "block this combat" requirement ends here.
         for c in &mut self.battlefield {
@@ -763,18 +775,14 @@ impl GameState {
         })
     }
 
-    /// CR 510.1c — ask the attacking player's decider to order the blockers
-    /// for combat-damage assignment. `default_order` is the engine's
-    /// deterministic fallback (CardId order). The decider's answer reorders
-    /// the listed ids; any id it omits is appended in its default position,
-    /// and unknown ids are ignored — so a partial or empty answer is always
-    /// legal and `AutoDecider` keeps `default_order`.
-    fn order_combat_blockers(
-        &mut self,
+    /// CR 510.1c — build the `Decision::CombatDamageOrder` asking the
+    /// attacking player to order `default_order` (deterministic CardId order)
+    /// for combat-damage assignment.
+    fn combat_damage_order_decision(
+        &self,
         attacker: CardId,
-        default_order: Vec<CardId>,
-    ) -> Vec<CardId> {
-        use crate::decision::{Decision, DecisionAnswer};
+        default_order: &[CardId],
+    ) -> crate::decision::Decision {
         let blockers: Vec<(CardId, String)> = default_order
             .iter()
             .map(|id| {
@@ -785,19 +793,29 @@ impl GameState {
                 (*id, name)
             })
             .collect();
-        let answer = self
-            .decider
-            .decide(&Decision::CombatDamageOrder { attacker, blockers });
+        crate::decision::Decision::CombatDamageOrder { attacker, blockers }
+    }
+
+    /// Validate a `DamageOrder` answer into a concrete blocker order. Ids the
+    /// answer omits are appended in their default position, and unknown ids
+    /// are ignored — so a partial or empty answer is always legal and keeps
+    /// `default_order`.
+    fn resolve_damage_order(
+        &self,
+        default_order: &[CardId],
+        answer: &crate::decision::DecisionAnswer,
+    ) -> Vec<CardId> {
+        use crate::decision::DecisionAnswer;
         let DecisionAnswer::DamageOrder(chosen) = answer else {
-            return default_order;
+            return default_order.to_vec();
         };
         let mut ordered: Vec<CardId> = Vec::with_capacity(default_order.len());
-        for id in &chosen {
+        for id in chosen {
             if default_order.contains(id) && !ordered.contains(id) {
                 ordered.push(*id);
             }
         }
-        for id in &default_order {
+        for id in default_order {
             if !ordered.contains(id) {
                 ordered.push(*id);
             }
@@ -816,28 +834,30 @@ impl GameState {
     /// subject to CR 510.1c: a blocker may receive damage only after every
     /// earlier blocker has been assigned at least its lethal, and the total
     /// can't exceed `total_power`. A malformed answer falls back to default.
-    fn assign_combat_damage(
-        &mut self,
-        attacker: CardId,
+    fn default_damage_split(
+        &self,
         total_power: u32,
         lethals: &[(CardId, u32)],
     ) -> Vec<(CardId, u32)> {
-        use crate::decision::{Decision, DecisionAnswer};
-        let default_split = || {
-            let mut remaining = total_power;
-            lethals
-                .iter()
-                .map(|&(id, lethal)| {
-                    let a = lethal.min(remaining);
-                    remaining -= a;
-                    (id, a)
-                })
-                .collect::<Vec<_>>()
-        };
-        // No meaningful choice for a single blocker or zero power.
-        if lethals.len() <= 1 || total_power == 0 {
-            return default_split();
-        }
+        let mut remaining = total_power;
+        lethals
+            .iter()
+            .map(|&(id, lethal)| {
+                let a = lethal.min(remaining);
+                remaining -= a;
+                (id, a)
+            })
+            .collect()
+    }
+
+    /// Build the `Decision::AssignCombatDamage` for dividing `total_power`
+    /// among `lethals` (in assignment order).
+    fn assign_combat_damage_decision(
+        &self,
+        attacker: CardId,
+        total_power: u32,
+        lethals: &[(CardId, u32)],
+    ) -> crate::decision::Decision {
         let blockers: Vec<(CardId, String, u32)> = lethals
             .iter()
             .map(|&(id, lethal)| {
@@ -848,16 +868,27 @@ impl GameState {
                 (id, name, lethal)
             })
             .collect();
-        let answer = self.decider.decide(&Decision::AssignCombatDamage {
+        crate::decision::Decision::AssignCombatDamage {
             attacker,
             attacker_power: total_power,
             blockers,
-        });
+        }
+    }
+
+    /// Validate a `CombatDamageAssignment` answer into a concrete split. An
+    /// empty or rule-violating answer falls back to `default_damage_split`.
+    fn resolve_damage_assignment(
+        &self,
+        total_power: u32,
+        lethals: &[(CardId, u32)],
+        answer: &crate::decision::DecisionAnswer,
+    ) -> Vec<(CardId, u32)> {
+        use crate::decision::DecisionAnswer;
         let DecisionAnswer::CombatDamageAssignment(pairs) = answer else {
-            return default_split();
+            return self.default_damage_split(total_power, lethals);
         };
         if pairs.is_empty() {
-            return default_split();
+            return self.default_damage_split(total_power, lethals);
         }
         // Re-key the answer into blocker order (missing entries = 0).
         let amounts: Vec<u32> = lethals
@@ -872,14 +903,14 @@ impl GameState {
             .collect();
         let assigned: u32 = amounts.iter().sum();
         if assigned > total_power {
-            return default_split();
+            return self.default_damage_split(total_power, lethals);
         }
         // Ordering rule: once a blocker is under-assigned, no later blocker
         // (nor trample-over) may receive damage.
         let mut earlier_all_lethal = true;
         for (i, &(_, lethal)) in lethals.iter().enumerate() {
             if !earlier_all_lethal && amounts[i] > 0 {
-                return default_split();
+                return self.default_damage_split(total_power, lethals);
             }
             if amounts[i] < lethal {
                 earlier_all_lethal = false;
@@ -887,9 +918,171 @@ impl GameState {
         }
         if total_power > assigned && !earlier_all_lethal {
             // A trample-over leftover requires every blocker to be at lethal.
-            return default_split();
+            return self.default_damage_split(total_power, lethals);
         }
         lethals.iter().map(|&(id, _)| id).zip(amounts).collect()
+    }
+
+    /// CR 510.1c-d — gather (and cache) the active player's combat-damage
+    /// ordering and assignment choices for every multi-blocker attacker,
+    /// before any damage is applied. Returns `true` if it suspended on a
+    /// `wants_ui` player's pending decision (the caller must return early and
+    /// re-enter the damage step after the answer); `false` once every choice
+    /// is settled. Pure w.r.t. the battlefield — only the decision caches and
+    /// `pending_decision` are written.
+    fn gather_combat_damage_decisions(
+        &mut self,
+        attacker_infos: &[AttackerInfo],
+        computed: &[ComputedPermanent],
+    ) -> bool {
+        use crate::game::types::{CombatDecisionKind, PendingDecision, ResumeContext};
+        // Reset the caches once when entering a new damage step (first-strike
+        // vs regular), but never on a mid-step decision resume.
+        if self.combat_damage_plan_step != Some(self.step) {
+            self.combat_damage_order.clear();
+            self.combat_damage_assignment.clear();
+            self.combat_damage_plan_step = Some(self.step);
+        }
+        let active = self.active_player_idx;
+        let wants_ui = self.players[active].wants_ui;
+        for atk in attacker_infos.iter().filter(|a| a.should_deal) {
+            let mut blocker_ids: Vec<CardId> = self
+                .block_map
+                .iter()
+                .filter(|(_, aid)| **aid == atk.id)
+                .map(|(&bid, _)| bid)
+                .collect();
+            blocker_ids.sort_by_key(|id| id.0);
+            if blocker_ids.len() <= 1 {
+                continue;
+            }
+
+            // 1) Blocker order (CR 510.1c).
+            if !self.combat_damage_order.contains_key(&atk.id) {
+                let decision = self.combat_damage_order_decision(atk.id, &blocker_ids);
+                if wants_ui {
+                    self.pending_decision = Some(PendingDecision {
+                        decision,
+                        resume: ResumeContext::CombatDamage {
+                            player: active,
+                            attacker: atk.id,
+                            kind: CombatDecisionKind::Order,
+                        },
+                    });
+                    return true;
+                }
+                let answer = self.decider.decide(&decision);
+                let order = self.resolve_damage_order(&blocker_ids, &answer);
+                self.combat_damage_order.insert(atk.id, order);
+            }
+            let order = self.combat_damage_order[&atk.id].clone();
+
+            // 2) Damage assignment across the ordered blockers (CR 510.1d).
+            if !self.combat_damage_assignment.contains_key(&atk.id) {
+                let total_power = if self.prevent_combat_damage_this_turn {
+                    0
+                } else {
+                    atk.power.max(0) as u32
+                };
+                let lethals = self.combat_lethals(atk.has_deathtouch, &order, computed);
+                // No meaningful choice with zero power — store the default.
+                if total_power == 0 {
+                    let split = self.default_damage_split(total_power, &lethals);
+                    self.combat_damage_assignment.insert(atk.id, split);
+                    continue;
+                }
+                let decision =
+                    self.assign_combat_damage_decision(atk.id, total_power, &lethals);
+                if wants_ui {
+                    self.pending_decision = Some(PendingDecision {
+                        decision,
+                        resume: ResumeContext::CombatDamage {
+                            player: active,
+                            attacker: atk.id,
+                            kind: CombatDecisionKind::Assign,
+                        },
+                    });
+                    return true;
+                }
+                let answer = self.decider.decide(&decision);
+                let split = self.resolve_damage_assignment(total_power, &lethals, &answer);
+                self.combat_damage_assignment.insert(atk.id, split);
+            }
+        }
+        false
+    }
+
+    /// Lethal damage required for each blocker in `order` (its toughness, or 1
+    /// under deathtouch per CR 702.2e). Blockers no longer on the battlefield
+    /// resolve to 0.
+    fn combat_lethals(
+        &self,
+        attacker_deathtouch: bool,
+        order: &[CardId],
+        computed: &[ComputedPermanent],
+    ) -> Vec<(CardId, u32)> {
+        order
+            .iter()
+            .map(|&bid| {
+                let tough = computed
+                    .iter()
+                    .find(|c| c.id == bid)
+                    .map(|c| c.toughness.max(0) as u32)
+                    .unwrap_or(0);
+                (bid, if attacker_deathtouch { 1 } else { tough })
+            })
+            .collect()
+    }
+
+    /// Validate and cache one combat-damage decision answered via
+    /// `submit_decision`, so the re-entered damage step finds it settled.
+    pub(crate) fn apply_combat_decision_answer(
+        &mut self,
+        attacker: CardId,
+        kind: crate::game::types::CombatDecisionKind,
+        answer: &crate::decision::DecisionAnswer,
+    ) {
+        use crate::game::types::CombatDecisionKind;
+        match kind {
+            CombatDecisionKind::Order => {
+                let mut default_order: Vec<CardId> = self
+                    .block_map
+                    .iter()
+                    .filter(|(_, aid)| **aid == attacker)
+                    .map(|(&bid, _)| bid)
+                    .collect();
+                default_order.sort_by_key(|id| id.0);
+                let order = self.resolve_damage_order(&default_order, answer);
+                self.combat_damage_order.insert(attacker, order);
+            }
+            CombatDecisionKind::Assign => {
+                let order = self
+                    .combat_damage_order
+                    .get(&attacker)
+                    .cloned()
+                    .unwrap_or_default();
+                let computed = self.compute_battlefield();
+                let atk_cp = computed.iter().find(|c| c.id == attacker);
+                let deathtouch = atk_cp
+                    .is_some_and(|c| c.keywords.contains(&Keyword::Deathtouch));
+                let power = atk_cp.map(|c| c.power).unwrap_or(0);
+                let total_power = if self.prevent_combat_damage_this_turn {
+                    0
+                } else {
+                    power.max(0) as u32
+                };
+                let lethals = self.combat_lethals(deathtouch, &order, &computed);
+                let split = self.resolve_damage_assignment(total_power, &lethals, answer);
+                self.combat_damage_assignment.insert(attacker, split);
+            }
+        }
+    }
+
+    /// Clear the cached combat-damage choices at the end of a combat phase.
+    pub(crate) fn clear_combat_damage_plan(&mut self) {
+        self.combat_damage_order.clear();
+        self.combat_damage_assignment.clear();
+        self.combat_damage_plan_step = None;
     }
 
     /// Core combat damage resolver. Each attacker has its own defending
@@ -938,6 +1131,18 @@ impl GameState {
             })
             .collect();
 
+        // PHASE 1 — gather the active player's combat-damage ordering and
+        // assignment choices for every multi-blocker attacker, before any
+        // damage is dealt. For a `wants_ui` player each choice surfaces as a
+        // `pending_decision` and this returns early; `submit_decision` then
+        // re-enters this damage step (which re-runs the now-cached gather and
+        // proceeds once every choice is settled). The choices are cached in
+        // `combat_damage_order` / `combat_damage_assignment` and read in the
+        // apply phase below.
+        if self.gather_combat_damage_decisions(&attacker_infos, computed) {
+            return Ok(vec![]);
+        }
+
         // CR 615.1 — "Prevent all combat damage this turn" (Owlin
         // Shieldmage, Holy Day, Constant Mists). When the global flag is
         // set, every combat damage assignment yields 0; lifelink scales
@@ -962,11 +1167,11 @@ impl GameState {
                 continue;
             }
 
-            // CR 510.1c: the attacking player chooses the order in which an
-            // attacker assigns combat damage to its multiple blockers. Start
-            // from a deterministic default (CardId = declaration-order proxy,
-            // so iteration isn't gated on HashMap order), then let the
-            // attacker's decider reorder via `Decision::CombatDamageOrder`.
+            // CR 510.1c: the attacking player chose the order in which an
+            // attacker assigns combat damage to its multiple blockers; that
+            // choice was gathered in PHASE 1 and cached. Start from the
+            // deterministic default (CardId = declaration-order proxy) and use
+            // the cached order when present.
             let mut blocker_ids: Vec<CardId> = self
                 .block_map
                 .iter()
@@ -974,8 +1179,10 @@ impl GameState {
                 .map(|(&bid, _)| bid)
                 .collect();
             blocker_ids.sort_by_key(|id| id.0);
-            if blocker_ids.len() > 1 {
-                blocker_ids = self.order_combat_blockers(atk.id, blocker_ids);
+            if blocker_ids.len() > 1
+                && let Some(order) = self.combat_damage_order.get(&atk.id)
+            {
+                blocker_ids = order.clone();
             }
 
             if blocker_ids.is_empty() {
@@ -1004,10 +1211,12 @@ impl GameState {
                     atk.power.max(0) as u32
                 };
                 // CR 510.1c-d — the attacking player divides combat damage
-                // among the blockers in the chosen order. Build the default
-                // lethal-to-each split, then let the controller override it
-                // (e.g. over-assign to a blocker to deny trample). The lethal
-                // for each is 1 under deathtouch (CR 702.2e).
+                // among the blockers in the chosen order; that choice was
+                // gathered in PHASE 1 and cached. Fall back to the default
+                // lethal-to-each split when there's no cached choice (single
+                // blocker, prevented, or a non-UI path that stored the
+                // default). The lethal for each is 1 under deathtouch (CR
+                // 702.2e).
                 let lethals: Vec<(CardId, u32)> = blocker_ids
                     .iter()
                     .map(|&bid| {
@@ -1017,7 +1226,11 @@ impl GameState {
                         (bid, if atk.has_deathtouch { 1 } else { tough })
                     })
                     .collect();
-                let assignment = self.assign_combat_damage(atk.id, total_power, &lethals);
+                let assignment = self
+                    .combat_damage_assignment
+                    .get(&atk.id)
+                    .cloned()
+                    .unwrap_or_else(|| self.default_damage_split(total_power, &lethals));
                 let mut lifelink_dealt = 0i32;
                 let mut assigned_to_blockers = 0u32;
 

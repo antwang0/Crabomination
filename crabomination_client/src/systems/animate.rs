@@ -75,6 +75,15 @@ const COMBAT_HOLD_PROGRESS: f32 = 0.32;
 /// is what visibly hits the icon.
 const COMBAT_STRIKE_PROGRESS: f32 = 0.85;
 
+/// Cap on how far (world units) a creature lunges toward its target. The
+/// defender's icon is most of the table away (~15 units), so without a cap
+/// even `COMBAT_HOLD_PROGRESS` would slide a declared attacker a third of the
+/// way across the board and park it there — reading as the card "hovering" in
+/// no-man's-land rather than leaning in to attack. Clamping the offset to a
+/// few card widths keeps the *direction* but turns the motion into a tidy
+/// lean / lunge that returns home after combat.
+const MAX_LUNGE_DISTANCE: f32 = CARD_WIDTH * 3.0;
+
 /// Drive the per-permanent [`CombatLurch`] from the latest view: pick a
 /// world-space target (the defending player's icon for attackers, the
 /// same icon for blockers but at a reduced distance), and set the
@@ -120,8 +129,12 @@ pub fn update_combat_lurch_targets(
         // lift-system pass, so the visual cost is negligible.
         let base = lift_q.get(entity).map(|l| l.base_translation).unwrap_or(Vec3::ZERO);
         // Keep Y at 0 so the attacker glides flat across the table
-        // rather than bobbing toward the icon's slightly-raised disc.
-        let target_offset = Vec3::new(icon.x - base.x, 0.0, icon.z - base.z);
+        // rather than bobbing toward the icon's slightly-raised disc, and
+        // clamp the distance so the card leans toward its target instead of
+        // drifting a third of the way across the board (see
+        // `MAX_LUNGE_DISTANCE`).
+        let target_offset =
+            Vec3::new(icon.x - base.x, 0.0, icon.z - base.z).clamp_length_max(MAX_LUNGE_DISTANCE);
 
         // On a damage step, only the creatures actually assigning damage
         // that step should lunge into contact — the others hold at

@@ -1473,7 +1473,17 @@ impl GameState {
             Effect::SetNoMaxHandSize { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
-                        self.players[p].no_maximum_hand_size = true;
+                        self.players[p].max_hand_size = None;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SetMaxHandSize { who, size } => {
+                let n = self.evaluate_value(size, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].max_hand_size = Some(n);
                     }
                 }
                 Ok(())

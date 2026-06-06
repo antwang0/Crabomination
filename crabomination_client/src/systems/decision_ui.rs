@@ -1359,6 +1359,47 @@ pub fn handle_confirm(
     }
 }
 
+/// Interim fallback for CR 510.1c-d combat-damage ordering / assignment.
+///
+/// The engine now surfaces these as `pending_decision`s for a `wants_ui`
+/// player, but the client doesn't render ordering / assignment modals yet.
+/// To avoid a soft-lock when one is posed for the local player, auto-submit
+/// the engine default — an empty answer, which keeps the default
+/// declaration-order, lethal-to-each split (exactly the pre-interactive
+/// behavior). The `Local` tracks the last auto-answered `(attacker, kind)` so
+/// each decision fires once despite the submit→new-view round-trip.
+///
+/// TODO: replace with real reorder + per-blocker assignment modals so a human
+/// can actually choose (the engine and bots already support it).
+pub fn auto_resolve_combat_damage_decisions(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut last: Local<Option<(CardId, u8)>>,
+) {
+    let Some(cv) = &view.0 else { *last = None; return; };
+    let pending = match &cv.pending_decision {
+        Some(pd) if pd.acting_player == cv.your_seat => pd,
+        _ => { *last = None; return; }
+    };
+    let combat = match pending.decision.as_ref() {
+        Some(DecisionWire::CombatDamageOrder { attacker, .. }) => {
+            Some(((*attacker, 0u8), DecisionAnswer::DamageOrder(vec![])))
+        }
+        Some(DecisionWire::AssignCombatDamage { attacker, .. }) => {
+            Some(((*attacker, 1u8), DecisionAnswer::CombatDamageAssignment(vec![])))
+        }
+        _ => None,
+    };
+    let Some((key, answer)) = combat else { *last = None; return; };
+    if *last == Some(key) {
+        return;
+    }
+    if let Some(outbox) = &outbox {
+        outbox.submit(GameAction::SubmitDecision(answer));
+    }
+    *last = Some(key);
+}
+
 /// Update the live "X / N selected" text in the PutOnLibrary banner.
 pub fn update_put_on_library_count_text(
     view: Res<CurrentView>,

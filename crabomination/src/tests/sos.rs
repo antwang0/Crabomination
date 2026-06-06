@@ -2313,10 +2313,10 @@ fn wisdom_of_ages_returns_all_instants_and_sorceries_from_graveyard() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == isl));
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bears));
     // Push (modern_decks): the new `Effect::SetNoMaxHandSize` clause
-    // flips `Player.no_maximum_hand_size` so the cleanup-step CR 514.1
+    // clears `Player.max_hand_size` so the cleanup-step CR 514.1
     // enforcement is skipped for the rest of the game.
-    assert!(g.players[0].no_maximum_hand_size,
-        "Wisdom of Ages sets the no-maximum-hand-size flag on the caster");
+    assert_eq!(g.players[0].max_hand_size, None,
+        "Wisdom of Ages removes the maximum hand size on the caster");
 }
 
 #[test]
@@ -2334,7 +2334,7 @@ fn wisdom_of_ages_lets_caster_keep_more_than_seven_cards() {
     })
     .expect("Wisdom of Ages castable");
     drain_stack(&mut g);
-    assert!(g.players[0].no_maximum_hand_size);
+    assert_eq!(g.players[0].max_hand_size, None);
 
     // Pile up a 10-card hand and run the cleanup step.
     for _ in 0..10 {

@@ -81,12 +81,26 @@ impl GameState {
             self.blockers_declared = true;
         }
 
-        let mut events = vec![];
+        let events = vec![];
 
-        if self.step == TurnStep::Cleanup {
-            self.do_cleanup();
+        if self.step == TurnStep::Cleanup && self.do_cleanup() {
+            // Suspended on the cleanup discard decision: a UI player must
+            // choose which cards to pitch. `submit_decision` resumes
+            // `finish_cleanup` + the step advance once it's answered.
+            return Ok(events);
         }
 
+        self.advance_step(events)
+    }
+
+    /// Compute and enter the step following the current one, running its
+    /// turn-based entry actions (untap, draw, combat resolution, step
+    /// triggers, …). Split out of `pass_priority` so the cleanup discard
+    /// resume path can re-run it after a suspended discard is answered.
+    pub(crate) fn advance_step(
+        &mut self,
+        mut events: Vec<GameEvent>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         // Skip FirstStrikeDamage if no first/double-strike creatures are in combat.
         let mut next = self.step.next();
         if next == TurnStep::FirstStrikeDamage && !self.has_first_strikers() {
@@ -188,12 +202,18 @@ impl GameState {
             TurnStep::FirstStrikeDamage => {
                 let mut fs_events = self.resolve_first_strike_damage()?;
                 events.append(&mut fs_events);
-                self.give_priority_to_active();
+                // Combat damage may suspend on a `wants_ui` player's ordering /
+                // assignment choice; leave priority alone until it's answered.
+                if self.pending_decision.is_none() {
+                    self.give_priority_to_active();
+                }
             }
             TurnStep::CombatDamage => {
                 let mut combat_events = self.resolve_combat()?;
                 events.append(&mut combat_events);
-                self.give_priority_to_active();
+                if self.pending_decision.is_none() {
+                    self.give_priority_to_active();
+                }
             }
             TurnStep::End => {
                 // CR 724 — the monarch draws a card at the beginning of
@@ -1015,41 +1035,75 @@ impl GameState {
         }
     }
 
-    pub(crate) fn do_cleanup(&mut self) {
+    /// CR 514 cleanup step. Returns `true` if it suspended on a pending
+    /// decision (a `wants_ui` player choosing which cards to discard down to
+    /// maximum hand size) — in which case the caller must return early and
+    /// `submit_decision` will resume `finish_cleanup` + the step advance once
+    /// the discard is answered. Returns `false` when cleanup completed
+    /// synchronously.
+    pub(crate) fn do_cleanup(&mut self) -> bool {
         // CR 514.1 — First, if the active player's hand contains more cards
         // than their maximum hand size (normally seven), they discard
         // enough cards to reduce their hand size to that number. This
         // turn-based action doesn't use the stack.
         //
-        // Implementation: deterministic-first-card discard from the active
-        // player's hand, routed through the centralized `discard_card` path
-        // so the discard fires `CardDiscarded` (CR 514.3 lets discard-
-        // matters triggers fire from cleanup) and honors Madness (CR
-        // 702.35). The bot harness's AutoDecider has no policy here (and
-        // turn-based actions can't suspend through the stack), so we dump
-        // the head of the hand vector. A future UI surfacing could ask the
-        // player which cards to discard via `Decision::Discard`.
-        const MAX_HAND_SIZE: usize = 7;
+        // For a `wants_ui` player we surface an interactive
+        // `Decision::Discard` so the player picks which cards to pitch (and
+        // suspend). For non-UI seats (tests, the bot's AutoDecider fallback)
+        // we keep the deterministic first-card dump, routed through the
+        // centralized `discard_card` path so the discard fires
+        // `CardDiscarded` (CR 514.3 lets discard-matters triggers fire from
+        // cleanup) and honors Madness (CR 702.35).
         let active = self.active_player_idx;
         // CR 402.2 — "Each player's maximum hand size is normally seven
-        // cards. A player may have any number of cards in their hand,
-        // but as part of their cleanup step, the player must discard
-        // excess cards down to the maximum hand size." Wisdom of Ages,
-        // Reliquary Tower, etc. set `Player.no_maximum_hand_size = true`
-        // which skips this discard-down step entirely.
-        if !self.players[active].no_maximum_hand_size {
-            let mut cleanup_events = Vec::new();
-            while self.players[active].hand.len() > MAX_HAND_SIZE {
-                let Some(cid) = self.players[active].hand.first().map(|c| c.id) else {
-                    break;
-                };
-                self.discard_card(active, cid, &mut cleanup_events);
-            }
-            if !cleanup_events.is_empty() {
-                self.dispatch_triggers_for_events(&cleanup_events);
+        // cards. A player may have any number of cards in their hand, but as
+        // part of their cleanup step, the player must discard excess cards
+        // down to the maximum hand size." `Player.max_hand_size` is `None`
+        // for "no maximum hand size" effects (skip entirely) and `Some(n)`
+        // otherwise (discard down to `n`).
+        if let Some(max) = self.players[active].max_hand_size {
+            if self.players[active].hand.len() > max {
+                if self.players[active].wants_ui {
+                    let excess = (self.players[active].hand.len() - max) as u32;
+                    self.set_cleanup_discard_decision(active, excess);
+                    return true;
+                }
+                let mut cleanup_events = Vec::new();
+                while self.players[active].hand.len() > max {
+                    let Some(cid) = self.players[active].hand.first().map(|c| c.id) else {
+                        break;
+                    };
+                    self.discard_card(active, cid, &mut cleanup_events);
+                }
+                if !cleanup_events.is_empty() {
+                    self.dispatch_triggers_for_events(&cleanup_events);
+                }
             }
         }
 
+        self.finish_cleanup();
+        false
+    }
+
+    /// Pose the CR 514.1 cleanup discard-down as an interactive decision:
+    /// the active player picks exactly `excess` cards from hand to discard.
+    pub(crate) fn set_cleanup_discard_decision(&mut self, player: usize, excess: u32) {
+        let hand: Vec<(CardId, String)> = self.players[player]
+            .hand
+            .iter()
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        self.pending_decision = Some(crate::game::types::PendingDecision {
+            decision: Decision::Discard { player, count: excess, hand },
+            resume: crate::game::types::ResumeContext::CleanupDiscard { player },
+        });
+    }
+
+    /// CR 514.2 onward — the part of cleanup that runs after the discard-down
+    /// step (which may have suspended for a UI player). Clears "until end of
+    /// turn" state, removes marked damage, advances to the next player's turn,
+    /// and hands them priority.
+    pub(crate) fn finish_cleanup(&mut self) {
         // CR 514.2 — Second, the following actions happen simultaneously:
         // all damage marked on permanents is removed and all "until end of
         // turn" and "this turn" effects end.

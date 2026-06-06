@@ -981,8 +981,8 @@ pub fn together_as_one() -> CardDefinition {
 /// ✅ (push: modern_decks) — all three printed clauses now ship.
 /// (a) Mass IS-gy-to-hand return via `Selector::CardsInZone(Graveyard,
 /// Instant | Sorcery)`. (b) "No max hand size" via the
-/// `Effect::SetNoMaxHandSize` primitive — backed by
-/// `Player.no_maximum_hand_size: bool`, honored by `do_cleanup`'s
+/// `Effect::SetNoMaxHandSize` primitive — clears `Player.max_hand_size`
+/// (`Option<usize>`, `None` = no maximum), honored by `do_cleanup`'s
 /// CR 514.1 discard-down enforcement. (c) "Exile Wisdom of Ages" now
 /// wired via the new `CardDefinition.exile_on_resolve` flag — the
 /// resolved sorcery lands in exile, not the graveyard, preventing

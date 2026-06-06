@@ -411,12 +411,12 @@ pub struct PlayerView {
     /// display and cards with "if you've cast N spells this turn" gates.
     #[serde(default)]
     pub spells_cast_this_turn: u32,
-    /// True if this player has no maximum hand size for the rest of the
-    /// game (Wisdom of Ages, Reliquary Tower-style effects). Surfaced
-    /// so UIs can suppress the cleanup-step discard warning when the
-    /// player is over 7 cards.
-    #[serde(default)]
-    pub no_maximum_hand_size: bool,
+    /// CR 402.2 — this player's maximum hand size: `Some(n)` (normally
+    /// `Some(7)`) or `None` for "no maximum hand size" effects (Wisdom of
+    /// Ages, Reliquary Tower). Surfaced so UIs can show the right limit and
+    /// suppress the cleanup-step discard warning when appropriate.
+    #[serde(default = "default_max_hand_size_view")]
+    pub max_hand_size: Option<usize>,
     /// Cards in this player's command zone (Commander commanders,
     /// Conspiracies, etc.). Always face-up — the command zone is a
     /// public zone, so every entry is `Known` regardless of viewer.
@@ -941,6 +941,12 @@ pub struct KnownStackItem {
 
 fn default_stack_item_kind() -> StackItemKind {
     StackItemKind::Trigger
+}
+
+/// Serde default for `PlayerView.max_hand_size` — the normal seven-card cap,
+/// matching the engine-side default for pre-`max_hand_size` snapshots.
+fn default_max_hand_size_view() -> Option<usize> {
+    Some(crate::player::DEFAULT_MAX_HAND_SIZE)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

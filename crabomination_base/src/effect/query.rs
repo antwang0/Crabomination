@@ -4,6 +4,26 @@
 
 use super::*;
 
+/// Implicit creature restriction for a bare, unfiltered target on a
+/// creature-only pump effect. A `Selector::Target(n)` carries no
+/// `SelectionRequirement`, but you can't give +3/+3 to (or set the base P/T
+/// of) a land — the target must be a creature. Surfacing this filter makes
+/// cast-time legality and the auto-targeter reject non-creatures.
+/// (`TargetFiltered` selectors already carry their own, stricter, filter;
+/// `BecomeCreature` deliberately targets *non*-creatures and is excluded.)
+static IMPLICIT_CREATURE_TARGET: SelectionRequirement = SelectionRequirement::Creature;
+
+/// `Some(&Creature)` when `what` is any bare numbered target (slot-agnostic —
+/// used for the "primary" target filter).
+fn implicit_creature_if_bare_target(what: &Selector) -> Option<&'static SelectionRequirement> {
+    matches!(what, Selector::Target(_)).then_some(&IMPLICIT_CREATURE_TARGET)
+}
+
+/// `Some(&Creature)` when `what` is the bare numbered target for `slot`.
+fn implicit_creature_for_slot(what: &Selector, slot: u8) -> Option<&'static SelectionRequirement> {
+    matches!(what, Selector::Target(n) if *n == slot).then_some(&IMPLICIT_CREATURE_TARGET)
+}
+
 impl Effect {
     pub const NOOP: Effect = Effect::Noop;
 
@@ -135,6 +155,7 @@ impl Effect {
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who } => sel_has_target(who),
+            Effect::SetMaxHandSize { who, size } => sel_has_target(who) || value_has_target(size),
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
             | Effect::LookAtTop { who, amount } => {
@@ -393,8 +414,9 @@ impl Effect {
             // CreateTokenCopyOf — the `source` is the targeted permanent to
             // copy (Esika's Chariot "copy target token you control").
             Effect::CreateTokenCopyOf { source, .. } => sel_filter(source),
-            Effect::PumpPT { what, .. } => sel_filter(what),
-            Effect::SetBasePT { what, .. } => sel_filter(what),
+            Effect::PumpPT { what, .. } | Effect::SetBasePT { what, .. } => {
+                sel_filter(what).or_else(|| implicit_creature_if_bare_target(what))
+            }
             Effect::BecomeCreature { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. }
             | Effect::GrantProtectionFromChosenColor { what, .. } => sel_filter(what),
@@ -406,6 +428,7 @@ impl Effect {
             Effect::Discard { who, .. }
             | Effect::DiscardAnyNumber { who }
             | Effect::SetNoMaxHandSize { who }
+            | Effect::SetMaxHandSize { who, .. }
             | Effect::Draw { who, .. }
             | Effect::Mill { who, .. } => sel_filter(who),
             Effect::Drain { to, .. } => sel_filter(to),
@@ -698,6 +721,7 @@ impl Effect {
             | Effect::Discard { .. }
             | Effect::DiscardAnyNumber { .. }
             | Effect::SetNoMaxHandSize { .. }
+            | Effect::SetMaxHandSize { .. }
             | Effect::Draw { .. }
             | Effect::Mill { .. }
             | Effect::MillHalf { .. }
@@ -950,6 +974,7 @@ impl Effect {
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
+                Effect::SetMaxHandSize { who, .. } => sel_find(who, slot),
                 Effect::Move { what, .. } => sel_find(what, slot),
                 Effect::Destroy { what }
                 | Effect::DestroyNoRegen { what }
@@ -965,8 +990,9 @@ impl Effect {
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
-                Effect::PumpPT { what, .. } => sel_find(what, slot),
-                Effect::SetBasePT { what, .. } => sel_find(what, slot),
+                Effect::PumpPT { what, .. } | Effect::SetBasePT { what, .. } => {
+                    sel_find(what, slot).or_else(|| implicit_creature_for_slot(what, slot))
+                }
                 Effect::BecomeCreature { what, .. } => sel_find(what, slot),
                 Effect::GrantKeyword { what, .. }
                 | Effect::GrantProtectionFromChosenColor { what, .. } => sel_find(what, slot),

@@ -1356,14 +1356,19 @@ pub enum Effect {
     /// conservative default); ScriptedDecider supplies the exact discard
     /// list via `DecisionAnswer::Discard(_)`.
     DiscardAnyNumber { who: Selector },
-    /// Set `Player.no_maximum_hand_size = true` on each resolved player,
-    /// for the rest of the game. Used by Wisdom of Ages ("You have no
-    /// maximum hand size for the rest of the game"), Reliquary Tower's
-    /// static (which actually wires through a layer, but the simpler
-    /// "for the rest of the game" cards can flip the flag directly).
-    /// Skips the cleanup-step CR 514.1 discard-down-to-7 in
-    /// `do_cleanup`.
+    /// Set `Player.max_hand_size = None` on each resolved player, for the
+    /// rest of the game. Used by Wisdom of Ages ("You have no maximum hand
+    /// size for the rest of the game"), Reliquary Tower's static (which
+    /// actually wires through a layer, but the simpler "for the rest of the
+    /// game" cards can flip the flag directly). Skips the cleanup-step CR
+    /// 514.1 discard-down step in `do_cleanup`.
     SetNoMaxHandSize { who: Selector },
+    /// CR 402.2b — set each resolved player's maximum hand size to a specific
+    /// number (`Player.max_hand_size = Some(size)`). Used by "your maximum
+    /// hand size is N" cards such as Null Profusion (zero) or Library of Leng
+    /// adjuncts. The cleanup-step CR 514.1 enforcement then discards down to
+    /// `size`.
+    SetMaxHandSize { who: Selector, size: Value },
     Mill    { who: Selector, amount: Value },
     /// Each player the selector resolves to mills half the cards in their
     /// *own* library (rounded up when `rounded_up`, else down). Per-player —

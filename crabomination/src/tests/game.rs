@@ -2992,6 +2992,46 @@ fn mystical_dispute_alt_cost_requires_blue_target() {
     .expect("Mystical Dispute alt cost should accept a blue target");
 }
 
+/// A creature-only pump spell (`Effect::PumpPT` with a bare `Target(0)`, e.g.
+/// Giant Growth) must not be castable targeting a land — `PumpPT` carries an
+/// implicit `Creature` target restriction even without an explicit filter.
+/// Regression for an exported bug: "giant growth targeting a land".
+#[test]
+fn giant_growth_cannot_target_a_land() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    // Targeting the land is illegal.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let gg = g.add_card_to_hand(0, catalog::giant_growth());
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: gg,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .unwrap_err();
+    assert_eq!(err, GameError::SelectionRequirementViolated,
+        "Giant Growth must reject a land target");
+
+    // Targeting a creature is legal (the spell was returned to hand on the
+    // rejection above, so re-cast it at the creature).
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gg,
+        target: Some(Target::Permanent(creature)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Giant Growth targets a creature fine");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(creature).expect("creature still on bf");
+    assert_eq!((cp.power, cp.toughness), (5, 5), "2/2 + 3/3 = 5/5");
+}
+
 /// Whether the opponent has spare mana decides if Mystical Dispute's {3}
 /// tax saves the targeted spell or counters it.
 fn mystical_dispute_setup(p1_spare_colorless: u32) -> (GameState, CardId) {

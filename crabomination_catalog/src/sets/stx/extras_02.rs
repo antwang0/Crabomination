@@ -1895,7 +1895,7 @@ pub fn anger() -> CardDefinition {
 /// - **ETB trigger** → `Effect::Draw 1` (standard cantrip body).
 /// - **Static "no maximum hand size"** → `Effect::SetNoMaxHandSize`
 ///   fires on ETB so the controller can hoard cards above 7. The
-///   cleanup-step discard (CR 514.1) consults `Player.no_maximum_hand_size`
+///   cleanup-step discard (CR 514.1) sees `Player.max_hand_size == None`
 ///   and skips the loop.
 /// - **Upkeep win** → `EventKind::StepBegins(Upkeep) / ActivePlayer`
 ///   trigger gated on `ValueEquals(HandSizeOf(You), Const(13))`. On

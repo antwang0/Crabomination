@@ -423,6 +423,8 @@ impl PendingDecision {
             ResumeContext::Ability { controller, .. } => *controller,
             ResumeContext::Mulligan { player, .. } => *player,
             ResumeContext::TriggerTargetPick { pending, .. } => pending.controller,
+            ResumeContext::CleanupDiscard { player } => *player,
+            ResumeContext::CombatDamage { player, .. } => *player,
         }
     }
 }
@@ -552,6 +554,32 @@ pub(crate) enum ResumeContext {
         pending: PendingTriggerPush,
         remaining: Vec<PendingTriggerPush>,
     },
+    /// CR 514.1 — the active player's hand is over the maximum hand size
+    /// at cleanup and they have `wants_ui`, so the discard-down is surfaced
+    /// as an interactive `Decision::Discard`. On answer, the chosen cards
+    /// are discarded; if the hand is still over the maximum (an under-
+    /// discard) the decision is re-posed, otherwise the rest of cleanup and
+    /// the step advance run.
+    CleanupDiscard { player: usize },
+    /// CR 510.1c-d — the active player (with `wants_ui`) is choosing combat
+    /// damage ordering / assignment for `attacker` during the current damage
+    /// step. On answer the choice is cached and the damage step is re-entered
+    /// (gathering the next choice or applying damage once all are made).
+    CombatDamage {
+        /// The active player making the choice (always the attacking player).
+        player: usize,
+        attacker: CardId,
+        kind: CombatDecisionKind,
+    },
+}
+
+/// Which of an attacker's two combat-damage choices a `ResumeContext::
+/// CombatDamage` is waiting on: the order its multiple blockers are dealt
+/// damage in (CR 510.1c), or how its power is divided among them (510.1d).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) enum CombatDecisionKind {
+    Order,
+    Assign,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

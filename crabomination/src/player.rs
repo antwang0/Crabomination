@@ -6,6 +6,15 @@ use crate::mana::ManaPool;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub usize);
 
+/// CR 402.2 — the default maximum hand size (seven cards). A player's
+/// `max_hand_size` starts here; effects can raise/lower it or remove it.
+pub const DEFAULT_MAX_HAND_SIZE: usize = 7;
+
+/// Serde default for `Player.max_hand_size` — the normal seven-card cap.
+fn default_max_hand_size() -> Option<usize> {
+    Some(DEFAULT_MAX_HAND_SIZE)
+}
+
 /// CR 114 — an emblem owned by a player. Has no characteristics other
 /// than the triggered abilities it grants its owner, and sits in the
 /// command zone for the rest of the game (emblems never leave). Created
@@ -190,12 +199,17 @@ pub struct Player {
     /// false for snapshot back-compat.
     #[serde(default)]
     pub city_blessing: bool,
-    /// True if this player has no maximum hand size for the rest of the
-    /// game. Set by `Effect::SetNoMaxHandSize` (Wisdom of Ages, Reliquary
-    /// Tower-style effects). When true, the cleanup-step CR 514.1 enforcement
-    /// in `do_cleanup` skips the discard-down-to-7 step.
-    #[serde(default)]
-    pub no_maximum_hand_size: bool,
+    /// CR 402.2 — this player's maximum hand size. `Some(n)` caps the hand at
+    /// `n` cards (normally `Some(7)`); `None` means no maximum (Wisdom of
+    /// Ages, Reliquary Tower-style effects). The cleanup-step CR 514.1
+    /// enforcement in `do_cleanup` reads this: `None` skips the discard-down
+    /// step, `Some(n)` discards down to `n`. Set by
+    /// `Effect::SetNoMaxHandSize` (→ `None`) and `Effect::SetMaxHandSize`
+    /// (→ `Some(n)`, e.g. Null Profusion's "maximum hand size is zero").
+    /// `#[serde(default)]` yields the normal `Some(7)` for snapshot
+    /// back-compat.
+    #[serde(default = "default_max_hand_size")]
+    pub max_hand_size: Option<usize>,
     /// True once this player has lost the game (life ≤ 0, poison ≥ 10, or
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
@@ -325,7 +339,7 @@ impl Player {
             energy: 0,
             rad_counters: 0,
             city_blessing: false,
-            no_maximum_hand_size: false,
+            max_hand_size: default_max_hand_size(),
             eliminated: false,
             skip_turns: 0,
             extra_turns: 0,
