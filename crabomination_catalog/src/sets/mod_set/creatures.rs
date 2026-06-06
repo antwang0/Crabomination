@@ -7969,3 +7969,96 @@ pub fn dragons_rage_channeler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Glistener Elf — {G}, 1/1 Phyrexian Elf Warrior with Infect.
+pub fn glistener_elf() -> CardDefinition {
+    CardDefinition {
+        name: "Glistener Elf",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Infect],
+        ..Default::default()
+    }
+}
+
+/// Imperial Recruiter — {2}{R}, 1/1 Human Advisor. ETB: search your library
+/// for a creature with power 2 or less, put it into your hand.
+pub fn imperial_recruiter() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Imperial Recruiter",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Goblin Matron — {2}{R}, 1/1 Goblin. ETB: search your library for a Goblin
+/// card, put it into your hand.
+pub fn goblin_matron() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Goblin Matron",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Loxodon Hierarch — {2}{G}{W}, 4/4 Elephant Cleric. ETB: gain 4 life.
+/// "{G}{W}, Sacrifice this creature: Regenerate each creature you control."
+pub fn loxodon_hierarch() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Loxodon Hierarch",
+        cost: cost(&[generic(2), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(4),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g(), w()]),
+            sac_cost: true,
+            effect: Effect::Regenerate {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

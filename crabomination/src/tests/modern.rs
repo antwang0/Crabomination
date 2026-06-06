@@ -32367,3 +32367,65 @@ fn dragons_rage_channeler_delirium_makes_3_3_flyer() {
     assert!(c1.keywords.contains(&Keyword::Flying), "delirium grants flying");
     assert!(c1.keywords.contains(&Keyword::MustAttack), "delirium adds attacks-each-combat");
 }
+
+// ── Glistener Elf / Imperial Recruiter / Goblin Matron / Loxodon Hierarch ───
+
+#[test]
+fn glistener_elf_has_infect() {
+    use crate::card::Keyword;
+    let d = catalog::glistener_elf();
+    assert_eq!((d.power, d.toughness), (1, 1));
+    assert!(d.keywords.contains(&Keyword::Infect));
+}
+
+#[test]
+fn imperial_recruiter_fetches_low_power_creature() {
+    let mut g = two_player_game();
+    let goblin = g.add_card_to_library(0, catalog::grizzly_bears()); // power 2, legal
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(goblin))]));
+    let ir = g.add_card_to_battlefield(0, catalog::imperial_recruiter());
+    g.fire_self_etb_triggers(ir, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == goblin), "fetched the power-2 creature");
+}
+
+#[test]
+fn goblin_matron_fetches_a_goblin() {
+    let mut g = two_player_game();
+    let gob = g.add_card_to_library(0, catalog::goblin_matron()); // a Goblin
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(gob))]));
+    let m = g.add_card_to_battlefield(0, catalog::goblin_matron());
+    g.fire_self_etb_triggers(m, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == gob), "fetched a Goblin to hand");
+}
+
+#[test]
+fn loxodon_hierarch_etb_gains_four_life() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let lox = g.add_card_to_battlefield(0, catalog::loxodon_hierarch());
+    g.fire_self_etb_triggers(lox, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "gained 4 life on ETB");
+}
+
+/// Loxodon Hierarch's sac ability regenerates each creature you control: a
+/// regenerated creature survives lethal damage (shield consumed).
+#[test]
+fn loxodon_hierarch_sac_regenerates_your_creatures() {
+    let mut g = two_player_game();
+    let lox = g.add_card_to_battlefield(0, catalog::loxodon_hierarch());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lox, ability_index: 0, target: None, x_value: None,
+    }).expect("sac ability activates");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lox).is_none(), "Hierarch sacrificed itself");
+    // Now lethal damage on the bear is replaced by its regen shield.
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_some(), "regen shield saved the bear from lethal damage");
+}
