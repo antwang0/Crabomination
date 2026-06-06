@@ -898,6 +898,26 @@ fn forked_bolt_deals_two_damage_to_creature() {
     );
 }
 
+// CR 115.3 — Forked Bolt's "divided among one or two targets" is one
+// multi-target instance, so the same creature can't be chosen for both slots.
+#[test]
+fn forked_bolt_rejects_duplicate_target() {
+    use crate::game::GameError;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::forked_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    });
+    assert!(matches!(err, Err(GameError::DuplicateTarget)),
+        "same creature in both divide slots is illegal (CR 115.3), got {err:?}");
+}
+
 #[test]
 fn forked_bolt_targets_player_for_two_damage() {
     let mut g = two_player_game();

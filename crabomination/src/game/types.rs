@@ -738,6 +738,12 @@ pub enum GameEvent {
     EnergyGained { player: usize, amount: u32 },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
+    /// CR 705.1 — `player` lost a coin flip (Karplusan Minotaur,
+    /// Goblin Bomb).
+    CoinFlipLost { player: usize },
+    /// CR 706.6 — `player` rolled one or more dice (`count` dice). Fires
+    /// once per roll instruction (Barbarian Class, Wand of Wonder).
+    DiceRolled { player: usize, count: u32 },
     CreatureDied { card_id: CardId },
     /// A creature was sacrificed by `who` (CR 701.16). Fires before the
     /// corresponding `CreatureDied` event so order-sensitive sacrifice
@@ -995,6 +1001,8 @@ pub enum GameError {
     TargetRequired,
     #[error("Invalid target")]
     InvalidTarget,
+    #[error("The same object can't be chosen for two targets (CR 115.3)")]
+    DuplicateTarget,
     #[error("Ability index out of bounds")]
     AbilityIndexOutOfBounds,
     #[error("Activated ability already used this turn (once-per-turn)")]

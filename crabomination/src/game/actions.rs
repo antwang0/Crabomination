@@ -1787,6 +1787,27 @@ impl GameState {
             }
         }
 
+        // CR 115.3 — within a *single* multi-target instance ("up to N / any
+        // number of / N target …"), the same object can't be chosen twice.
+        // Separate "target" clauses (a Seq of single-target effects) may share
+        // a target, so this only fires for the divide/support-style effects.
+        if let Some(n) = card.definition.effect.distinct_target_count(mode) {
+            let mut chosen: Vec<&Target> = Vec::with_capacity(1 + additional_targets.len());
+            if let Some(t) = target.as_ref() {
+                chosen.push(t);
+            }
+            chosen.extend(additional_targets.iter());
+            chosen.truncate(n as usize);
+            for i in 0..chosen.len() {
+                for j in (i + 1)..chosen.len() {
+                    if chosen[i] == chosen[j] {
+                        self.players[p].hand.push(card);
+                        return Err(GameError::DuplicateTarget);
+                    }
+                }
+            }
+        }
+
         // CR 702.16: Protection from [color] prevents targeting by spells
         // of that color. Check the spell's colors against the target's
         // protection keywords.

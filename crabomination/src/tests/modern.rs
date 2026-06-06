@@ -31577,6 +31577,78 @@ fn chance_encounter_wins_the_game_at_ten_luck() {
     assert!(g.players[1].eliminated, "the opponent was eliminated");
 }
 
+// CR 705.1 — "Whenever you lose a coin flip" trigger event. No common
+// printed card uses it, so the listener is a synthetic permanent: it adds a
+// +1/+1 counter to itself each time its controller loses a flip.
+#[test]
+fn lost_coin_flip_fires_lose_trigger() {
+    use crate::card::{CardDefinition, CardId, CardType, CounterType};
+    use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, TriggeredAbility, Value};
+    let mut g = two_player_game();
+    let mut def = CardDefinition {
+        name: "Flip Loser",
+        card_types: vec![CardType::Creature],
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    };
+    def.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::LostCoinFlip, EventScope::YourControl),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+    }];
+    let id = g.add_card_to_battlefield(0, def);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // tails → lose
+    let ctx = crate::game::effects::EffectContext::for_ability(CardId(0), 0, None);
+    let events = g.resolve_effect(&Effect::FlipCoin {
+        count: Value::Const(1),
+        on_heads: Box::new(Effect::Noop),
+        on_tails: Box::new(Effect::Noop),
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let n = g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(n, 1, "losing the flip fired the lose-flip trigger");
+}
+
+// CR 706.6 — "Whenever you roll one or more dice" fires once per roll
+// instruction (not once per die). The synthetic listener gains 1 life.
+#[test]
+fn rolled_dice_fires_once_per_roll() {
+    use crate::card::{CardDefinition, CardId, CardType};
+    use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, TriggeredAbility, Value};
+    let mut g = two_player_game();
+    let mut def = CardDefinition {
+        name: "Die Watcher",
+        card_types: vec![CardType::Enchantment],
+        ..Default::default()
+    };
+    def.triggered_abilities = vec![TriggeredAbility {
+        event: EventSpec::new(EventKind::RolledDice, EventScope::YourControl),
+        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+    }];
+    g.add_card_to_battlefield(0, def);
+    let life0 = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(3), DecisionAnswer::DieRoll(5)]));
+    let ctx = crate::game::effects::EffectContext::for_ability(CardId(0), 0, None);
+    // Roll two dice in one instruction → trigger fires exactly once.
+    let events = g.resolve_effect(&Effect::RollDie {
+        sides: 6,
+        count: Value::Const(2),
+        modifier: Value::Const(0),
+        reroll_at_most: 0,
+        results: vec![],
+        on_doubles: None,
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 1, "two dice in one roll → +1 life once");
+}
+
 // ── Ancient Copper Dragon (CR 706.4 — Value::LastDieRoll) ──────────────────
 
 #[test]

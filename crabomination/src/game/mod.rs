@@ -3681,6 +3681,8 @@ impl GameState {
                         | crate::effect::EventKind::LifeLost
                         | crate::effect::EventKind::EnergyGained
                         | crate::effect::EventKind::WonCoinFlip
+                        | crate::effect::EventKind::LostCoinFlip
+                        | crate::effect::EventKind::RolledDice
                         | crate::effect::EventKind::BecameTarget
                         // Enrage fires once per instance of damage
                         // (CR 702.130a) — fan out across the batch.

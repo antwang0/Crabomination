@@ -608,6 +608,8 @@ impl GameState {
                         events.push(GameEvent::CoinFlipWon { player: ctx.controller });
                         self.run_effect(on_heads, ctx, events)?;
                     } else {
+                        // CR 705.1 — the controller lost this flip.
+                        events.push(GameEvent::CoinFlipLost { player: ctx.controller });
                         self.run_effect(on_tails, ctx, events)?;
                     }
                 }
@@ -634,7 +636,9 @@ impl GameState {
                     let opp_flip = self.flip_one_coin(opp);
                     // CR 705.1 — each player who won this round's flip.
                     if my_flip { events.push(GameEvent::CoinFlipWon { player: me }); }
+                    else { events.push(GameEvent::CoinFlipLost { player: me }); }
                     if opp_flip { events.push(GameEvent::CoinFlipWon { player: opp }); }
+                    else { events.push(GameEvent::CoinFlipLost { player: opp }); }
                     if !my_flip {
                         self.deal_damage_to_from(EntityRef::Player(me), 1, src, events);
                     }
@@ -658,6 +662,15 @@ impl GameState {
             Effect::RollDie { sides, count, modifier, reroll_at_most, results, on_doubles } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 let sides = (*sides).max(2);
+                // CR 706.6 — "whenever a player rolls one or more dice" fires
+                // once for the whole roll. Emitted before the per-die result
+                // dispatch so the roll-count is known to listeners.
+                if n > 0 {
+                    events.push(GameEvent::DiceRolled {
+                        player: ctx.controller,
+                        count: n as u32,
+                    });
+                }
                 // CR 706.2 — the flat result modifier applied to every die
                 // this resolution.
                 let modifier = self.evaluate_value(modifier, ctx);

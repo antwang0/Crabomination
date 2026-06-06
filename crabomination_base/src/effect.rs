@@ -989,6 +989,12 @@ pub enum EventKind {
     /// flip"). Fires once per won flip; the player is the event subject;
     /// matched to `GameEvent::CoinFlipWon`. Chance Encounter listens here.
     WonCoinFlip,
+    /// CR 705.1 — the player lost a coin flip ("Whenever you lose a coin
+    /// flip"). Fires once per lost flip; matched to `GameEvent::CoinFlipLost`.
+    LostCoinFlip,
+    /// CR 706.6 — the player rolled one or more dice ("Whenever you roll one
+    /// or more dice"). Fires once per roll; matched to `GameEvent::DiceRolled`.
+    RolledDice,
 }
 
 /// Whose events does this trigger listen for?

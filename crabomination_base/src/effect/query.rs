@@ -1059,4 +1059,26 @@ impl Effect {
     pub fn target_filter_for_slot(&self, slot: u8) -> Option<&SelectionRequirement> {
         self.target_filter_for_slot_in_mode(slot, None)
     }
+
+    /// CR 115.3 — the count of mutually-distinct targets a *single* multi-target
+    /// instance consumes (the "up to / any number of / N target …" effects:
+    /// `DealDamageDivided`, `SupportCounters`). Those N targets occupy slots
+    /// `0..N` and must all differ. Returns `None` for effects whose `target`
+    /// clauses are separate instances (a `Seq` of single-target effects), where
+    /// the same object may legally fill each clause. Walks modal wrappers so a
+    /// chosen mode's multi-target effect is found.
+    pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
+        match self {
+            Effect::DealDamageDivided { max_targets, .. }
+            | Effect::SupportCounters { max_targets, .. } => Some(*max_targets),
+            Effect::ChooseMode(modes) => match mode {
+                Some(m) => modes.get(m).and_then(|e| e.distinct_target_count(None)),
+                None => modes.iter().find_map(|e| e.distinct_target_count(None)),
+            },
+            Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
+                body.distinct_target_count(mode)
+            }
+            _ => None,
+        }
+    }
 }

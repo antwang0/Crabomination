@@ -624,13 +624,13 @@ picking an item up.
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).
-- 🟡 **CR 115 — Targets** — Aura subtype (115.1b); same-target rejection across slots (115.3); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange).
+- 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.
 - 🟡 **CR 116 — Special Actions** — morph / face-down (116.2b); Companion from outside the game (116.2g). (Foretell/Plot/Suspend special actions now ✅.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
-- 🟡 **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2) ✅. 705.3 advantage/Krark's Thumb ✅. **Win-a-flip trigger** ✅ via `EventKind::WonCoinFlip` + `GameEvent::CoinFlipWon` (emitted from the FlipCoin / ManaClash resolvers); Chance Encounter (luck counters → win at 10) carded + tested. Remaining: a *lose*-the-flip trigger event (Karplusan Minotaur's opponent-chooses half).
+- ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur).
 - 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
 - 🟡 **CR 401 — Library** — cast-with-top-of-library-revealed recompute (401.5/401.6); multi-card same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
-- 🟡 **CR 706 — Rolling a Die** — ignore/observe-roll triggers (706.6); stored rolls (706.8). Result-referencing effects ✅ via `Value::LastDieRoll` (CR 706.4 — Ancient Copper Dragon's "d20 → that many Treasures", carded + tested). (modifier / reroll-at-most / doubles ✅.)
+- 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9).
 - 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7).
 - 🟡 **CR 605 — Mana Abilities** — triggered-mana-ability fast-path (605.4a).
@@ -669,9 +669,14 @@ picking an item up.
 
 - 🟡 **`ActivatedAbility` `..Default::default()` sweep.** `ActivatedAbility`
   now derives `Default`, and the land/shortcut helpers use
-  `..Default::default()`. Many older struct literals (kld, decks/modern, …)
-  still spell out every field; a mechanical sweep would let an `energy_cost`
-  field be added cheaply (unblocks energy-gated mana abilities).
+  `..Default::default()`. ~377 older struct literals (kld, decks/modern, …)
+  still spell out every field (e.g. `energy_cost: 0`); a mechanical sweep
+  would let a new field be added cheaply. **Blocks `remove_counter_cost`**:
+  Walking Ballista / Triskelion / Hangarback need a "remove a +1/+1 counter
+  from this" activation cost — modeling it in the effect (not the cost) lets
+  you over-activate off the stack, so it must be a real cost field, which
+  can't be added until this sweep lands. Do the sweep, then add
+  `remove_counter_cost: Option<(CounterType, u32)>` mirroring `sac_other_filter`.
 
 - ⏳ **Future batch — focus on engine-feature-unlocking cards**: priority
   candidates are Helix Pinnacle (keyword counter), Walking Ballista
