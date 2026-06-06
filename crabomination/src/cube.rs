@@ -1748,6 +1748,10 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         explosive_vegetation,
         circuitous_route,
         skyshroud_claim,
+        // Green beef: ETB lifegain, sac-for-life, death-token.
+        obstinate_baloth,
+        ravenous_baloth,
+        penumbra_wurm,
 
         // ── Poisonous (CR 702.70) ──
         marsh_viper,

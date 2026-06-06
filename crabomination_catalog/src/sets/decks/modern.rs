@@ -19820,6 +19820,75 @@ pub fn tendrils_of_corruption() -> CardDefinition {
     }
 }
 
+/// Obstinate Baloth — {2}{G}{G} 4/4 Beast. "When this enters, you gain 4
+/// life." (The discard-to-battlefield clause is dropped.)
+pub fn obstinate_baloth() -> CardDefinition {
+    use crate::effect::shortcut::etb_gain_life;
+    CardDefinition {
+        name: "Obstinate Baloth",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb_gain_life(4)],
+        ..Default::default()
+    }
+}
+
+/// Ravenous Baloth — {2}{G}{G} 4/4 Beast. "Sacrifice a Beast: You gain 4 life."
+pub fn ravenous_baloth() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Ravenous Baloth",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Beast), 1)),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Penumbra Wurm — {5}{G}{G} 6/6 Wurm, Trample. "When this dies, create a 6/6
+/// black Wurm creature token with trample."
+pub fn penumbra_wurm() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let wurm = TokenDefinition {
+        name: "Wurm".into(),
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Penumbra Wurm",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: wurm,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Trusty Machete — {1} Artifact — Equipment. "Equipped creature gets +2/+1.
 /// Equip {1}."
 pub fn trusty_machete() -> CardDefinition {

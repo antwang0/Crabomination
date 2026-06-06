@@ -31009,3 +31009,40 @@ fn cranial_plating_scales_with_artifacts() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 2), "2/2 + 3/0");
 }
+
+// ── Obstinate / Ravenous Baloth + Penumbra Wurm ────────────────────────────
+
+#[test]
+fn obstinate_baloth_gains_four_life_on_etb() {
+    let mut g = two_player_game();
+    let life = g.players[0].life;
+    let id = g.add_card_to_battlefield(0, catalog::obstinate_baloth());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+#[test]
+fn ravenous_baloth_sacs_a_beast_for_four_life() {
+    let mut g = two_player_game();
+    let baloth = g.add_card_to_battlefield(0, catalog::ravenous_baloth());
+    let beast = g.add_card_to_battlefield(0, catalog::obstinate_baloth()); // a Beast
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: baloth, ability_index: 0, target: None, x_value: None,
+    }).expect("sacrifice a Beast to gain life");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == beast), "Beast sacrificed");
+    assert_eq!(g.players[0].life, life + 4);
+}
+
+#[test]
+fn penumbra_wurm_leaves_a_wurm_token_when_it_dies() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::penumbra_wurm());
+    let _ = g.remove_to_graveyard_with_triggers(wurm);
+    drain_stack(&mut g);
+    let tok = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Wurm")
+        .expect("Wurm token created on death");
+    assert!(tok.definition.keywords.contains(&Keyword::Trample), "token has trample");
+}
