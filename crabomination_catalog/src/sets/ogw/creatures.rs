@@ -125,6 +125,54 @@ pub fn cultivator_drone() -> CardDefinition {
     }
 }
 
+/// Maw of Kozilek — {3}{R} 2/5 Eldrazi Drone. Devoid, {C}: +2/-2 EOT.
+pub fn maw_of_kozilek() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        toughness: 5,
+        power: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::colorless(1)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..drone("Maw of Kozilek", cost(&[generic(3), r()]), 2, 5)
+    }
+}
+
+/// Voracious Null — {2}{B} 2/2 Zombie. "{1}{B}, Sacrifice another creature:
+/// Put two +1/+1 counters on this creature. Activate only as a sorcery."
+pub fn voracious_null() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType, SelectionRequirement};
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        name: "Voracious Null",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sorcery_speed: true,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vile Aggregate — {2}{R} */5 Eldrazi Drone. Devoid, Trample, Ingest;
 /// its power equals the number of colorless creatures you control
 /// (characteristic-defining, wired via `DynamicPt::ColorlessCreaturesControlled`).

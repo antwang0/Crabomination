@@ -268,6 +268,37 @@ fn vile_aggregate_power_scales_with_colorless_creatures() {
     assert_eq!(g.computed_permanent(id).unwrap().power, 3, "3 colorless creatures");
 }
 
+/// Maw of Kozilek's {C} ability gives +2/-2 until end of turn.
+#[test]
+fn maw_of_kozilek_pumps_plus_two_minus_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::maw_of_kozilek());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump +2/-2");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 3), "2/5 → 4/3");
+}
+
+/// Voracious Null sacrifices a creature to grow by two +1/+1 counters.
+#[test]
+fn voracious_null_sacrifices_for_counters() {
+    let mut g = two_player_game();
+    let null = g.add_card_to_battlefield(0, catalog::voracious_null());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: null, ability_index: 0, target: None, x_value: None,
+    }).expect("sac for counters");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed");
+    let c = g.battlefield_find(null).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4), "2/2 + two +1/+1 → 4/4");
+}
+
 /// Dread Drone mints two 0/1 Eldrazi Spawn on ETB.
 #[test]
 fn dread_drone_makes_two_spawn() {
