@@ -30980,3 +30980,32 @@ fn dictate_of_erebos_forces_opponent_sacrifice_on_your_death() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == theirs), "opponent sacrificed their creature");
 }
+
+// ── Equipment: Trusty Machete / Cranial Plating ────────────────────────────
+
+#[test]
+fn trusty_machete_grants_plus_two_plus_one() {
+    let mut g = two_player_game();
+    let eq = g.add_card_to_battlefield(0, catalog::trusty_machete());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: eq, target: bear })
+        .expect("equip for {1}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "2/2 + 2/1");
+}
+
+#[test]
+fn cranial_plating_scales_with_artifacts() {
+    let mut g = two_player_game();
+    let plating = g.add_card_to_battlefield(0, catalog::cranial_plating());
+    g.add_card_to_battlefield(0, catalog::sol_ring());
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: plating, target: bear })
+        .expect("equip for {1}");
+    // Artifacts: Plating, Sol Ring, Mind Stone = 3 → +3/+0.
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 2), "2/2 + 3/0");
+}

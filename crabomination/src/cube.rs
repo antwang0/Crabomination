@@ -245,6 +245,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         // Sacrifice-for-mana altars.
         ashnods_altar,
         phyrexian_altar,
+        // Equipment.
+        trusty_machete,
+        darksteel_axe,
+        cranial_plating,
         // Draw-step group draw + library-manipulation artifacts.
         font_of_mythos,
         senseis_divining_top,

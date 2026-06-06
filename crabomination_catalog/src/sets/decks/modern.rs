@@ -19820,6 +19820,83 @@ pub fn tendrils_of_corruption() -> CardDefinition {
     }
 }
 
+/// Trusty Machete — {1} Artifact — Equipment. "Equipped creature gets +2/+1.
+/// Equip {1}."
+pub fn trusty_machete() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Trusty Machete",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 1,
+            keywords: vec![],
+            scale: None,
+            triggered_abilities: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Darksteel Axe — {1} Artifact — Equipment. Indestructible. "Equipped
+/// creature gets +2/+0. Equip {1}."
+pub fn darksteel_axe() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Darksteel Axe",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Indestructible, Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 0,
+            keywords: vec![],
+            scale: None,
+            triggered_abilities: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Cranial Plating — {2} Artifact — Equipment. "Equipped creature gets +1/+0
+/// for each artifact you control. Equip {1}."
+pub fn cranial_plating() -> CardDefinition {
+    use crate::card::{EquipBonus, EquipScale};
+    CardDefinition {
+        name: "Cranial Plating",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 0,
+            toughness: 0,
+            keywords: vec![],
+            scale: Some(EquipScale {
+                filter: SelectionRequirement::Artifact,
+                per_power: 1,
+                per_toughness: 0,
+                count_self_counters: None,
+            }),
+            triggered_abilities: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
 /// Ashnod's Altar — {3} Artifact. "Sacrifice a creature: Add {C}{C}."
 pub fn ashnods_altar() -> CardDefinition {
     use crate::card::ActivatedAbility;
