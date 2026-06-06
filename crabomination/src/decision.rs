@@ -276,6 +276,11 @@ pub enum Decision {
         prompt: String,
         /// The selectable cards (id + display name), already filtered.
         candidates: Vec<(CardId, String)>,
+        /// Inclusive lower bound on how many must be chosen. `0` for the
+        /// "choose any number / up to" case (Devious Cover-Up); equal to `max`
+        /// for a forced "choose exactly N" cost (sacrifice / exile-as-cost).
+        #[serde(default)]
+        min: u32,
         /// Inclusive upper bound on how many may be chosen.
         max: u32,
     },
@@ -504,7 +509,12 @@ impl Decider for AutoDecider {
             Decision::ChooseAmount { .. } => DecisionAnswer::Amount(0),
             // Conservative "up to" default — choose nothing unprompted.
             // ScriptedDecider / the bot supply a positive subset.
-            Decision::ChooseCards { .. } => DecisionAnswer::Cards(vec![]),
+            // Forced "choose exactly N" (min > 0) auto-picks the first N
+            // candidates so a non-interactive decider still pays the cost;
+            // the "up to" case (min == 0, Devious Cover-Up) chooses nothing.
+            Decision::ChooseCards { candidates, min, .. } => DecisionAnswer::Cards(
+                candidates.iter().take(*min as usize).map(|(id, _)| *id).collect(),
+            ),
         }
     }
 }

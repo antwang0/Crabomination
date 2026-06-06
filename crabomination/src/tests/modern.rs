@@ -5850,6 +5850,49 @@ fn grim_lavamancer_activated_ability_deals_two_damage() {
     assert!(g.exile.len() >= 2, "Exile zone gained both cost-paid cards");
 }
 
+/// CR 602.5b — a `wants_ui` activator chooses which graveyard cards to exile
+/// for Grim Lavamancer's "exile two cards from your graveyard" cost, via a
+/// `ChooseCards` modal, instead of the engine auto-exiling the cheapest.
+#[test]
+fn grim_lavamancer_ui_activator_chooses_graveyard_cards_to_exile() {
+    let mut g = two_player_game();
+    let lava = g.add_card_to_battlefield(0, catalog::grim_lavamancer());
+    g.clear_sickness(lava);
+    g.players[0].wants_ui = true;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Three graveyard cards → a genuine choice (exile two of three).
+    let a = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let b = g.add_card_to_graveyard(0, catalog::shock());
+    let keep = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lava, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    })
+    .expect("activation suspends for the exile choice");
+
+    let pd = g.pending_decision.as_ref().expect("an exile choice is pending");
+    assert_eq!(pd.acting_player(), 0);
+    match &pd.decision {
+        crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
+            assert_eq!((*min, *max), (2, 2), "must exile exactly two");
+            assert_eq!(candidates.len(), 3, "all three graveyard cards offered");
+        }
+        other => panic!("expected ChooseCards, got {other:?}"),
+    }
+
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![a, b])))
+        .expect("submit the exile choice");
+
+    // Chosen cards exiled as the cost; the unchosen one stays in the graveyard.
+    assert!(g.exile.iter().any(|c| c.id == a) && g.exile.iter().any(|c| c.id == b),
+        "chosen graveyard cards exiled");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == keep), "unchosen card kept");
+    // The ability is on the stack; resolving it deals 2.
+    let life_before = g.players[1].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 2, "ability resolves for 2 damage");
+}
+
 /// Zuran Orb sacrifices a land to gain 2 life.
 #[test]
 fn zuran_orb_sacrifices_a_land_for_two_life() {
@@ -10717,6 +10760,43 @@ fn lotus_field_etb_sacrifices_two_lands() {
         .count();
     assert_eq!(remaining_forests, 1,
         "Lotus Field's ETB should sacrifice two of your lands");
+}
+
+/// CR 701.16 — a `wants_ui` player choosing a *multi* sacrifice (Lotus Field's
+/// "sacrifice two lands") gets a `ChooseCards` modal to pick exactly two,
+/// rather than the engine auto-dumping the weakest.
+#[test]
+fn lotus_field_ui_player_chooses_which_lands_to_sacrifice() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    let f3 = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::lotus_field());
+
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    // Resolve the ETB trigger: both players pass priority.
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let pd = g.pending_decision.as_ref().expect("a sacrifice choice is pending");
+    assert_eq!(pd.acting_player(), 0);
+    match &pd.decision {
+        crate::decision::Decision::ChooseCards { candidates, min, max, .. } => {
+            assert_eq!((*min, *max), (2, 2), "must choose exactly two");
+            assert!(candidates.len() >= 4, "all of your lands are offered");
+        }
+        other => panic!("expected ChooseCards, got {other:?}"),
+    }
+
+    // Choose to sacrifice f1 and f2 — keep f3 and the Field.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![f1, f2])))
+        .expect("submit the multi-sacrifice choice");
+
+    assert!(g.battlefield_find(f1).is_none(), "first chosen land sacrificed");
+    assert!(g.battlefield_find(f2).is_none(), "second chosen land sacrificed");
+    assert!(g.battlefield_find(f3).is_some(), "unchosen land kept");
+    assert!(g.battlefield_find(id).is_some(), "Lotus Field kept");
 }
 
 #[test]

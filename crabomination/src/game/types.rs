@@ -518,6 +518,10 @@ pub enum AbilityCostChoice {
     SacOther,
     /// `tap_other_filter` — "Tap an untapped … you control".
     TapOther,
+    /// `exile_other_filter` — "Exile N cards from your graveyard" (Grim
+    /// Lavamancer, Scrapheap Scrounger). Answered via a `ChooseCards` modal
+    /// since graveyard cards aren't selectable with the in-scene cursor.
+    ExileOther,
 }
 
 /// Recorded where resolution suspended so it can resume after the decision.

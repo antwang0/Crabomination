@@ -1109,6 +1109,8 @@ pub enum DecisionWire {
         source: CardId,
         prompt: String,
         candidates: Vec<(CardId, String)>,
+        #[serde(default)]
+        min: u32,
         max: u32,
     },
 }
@@ -1231,11 +1233,12 @@ impl From<&Decision> for DecisionWire {
                 prompt: prompt.clone(),
                 max: *max,
             },
-            Decision::ChooseCards { source, prompt, candidates, max } => {
+            Decision::ChooseCards { source, prompt, candidates, min, max } => {
                 DecisionWire::ChooseCards {
                     source: *source,
                     prompt: prompt.clone(),
                     candidates: candidates.clone(),
+                    min: *min,
                     max: *max,
                 }
             }

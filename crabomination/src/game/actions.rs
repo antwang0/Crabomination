@@ -2212,6 +2212,43 @@ impl GameState {
         ranked.into_iter().take(count).map(|(id, _)| id).collect()
     }
 
+    /// Pick the `count` lowest-mana-value cards (by id) from `player`'s
+    /// graveyard among `candidates` — the AutoDecider heuristic for an
+    /// "Exile N cards from your graveyard" cost, keeping higher-value cards.
+    pub(crate) fn auto_pick_lowest_cmc_gy(
+        &self,
+        player: usize,
+        candidates: &[CardId],
+        count: usize,
+    ) -> Vec<CardId> {
+        let mut ranked: Vec<(CardId, u32)> = candidates
+            .iter()
+            .filter_map(|id| {
+                self.players[player]
+                    .graveyard
+                    .iter()
+                    .find(|c| c.id == *id)
+                    .map(|c| (*id, c.definition.cost.cmc()))
+            })
+            .collect();
+        ranked.sort_by_key(|(_, cmc)| *cmc);
+        ranked.into_iter().take(count).map(|(id, _)| id).collect()
+    }
+
+    /// Pair each `CardId` with its display name from `player`'s graveyard, for
+    /// a `Decision::ChooseCards` candidate list. Ids not in the graveyard drop.
+    pub(crate) fn graveyard_card_names(&self, player: usize, ids: &[CardId]) -> Vec<(CardId, String)> {
+        ids.iter()
+            .filter_map(|id| {
+                self.players[player]
+                    .graveyard
+                    .iter()
+                    .find(|c| c.id == *id)
+                    .map(|c| (*id, c.definition.name.to_string()))
+            })
+            .collect()
+    }
+
     /// CR 601.2b — can every additional cast cost be paid right now? Checked
     /// before mana so an unpayable spell reverts cleanly.
     pub(crate) fn additional_costs_payable(
@@ -4680,6 +4717,7 @@ impl GameState {
         // the auto-pick).
         let chosen_sac_other = self.pending_ability_sac_other.take();
         let chosen_tap_other = self.pending_ability_tap_other.take();
+        let chosen_exile_other = self.pending_ability_exile_other.take();
 
         // Source zone: battlefield by default, the controller's graveyard
         // when the ability is flagged `from_graveyard`, or the controller's
@@ -4950,34 +4988,69 @@ impl GameState {
 
         // Pre-flight exile-other-from-gy gate: confirm `count` graveyard
         // cards matching the cost's filter exist, *excluding* the source
-        // itself for graveyard activations where source_in_gy is true.
-        // Picks the lowest-CMC matching cards (so the activator keeps
-        // higher-value cards in their graveyard). If fewer than `count`
-        // match, reject cleanly so tap/mana aren't burned. The actual
-        // exile happens after payment succeeds.
+        // itself for graveyard activations where source_in_gy is true. If
+        // fewer than `count` match, reject cleanly so tap/mana aren't burned.
+        // The actual exile happens after payment succeeds.
         //
-        // Unlike the sacrifice / tap costs above, this keeps the auto-pick even
-        // for a `wants_ui` activator: the cost exiles graveyard cards, which the
-        // in-scene `ChooseTarget` cursor can't select (it only highlights
-        // battlefield permanents and players). Surfacing this interactively
-        // would need a graveyard-picker decision + client UI — tracked
-        // separately. Affects Grim Lavamancer, Scrapheap Scrounger, et al.
+        // CR 602.5b — a `wants_ui` activator with more candidates than required
+        // chooses which cards to exile via a `ChooseCards` modal (graveyard
+        // cards aren't selectable with the in-scene cursor). Bots and the
+        // no-real-choice case keep the lowest-CMC auto-pick so higher-value
+        // graveyard cards stay put. Affects Grim Lavamancer, Scrapheap
+        // Scrounger, et al.
         let exile_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.exile_other_filter.as_ref()
         {
             let count = *count as usize;
-            let mut picks: Vec<(CardId, i32)> = self.players[p]
+            let candidates: Vec<CardId> = self.players[p]
                 .graveyard
                 .iter()
                 .filter(|c| c.id != card_id)
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                .map(|c| (c.id, c.definition.cost.cmc() as i32))
+                .map(|c| c.id)
                 .collect();
-            if picks.len() < count {
+            if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            picks.sort_by_key(|(_, cmc)| *cmc);
-            picks.into_iter().take(count).map(|(cid, _)| cid).collect()
+            if let Some(chosen) = chosen_exile_other {
+                // Replay path: keep the player's picks that are still valid
+                // candidates; backfill from the auto-pick if short.
+                let valid: std::collections::HashSet<CardId> = candidates.iter().copied().collect();
+                let mut picks: Vec<CardId> =
+                    chosen.into_iter().filter(|id| valid.contains(id)).take(count).collect();
+                if picks.len() < count {
+                    let have: std::collections::HashSet<CardId> = picks.iter().copied().collect();
+                    let extra: Vec<CardId> = candidates.iter().copied().filter(|id| !have.contains(id)).collect();
+                    picks.extend(self.auto_pick_lowest_cmc_gy(p, &extra, count - picks.len()));
+                }
+                picks
+            } else if candidates.len() > count && self.players[p].wants_ui {
+                let source_name = self
+                    .battlefield_find(card_id)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                let named = self.graveyard_card_names(p, &candidates);
+                self.pending_decision = Some(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseCards {
+                        source: card_id,
+                        prompt: format!("{source_name}: exile {count} cards from your graveyard"),
+                        candidates: named,
+                        min: count as u32,
+                        max: count as u32,
+                    },
+                    resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                        activator: p,
+                        card_id,
+                        ability_index,
+                        target,
+                        x_value,
+                        kind: crate::game::types::AbilityCostChoice::ExileOther,
+                    },
+                });
+                return Ok(vec![]);
+            } else {
+                self.auto_pick_lowest_cmc_gy(p, &candidates, count)
+            }
         } else {
             Vec::new()
         };

@@ -406,6 +406,13 @@ pub struct GameState {
     /// Set by the `ActivateAbilityChoice` resume, consumed by `activate_ability`.
     #[serde(skip, default)]
     pub(crate) pending_ability_tap_other: Option<CardId>,
+    /// Transient sibling of [`pending_ability_sac_other`] for an activated
+    /// ability's "Exile N cards from your graveyard" cost (`exile_other_filter`).
+    /// Carries the full chosen set (the cost can exile several — Grim
+    /// Lavamancer exiles two). Set by the `ActivateAbilityChoice` resume,
+    /// consumed by `activate_ability`.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_exile_other: Option<Vec<CardId>>,
     /// Resolves player choices encountered during effect resolution. Used for
     /// *non-suspending* decisions (e.g. `AddManaAnyColor` auto-picks a color).
     /// Suspending decisions (currently Scry) surface through `pending_decision`
@@ -646,6 +653,7 @@ impl Clone for GameState {
             pending_cast_discards: self.pending_cast_discards.clone(),
             pending_ability_sac_other: self.pending_ability_sac_other,
             pending_ability_tap_other: self.pending_ability_tap_other,
+            pending_ability_exile_other: self.pending_ability_exile_other.clone(),
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
@@ -736,6 +744,7 @@ impl GameState {
             pending_cast_discards: None,
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
+            pending_ability_exile_other: None,
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
@@ -4615,29 +4624,37 @@ impl GameState {
                 x_value,
                 kind,
             } => {
-                // CR 602.5 — the activator picked which permanent to pay one of
-                // the ability's "another …" costs. Validate it's a permanent
-                // they control (other than the source), stash it for the
-                // matching cost, and replay the activation from the top —
-                // nothing was paid before the suspend, so this is a clean
-                // replay (which may suspend again for a further choice).
-                let chosen = match answer {
-                    DecisionAnswer::Target(Target::Permanent(id))
-                        if id != card_id
-                            && self
-                                .battlefield_find(id)
-                                .is_some_and(|c| c.controller == activator) =>
-                    {
-                        id
-                    }
-                    _ => return Err(GameError::DecisionAnswerMismatch),
-                };
+                // CR 602.5 — the activator picked how to pay one of the
+                // ability's "another …" costs. Stash it for the matching cost
+                // and replay the activation from the top — nothing was paid
+                // before the suspend, so this is a clean replay (which may
+                // suspend again for a further choice). Sacrifice/tap come back
+                // as a battlefield `Target`; the graveyard exile as `Cards`.
+                use crate::game::types::AbilityCostChoice as K;
                 match kind {
-                    crate::game::types::AbilityCostChoice::SacOther => {
-                        self.pending_ability_sac_other = Some(chosen);
+                    K::SacOther | K::TapOther => {
+                        let DecisionAnswer::Target(Target::Permanent(id)) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        if id == card_id
+                            || !self.battlefield_find(id).is_some_and(|c| c.controller == activator)
+                        {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        }
+                        if matches!(kind, K::SacOther) {
+                            self.pending_ability_sac_other = Some(id);
+                        } else {
+                            self.pending_ability_tap_other = Some(id);
+                        }
                     }
-                    crate::game::types::AbilityCostChoice::TapOther => {
-                        self.pending_ability_tap_other = Some(chosen);
+                    K::ExileOther => {
+                        let DecisionAnswer::Cards(ids) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        // Trust the posed option list (the activator's graveyard
+                        // minus the source); `activate_ability` re-checks each id
+                        // is still in the graveyard and matches the filter.
+                        self.pending_ability_exile_other = Some(ids);
                     }
                 }
                 return self.activate_ability(card_id, ability_index, target, x_value);
@@ -4977,21 +4994,28 @@ impl GameState {
                 Ok(events)
             }
             PendingEffectState::SacrificePending { player } => {
-                // CR 701.16 — the player chose which permanent to sacrifice.
-                let DecisionAnswer::Target(Target::Permanent(id)) = answer else {
-                    return Err(GameError::DecisionAnswerMismatch);
+                // CR 701.16 — the player chose which permanent(s) to sacrifice.
+                // A single sacrifice comes back as a `Target` (in-scene cursor);
+                // a multi-sacrifice as `Cards` (the ChooseCards modal).
+                let ids: Vec<CardId> = match answer {
+                    DecisionAnswer::Target(Target::Permanent(id)) => vec![*id],
+                    DecisionAnswer::Cards(ids) => ids.clone(),
+                    _ => return Err(GameError::DecisionAnswerMismatch),
                 };
                 // Trust the option list that was posed (built from the legal
-                // candidates), but guard against a stale/hostile id: it must
+                // candidates), but guard against stale/hostile ids: each must
                 // still be a permanent the sacrificing player controls.
-                let controlled = self
-                    .battlefield_find(*id)
-                    .is_some_and(|c| c.controller == player);
-                if !controlled {
+                if ids.is_empty()
+                    || !ids.iter().all(|id| {
+                        self.battlefield_find(*id).is_some_and(|c| c.controller == player)
+                    })
+                {
                     return Err(GameError::DecisionAnswerMismatch);
                 }
                 let mut events = Vec::new();
-                self.sacrifice_one(*id, player, &mut events);
+                for id in ids {
+                    self.sacrifice_one(id, player, &mut events);
+                }
                 Ok(events)
             }
             PendingEffectState::DiscardChosenPending { target_player } => {

@@ -112,6 +112,9 @@ pub enum DecisionKey {
     Learn(Vec<CardId>),
     /// `Decision::OrderTriggers` — keyed by the trigger source ids.
     OrderTriggers(Vec<CardId>),
+    /// `Decision::ChooseCards` — keyed by the candidate ids + (min, max) so a
+    /// re-posed pick (e.g. a chained second cost) re-spawns the modal.
+    ChooseCards(Vec<CardId>, u32, u32),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -143,6 +146,11 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
         DecisionWire::OrderTriggers { triggers, .. } => {
             Some(DecisionKey::OrderTriggers(triggers.iter().map(|(id, _)| *id).collect()))
         }
+        DecisionWire::ChooseCards { candidates, min, max, .. } => Some(DecisionKey::ChooseCards(
+            candidates.iter().map(|(id, _)| *id).collect(),
+            *min,
+            *max,
+        )),
         _ => None,
     }
 }
@@ -284,7 +292,13 @@ pub fn spawn_decision_ui(
         DecisionWire::Discard { count, hand, .. } => {
             state.discard_selected.clear();
             state.spawned_for = Some(key);
-            spawn_discard_modal(&mut commands, &asset_server, &ui_fonts, hand, *count);
+            let title = format!("Choose {count} card(s) to discard");
+            spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, &title, hand);
+        }
+        DecisionWire::ChooseCards { prompt, candidates, .. } => {
+            state.discard_selected.clear();
+            state.spawned_for = Some(key);
+            spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, prompt, candidates);
         }
         DecisionWire::OrderTriggers { triggers, .. } => {
             if state.trigger_order.is_empty() {
@@ -835,12 +849,19 @@ fn spawn_search_modal(
 ///   the player's own hand.
 /// - **Inquisition / Thoughtseize** — `Effect::DiscardChosen`. The caster
 ///   sees the target opponent's hand and picks for them.
-fn spawn_discard_modal(
+/// Generic "pick cards from a list + Confirm" modal. Shared by the discard
+/// decision and the `ChooseCards` decision (forced sacrifice / graveyard
+/// exile-as-cost). `title` is the prompt shown above the grid; selection state
+/// lives in `DecisionUiState::discard_selected` and the per-tile
+/// `DiscardSelectButton` (reused as the generic multi-card-pick buffer), with
+/// the min/max enforced by `handle_discard_select` / `handle_confirm` off the
+/// live decision.
+fn spawn_card_picker_modal(
     commands: &mut Commands,
     asset_server: &AssetServer,
     ui_fonts: &UiFonts,
+    title: &str,
     candidates: &[(CardId, String)],
-    count: u32,
 ) {
     let root = commands
         .spawn((
@@ -878,7 +899,7 @@ fn spawn_discard_modal(
 
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
-            Text::new(format!("Choose {count} card(s) to discard")),
+            Text::new(title.to_string()),
             ui_fonts.tf(16.0),
             TextColor(theme::TEXT_PRIMARY),
         ));
@@ -1202,6 +1223,8 @@ pub fn handle_discard_select(
         .and_then(|p| p.decision.as_ref())
     {
         Some(DecisionWire::Discard { count, .. }) => *count as usize,
+        // ChooseCards reuses the same multi-select grid; `max` is the cap.
+        Some(DecisionWire::ChooseCards { max, .. }) => *max as usize,
         _ => return,
     };
     for (interaction, btn, mut bg) in buttons.iter_mut() {
@@ -1364,6 +1387,12 @@ pub fn handle_confirm(
             DecisionWire::Discard { count, .. } => {
                 if state.discard_selected.len() < *count as usize { continue; }
                 DecisionAnswer::Discard(state.discard_selected.clone())
+            }
+            DecisionWire::ChooseCards { min, .. } => {
+                // Require at least `min` selected; the per-tile handler already
+                // caps selection at `max`.
+                if state.discard_selected.len() < *min as usize { continue; }
+                DecisionAnswer::Cards(state.discard_selected.clone())
             }
             DecisionWire::OrderTriggers { .. } => {
                 DecisionAnswer::TriggerOrder(state.trigger_order.clone())

@@ -588,6 +588,18 @@ impl GameState {
             .collect()
     }
 
+    /// Pair each battlefield `CardId` with its display name, for building a
+    /// `Decision::ChooseCards` candidate list. Ids not on the battlefield are
+    /// dropped.
+    pub(crate) fn card_id_names(&self, ids: &[CardId]) -> Vec<(CardId, String)> {
+        ids.iter()
+            .filter_map(|id| {
+                self.battlefield_find(*id)
+                    .map(|c| (*id, c.definition.name.to_string()))
+            })
+            .collect()
+    }
+
     /// Auto-pick `count` permanents for `player` to sacrifice from `candidates`
     /// (the AutoDecider heuristic used for bots / tests / multi-sacrifice):
     /// non-source first (honours "another"), then tokens, then by mana value,
@@ -2330,6 +2342,7 @@ impl GameState {
                     source,
                     prompt: "Exile which cards from graveyards?".to_string(),
                     candidates: candidates.clone(),
+                    min: 0,
                     max,
                 });
                 let valid: std::collections::HashSet<CardId> =
@@ -3768,12 +3781,13 @@ impl GameState {
                 // printed "another" intent is honored.
                 let source_id = ctx.source;
                 // CR 701.16 — the player doing the sacrificing chooses which
-                // permanent(s). For a `wants_ui` player making a *single*
-                // sacrifice with a genuine choice (more than one legal
-                // candidate) we suspend on a `ChooseTarget` decision; bots,
-                // multi-sacrifice (n > 1), and "no real choice" cases keep the
-                // auto-pick (cheapest/weakest non-source). Auto-pick players are
-                // resolved first so a deferred UI suspend doesn't strand them.
+                // permanent(s). For a `wants_ui` player with a genuine choice
+                // (more legal candidates than required) we suspend: a *single*
+                // sacrifice uses the in-scene `ChooseTarget` cursor, a
+                // multi-sacrifice uses the `ChooseCards` modal. Bots and the
+                // "no real choice" case keep the auto-pick (cheapest/weakest
+                // non-source). Auto-pick players are resolved first so a
+                // deferred UI suspend doesn't strand them.
                 let players: Vec<usize> = self
                     .resolve_selector(who, ctx)
                     .into_iter()
@@ -3788,8 +3802,7 @@ impl GameState {
                     if candidates.is_empty() {
                         continue;
                     }
-                    if n == 1
-                        && candidates.len() > 1
+                    if candidates.len() > n
                         && self.players[p].wants_ui
                         && deferred_ui.is_none()
                     {
@@ -3803,13 +3816,22 @@ impl GameState {
                 }
                 if let Some(p) = deferred_ui {
                     let candidates = self.sacrifice_candidates(p, filter, source_id);
-                    let options: Vec<Target> =
-                        candidates.iter().map(|id| Target::Permanent(*id)).collect();
-                    let decision = crate::decision::Decision::ChooseTarget {
-                        source: source_id.unwrap_or(crate::card::CardId(0)),
-                        legal: options,
-                        source_name: ctx.source_name.unwrap_or("").to_string(),
-                        description: "choose a permanent to sacrifice".into(),
+                    let source = source_id.unwrap_or(crate::card::CardId(0));
+                    let decision = if n == 1 {
+                        crate::decision::Decision::ChooseTarget {
+                            source,
+                            legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                            source_name: ctx.source_name.unwrap_or("").to_string(),
+                            description: "choose a permanent to sacrifice".into(),
+                        }
+                    } else {
+                        crate::decision::Decision::ChooseCards {
+                            source,
+                            prompt: format!("Choose {n} permanents to sacrifice"),
+                            candidates: self.card_id_names(&candidates),
+                            min: n as u32,
+                            max: n as u32,
+                        }
                     };
                     self.suspend_signal = Some((
                         decision,
