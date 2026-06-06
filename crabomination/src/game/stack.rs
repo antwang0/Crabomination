@@ -909,6 +909,16 @@ impl GameState {
                         StaticEffect::PreventUntap {
                             applies_to: crate::effect::Selector::EachPermanent(req),
                         } => prevent_filters.push(req.clone()),
+                        // Aura-anchored prevention ("enchanted creature doesn't
+                        // untap" — Claustrophobia): block the permanent this
+                        // source is attached to.
+                        StaticEffect::PreventUntap {
+                            applies_to: crate::effect::Selector::AttachedTo(inner),
+                        } if matches!(**inner, crate::effect::Selector::This) => {
+                            if let Some(host) = c.attached_to {
+                                blocked.insert(host);
+                            }
+                        }
                         _ => {}
                     }
                 }

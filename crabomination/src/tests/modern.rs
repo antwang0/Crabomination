@@ -33279,3 +33279,51 @@ fn wild_slash_ferocious_locks_out_prevention() {
     assert_eq!(g.players[1].life, 18, "2 damage dealt");
     assert!(g.damage_cant_be_prevented_this_turn, "ferocious set the no-prevent flag");
 }
+
+/// Stat/keyword Auras attach to a creature and grant their +P/+T and keywords.
+#[test]
+fn stat_keyword_auras_grant_their_bonus() {
+    use crate::card::Keyword;
+    let cases: &[(Factory, i32, i32, &[Keyword])] = &[
+        (catalog::untamed_hunger as Factory, 4, 3, &[Keyword::Menace]),
+        (catalog::mark_of_the_vampire as Factory, 4, 4, &[Keyword::Lifelink]),
+        (catalog::hammerhand as Factory, 3, 2, &[Keyword::Haste, Keyword::CantBlock]),
+    ];
+    for &(factory, p, t, kws) in cases {
+        let mut g = two_player_game();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_hand(0, factory());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(4);
+        g.perform_action(GameAction::CastSpell {
+            card_id: aura, target: Some(Target::Permanent(bears)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("aura castable");
+        drain_stack(&mut g);
+        let view = g.compute_battlefield();
+        let c = view.iter().find(|c| c.id == bears).unwrap();
+        assert_eq!((c.power, c.toughness), (p, t), "{} P/T", c.id.0);
+        for kw in kws {
+            assert!(c.keywords.contains(kw), "aura grants {kw:?}");
+        }
+    }
+}
+
+/// Claustrophobia taps the enchanted creature on ETB and keeps it tapped
+/// through its controller's untap step (aura-anchored CR 502.3 prevention).
+#[test]
+fn claustrophobia_taps_and_locks_down_the_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    let aura = g.add_card_to_hand(0, catalog::claustrophobia());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).unwrap().tapped, "ETB tapped the creature");
+    // The enchanted creature's controller's untap step must NOT untap it.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "stays tapped (doesn't untap)");
+}

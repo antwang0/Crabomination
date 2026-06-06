@@ -21,10 +21,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - ✅ **Color-change EOT (Crimson Wisps).** Shipped via `Effect::BecomeColor`
   (fixed-color layer-5 `SetColors`, sibling of `BecomeChosenColor`). Crimson
   Wisps grants haste + becomes red + cantrips.
-- **Aura that grants +N/+N and a keyword (Untamed Hunger).** Confirm the
-  Aura-attach + `equipped_bonus`-style stat/keyword grant path covers a plain
-  creature Aura (not just Equipment/bestow); then ship a small Aura batch
-  (Untamed Hunger, Dehydration, Claustrophobia).
+- ✅ **Aura that grants +N/+N and a keyword.** The `simple_aura` helper
+  (Attach + `equipped_bonus`) already covers plain creature Auras (Rancor,
+  Spectral Flight). Shipped Untamed Hunger (+2/+1 menace), Mark of the Vampire
+  (+2/+2 lifelink), Hammerhand (+1/+0 haste + can't block). The tap-down Auras
+  Claustrophobia/Dehydration also ship via an aura-anchored
+  `PreventUntap { applies_to: AttachedTo(This) }` (CR 502.3) + an ETB
+  `Tap { AttachedTo(This) }`.
 - **Look-at-hand riders (Peek, Telepathy).** Informational "look at target
   player's hand" has no mechanical primitive; only the cantrip half is
   modelable today.

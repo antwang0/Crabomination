@@ -25101,3 +25101,64 @@ pub fn wild_slash() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Untamed Hunger — {3}{B} Aura. Enchanted creature gets +2/+1 and has menace.
+pub fn untamed_hunger() -> CardDefinition {
+    simple_aura("Untamed Hunger", cost(&[generic(3), b()]), 2, 1, vec![Keyword::Menace])
+}
+
+/// Mark of the Vampire — {3}{B} Aura. Enchanted creature gets +2/+2 and has
+/// lifelink.
+pub fn mark_of_the_vampire() -> CardDefinition {
+    simple_aura("Mark of the Vampire", cost(&[generic(3), b()]), 2, 2, vec![Keyword::Lifelink])
+}
+
+/// Hammerhand — {R} Aura. Enchanted creature gets +1/+0 and has haste and
+/// can't block.
+pub fn hammerhand() -> CardDefinition {
+    simple_aura("Hammerhand", cost(&[r()]), 1, 0, vec![Keyword::Haste, Keyword::CantBlock])
+}
+
+/// Tap-down Aura ({2}{U} template): enchant creature, tap it on ETB, and it
+/// doesn't untap during its controller's untap step (Claustrophobia,
+/// Dehydration). CR 502.3 prevention is aura-anchored via
+/// `StaticEffect::PreventUntap { applies_to: AttachedTo(This) }`.
+fn tap_down_aura(name: &'static str) -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name,
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: Selector::AttachedTo(Box::new(Selector::This)),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Claustrophobia — {2}{U} Aura. ETB taps the enchanted creature; it doesn't
+/// untap during its controller's untap step.
+pub fn claustrophobia() -> CardDefinition {
+    tap_down_aura("Claustrophobia")
+}
+
+/// Dehydration — {2}{U} Aura. ETB taps the enchanted creature; it doesn't
+/// untap during its controller's untap step.
+pub fn dehydration() -> CardDefinition {
+    tap_down_aura("Dehydration")
+}

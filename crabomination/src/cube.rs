@@ -848,6 +848,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mist_raven,
         // tap-down-target-player's-board (modern_decks)
         sleep,
+        // aura-anchored untap-prevention (modern_decks)
+        claustrophobia,
+        dehydration,
         // ── Evoke Incarnation (MH2) ──
         subtlety,
         // ── unblocked-draw snake + tempo illusions ──
@@ -1128,6 +1131,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: aggro / aristocrat supplement ──
         walking_corpse,
         highborn_ghoul,
+        // stat/keyword Auras (modern_decks)
+        untamed_hunger,
+        mark_of_the_vampire,
         champion_of_the_perished,
         falkenrath_noble,
         carrier_thrall,
@@ -1489,6 +1495,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // color-set / ferocious burn (modern_decks)
         crimson_wisps,
         wild_slash,
+        hammerhand,
         // ── modern_decks: red beaters batch 2 ──
         canyon_minotaur,
         brazen_scourge,
