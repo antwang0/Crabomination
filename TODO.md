@@ -21,9 +21,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - ⏳ **"Up to one target" for Suspect (Reasonable Doubt).** Currently modeled
   as a required creature target; a true optional single-target slot would let
   it resolve with the counter clause alone.
-- ⏳ **Client suspect/goaded/monstrous badges.** `PermanentView.suspected`
-  (and the existing `goaded`/`monstrous`) are surfaced over the wire but the
-  client doesn't render a badge for any of them yet.
+- ✅ **Client suspect/goaded/monstrous badges.** `build_tooltip_body`
+  (`systems/counter_tooltip.rs`) renders "(suspected …)" / "(goaded …)" /
+  "(monstrous)" status lines from the wire flags. A 3D on-card glyph (vs.
+  the hover tooltip) is still a possible follow-up.
 
 - ✅ **Ferocious damage-can't-be-prevented rider (Wild Slash).** Shipped via
   `If(SelectorExists(EachPermanent(Creature ∧ ControlledByYou ∧

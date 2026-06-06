@@ -408,6 +408,22 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("(blocking #{})", att.0));
     }
 
+    // Designation badges surfaced over the wire (CR 701.60 Suspect,
+    // CR 701.39 Goad, CR 701.27 Monstrosity). Each is a sticky game-state
+    // flag the player needs at a glance — a suspected creature has menace
+    // and can't block, a goaded creature must attack a player other than
+    // its controller, and a monstrous creature has already paid its
+    // one-shot monstrosity cost. Push (claude/modern_decks).
+    if p.suspected {
+        lines.push(String::from("(suspected — has menace, can't block)"));
+    }
+    if p.goaded {
+        lines.push(String::from("(goaded — must attack)"));
+    }
+    if p.monstrous {
+        lines.push(String::from("(monstrous)"));
+    }
+
     // Marked damage: every creature with non-zero damage is one toughness-
     // threshold away from death. Surface "marked: N damage" plus a
     // (lethal? Y/N) shorthand so the player sees at a glance how close
@@ -923,6 +939,18 @@ mod tests {
         p.blocking_attacker = Some(CardId(7));
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(blocking #7)"), "got: {body}");
+    }
+
+    #[test]
+    fn suspect_goad_monstrous_badges_surface_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.suspected = true;
+        p.goaded = true;
+        p.monstrous = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("suspected"), "got: {body}");
+        assert!(body.contains("goaded"), "got: {body}");
+        assert!(body.contains("monstrous"), "got: {body}");
     }
 
     #[test]
