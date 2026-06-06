@@ -234,6 +234,11 @@ fn colorless_pool() -> Vec<CardFactory> {
         thought_vessel,
         crucible_of_worlds,
         vensers_journal,
+        spellbook,
+        // Spell-tax stax artifacts (AdditionalCost statics).
+        sphere_of_resistance,
+        thorn_of_amethyst,
+        lodestone_golem,
         // Draw-step group draw + library-manipulation artifacts.
         font_of_mythos,
         senseis_divining_top,
@@ -1040,6 +1045,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         deaths_shadow,
         cabal_ritual,
         cabal_coffers,
+        // Repeatable board-sweep enchantment ({B}: ping all).
+        pestilence,
         bump_in_the_night,
         // ── Eternalize (CR 702.91) ──
         dreamstealer,

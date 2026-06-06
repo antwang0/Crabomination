@@ -19682,6 +19682,120 @@ pub fn shield_sphere() -> CardDefinition {
     }
 }
 
+/// Spellbook — {0} Artifact — Book. "You have no maximum hand size."
+pub fn spellbook() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Spellbook",
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sphere of Resistance — {2} Artifact. "Spells cost {1} more to cast."
+pub fn sphere_of_resistance() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Sphere of Resistance",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Spells cost {1} more to cast.",
+            effect: StaticEffect::AdditionalCost { filter: SelectionRequirement::Any, amount: 1 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thorn of Amethyst — {2} Artifact. "Noncreature spells cost {1} more to cast."
+pub fn thorn_of_amethyst() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Thorn of Amethyst",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Noncreature spells cost {1} more to cast.",
+            effect: StaticEffect::AdditionalCost {
+                filter: SelectionRequirement::Noncreature,
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lodestone Golem — {4} Artifact Creature — Golem 5/3. "Nonartifact spells
+/// cost {1} more to cast."
+pub fn lodestone_golem() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Lodestone Golem",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 5,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Nonartifact spells cost {1} more to cast.",
+            effect: StaticEffect::AdditionalCost {
+                filter: SelectionRequirement::Artifact.negate(),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pestilence — {2}{B}{B} Enchantment. "At the beginning of the end step, if
+/// no creatures are on the battlefield, sacrifice this. {B}: This deals 1
+/// damage to each creature and each player."
+pub fn pestilence() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Pestilence",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(
+                    Selector::EachPermanent(SelectionRequirement::Creature),
+                )))),
+            effect: Effect::SacrificeSource,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Seq(vec![
+                Effect::ForEach {
+                    selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::Const(1),
+                    }),
+                },
+                Effect::ForEach {
+                    selector: Selector::Player(PlayerRef::EachPlayer),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::Const(1),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Font of Mythos — {4} Artifact. "At the beginning of each player's draw
 /// step, that player draws two additional cards."
 pub fn font_of_mythos() -> CardDefinition {

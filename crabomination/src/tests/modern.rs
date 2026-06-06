@@ -30743,3 +30743,53 @@ fn senseis_divining_top_draws_and_returns_itself_to_library() {
         "the Top is on top of the library");
     assert!(!g.battlefield.iter().any(|c| c.id == top), "no longer on the battlefield");
 }
+
+// ── Spellbook / spell-tax stax artifacts / Pestilence ──────────────────────
+
+#[test]
+fn spellbook_removes_maximum_hand_size() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spellbook());
+    assert_eq!(g.effective_max_hand_size(0), None);
+}
+
+#[test]
+fn thorn_of_amethyst_taxes_only_noncreature_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thorn_of_amethyst());
+    let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear_id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
+    let bear = g.players[0].hand.iter().find(|c| c.id == bear_id).unwrap().clone();
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt), 1, "noncreature taxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bear), 0, "creature untaxed");
+}
+
+#[test]
+fn lodestone_golem_taxes_nonartifact_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lodestone_golem());
+    let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let sol_id = g.add_card_to_hand(0, catalog::sol_ring());
+    let bolt = g.players[0].hand.iter().find(|c| c.id == bolt_id).unwrap().clone();
+    let sol = g.players[0].hand.iter().find(|c| c.id == sol_id).unwrap().clone();
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &bolt), 1, "nonartifact taxed");
+    assert_eq!(crate::game::actions::extra_cost_for_spell(&g, 0, &sol), 0, "artifact untaxed");
+}
+
+#[test]
+fn pestilence_pings_each_creature_and_player() {
+    let mut g = two_player_game();
+    let pest = g.add_card_to_battlefield(0, catalog::pestilence());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pest, ability_index: 0, target: None, x_value: None,
+    }).expect("Pestilence ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 - 1, "P0 took 1");
+    assert_eq!(g.players[1].life, p1 - 1, "P1 took 1");
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(1), "bear took 1");
+}
