@@ -30063,6 +30063,38 @@ fn uro_escaped_stays_gains_life_and_draws() {
 }
 
 #[test]
+fn cruel_celebrant_drains_when_your_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cruel_celebrant());
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Bolt my own fodder so the full SBA + death-trigger dispatch fires.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    cast_at(&mut g, bolt, Target::Permanent(token));
+    assert_eq!(g.players[1].life, l1 - 1, "opponent lost 1");
+    assert_eq!(g.players[0].life, l0 + 1, "you gained 1");
+}
+
+#[test]
+fn mayhem_devil_pings_on_sacrifice() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mayhem_devil());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let tribute = g.add_card_to_hand(0, catalog::tribute_to_hunger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tribute, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tribute forces opp sacrifice");
+    drain_stack(&mut g);
+    // Opp sacrificed a permanent → Mayhem Devil pinged 1 (auto-targeted at them).
+    assert_eq!(g.players[1].life, l1 - 1, "Mayhem Devil dealt 1 on the sacrifice");
+}
+
+#[test]
 fn mana_dorks_tap_for_their_color() {
     let mut g = two_player_game();
     let bd = g.add_card_to_battlefield(0, catalog::boreal_druid());

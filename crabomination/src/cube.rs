@@ -1162,6 +1162,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cling_to_dust,
         kroxa,
         uro,
+        cruel_celebrant,
+        mayhem_devil,
         beacon_of_destruction,
         // tezzeret_cruel_captain — 🟡 static (+1/+1 to artifact creatures) and ult omitted
         // ── modern_decks-14 ──

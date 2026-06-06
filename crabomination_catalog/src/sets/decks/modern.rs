@@ -7305,6 +7305,46 @@ pub fn cabal_ritual() -> CardDefinition {
     }
 }
 
+/// Cruel Celebrant — {W}{B} 1/1 Creature — Vampire. Whenever this or another
+/// creature you control dies, each opponent loses 1 life and you gain 1 life.
+pub fn cruel_celebrant() -> CardDefinition {
+    CardDefinition {
+        name: "Cruel Celebrant",
+        cost: cost(&[w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mayhem Devil — {B}{R} 3/3 Creature — Devil. Whenever a player sacrifices a
+/// permanent, deal 1 damage to any target.
+pub fn mayhem_devil() -> CardDefinition {
+    CardDefinition {
+        name: "Mayhem Devil",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::AnyPlayer),
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Boreal Druid — {G} 1/1 Creature — Elf Druid. {T}: Add {C}.
 pub fn boreal_druid() -> CardDefinition {
     use crate::card::ActivatedAbility;
