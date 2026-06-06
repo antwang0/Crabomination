@@ -426,6 +426,10 @@ fn compute_permanent(
 /// Determine which colors a card has from its mana cost symbols.
 fn colors_from_card(card: &crate::card::CardInstance) -> Vec<Color> {
     use crate::mana::ManaSymbol;
+    // CR 702.114 — Devoid: the object is colorless (CDA), ignore cost pips.
+    if card.definition.keywords.contains(&crate::card::Keyword::Devoid) {
+        return Vec::new();
+    }
     let mut colors = Vec::new();
     for sym in &card.definition.cost.symbols {
         match sym {

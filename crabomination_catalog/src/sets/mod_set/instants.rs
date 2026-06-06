@@ -1534,6 +1534,25 @@ pub fn mending_hands() -> CardDefinition {
     }
 }
 
+/// Reverse Damage — {1}{W}{W} Instant. "The next time a source of your
+/// choice would deal damage to you this turn, prevent that damage. You
+/// gain life equal to the damage prevented this way." (CR 615.1.) Modeled
+/// as a `gain_life` prevention shield on the caster; the source-of-your-
+/// choice restriction collapses (any source's next hit is soaked, up to a
+/// high cap that stands in for "that damage").
+pub fn reverse_damage() -> CardDefinition {
+    CardDefinition {
+        name: "Reverse Damage",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventNextDamageAndGainLife {
+            target: Selector::You,
+            amount: Value::Const(99),
+        },
+        ..Default::default()
+    }
+}
+
 /// Moment's Peace — {1}{G} Instant. "Prevent all combat damage that would be
 /// dealt this turn. Flashback {2}{G}." A fog you can recast from the graveyard.
 pub fn moments_peace() -> CardDefinition {

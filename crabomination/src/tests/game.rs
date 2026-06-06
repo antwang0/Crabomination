@@ -768,6 +768,7 @@ fn prevention_shield_stops_combat_damage_to_player() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         remaining: None,
+        gain_life: false,
     });
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -841,12 +842,30 @@ fn skullcrack_damage_cant_be_prevented() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         remaining: None,
+        gain_life: false,
     });
     let sk = g.add_card_to_hand(0, catalog::skullcrack());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     cast_at(&mut g, sk, Target::Player(1));
     assert_eq!(g.players[1].life, 2, "shield ignored — 3 damage went through");
+}
+
+/// CR 615.1 — Reverse Damage prevents the next damage to its caster and
+/// the caster gains life equal to the amount prevented.
+#[test]
+fn reverse_damage_prevents_and_gains_life() {
+    let mut g = two_player_game();
+    let rd = g.add_card_to_hand(0, catalog::reverse_damage());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, rd); // shield on self
+    let before = g.players[0].life;
+    // Player 0 takes 3 burn damage to the face → prevented, +3 life.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(0));
+    assert_eq!(g.players[0].life, before + 3, "3 prevented, 3 life gained");
 }
 
 #[test]
@@ -888,6 +907,7 @@ fn prevention_shield_stops_creature_combat_damage() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Permanent(blocker_id),
         remaining: None, // prevent all damage to the blocker this turn
+        gain_life: false,
     });
 
     g.step = TurnStep::DeclareAttackers;

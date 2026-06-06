@@ -1949,6 +1949,21 @@ pub fn poisonous(n: u32) -> TriggeredAbility {
     }
 }
 
+/// Ingest (CR 702.115): "Whenever this creature deals combat damage to a
+/// player, that player exiles the top card of their library." A
+/// `DealsCombatDamageToPlayer / SelfSource` trigger; the damaged player is
+/// bound to target slot 0 by `fire_combat_damage_to_player_triggers`.
+pub fn ingest() -> TriggeredAbility {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::ExileTopOfLibrary {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(1),
+        },
+    }
+}
+
 /// Outlast (CR 702.97) — the activated ability "{cost}, {T}: Put a
 /// +1/+1 counter on this creature. Activate only as a sorcery." Returns
 /// the `ActivatedAbility`; pass the (already mana-loaded) cost in.

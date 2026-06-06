@@ -1034,6 +1034,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::SetLifeTotal { .. } => "Set life total",
         Effect::ExchangeLifeTotals { .. } => "Exchange life totals",
         Effect::PreventNextDamage { .. } => "Prevent damage",
+        Effect::PreventNextDamageAndGainLife { .. } => "Prevent damage, gain life",
         Effect::PreventAllDamageThisTurn { .. } => "Prevent all damage",
         Effect::DamageCantBePreventedThisTurn => "Damage can't be prevented",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
@@ -1184,10 +1185,12 @@ mod tests {
         state.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Player(0),
             remaining: None,
+            gain_life: false,
         });
         state.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Permanent(bear),
             remaining: Some(2),
+            gain_life: false,
         });
         state.damage_cant_be_prevented_this_turn = true;
         let v = project(&state, 0);

@@ -1450,6 +1450,10 @@ pub enum Effect {
     /// `size`.
     SetMaxHandSize { who: Selector, size: Value },
     Mill    { who: Selector, amount: Value },
+    /// Each player the selector resolves to exiles the top `amount` cards of
+    /// their own library (CR 702.115 Ingest, processed-card exile, etc.).
+    /// Mirrors `Mill` but routes to the exile zone instead of the graveyard.
+    ExileTopOfLibrary { who: Selector, amount: Value },
     /// Each player the selector resolves to mills half the cards in their
     /// *own* library (rounded up when `rounded_up`, else down). Per-player —
     /// `Mill`'s global amount can't scale to each target's own library size.
@@ -2360,6 +2364,13 @@ pub enum Effect {
     /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
     /// "you don't lose / prevent all damage to you". Non-combat path.
     PreventAllDamageThisTurn { target: Selector },
+
+    /// "The next time a source would deal damage to `target` this turn,
+    /// prevent that damage; `target` gains life equal to the damage
+    /// prevented this way." (CR 615.1 prevention + life gain.) Pushes a
+    /// per-target prevention shield flagged `gain_life`; when it soaks
+    /// damage the protected player gains that much life. Reverse Damage.
+    PreventNextDamageAndGainLife { target: Selector, amount: Value },
 
     /// "Damage can't be prevented this turn." (CR 615.12) Sets a global
     /// flag that suppresses every prevention shield for the rest of the

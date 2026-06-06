@@ -432,6 +432,11 @@ pub enum Keyword {
     Prowess,
     Ward(WardCost),
     Changeling,
+    /// CR 702.114 — Devoid is a characteristic-defining ability: the object
+    /// is colorless regardless of the colored pips in its mana cost. Honored
+    /// in `colors_from_card` (the layer-5 color base), so protection-from-
+    /// color and "colorless permanent" payoffs treat it as colorless.
+    Devoid,
     Storm,
     /// CR 702.69 — "When you cast this spell, copy it for each permanent put
     /// into a graveyard from the battlefield this turn." A self-cast copy

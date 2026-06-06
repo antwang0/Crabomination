@@ -801,6 +801,10 @@ pub struct PreventionShield {
     /// `None` = prevent all damage to the target this turn; `Some(n)` =
     /// prevent the next `n` damage, then the shield expires (CR 615.7).
     pub remaining: Option<u32>,
+    /// CR 615.1 — when set and `target` is a player, that player gains
+    /// life equal to the damage this shield prevents (Reverse Damage).
+    #[serde(default)]
+    pub gain_life: bool,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither

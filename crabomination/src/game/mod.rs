@@ -63,6 +63,9 @@ mod tests_akh;
 #[cfg(test)]
 #[path = "../tests/mkm.rs"]
 mod tests_mkm;
+#[cfg(test)]
+#[path = "../tests/ogw.rs"]
+mod tests_ogw;
 pub mod types;
 
 #[cfg(test)]

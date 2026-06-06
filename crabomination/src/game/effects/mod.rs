@@ -1675,6 +1675,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopOfLibrary { who, amount } => {
+                // CR 702.115 Ingest etc. — like Mill but routes to exile.
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            if self.players[p].library.is_empty() { break; }
+                            let card = self.players[p].library.remove(0);
+                            let cid = card.id;
+                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
+                            self.last_moved_cards.push(cid);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SetNoMaxHandSize { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
@@ -5305,6 +5322,23 @@ impl GameState {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
                             target: s,
                             remaining: Some(n),
+                            gain_life: false,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::PreventNextDamageAndGainLife { target, amount } => {
+                // CR 615.1 — prevent the next N damage to target; the
+                // protected player gains that much life (Reverse Damage).
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 {
+                    for s in self.prevention_targets(target, ctx) {
+                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                            target: s,
+                            remaining: Some(n),
+                            gain_life: true,
                         });
                     }
                 }
@@ -5317,6 +5351,7 @@ impl GameState {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         remaining: None,
+                        gain_life: false,
                     });
                 }
                 Ok(())
