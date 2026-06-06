@@ -347,6 +347,11 @@ pub enum StaticEffect {
     /// doubles the produced pip count (2 instances → 4×, …). Read by
     /// `mana_production_doublers_for` just before a mana ability resolves.
     ManaProductionDoubled,
+    /// Cursed Totem / Damping Matrix — "Activated abilities of creatures
+    /// can't be activated unless they're mana abilities." Global lock
+    /// checked in `activate_ability` (sibling of
+    /// `ArtifactActivatedAbilitiesLocked`).
+    CreatureActivatedAbilitiesLocked,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

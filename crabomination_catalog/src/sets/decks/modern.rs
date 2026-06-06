@@ -19682,6 +19682,46 @@ pub fn shield_sphere() -> CardDefinition {
     }
 }
 
+/// Cursed Totem — {2} Artifact. "Activated abilities of creatures can't be
+/// activated unless they're mana abilities."
+pub fn cursed_totem() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Cursed Totem",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of creatures can't be activated unless they're mana abilities.",
+            effect: StaticEffect::CreatureActivatedAbilitiesLocked,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Damping Matrix — {3} Artifact. "Activated abilities of artifacts and
+/// creatures can't be activated unless they're mana abilities."
+pub fn damping_matrix() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Damping Matrix",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Activated abilities of artifacts can't be activated unless they're mana abilities.",
+                effect: StaticEffect::ArtifactActivatedAbilitiesLocked,
+            },
+            StaticAbility {
+                description: "Activated abilities of creatures can't be activated unless they're mana abilities.",
+                effect: StaticEffect::CreatureActivatedAbilitiesLocked,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Spellbook — {0} Artifact — Book. "You have no maximum hand size."
 pub fn spellbook() -> CardDefinition {
     use crate::card::StaticAbility;

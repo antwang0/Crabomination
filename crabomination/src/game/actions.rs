@@ -4548,6 +4548,30 @@ impl GameState {
             }
         }
 
+        // Cursed Totem / Damping Matrix lock: non-mana activated abilities of
+        // creatures can't be activated while a
+        // `CreatureActivatedAbilitiesLocked` static is in play (global).
+        if !is_mana_ability(&ability.effect) {
+            let src_is_creature = if source_in_gy {
+                self.players[source_owner.unwrap()].graveyard.iter()
+                    .find(|c| c.id == card_id)
+                    .is_some_and(|c| c.definition.is_creature())
+            } else if source_in_hand {
+                self.players[source_owner.unwrap()].hand.iter()
+                    .find(|c| c.id == card_id)
+                    .is_some_and(|c| c.definition.is_creature())
+            } else {
+                self.battlefield_find(card_id).is_some_and(|c| c.definition.is_creature())
+            };
+            if src_is_creature
+                && self.battlefield.iter().flat_map(|c| &c.definition.static_abilities).any(|sa| {
+                    matches!(sa.effect, crate::effect::StaticEffect::CreatureActivatedAbilitiesLocked)
+                })
+            {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
         // Once-per-turn: reject if this ability index has already been
         // used since the most recent turn-cleanup. The ability is recorded
         // as "used" *after* successful activation below so failed mana

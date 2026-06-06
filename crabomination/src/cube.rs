@@ -239,6 +239,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         sphere_of_resistance,
         thorn_of_amethyst,
         lodestone_golem,
+        // Activated-ability lock stax (Cursed Totem / Damping Matrix).
+        cursed_totem,
+        damping_matrix,
         // Draw-step group draw + library-manipulation artifacts.
         font_of_mythos,
         senseis_divining_top,

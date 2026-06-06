@@ -30793,3 +30793,25 @@ fn pestilence_pings_each_creature_and_player() {
     assert_eq!(g.players[1].life, p1 - 1, "P1 took 1");
     assert_eq!(g.battlefield_find(bear).map(|c| c.damage), Some(1), "bear took 1");
 }
+
+// ── Cursed Totem / Damping Matrix (creature activated-ability lock) ─────────
+
+#[test]
+fn cursed_totem_locks_creature_nonmana_abilities_but_not_mana() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cursed_totem());
+    let pinger = g.add_card_to_battlefield(0, catalog::prodigal_sorcerer());
+    g.clear_sickness(pinger);
+    let dork = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.clear_sickness(dork);
+    // Non-mana creature ability is locked.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: pinger, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).is_err(), "Cursed Totem locks the pinger's tap ability");
+    // Mana ability still works.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None, x_value: None,
+    }).expect("mana ability is exempt");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}

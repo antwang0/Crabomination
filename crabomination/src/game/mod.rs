@@ -5721,7 +5721,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::MayPlayLandsFromGraveyard
             // ManaProductionDoubled — consulted at mana-ability resolution
             // via `mana_production_doublers_for`; no layer effect.
-            | StaticEffect::ManaProductionDoubled => vec![],
+            | StaticEffect::ManaProductionDoubled
+            // CreatureActivatedAbilitiesLocked — consulted in
+            // `activate_ability` (Cursed Totem); no layer effect.
+            | StaticEffect::CreatureActivatedAbilitiesLocked => vec![],
         })
         .collect()
 }
