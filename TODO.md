@@ -8,6 +8,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Goldvein Hydra death-treasure rider (LKI).** The dies trigger's
+  `Value::PowerOf(This)` can't read the counter-boosted power because
+  `died_card_snapshots` is cleared after the trigger dispatcher runs, before
+  the stack trigger resolves (CR 603.10 full LKI for stack resolution is
+  unmodeled). Carded without the rider. Fix needs either a snapshot kept alive
+  through resolution or a captured-at-trigger-time value.
+- ⏳ **Collect Evidence which-cards picker.** `Effect::CollectEvidence`
+  auto-exiles the cheapest graveyard cards summing to ≥ N; a player-driven
+  pick (which cards to exile) would need a sum-constrained `ChooseCards`
+  variant. Sample Collector / Izoni work today via the auto-pick.
+- ⏳ **"Up to one target" for Suspect (Reasonable Doubt).** Currently modeled
+  as a required creature target; a true optional single-target slot would let
+  it resolve with the counter clause alone.
+- ⏳ **Client suspect/goaded/monstrous badges.** `PermanentView.suspected`
+  (and the existing `goaded`/`monstrous`) are surfaced over the wire but the
+  client doesn't render a badge for any of them yet.
+
 - ✅ **Ferocious damage-can't-be-prevented rider (Wild Slash).** Shipped via
   `If(SelectorExists(EachPermanent(Creature ∧ ControlledByYou ∧
   PowerAtLeast(4))))` gating `DamageCantBePreventedThisTurn` — no new

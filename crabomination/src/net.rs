@@ -775,6 +775,11 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub monstrous: bool,
+    /// True when this creature is suspected (CR 701.60) — a UI hint so the
+    /// client can badge it as "menace + can't block." Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub suspected: bool,
     /// True when the permanent's computed power or toughness differs
     /// from its base (printed) values — a UI hint for rendering
     /// modified P/T in a distinct color. Always false for non-creatures.

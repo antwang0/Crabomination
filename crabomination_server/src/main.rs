@@ -428,6 +428,17 @@ impl MatchStats {
             self.wins.saturating_mul(100) / resolved
         }
     }
+    /// Percent of wins that closed via something other than lethal face
+    /// damage (deckout / poison / mill / win-the-game). Returns 0 when no
+    /// wins have been recorded. A rising share flags a stall regression
+    /// where bots grind to empty libraries instead of closing on life.
+    fn deckout_pct(&self) -> u64 {
+        if self.wins == 0 {
+            0
+        } else {
+            self.deckout_wins.saturating_mul(100) / self.wins
+        }
+    }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator
     /// rolling-summary line.
@@ -670,7 +681,7 @@ fn format_match_stats(s: &MatchStats) -> String {
         // mill / win-the-game). Only rendered when at least one such
         // win has been seen so the common all-damage case stays tight.
         if s.deckout_wins > 0 {
-            out.push_str(&format!(" alt_wins={}", s.deckout_wins));
+            out.push_str(&format!(" alt_wins={} ({}%)", s.deckout_wins, s.deckout_pct()));
         }
         let unresolved = n.saturating_sub(s.wins + s.draws);
         if unresolved > 0 {
@@ -1542,6 +1553,15 @@ mod tests {
     fn decisive_pct_zero_before_any_resolution() {
         let s = MatchStats::default();
         assert_eq!(s.decisive_pct(), 0);
+    }
+
+    #[test]
+    fn deckout_pct_is_share_of_wins() {
+        // 1 of 4 wins closed via an alternate condition → 25%.
+        let s = MatchStats { wins: 4, deckout_wins: 1, ..Default::default() };
+        assert_eq!(s.deckout_pct(), 25);
+        // No wins yet → 0, not a divide-by-zero.
+        assert_eq!(MatchStats::default().deckout_pct(), 0);
     }
 
     #[test]

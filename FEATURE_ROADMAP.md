@@ -327,7 +327,15 @@ feature; sweep card-batch by card-batch.
   `MayPay({W/B}, drain 1)`; Basilica Screecher, Syndic of Tithes, Tithe
   Drinker, Kingpin's Pet), ⏳ Cohort, ✅ Support (`shortcut::support(n)` /
   `Effect::SupportCounters` — CR 701.32, a +1/+1 counter on each of up to N
-  target creatures via the slot-based "up to N targets" machinery).
+  target creatures via the slot-based "up to N targets" machinery),
+  ✅ Suspect (`Effect::Suspect` + `CardInstance.suspected` → computed Menace +
+  CantBlock, CR 701.60; Barbed Servitor, Repeat Offender, Reasonable Doubt,
+  Person of Interest), ✅ Discover (`Effect::Discover { n }` — CR 701.57,
+  cascade-style exile-until-MV≤N then cast-free-or-to-hand; Geological
+  Appraiser, Trumpeting Carnosaur), 🟡 Collect Evidence
+  (`Effect::CollectEvidence { amount, then }` — CR 701.59, auto-picks the
+  cheapest graveyard cards summing ≥ N then runs the reflexive payoff; Sample
+  Collector, Izoni. Player which-cards picker ⏳).
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
   per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,

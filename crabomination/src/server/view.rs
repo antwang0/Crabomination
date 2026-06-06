@@ -475,6 +475,7 @@ fn project_permanent(
         has_prevention_shield,
         goaded: !card.goaded_by.is_empty(),
         monstrous: card.monstrous,
+        suspected: card.suspected,
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
@@ -1207,6 +1208,17 @@ mod tests {
         assert!(v.battlefield.iter().find(|p| p.id == a).unwrap().goaded);
         assert!(v.battlefield.iter().find(|p| p.id == b).unwrap().monstrous);
         assert!(!v.battlefield.iter().find(|p| p.id == a).unwrap().monstrous);
+    }
+
+    #[test]
+    fn suspected_surfaces_in_the_view() {
+        let mut state = two_player_game();
+        let a = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        state.battlefield_find_mut(a).unwrap().suspected = true;
+        let v = project(&state, 0);
+        assert!(v.battlefield.iter().find(|p| p.id == a).unwrap().suspected);
+        assert!(!v.battlefield.iter().find(|p| p.id == b).unwrap().suspected);
     }
 
     #[test]
