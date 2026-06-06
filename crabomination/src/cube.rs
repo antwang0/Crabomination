@@ -1690,6 +1690,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         fervor,
         sizzle,
         renegade_tactics,
+        furnace_of_rath,
+        dictate_of_the_twin_gods,
         dragon_fodder,
         krenkos_command,
         hordeling_outburst,

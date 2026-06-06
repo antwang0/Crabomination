@@ -8305,3 +8305,35 @@ pub fn fervor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Furnace of Rath — {1}{R}{R}{R} Enchantment. "If a source would deal
+/// damage to a permanent or player, it deals double that damage instead."
+/// (CR 614.2 — `StaticEffect::DoubleDamageDealt`.)
+pub fn furnace_of_rath() -> CardDefinition {
+    CardDefinition {
+        name: "Furnace of Rath",
+        cost: cost(&[generic(1), r(), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If a source would deal damage, it deals double instead.",
+            effect: StaticEffect::DoubleDamageDealt,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dictate of the Twin Gods — {3}{R}{R} Enchantment with Flash. Doubles all
+/// damage (CR 614.2), like Furnace of Rath but castable at instant speed.
+pub fn dictate_of_the_twin_gods() -> CardDefinition {
+    CardDefinition {
+        name: "Dictate of the Twin Gods",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "If a source would deal damage, it deals double instead.",
+            effect: StaticEffect::DoubleDamageDealt,
+        }],
+        ..Default::default()
+    }
+}

@@ -16171,6 +16171,32 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
 }
 
+/// Furnace of Rath doubles damage: a 3-damage bolt deals 6.
+#[test]
+fn furnace_of_rath_doubles_damage() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::furnace_of_rath());
+    let opp = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 6, "3 doubled to 6");
+}
+
+/// Dictate of the Twin Gods has Flash and doubles damage.
+#[test]
+fn dictate_of_the_twin_gods_has_flash_and_doubles() {
+    let d = catalog::dictate_of_the_twin_gods();
+    assert!(d.keywords.contains(&Keyword::Flash), "castable at instant speed");
+    assert!(d.static_abilities.iter().any(|s| matches!(
+        s.effect, crate::effect::StaticEffect::DoubleDamageDealt)));
+}
+
 /// Wring Flesh shrinks a creature -3/-1.
 #[test]
 fn wring_flesh_shrinks_creature() {
