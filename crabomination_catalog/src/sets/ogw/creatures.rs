@@ -125,6 +125,45 @@ pub fn cultivator_drone() -> CardDefinition {
     }
 }
 
+/// Kozilek's Channeler — {5} 4/4 colorless Eldrazi. {T}: Add {C}{C}.
+pub fn kozileks_channeler() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{ManaPayload, PlayerRef, Value};
+    CardDefinition {
+        name: "Kozilek's Channeler",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Scion Summoner — {2}{G} 2/2 Eldrazi Drone. Devoid, ETB make a Scion.
+pub fn scion_summoner() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 1)],
+        ..drone("Scion Summoner", cost(&[generic(2), g()]), 2, 2)
+    }
+}
+
+/// Brood Monitor — {4}{G}{G} 3/3 Eldrazi Drone. Devoid, ETB make three Scions.
+pub fn brood_monitor() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 3)],
+        ..drone("Brood Monitor", cost(&[generic(4), g(), g()]), 3, 3)
+    }
+}
+
 /// Eldrazi Skyspawner — {2}{U} 2/1 Eldrazi Drone. Devoid, Flying, ETB make
 /// a 1/1 Eldrazi Scion.
 pub fn eldrazi_skyspawner() -> CardDefinition {

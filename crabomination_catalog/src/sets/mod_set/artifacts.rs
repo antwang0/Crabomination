@@ -165,6 +165,28 @@ pub fn millstone() -> CardDefinition {
 /// Both abilities are wired: the first is a vanilla mana ability, the
 /// second uses the new `sac_cost` field on `ActivatedAbility` so paying
 /// the cost sacrifices Mind Stone before the Draw resolves.
+/// Hedron Crawler — {2} 0/1 Artifact Creature — Construct. {T}: Add {C}.
+pub fn hedron_crawler() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Hedron Crawler",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Springleaf Drum — {1} Artifact. "{T}, Tap an untapped creature you
 /// control: Add one mana of any color." A creature-tap mana rock.
 pub fn springleaf_drum() -> CardDefinition {

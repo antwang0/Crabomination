@@ -251,6 +251,40 @@ fn tar_snare_kills_a_two_two() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 → -2 toughness → dies");
 }
 
+/// Kozilek's Channeler and Hedron Crawler are colorless mana producers.
+#[test]
+fn colorless_mana_dorks_produce_colorless() {
+    let mut g = two_player_game();
+    let ch = g.add_card_to_battlefield(0, catalog::kozileks_channeler());
+    let cr = g.add_card_to_battlefield(0, catalog::hedron_crawler());
+    g.clear_sickness(ch);
+    g.clear_sickness(cr);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ch, ability_index: 0, target: None, x_value: None,
+    }).expect("channeler taps");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cr, ability_index: 0, target: None, x_value: None,
+    }).expect("crawler taps");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 3, "{{C}}{{C}} + {{C}}");
+    assert!(g.computed_permanent(ch).unwrap().colors.is_empty(), "Channeler is colorless");
+}
+
+/// Scion Summoner mints one Scion; Brood Monitor mints three.
+#[test]
+fn scion_summoner_and_brood_monitor_make_scions() {
+    let mut g = two_player_game();
+    let ss = g.add_card_to_hand(0, catalog::scion_summoner());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast(&mut g, ss);
+    assert_eq!(scion_count(&g), 1);
+    let bm = g.add_card_to_hand(0, catalog::brood_monitor());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    crate::game::cast(&mut g, bm);
+    assert_eq!(scion_count(&g), 4, "Brood Monitor adds three more");
+}
+
 /// Springleaf Drum taps a creature for one mana of any color.
 #[test]
 fn springleaf_drum_taps_a_creature_for_mana() {
