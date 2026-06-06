@@ -20524,6 +20524,83 @@ pub fn chance_encounter() -> CardDefinition {
     }
 }
 
+/// Reprisal — {1}{W} Instant. "Destroy target creature with power 4 or
+/// greater. It can't be regenerated."
+pub fn reprisal() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Reprisal",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DestroyNoRegen {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Icatian Javelineers — {W} 1/1 Human Soldier. Enters with a javelin
+/// (charge) counter. "{T}, Remove a counter: deal 1 damage to any target."
+pub fn icatian_javelineers() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::shortcut::{deal, target};
+    CardDefinition {
+        name: "Icatian Javelineers",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::Charge, Value::Const(1))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            // Gated on having a counter to remove (the counter is the cost).
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Charge },
+                Value::Const(1),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This, kind: CounterType::Charge, amount: Value::Const(1),
+                },
+                deal(1, target()),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Leonin Relic-Warder — {W}{W} 2/2 Cat Cleric. ETB exiles target artifact or
+/// enchantment until this leaves the battlefield (CR 603.6e).
+pub fn leonin_relic_warder() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::shortcut::{etb, target_filtered};
+    CardDefinition {
+        name: "Leonin Relic-Warder",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Spiketail Hatchling — {1}{U} 1/1 Drake, Flying. "Sacrifice this: Counter
 /// target spell unless its controller pays {1}."
 pub fn spiketail_hatchling() -> CardDefinition {

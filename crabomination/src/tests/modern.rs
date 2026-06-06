@@ -31178,6 +31178,56 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── White removal + utility ────────────────────────────────────────────────
+
+#[test]
+fn reprisal_destroys_a_big_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::reprisal());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(big));
+    assert!(g.battlefield_find(big).is_none(), "the power-4 creature is destroyed");
+}
+
+#[test]
+fn icatian_javelineers_pings_once_then_runs_dry() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let jav = g.add_card_to_battlefield(0, catalog::icatian_javelineers());
+    g.battlefield_find_mut(jav).unwrap().add_counters(CounterType::Charge, 1);
+    g.clear_sickness(jav);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jav, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("ping for 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "dealt 1 to the opponent");
+    // Untap it so the only blocker to re-activation is the missing counter.
+    g.battlefield_find_mut(jav).unwrap().tapped = false;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: jav, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).is_err(), "can't ping again with no counter");
+}
+
+#[test]
+fn leonin_relic_warder_exiles_then_returns_on_death() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(1, catalog::ur_golems_eye());
+    let warder = g.add_card_to_hand(0, catalog::leonin_relic_warder());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: warder, target: Some(Target::Permanent(relic)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Leonin Relic-Warder castable for {W}{W}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(relic).is_none(), "artifact exiled by the Warder's ETB");
+    // Kill the Warder — the exiled artifact returns (CR 603.6e).
+    g.battlefield_find_mut(warder).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == relic), "artifact returns on the Warder's death");
+}
+
 // ── Tempo illusions + Spiketail Hatchling ──────────────────────────────────
 
 #[test]

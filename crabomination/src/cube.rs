@@ -432,6 +432,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Lifegain + targeted removal.
         congregate,
         smite_the_monstrous,
+        reprisal,
+        // Pinger + linked-exile hatebear.
+        icatian_javelineers,
+        leonin_relic_warder,
 
         // ── modern_decks: white value/aggro creatures ──
         solemn_recruit,
