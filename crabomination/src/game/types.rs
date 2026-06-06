@@ -49,6 +49,10 @@ pub enum GameAction {
     /// definition before entering the battlefield, so all subsequent abilities
     /// (mana abilities, ETB triggers, land types) come from the back face.
     PlayLandBack(CardId),
+    /// CR 305 — play a land from the controller's graveyard, legal only while
+    /// a `StaticEffect::MayPlayLandsFromGraveyard` permanent (Crucible of
+    /// Worlds, Ramunap Excavator) is in play.
+    PlayLandFromGraveyard(CardId),
     CastSpell { card_id: CardId, target: Option<Target>, additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// CR 702.32 — cast a spell paying its optional Kicker cost in addition
     /// to the mana cost. The resolving spell is stamped `kicked` so

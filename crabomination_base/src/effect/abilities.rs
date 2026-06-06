@@ -331,6 +331,16 @@ pub enum StaticEffect {
     /// to exile. Cast creature spells bypass this path entirely (they enter
     /// via `resolve_spell` in `stack.rs`), so they are unaffected.
     ExileNontokenCreaturesNotCast,
+    /// CR 402.2 — "You have no maximum hand size." While the controller has
+    /// a permanent carrying this static, their cleanup-step discard is
+    /// skipped entirely. Read by `effective_max_hand_size`; Reliquary Tower,
+    /// Thought Vessel, Spellbook, Library of Leng-adjacent statics.
+    NoMaximumHandSize,
+    /// CR 305 / 718 — "You may play lands from your graveyard." Crucible of
+    /// Worlds, Ramunap Excavator. Read by the land-play legality + the
+    /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
+    /// becomes a legal land play (still bound by the one-land-per-turn cap).
+    MayPlayLandsFromGraveyard,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

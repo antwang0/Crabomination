@@ -229,6 +229,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── colorless utility ──
         pilgrims_eye,
         filigree_familiar,
+        // No-maximum-hand-size + play-lands-from-graveyard statics.
+        reliquary_tower,
+        thought_vessel,
+        crucible_of_worlds,
         // ── classic colorless core-set bodies (claude/modern_decks) ──
         obsianus_golem,
         yotian_soldier,
@@ -1701,6 +1705,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: cube staples ──
         ancient_stirrings,
         arbor_elf,
+        // Play-lands-from-graveyard (MayPlayLandsFromGraveyard static).
+        ramunap_excavator,
 
         // ── Poisonous (CR 702.70) ──
         marsh_viper,

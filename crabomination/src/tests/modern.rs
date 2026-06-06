@@ -30516,3 +30516,55 @@ fn flusterstorm_counters_an_instant_unless_paid() {
     drain_stack(&mut g);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt was countered (unpaid)");
 }
+
+// ── No-maximum-hand-size + play-lands-from-graveyard statics ────────────────
+
+#[test]
+fn reliquary_tower_skips_cleanup_discard() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.add_card_to_battlefield(0, catalog::reliquary_tower());
+    for _ in 0..10 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    assert_eq!(g.effective_max_hand_size(0), None, "Reliquary Tower removes the maximum");
+    let suspended = g.do_cleanup();
+    assert!(!suspended, "cleanup completes synchronously");
+    assert_eq!(g.players[0].hand.len(), 10, "no cards discarded with no max hand size");
+}
+
+#[test]
+fn no_reliquary_tower_discards_to_seven() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    for _ in 0..10 {
+        g.add_card_to_hand(0, catalog::forest());
+    }
+    g.do_cleanup();
+    assert_eq!(g.players[0].hand.len(), 7, "without the static, discard down to seven");
+}
+
+#[test]
+fn crucible_of_worlds_plays_a_land_from_the_graveyard() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::crucible_of_worlds());
+    let land = g.add_card_to_graveyard(0, catalog::forest());
+    assert!(g.player_may_play_lands_from_graveyard(0));
+    g.perform_action(GameAction::PlayLandFromGraveyard(land)).expect("land replays from gy");
+    assert!(g.battlefield.iter().any(|c| c.id == land), "land is on the battlefield");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == land), "removed from graveyard");
+}
+
+#[test]
+fn play_land_from_graveyard_rejected_without_static() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let land = g.add_card_to_graveyard(0, catalog::forest());
+    assert!(g.perform_action(GameAction::PlayLandFromGraveyard(land)).is_err(),
+        "no Crucible → can't play lands from graveyard");
+}

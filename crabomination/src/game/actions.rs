@@ -616,6 +616,40 @@ impl crate::game::GameState {
     pub fn can_player_play_land(&self, player: usize) -> bool {
         self.players[player].lands_played_this_turn < self.max_lands_per_turn(player)
     }
+
+    /// CR 402.2 — `player`'s effective maximum hand size, honoring any
+    /// `StaticEffect::NoMaximumHandSize` permanent they control (Reliquary
+    /// Tower, Thought Vessel). `None` means "no maximum" (skip cleanup
+    /// discard entirely).
+    pub fn effective_max_hand_size(&self, player: usize) -> Option<usize> {
+        use crate::effect::StaticEffect;
+        let no_max = self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::NoMaximumHandSize))
+        });
+        if no_max {
+            None
+        } else {
+            self.players[player].max_hand_size
+        }
+    }
+
+    /// CR 305 — Whether `player` may play lands from their graveyard
+    /// (Crucible of Worlds, Ramunap Excavator) via a
+    /// `StaticEffect::MayPlayLandsFromGraveyard` permanent.
+    pub fn player_may_play_lands_from_graveyard(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::MayPlayLandsFromGraveyard))
+        })
+    }
 }
 
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
@@ -691,6 +725,48 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(GameError::NotALand(card_id));
         }
+        self.place_land_card(p, card)
+    }
+
+    /// CR 305 — Play a land from the controller's graveyard, legal only while
+    /// a `StaticEffect::MayPlayLandsFromGraveyard` permanent (Crucible of
+    /// Worlds, Ramunap Excavator) is in play. Honors the same sorcery-speed
+    /// and one-land-per-turn restrictions as a hand land play.
+    pub(crate) fn play_land_from_graveyard(
+        &mut self,
+        card_id: CardId,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if !self.can_player_play_land(p) {
+            return Err(GameError::AlreadyPlayedLand);
+        }
+        if !self.player_may_play_lands_from_graveyard(p) {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let Some(idx) = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id && c.definition.is_land())
+        else {
+            return Err(GameError::NotALand(card_id));
+        };
+        let card = self.players[p].graveyard.remove(idx);
+        self.place_land_card(p, card)
+    }
+
+    /// Shared land-placement tail for `play_land_with_face` and
+    /// `play_land_from_graveyard`: applies Damping Sphere mana downgrades,
+    /// pushes the card to the battlefield, fires ETB triggers, and returns
+    /// the land-played events.
+    fn place_land_card(
+        &mut self,
+        p: usize,
+        mut card: crate::card::CardInstance,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let card_id = card.id;
         // Damping Sphere: if any battlefield permanent grants
         // `LandsTapColorlessOnly`, downgrade this land's mana abilities
         // to `{T}: Add {C}` if the original would have produced more than

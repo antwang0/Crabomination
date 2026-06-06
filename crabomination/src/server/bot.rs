@@ -1131,6 +1131,19 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Crucible of Worlds / Ramunap Excavator: replay a land from the
+    // graveyard if no hand land was played (CR 305 land-from-gy permission).
+    if state.can_player_play_land(seat)
+        && state.player_may_play_lands_from_graveyard(seat)
+        && let Some(land) =
+            state.players[seat].graveyard.iter().find(|c| c.definition.is_land())
+    {
+        let action = GameAction::PlayLandFromGraveyard(land.id);
+        if state.would_accept(action.clone()) {
+            return action;
+        }
+    }
+
     if !castable.is_empty() {
         // Magecraft-aware bias: if the bot controls a permanent with a
         // magecraft trigger and at least one instant or sorcery is in

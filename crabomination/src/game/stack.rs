@@ -1061,7 +1061,7 @@ impl GameState {
         // down to the maximum hand size." `Player.max_hand_size` is `None`
         // for "no maximum hand size" effects (skip entirely) and `Some(n)`
         // otherwise (discard down to `n`).
-        if let Some(max) = self.players[active].max_hand_size
+        if let Some(max) = self.effective_max_hand_size(active)
             && self.players[active].hand.len() > max
         {
             if self.players[active].wants_ui {

@@ -2625,6 +2625,7 @@ impl GameState {
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
             GameAction::PlayLandBack(id) => self.play_land_with_face(id, true),
+            GameAction::PlayLandFromGraveyard(id) => self.play_land_from_graveyard(id),
             GameAction::CastSpell {
                 card_id,
                 target,
@@ -4395,8 +4396,8 @@ impl GameState {
                     // Once the hand is back at the limit, ignore any further
                     // ids so a buggy/hostile client can't force an
                     // over-discard with an oversized answer.
-                    let over = self.players[player]
-                        .max_hand_size
+                    let over = self
+                        .effective_max_hand_size(player)
                         .is_some_and(|max| self.players[player].hand.len() > max);
                     if !over {
                         break;
@@ -4410,7 +4411,7 @@ impl GameState {
                 }
                 // Under-discard (the answer pitched too few): re-pose the
                 // decision until the hand is back at the maximum.
-                if let Some(max) = self.players[player].max_hand_size
+                if let Some(max) = self.effective_max_hand_size(player)
                     && self.players[player].hand.len() > max
                 {
                     let excess = (self.players[player].hand.len() - max) as u32;
@@ -5687,7 +5688,13 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // ExileNontokenCreaturesNotCast (Containment Priest) — read at
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.
-            | StaticEffect::ExileNontokenCreaturesNotCast => vec![],
+            | StaticEffect::ExileNontokenCreaturesNotCast
+            // NoMaximumHandSize — consulted at cleanup via
+            // `effective_max_hand_size`; no layer effect.
+            | StaticEffect::NoMaximumHandSize
+            // MayPlayLandsFromGraveyard — consulted by the land-play paths
+            // via `player_may_play_lands_from_graveyard`; no layer effect.
+            | StaticEffect::MayPlayLandsFromGraveyard => vec![],
         })
         .collect()
 }

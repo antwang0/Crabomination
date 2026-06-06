@@ -109,6 +109,8 @@ pub enum CreatureType {
     Gnome,
     // Artifact creature subtype (Court Homunculus, Fblthp).
     Homunculus,
+    // Amonkhet Naga (Ramunap Excavator).
+    Naga,
 }
 
 /// Land subtypes (basic land types + others).

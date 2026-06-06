@@ -19628,6 +19628,92 @@ pub fn expedition_map() -> CardDefinition {
     }
 }
 
+/// Reliquary Tower — Land. "You have no maximum hand size. {T}: Add {C}."
+pub fn reliquary_tower() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::{ManaPayload, StaticEffect};
+    CardDefinition {
+        name: "Reliquary Tower",
+        card_types: vec![CardType::Land],
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thought Vessel — {2} Artifact. "You have no maximum hand size. {T}: Add {C}."
+pub fn thought_vessel() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::{ManaPayload, StaticEffect};
+    CardDefinition {
+        name: "Thought Vessel",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crucible of Worlds — {3} Artifact. "You may play lands from your graveyard."
+pub fn crucible_of_worlds() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Crucible of Worlds",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You may play lands from your graveyard.",
+            effect: StaticEffect::MayPlayLandsFromGraveyard,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ramunap Excavator — {2}{G} 2/3 Naga Cleric. "You may play lands from your
+/// graveyard."
+pub fn ramunap_excavator() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Ramunap Excavator",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Naga, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "You may play lands from your graveyard.",
+            effect: StaticEffect::MayPlayLandsFromGraveyard,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Executioner's Capsule — {B} Artifact. "{1}{B}, Sacrifice this: Destroy
 /// target nonblack creature."
 pub fn executioners_capsule() -> CardDefinition {
