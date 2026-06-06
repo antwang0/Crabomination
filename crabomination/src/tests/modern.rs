@@ -30185,6 +30185,35 @@ fn silverquill_silencer_ignores_unnamed_spell() {
 }
 
 #[test]
+fn beacon_effects_render_short_text_for_ui() {
+    // The UI surfaces effects via `effect_short_text`; the new effects must
+    // not render as empty strings.
+    let txt = catalog::beacon_of_immortality().effect.effect_short_text();
+    assert!(txt.contains("double"), "got: {txt}");
+    assert!(txt.contains("shuffle"), "got: {txt}");
+}
+
+#[test]
+fn modal_modes_render_nonempty_short_text() {
+    // Callous Bloodmage's modal "choose one" modes must each surface readable
+    // text in the client's mode-picker (scry/mill/discard/sacrifice were
+    // previously blank).
+    use crate::effect::Effect;
+    let modes = match &catalog::callous_bloodmage().triggered_abilities[0].effect {
+        Effect::ChooseMode(m) => m.clone(),
+        other => match other {
+            // ETB wraps the ChooseMode; unwrap one layer if needed.
+            Effect::Seq(v) => v.iter().find_map(|e| match e {
+                Effect::ChooseMode(m) => Some(m.clone()), _ => None }).expect("modes"),
+            _ => panic!("expected ChooseMode"),
+        },
+    };
+    for m in &modes {
+        assert!(!m.effect_short_text().is_empty(), "mode rendered empty: {m:?}");
+    }
+}
+
+#[test]
 fn beacon_of_immortality_doubles_life_and_reshuffles() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::beacon_of_immortality());
@@ -30197,6 +30226,14 @@ fn beacon_of_immortality_doubles_life_and_reshuffles() {
     // Beacon shuffled into owner's library — not the graveyard.
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == id), "not in graveyard");
     assert_eq!(g.players[0].library.len(), lib0_before + 1, "back in library");
+}
+
+#[test]
+fn beacon_of_immortality_auto_targets_caster() {
+    // The bot/auto-targeter should double its own life, not the opponent's.
+    let g = two_player_game();
+    let t = g.auto_target_for_effect(&catalog::beacon_of_immortality().effect, 0);
+    assert_eq!(t, Some(Target::Player(0)), "auto-target is the caster");
 }
 
 #[test]

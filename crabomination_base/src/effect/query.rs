@@ -519,6 +519,9 @@ impl Effect {
             Effect::SetBasePT { .. } => false,
             // Animating your own land into a creature is a friendly self-buff.
             Effect::BecomeCreature { .. } => true,
+            // Doubling a life total is a gift — point Beacon of Immortality at
+            // the caster, not the opponent.
+            Effect::DoubleLife { .. } => true,
             // Copying "target token you control" is friendly (Esika's Chariot).
             Effect::CreateTokenCopyOf { .. } => true,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
@@ -673,6 +676,29 @@ impl Effect {
                 Value::Const(n) => format!("each opponent loses {n} life, you gain {n} life"),
                 _ => "drain life".into(),
             },
+            Effect::DoubleLife { .. } => "double target player's life total".into(),
+            Effect::ShuffleSelfIntoLibrary => "shuffle this card into its owner's library".into(),
+            Effect::Scry { amount, .. } => match amount {
+                Value::Const(n) => format!("scry {n}"),
+                _ => "scry".into(),
+            },
+            Effect::Surveil { amount, .. } => match amount {
+                Value::Const(n) => format!("surveil {n}"),
+                _ => "surveil".into(),
+            },
+            Effect::Mill { amount, .. } => match amount {
+                Value::Const(n) => format!("mill {n}"),
+                _ => "mill".into(),
+            },
+            Effect::Discard { amount, .. } => match amount {
+                Value::Const(1) => "discard a card".into(),
+                Value::Const(n) => format!("discard {n} cards"),
+                _ => "discard".into(),
+            },
+            Effect::Sacrifice { .. } => "sacrifice".into(),
+            Effect::SacrificeSource => "sacrifice this".into(),
+            Effect::Explore { .. } => "explore".into(),
+            Effect::Goad { .. } => "goad target creature".into(),
             // Walk every child and concatenate the non-empty pieces. The
             // earlier "first non-empty wins" version produced a misleading
             // summary for cards like Artistic Process mode 2 — Seq([
