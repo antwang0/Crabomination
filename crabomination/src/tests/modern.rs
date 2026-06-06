@@ -15386,6 +15386,124 @@ fn sorin_grim_nemesis_minus_nine_drains_each_opponent() {
 }
 
 #[test]
+fn narset_parter_caps_opponent_draws_at_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::narset_parter_of_veils());
+    let cp = g.compute_battlefield();
+    let _ = cp; // static is consulted via PlayerView/draw path
+    // Opponent's per-turn draw cap is now 1.
+    assert_eq!(g.draw_cap_for(1), Some(1), "opponent capped to one draw per turn");
+    // Controller is unaffected.
+    assert_eq!(g.draw_cap_for(0), None, "your own draws are uncapped");
+}
+
+#[test]
+fn narset_parter_minus_two_digs_for_a_noncreature() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let narset = g.add_card_to_battlefield(0, catalog::narset_parter_of_veils());
+    let spell = g.add_card_to_library(0, catalog::lightning_bolt()); // noncreature, nonland
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());   // creature → not takeable
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(spell))]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: narset, ability_index: 0, target: None,
+    }).expect("Narset -2");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spell), "took the noncreature spell");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == bear), "the creature stayed out of hand");
+}
+
+#[test]
+fn liliana_of_the_veil_plus_one_makes_each_player_discard() {
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    let h0 = g.players[0].hand.len();
+    let h1 = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 0, target: None,
+    }).expect("Lily +1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 - 1, "you discarded one");
+    assert_eq!(g.players[1].hand.len(), h1 - 1, "opponent discarded one");
+}
+
+#[test]
+fn liliana_of_the_veil_minus_two_forces_a_sacrifice() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 1, target: Some(Target::Player(1)),
+    }).expect("Lily -2");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "target player sacrificed a creature");
+}
+
+#[test]
+fn liliana_last_hope_plus_one_shrinks_a_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_the_last_hope());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 0, target: Some(Target::Permanent(bear)),
+    }).expect("Lily +1");
+    drain_stack(&mut g);
+    // -2/-1 puts the 2/2 to 0/1; SBA keeps it (toughness 1).
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear);
+    assert!(b.is_none() || b.unwrap().power == 0, "creature shrunk to 0 power");
+}
+
+#[test]
+fn liliana_last_hope_minus_two_mills_and_returns_a_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_the_last_hope());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 1, target: Some(Target::Permanent(dead)),
+    }).expect("Lily -2");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the creature to hand");
+}
+
+#[test]
+fn teferi_hero_plus_one_draws() {
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_hero_of_dominaria());
+    g.add_card_to_library(0, catalog::island());
+    let h = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi, ability_index: 0, target: None,
+    }).expect("Teferi +1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h + 1, "drew a card");
+}
+
+#[test]
+fn teferi_hero_minus_three_tucks_a_permanent() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_hero_of_dominaria());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_library(1, catalog::island()); }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi, ability_index: 1, target: Some(Target::Permanent(bear)),
+    }).expect("Teferi -3");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "permanent left the battlefield");
+    // Third from top → library index 2.
+    assert_eq!(g.players[1].library.get(2).map(|c| c.id), Some(bear), "tucked third from top");
+}
+
+#[test]
 fn saheeli_rai_plus_one_pings_each_opponent() {
     let mut g = two_player_game();
     let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());

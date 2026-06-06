@@ -21596,3 +21596,213 @@ pub fn mask_of_memory() -> CardDefinition {
             Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
         ]))
 }
+
+// ── modern_decks: cube planeswalkers ─────────────────────────────────────────
+
+/// Narset, Parter of Veils — {1}{U}{U} Legendary Planeswalker. 5 loyalty.
+/// Static: each opponent can't draw more than one card each turn.
+/// **−2**: Look at the top four cards, you may put a noncreature, nonland
+/// card into your hand; rest to the bottom.
+pub fn narset_parter_of_veils() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, Supertype as Sup};
+    use crate::effect::{PlayerStaticTarget, StaticEffect};
+    CardDefinition {
+        name: "Narset, Parter of Veils",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Narset],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Each opponent can't draw more than one card each turn.",
+            effect: StaticEffect::CapDrawsPerTurn {
+                target: PlayerStaticTarget::EachOpponent,
+                max: 1,
+            },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: false,
+                pick_filter: Some(SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland)),
+                take: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Liliana of the Veil — {1}{B}{B} Legendary Planeswalker. 3 loyalty.
+/// **+1**: Each player discards a card. **−2**: Target player sacrifices a
+/// creature. **−6**: target player sacrifices half their permanents (the
+/// printed two-pile split is approximated by `SacrificeHalf`).
+pub fn liliana_of_the_veil() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Liliana of the Veil",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::SacrificeHalf {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    filter: SelectionRequirement::Permanent,
+                    rounded_up: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Liliana, the Last Hope — {1}{B}{B} Legendary Planeswalker. 3 loyalty.
+/// **+1**: Up to one target creature gets -2/-1 until your next turn.
+/// **−2**: Mill two, then return a creature card from your graveyard to hand.
+/// **−7**: emblem that mints Zombies each end step (approximated as a fixed
+/// two-token end-step emblem; the "+number of Zombies you control" scaling is
+/// dropped).
+pub fn liliana_the_last_hope() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup, TokenDefinition};
+    let zombie = TokenDefinition {
+        name: "Zombie".to_string(),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        colors: vec![Color::Black],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Liliana, the Last Hope",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-1),
+                    duration: Duration::UntilNextTurn,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Liliana, the Last Hope".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crate::game::TurnStep::End),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::Const(2),
+                            definition: zombie,
+                        },
+                    }],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Teferi, Hero of Dominaria — {3}{W}{U} Legendary Planeswalker. 4 loyalty.
+/// **+1**: Draw a card (the "untap two lands at the next end step" rider is
+/// dropped). **−3**: Put target nonland permanent into its owner's library
+/// third from the top. **−8**: emblem — whenever you draw a card, exile target
+/// permanent an opponent controls.
+pub fn teferi_hero_of_dominaria() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Teferi, Hero of Dominaria",
+        cost: cost(&[generic(3), w(), u()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Teferi],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Move {
+                    what: target_filtered(SelectionRequirement::Nonland),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        pos: LibraryPosition::FromTop(2),
+                    },
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Teferi, Hero of Dominaria".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                        effect: Effect::Exile {
+                            what: target_filtered(
+                                SelectionRequirement::Permanent
+                                    .and(SelectionRequirement::ControlledByOpponent),
+                            ),
+                        },
+                    }],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

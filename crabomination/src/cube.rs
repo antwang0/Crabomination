@@ -761,6 +761,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         wingcrafter,
         deadeye_navigator,
         tandem_lookout,
+        // ── modern_decks: cube planeswalkers ──
+        narset_parter_of_veils,
+        teferi_hero_of_dominaria,
         // ── modern_decks: land-scaled dig + storm payoff ──
         consult_the_star_charts,
         minds_desire,
@@ -998,6 +1001,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: cube planeswalkers ──
+        liliana_of_the_veil,
+        liliana_the_last_hope,
         // ── Eternalize (CR 702.91) ──
         dreamstealer,
         // ── Afflict (CR 702.130) ──

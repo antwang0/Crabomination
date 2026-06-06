@@ -149,6 +149,8 @@ pub enum PlaneswalkerSubtype {
     // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
     // Geyadrone Dihada, Urza Chief Artificer).
     Saheeli, Tamiyo, Dihada, Urza,
+    // modern_decks: Narset, Parter of Veils.
+    Narset,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
