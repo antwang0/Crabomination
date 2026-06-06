@@ -5,6 +5,7 @@ mod observers;
 pub mod spawn;
 
 pub use components::{
+    ActivatableHighlight,
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CastableHighlight,
     CombatLurch, DyingHighlight,

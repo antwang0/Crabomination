@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 use crate::card::{
-    BattlefieldCard, Card, CardBorderHighlight, CardFrontTexture, CardHighlightAssets, CardHovered,
-    CastableHighlight, DeckCard, DeckPile, DyingHighlight, GameCardId, GraveyardPile, HandCard,
-    PileHovered, CARD_THICKNESS,
+    ActivatableHighlight, BattlefieldCard, Card, CardBorderHighlight, CardFrontTexture,
+    CardHighlightAssets, CardHovered, CastableHighlight, DeckCard, DeckPile, DyingHighlight,
+    GameCardId, GraveyardPile, HandCard, PileHovered, CARD_THICKNESS,
 };
 use crate::game::GraveyardBrowserState;
 use crate::net_plugin::CurrentView;
@@ -287,6 +287,86 @@ pub fn update_dying_highlights(
                 commands.entity(h.back).despawn();
                 commands.entity(h.front).despawn();
                 commands.entity(entity).remove::<DyingHighlight>();
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Spawn / despawn a violet "can activate now" border around each
+/// battlefield permanent the viewer controls that has an ability they could
+/// activate right now (`activatable_permanents`). The engine computes the
+/// set via a `would_accept` dry-run — so it already honors timing, mana, tap
+/// state, target availability, and priority (the list is empty off-priority,
+/// and excludes pure mana abilities). This is what makes "crack a fetch land
+/// on the opponent's end step" visible: the land glows the moment you receive
+/// priority. Mirrors `update_dying_highlights`.
+///
+/// Suppressed while the targeting cursor is active so the gold valid-target
+/// borders own the visuals and a second ring set doesn't z-fight.
+#[allow(clippy::type_complexity)]
+pub fn update_activatable_highlights(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    targeting: Res<crate::game::TargetingState>,
+    highlight_assets: Option<Res<CardHighlightAssets>>,
+    bf_cards: Query<(Entity, &GameCardId, Option<&ActivatableHighlight>), With<BattlefieldCard>>,
+    // A permanent that leaves the battlefield (sacrificed fetch land, etc.)
+    // keeps its entity briefly while it animates away (BattlefieldCard is
+    // removed, not despawned — see `sync_game_visuals`), so strip the border
+    // from anything that left the battlefield still wearing it.
+    left_bf: Query<(Entity, &ActivatableHighlight), Without<BattlefieldCard>>,
+) {
+    let Some(assets) = highlight_assets else { return };
+
+    for (entity, h) in &left_bf {
+        commands.entity(h.back).despawn();
+        commands.entity(h.front).despawn();
+        commands.entity(entity).remove::<ActivatableHighlight>();
+    }
+
+    let activatable: std::collections::HashSet<crabomination::card::CardId> = if targeting.active {
+        Default::default()
+    } else {
+        view.0
+            .as_ref()
+            .map(|cv| cv.activatable_permanents.iter().copied().collect())
+            .unwrap_or_default()
+    };
+
+    for (entity, gid, marker) in &bf_cards {
+        let should = activatable.contains(&gid.0);
+        match (should, marker) {
+            (true, None) => {
+                // Offset proud of the hover gold (0.001), dying red (0.0015),
+                // and castable green (0.0018) borders so an activatable,
+                // hovered permanent shows every ring without z-fighting.
+                let offset = CARD_THICKNESS / 2.0 + 0.0021;
+                let back = commands
+                    .spawn((
+                        Mesh3d(assets.border_mesh.clone()),
+                        MeshMaterial3d(assets.activatable_material.clone()),
+                        Transform::from_xyz(0.0, 0.0, -offset),
+                        Pickable::IGNORE,
+                    ))
+                    .id();
+                let front = commands
+                    .spawn((
+                        Mesh3d(assets.border_mesh.clone()),
+                        MeshMaterial3d(assets.activatable_material.clone()),
+                        Transform::from_xyz(0.0, 0.0, offset),
+                        Pickable::IGNORE,
+                    ))
+                    .id();
+                commands
+                    .entity(entity)
+                    .insert(ActivatableHighlight { back, front })
+                    .add_children(&[back, front]);
+            }
+            (false, Some(h)) => {
+                commands.entity(h.back).despawn();
+                commands.entity(h.front).despawn();
+                commands.entity(entity).remove::<ActivatableHighlight>();
             }
             _ => {}
         }

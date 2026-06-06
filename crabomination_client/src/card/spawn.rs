@@ -73,12 +73,20 @@ pub fn init_shared_assets(
         cull_mode: None,
         ..default()
     });
+    // Violet "can activate an ability now" border for battlefield permanents.
+    let activatable_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.70, 0.45, 1.0),
+        unlit: true,
+        cull_mode: None,
+        ..default()
+    });
     commands.insert_resource(CardHighlightAssets {
         border_mesh: border_mesh_handle,
         border_material,
         castable_material,
         alt_castable_material,
         dying_material,
+        activatable_material,
     });
     commands.insert_resource(CardMeshAssets {
         card_mesh: card_mesh_handle.clone(),

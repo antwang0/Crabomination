@@ -2780,13 +2780,41 @@ pub fn auto_advance_p0(
         return;
     }
 
-    let should_advance = ff.end_turn || ff.next_turn || matches!(
+    // Bookkeeping windows the viewer normally has no reason to act in.
+    // (Untap has no priority window at all; the rest are pass-through steps
+    // outside the main phases.)
+    let bookkeeping_step = matches!(
         cv.step,
         TurnStep::Untap | TurnStep::Upkeep | TurnStep::Draw
             | TurnStep::BeginCombat | TurnStep::CombatDamage
             | TurnStep::EndCombat | TurnStep::End | TurnStep::Cleanup
-    ) || cv.active_player != your_seat
-        || stack_is_own_triggers_only;
+    );
+
+    // Whether the viewer actually has a legal instant-speed play in *this*
+    // priority window. Every one of these lists is produced by the engine's
+    // `would_accept` dry-run, so it's already priority- and timing-gated:
+    // empty off-priority, and empty when the action isn't legal at the
+    // current step (a sorcery in hand won't appear on the opponent's turn).
+    // A non-empty list therefore means "you could legally act right now" —
+    // e.g. crack a fetch land (an activatable ability) or hold up a
+    // counterspell on the opponent's end step. When that's the case we stop
+    // auto-passing and surface the window so the player gets priority.
+    let has_instant_play = !cv.castable_hand.is_empty()
+        || !cv.activatable_permanents.is_empty()
+        || !cv.kickable_hand.is_empty()
+        || !cv.buyback_hand.is_empty();
+
+    // Auto-pass a window only when the viewer has nothing to do there —
+    // unless they've explicitly asked to fast-forward. End Turn (E) skips
+    // the rest of the viewer's own turn; Next Turn (N) skips the whole turn
+    // cycle up to the viewer's next main phase. The stack-of-own-triggers
+    // case is pure bookkeeping (ETBs, investigate, attack triggers) and
+    // always advances so those don't strand the player.
+    let should_advance = ff.end_turn
+        || ff.next_turn
+        || cv.step == TurnStep::Untap
+        || stack_is_own_triggers_only
+        || ((bookkeeping_step || cv.active_player != your_seat) && !has_instant_play);
 
     if should_advance {
         outbox.submit(GameAction::PassPriority);

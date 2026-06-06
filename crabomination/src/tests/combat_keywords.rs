@@ -535,6 +535,72 @@ fn activatable_permanents_empty_off_priority() {
     assert!(view.activatable_permanents.is_empty(), "no affordance off-priority");
 }
 
+/// A pure mana ability (Llanowar Elves' `{T}: Add G`) is not a meaningful
+/// instant-speed play: it never uses the stack and is auto-tapped on demand
+/// during payment. It must be excluded from `activatable_permanents` so the
+/// client doesn't stall priority on every step just because a mana dork is
+/// available.
+#[test]
+fn activatable_permanents_excludes_pure_mana_abilities() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    // Untapped + not summoning-sick → the tap-for-mana ability would
+    // otherwise be accepted by the engine.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == elf) {
+        c.summoning_sick = false;
+    }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let view = crate::server::view::project(&g, 0);
+    assert!(
+        !view.activatable_permanents.contains(&elf),
+        "a pure mana dork must not register as an instant-speed play",
+    );
+}
+
+/// CR 116 priority: a non-active player who holds priority can activate
+/// instant-speed abilities — e.g. crack a fetch land on the opponent's end
+/// step. Verifies both that the engine hands priority to the non-active
+/// player on the opponent's end step and that the fetch land surfaces as an
+/// available play (the signal the client uses to stop auto-passing).
+#[test]
+fn crack_fetchland_on_opponents_end_step() {
+    let mut g = two_player_game();
+    // Seat 0 controls a fetch land. Seat 1 is the active player, on their
+    // End step, having just passed priority to seat 0.
+    let strand = g.add_card_to_battlefield(0, catalog::flooded_strand());
+    g.active_player_idx = 1;
+    g.step = TurnStep::End;
+    g.give_priority_to_active(); // seat 1 (active) receives priority first
+    g.perform_action(GameAction::PassPriority).expect("active player passes");
+
+    // CR 116.3b/116.4 — priority now sits with the non-active player.
+    assert_eq!(g.player_with_priority(), 0, "non-active player gets priority");
+    assert_eq!(g.active_player_idx, 1);
+    assert_eq!(g.step, TurnStep::End);
+
+    // The fetch land is reported as a legal instant-speed play right now.
+    let view = crate::server::view::project(&g, 0);
+    assert!(
+        view.activatable_permanents.contains(&strand),
+        "fetch land should be crackable on the opponent's end step",
+    );
+
+    // Cracking it is accepted and sacrifices the land (CR 605/701.16).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: strand,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("crack fetch on opponent's end step");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().all(|c| c.id != strand),
+        "fetch land sacrificed after cracking",
+    );
+}
+
 // ── CR 508.3a — create tokens tapped and attacking ──────────────────────────
 
 #[test]

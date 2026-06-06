@@ -387,6 +387,12 @@ pub struct CardHighlightAssets {
     /// projects to die. Distinct from gold/green so a doomed creature
     /// reads as a warning, not a candidate.
     pub dying_material: Handle<StandardMaterial>,
+    /// Violet border for battlefield permanents the viewer can activate an
+    /// ability on right now (`activatable_permanents`). Distinct from the
+    /// green hand-castable / gold hover / red dying borders so "this
+    /// permanent can do something" reads as its own affordance — e.g. a
+    /// fetch land crackable on the opponent's end step.
+    pub activatable_material: Handle<StandardMaterial>,
 }
 
 /// Links a viewer hand card to its spawned "playable now" border meshes
@@ -407,6 +413,16 @@ pub struct CastableHighlight {
 /// view's `combat_preview.dying_creatures` set.
 #[derive(Component)]
 pub struct DyingHighlight {
+    pub back: Entity,
+    pub front: Entity,
+}
+
+/// Links a battlefield card to its spawned violet "can activate now" border
+/// meshes (back, front). Driven by `update_activatable_highlights` off the
+/// view's `activatable_permanents` set (empty off-priority, so the border
+/// only shows when the viewer actually holds priority).
+#[derive(Component)]
+pub struct ActivatableHighlight {
     pub back: Entity,
     pub front: Entity,
 }

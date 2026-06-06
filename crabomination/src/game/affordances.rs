@@ -146,11 +146,17 @@ impl GameState {
         out
     }
 
-    /// CardIds of permanents `seat` controls with at least one activated
-    /// ability they could activate **right now** — dry-run through
+    /// CardIds of permanents `seat` controls with at least one **non-mana**
+    /// activated ability they could activate **right now** — dry-run through
     /// [`would_accept`] so timing, mana, tap state, and target availability
     /// are all honored. Drives a client "this permanent can do something"
-    /// highlight (legal-plays hint, roadmap Tier 7/8). Empty off-priority.
+    /// highlight (legal-plays hint, roadmap Tier 7/8) and the client's
+    /// priority-stop heuristic (don't auto-pass when the viewer has a real
+    /// instant-speed play). Empty off-priority.
+    ///
+    /// Pure mana abilities are intentionally excluded: they never use the
+    /// stack and are auto-tapped on demand during payment, so a lone mana
+    /// dork is not a reason to hold priority or stop step advancement.
     ///
     /// [`would_accept`]: Self::would_accept
     pub fn activatable_permanents(&self, seat: usize) -> Vec<CardId> {
@@ -167,7 +173,10 @@ impl GameState {
     fn activatable_permanents_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
         // Snapshot (id, [ability effects]) so the borrow of `self.battlefield`
         // is released before the cloning probes run.
-        let perms: Vec<(CardId, Vec<Option<Effect>>)> = self
+        // Per ability: (is_mana_ability, optional effect to auto-target).
+        // We carry the mana flag so the probe loop can skip mana abilities
+        // without re-walking the effect tree.
+        let perms: Vec<(CardId, Vec<(bool, Option<Effect>)>)> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == seat && !c.definition.activated_abilities.is_empty())
@@ -176,7 +185,10 @@ impl GameState {
                     .definition
                     .activated_abilities
                     .iter()
-                    .map(|a| a.effect.requires_target().then(|| a.effect.clone()))
+                    .map(|a| {
+                        let targeted = a.effect.requires_target().then(|| a.effect.clone());
+                        (is_mana_ability_effect(&a.effect), targeted)
+                    })
                     .collect();
                 (c.id, effs)
             })
@@ -184,7 +196,12 @@ impl GameState {
 
         let mut out = Vec::new();
         for (id, ability_effects) in &perms {
-            let any = ability_effects.iter().enumerate().any(|(idx, targeted)| {
+            let any = ability_effects.iter().enumerate().any(|(idx, (is_mana, targeted))| {
+                // Skip mana abilities — they don't use the stack and aren't a
+                // meaningful instant-speed play (see method doc).
+                if *is_mana {
+                    return false;
+                }
                 let target = match targeted {
                     Some(eff) => self.auto_targets_for_effect_all_slots(eff, seat, None).0,
                     None => None,
@@ -689,5 +706,18 @@ impl GameState {
             return 0;
         };
         crate::game::actions::extra_cost_for_spell(self, caster, card)
+    }
+}
+
+/// True if `effect` is a pure mana ability (CR 605.1a) — it only adds mana
+/// and has no other rider. Such abilities don't use the stack and are
+/// auto-tapped on demand during cost payment, so the affordance probe
+/// excludes them from `activatable_permanents` (a mana dork is not an
+/// instant-speed "play" that should hold priority).
+fn is_mana_ability_effect(effect: &Effect) -> bool {
+    match effect {
+        Effect::AddMana { .. } => true,
+        Effect::Seq(steps) => !steps.is_empty() && steps.iter().all(is_mana_ability_effect),
+        _ => false,
     }
 }

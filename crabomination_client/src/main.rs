@@ -73,8 +73,8 @@ use systems::quality::{
 };
 use systems::ui::{
     graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, hover_card_preview,
-    toggle_shortcut_help, update_castable_highlights, update_dying_highlights, peek_popup,
-    pile_tooltip, reveal_popup, RevealPopupState,
+    toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
+    update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
 use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_trigger_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_learn_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, auto_resolve_combat_damage_decisions, DecisionUiState};
 
@@ -474,6 +474,7 @@ fn main() {
                 draw_attack_plan_gizmos,
                 update_castable_highlights,
                 update_dying_highlights,
+                update_activatable_highlights,
                 toggle_shortcut_help,
                 trigger_phase_banner,
                 animate_phase_banner,

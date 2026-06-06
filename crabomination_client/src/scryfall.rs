@@ -559,7 +559,7 @@ const SCRYFALL_USER_AGENT: &str =
 /// small so a persistently-limited card doesn't stall startup (3 tries =
 /// 0.5+1+2 = 3.5s); the negative cache stops doomed cards being re-requested
 /// at all on later launches, which is what actually relieves the rate limit.
-const MAX_RATE_LIMIT_RETRIES: u32 = 3;
+const MAX_RATE_LIMIT_RETRIES: u32 = 8;
 
 /// GET `url` from Scryfall and return the response body bytes, sending the
 /// required identifying headers and retrying with exponential backoff on a
@@ -592,7 +592,7 @@ fn scryfall_get_bytes(url: &str) -> Result<Vec<u8>, LookupError> {
                 }
                 attempt += 1;
                 // 0.5s, 1s, 2s — gives Scryfall's limiter time to refill.
-                let wait = Duration::from_millis(2000u64 << (attempt - 1));
+                let wait = Duration::from_millis(5000u64 << (attempt - 1));
                 eprintln!(
                     "  HTTP {code} (rate limited); retry {attempt}/{MAX_RATE_LIMIT_RETRIES} after {}ms",
                     wait.as_millis()
