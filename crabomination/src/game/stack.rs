@@ -891,18 +891,25 @@ impl GameState {
         let prevented: std::collections::HashSet<crate::card::CardId> = {
             let mut blocked = std::collections::HashSet::new();
             // Walk static abilities in play and OR each PreventUntap
-            // selector's match set into the blocked set.
-            let prevent_filters: Vec<SelectionRequirement> = self
-                .battlefield
-                .iter()
-                .flat_map(|c| c.definition.static_abilities.iter())
-                .filter_map(|sa| match &sa.effect {
-                    StaticEffect::PreventUntap {
-                        applies_to: crate::effect::Selector::EachPermanent(req),
-                    } => Some(req.clone()),
-                    _ => None,
-                })
-                .collect();
+            // selector's match set into the blocked set. `Selector::This`
+            // blocks the static's own source (Basalt/Grim Monolith);
+            // `EachPermanent(req)` blocks every matching permanent.
+            let mut prevent_filters: Vec<SelectionRequirement> = Vec::new();
+            for c in &self.battlefield {
+                for sa in &c.definition.static_abilities {
+                    match &sa.effect {
+                        StaticEffect::PreventUntap {
+                            applies_to: crate::effect::Selector::This,
+                        } => {
+                            blocked.insert(c.id);
+                        }
+                        StaticEffect::PreventUntap {
+                            applies_to: crate::effect::Selector::EachPermanent(req),
+                        } => prevent_filters.push(req.clone()),
+                        _ => {}
+                    }
+                }
+            }
             if !prevent_filters.is_empty() {
                 for c in &self.battlefield {
                     if c.controller != p {

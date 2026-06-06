@@ -20524,6 +20524,74 @@ pub fn chance_encounter() -> CardDefinition {
     }
 }
 
+/// Icy Manipulator — {4} Artifact. "{1}, {T}: Tap target artifact, creature,
+/// or land."
+pub fn icy_manipulator() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Icy Manipulator",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Land),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Basalt Monolith — {3} Artifact. Doesn't untap during your untap step.
+/// "{T}: Add {C}{C}{C}. {3}: Untap this artifact." (CR 502.3.)
+pub fn basalt_monolith() -> CardDefinition {
+    monolith("Basalt Monolith", 3, 3)
+}
+
+/// Grim Monolith — {2} Artifact. Doesn't untap during your untap step.
+/// "{T}: Add {C}{C}{C}. {4}: Untap this artifact." (CR 502.3.)
+pub fn grim_monolith() -> CardDefinition {
+    monolith("Grim Monolith", 2, 4)
+}
+
+/// Shared body for the Basalt/Grim "doesn't untap; pay to untap" monoliths.
+fn monolith(name: &'static str, cmc: u32, untap_cost: u32) -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::{ManaPayload, StaticEffect};
+    CardDefinition {
+        name,
+        cost: cost(&[generic(cmc)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(3)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(untap_cost)]),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Ancient Copper Dragon — {4}{R}{R} 6/5 Dragon, Flying. "Whenever this
 /// creature deals combat damage to a player, roll a d20 and create that many
 /// Treasure tokens." (CR 706.4 — `Value::LastDieRoll`.)

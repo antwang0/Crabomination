@@ -31178,6 +31178,44 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── Utility artifacts (Icy Manipulator + monoliths) ────────────────────────
+
+#[test]
+fn icy_manipulator_taps_a_target() {
+    let mut g = two_player_game();
+    let icy = g.add_card_to_battlefield(0, catalog::icy_manipulator());
+    g.clear_sickness(icy);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: icy, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Icy Manipulator taps a target");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "the target creature is tapped");
+}
+
+#[test]
+fn basalt_monolith_makes_three_and_needs_three_to_untap() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::basalt_monolith());
+    g.clear_sickness(m);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for {C}{C}{C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 3, "three colorless");
+    // CR 502.3 — doesn't untap normally.
+    g.do_untap();
+    assert!(g.battlefield_find(m).unwrap().tapped, "Basalt Monolith stays tapped through untap");
+    // Pay {3} to untap.
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m, ability_index: 1, target: None, x_value: None,
+    }).expect("pay 3 to untap");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(m).unwrap().tapped, "untapped after paying three");
+}
+
 // ── Misc cube creatures ────────────────────────────────────────────────────
 
 #[test]

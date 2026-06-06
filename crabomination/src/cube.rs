@@ -229,6 +229,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── colorless utility ──
         pilgrims_eye,
         filigree_familiar,
+        // Colorless utility artifacts (tap-down + pay-to-untap rituals).
+        icy_manipulator,
+        basalt_monolith,
+        grim_monolith,
         // No-maximum-hand-size + play-lands-from-graveyard statics.
         reliquary_tower,
         thought_vessel,
