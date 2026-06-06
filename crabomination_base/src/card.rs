@@ -109,6 +109,8 @@ pub enum CreatureType {
     Army,
     // Edge-of-Eternities Drone artifact-creature token (Pinnacle Emissary).
     Drone,
+    // Battle for Zendikar Eldrazi Scion token subtype.
+    Scion,
     // Artifact creature subtype (Bottle Gnomes).
     Gnome,
     // Artifact creature subtype (Court Homunculus, Fblthp).

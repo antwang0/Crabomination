@@ -1,6 +1,24 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
-use crate::effect::shortcut::{ingest, prowess_trigger};
-use crate::mana::{cost, r, u};
+use crate::effect::shortcut::{dies_mint_token, etb_mint_token, ingest, prowess_trigger};
+use crate::mana::{b, cost, g, generic, r, u};
+use crabomination_base::tokens::eldrazi_scion_token;
+
+/// Eldrazi Drone body shared by the Scion-making creatures below.
+fn drone(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone],
+            ..Default::default()
+        },
+        power: p,
+        toughness: t,
+        keywords: vec![Keyword::Devoid],
+        ..Default::default()
+    }
+}
 
 /// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste Prowess
 pub fn stormchaser_mage() -> CardDefinition {
@@ -36,6 +54,77 @@ pub fn mist_intruder() -> CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Flying],
         triggered_abilities: vec![ingest()],
         ..Default::default()
+    }
+}
+
+/// Eldrazi Devastator — {8} 8/9 colorless Eldrazi. Trample. (Naturally
+/// colorless from its generic-only cost — no Devoid keyword needed.)
+pub fn eldrazi_devastator() -> CardDefinition {
+    CardDefinition {
+        name: "Eldrazi Devastator",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 9,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Eldrazi Skyspawner — {2}{U} 2/1 Eldrazi Drone. Devoid, Flying, ETB make
+/// a 1/1 Eldrazi Scion.
+pub fn eldrazi_skyspawner() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Flying],
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 1)],
+        ..drone("Eldrazi Skyspawner", cost(&[generic(2), u()]), 2, 1)
+    }
+}
+
+/// Incubator Drone — {3}{U} 2/3 Eldrazi Drone. Devoid, ETB make a Scion.
+pub fn incubator_drone() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 1)],
+        ..drone("Incubator Drone", cost(&[generic(3), u()]), 2, 3)
+    }
+}
+
+/// Eyeless Watcher — {3}{G} 1/1 Eldrazi Drone. Devoid, ETB make two Scions.
+pub fn eyeless_watcher() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 2)],
+        ..drone("Eyeless Watcher", cost(&[generic(3), g()]), 1, 1)
+    }
+}
+
+/// Blisterpod — {G} 1/1 Eldrazi Drone. Devoid, dies → make a Scion.
+pub fn blisterpod() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![dies_mint_token(eldrazi_scion_token(), 1)],
+        ..drone("Blisterpod", cost(&[g()]), 1, 1)
+    }
+}
+
+/// Catacomb Sifter — {1}{B}{G} 2/3 Eldrazi Drone. Devoid, ETB make a Scion;
+/// whenever another creature you control dies, scry 1.
+pub fn catacomb_sifter() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{PlayerRef, Predicate, Selector, Value};
+    let scry_on_death = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::OtherThanSource,
+            }),
+        effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+    };
+    CardDefinition {
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 1), scry_on_death],
+        ..drone("Catacomb Sifter", cost(&[generic(1), b(), g()]), 2, 3)
     }
 }
 

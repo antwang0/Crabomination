@@ -266,6 +266,35 @@ pub fn stx_pest_token() -> TokenDefinition {
     }
 }
 
+/// 1/1 colorless Eldrazi Scion creature token with "Sacrifice this: Add
+/// {C}." (CR — Battle for Zendikar Eldrazi). Sacrifices for one colorless.
+pub fn eldrazi_scion_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Eldrazi Scion".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Scion],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            sac_cost: true,
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+    }
+}
+
 /// 1/1 white-and-black Inkling creature token with flying. Used by several
 /// SOS Silverquill / White cards.
 pub fn inkling_token() -> TokenDefinition {

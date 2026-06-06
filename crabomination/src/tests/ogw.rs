@@ -71,6 +71,91 @@ fn touch_of_the_void_deals_three() {
     assert!(catalog::touch_of_the_void().keywords.contains(&crate::card::Keyword::Devoid));
 }
 
+fn scion_count(g: &GameState) -> usize {
+    g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count()
+}
+
+/// Eldrazi Skyspawner makes a Scion on ETB; the Scion sacs for {C}.
+#[test]
+fn eldrazi_skyspawner_makes_scion_that_sacs_for_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::eldrazi_skyspawner());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast(&mut g, id);
+    assert_eq!(scion_count(&g), 1, "ETB mints one Eldrazi Scion");
+    let scion = g.battlefield.iter().find(|c| c.definition.name == "Eldrazi Scion").unwrap().id;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scion, ability_index: 0, target: None, x_value: None,
+    }).expect("sac scion for mana");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "Scion sacs for {{C}}");
+    assert_eq!(scion_count(&g), 0, "Scion is sacrificed");
+}
+
+/// Call the Scions mints two Eldrazi Scions.
+#[test]
+fn call_the_scions_makes_two_scions() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::call_the_scions());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast(&mut g, id);
+    assert_eq!(scion_count(&g), 2, "Call the Scions makes two Scions");
+}
+
+/// Blisterpod mints a Scion when it dies.
+#[test]
+fn blisterpod_makes_scion_on_death() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::blisterpod());
+    drain_stack(&mut g);
+    assert_eq!(scion_count(&g), 0);
+    // Lethal damage + SBA → death trigger.
+    g.battlefield_find_mut(id).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(scion_count(&g), 1, "Blisterpod's death mints a Scion");
+}
+
+/// Eyeless Watcher mints two Scions on ETB.
+#[test]
+fn eyeless_watcher_makes_two_scions() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::eyeless_watcher());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    crate::game::cast(&mut g, id);
+    assert_eq!(scion_count(&g), 2);
+}
+
+/// Eldrazi Devastator is an 8/9 colorless trampler.
+#[test]
+fn eldrazi_devastator_is_colorless_trampler() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 9));
+    assert!(cp.colors.is_empty(), "generic-only cost → colorless");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Trample));
+}
+
+/// Incubator Drone and Catacomb Sifter each mint a Scion on ETB.
+#[test]
+fn incubator_and_catacomb_sifter_make_scions() {
+    let mut g = two_player_game();
+    let inc = g.add_card_to_hand(0, catalog::incubator_drone());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    crate::game::cast(&mut g, inc);
+    assert_eq!(scion_count(&g), 1);
+    let cs = g.add_card_to_hand(0, catalog::catacomb_sifter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    crate::game::cast(&mut g, cs);
+    assert_eq!(scion_count(&g), 2, "Catacomb Sifter adds a second Scion");
+}
+
 /// Reality Hemorrhage is a Devoid burn instant dealing 2.
 #[test]
 fn reality_hemorrhage_deals_two_and_is_colorless() {

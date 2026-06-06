@@ -1,6 +1,24 @@
 use crate::card::{CardDefinition, CardType, Keyword};
 use crate::effect::shortcut::{deal, target};
-use crate::mana::{cost, generic, r};
+use crate::effect::{Effect, PlayerRef, Value};
+use crate::mana::{cost, g, generic, r};
+use crabomination_base::tokens::eldrazi_scion_token;
+
+/// Call the Scions — {2}{G} Devoid Sorcery. Create two 1/1 Eldrazi Scions.
+pub fn call_the_scions() -> CardDefinition {
+    CardDefinition {
+        name: "Call the Scions",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Devoid],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: eldrazi_scion_token(),
+        },
+        ..Default::default()
+    }
+}
 
 /// Reality Hemorrhage — {1}{R} Devoid Instant. Deals 2 damage to any target.
 pub fn reality_hemorrhage() -> CardDefinition {
