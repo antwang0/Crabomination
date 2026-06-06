@@ -66,6 +66,8 @@ pub enum CreatureType {
     Dryad,
     // Modern supplement: Kari Zev's Ragavan token.
     Monkey,
+    // Modern supplement: Brazen Scourge.
+    Gremlin,
     // Strixhaven Elder Dragon legendary creatures (Lorehold, Prismari,
     // Quandrix, Silverquill, Witherbloom, the Balancer).
     Elder,

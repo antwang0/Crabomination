@@ -814,6 +814,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
+        snapping_drake,
         // ── Evoke Incarnation (MH2) ──
         subtlety,
         // ── unblocked-draw snake + tempo illusions ──
@@ -1437,6 +1438,12 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sedge_troll,
         furnace_whelp,
         scorch_spitter,
+        // ── modern_decks: red beaters batch 2 ──
+        canyon_minotaur,
+        brazen_scourge,
+        boggart_brute,
+        torch_fiend,
+        goblin_arsonist,
         // ── modern_decks: aggro goblin lord ──
         legion_warboss,
         staggershock,
@@ -1815,6 +1822,14 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: undying / counters supplement ──
         young_wolf,
         servant_of_the_scale,
+        // ── modern_decks: green beaters batch 2 ──
+        runeclaw_bear,
+        alpine_grizzly,
+        pheres_band_centaurs,
+        axebane_stag,
+        colossal_dreadmaw,
+        garruks_packleader,
+        wing_snare,
         // ── green bodies + Eldrazi Spawn ramp ──
         silverback_ape,
         greater_basilisk,

@@ -24658,3 +24658,206 @@ pub fn moan_of_the_unhallowed() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks: vanilla / keyword beaters batch 2 ────────────────────
+
+/// Canyon Minotaur — {3}{R} 3/3 Minotaur Warrior (vanilla).
+pub fn canyon_minotaur() -> CardDefinition {
+    CardDefinition {
+        name: "Canyon Minotaur",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Brazen Scourge — {1}{R}{R} 3/3 Gremlin with Haste.
+pub fn brazen_scourge() -> CardDefinition {
+    CardDefinition {
+        name: "Brazen Scourge",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Gremlin], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    }
+}
+
+/// Boggart Brute — {2}{R} 3/2 Goblin Warrior with Menace.
+pub fn boggart_brute() -> CardDefinition {
+    CardDefinition {
+        name: "Boggart Brute",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        ..Default::default()
+    }
+}
+
+/// Torch Fiend — {1}{R} 2/1 Devil. {R}, Sacrifice this: destroy target artifact.
+pub fn torch_fiend() -> CardDefinition {
+    CardDefinition {
+        name: "Torch Fiend",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            sac_cost: true,
+            effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Arsonist — {R} 1/1 Goblin Shaman. When it dies, you may have it deal
+/// 1 damage to any target.
+pub fn goblin_arsonist() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Arsonist",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Goblin Arsonist deals 1 damage to any target?".to_string(),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Runeclaw Bear — {1}{G} 2/2 Bear (vanilla).
+pub fn runeclaw_bear() -> CardDefinition {
+    CardDefinition {
+        name: "Runeclaw Bear",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Alpine Grizzly — {2}{G} 4/2 Bear (vanilla).
+pub fn alpine_grizzly() -> CardDefinition {
+    CardDefinition {
+        name: "Alpine Grizzly",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bear], ..Default::default() },
+        power: 4,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Pheres-Band Centaurs — {4}{G} 3/7 Centaur Warrior (vanilla).
+pub fn pheres_band_centaurs() -> CardDefinition {
+    CardDefinition {
+        name: "Pheres-Band Centaurs",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 7,
+        ..Default::default()
+    }
+}
+
+/// Axebane Stag — {6}{G} 6/7 Elk (vanilla).
+pub fn axebane_stag() -> CardDefinition {
+    CardDefinition {
+        name: "Axebane Stag",
+        cost: cost(&[generic(6), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elk], ..Default::default() },
+        power: 6,
+        toughness: 7,
+        ..Default::default()
+    }
+}
+
+/// Colossal Dreadmaw — {4}{G}{G} 6/6 Dinosaur with Trample.
+pub fn colossal_dreadmaw() -> CardDefinition {
+    CardDefinition {
+        name: "Colossal Dreadmaw",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Garruk's Packleader — {4}{G} 4/4 Beast. Whenever another creature you
+/// control with power 3 or greater enters, you may draw a card.
+pub fn garruks_packleader() -> CardDefinition {
+    CardDefinition {
+        name: "Garruk's Packleader",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::PowerAtLeast(3)),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wing Snare — {2}{G} Sorcery. Destroy target creature with flying.
+pub fn wing_snare() -> CardDefinition {
+    CardDefinition {
+        name: "Wing Snare",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+        },
+        ..Default::default()
+    }
+}

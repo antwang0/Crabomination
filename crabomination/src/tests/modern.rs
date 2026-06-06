@@ -31977,3 +31977,75 @@ fn moan_of_the_unhallowed_makes_two_zombies_and_has_flashback() {
     assert!(catalog::moan_of_the_unhallowed().keywords.iter()
         .any(|k| matches!(k, Keyword::Flashback(_))));
 }
+
+// ── claude/modern_decks: beaters batch 2 tests ────────────────────────────────
+
+#[test]
+fn batch2_vanilla_and_keyword_bodies() {
+    use crate::card::Keyword;
+    assert_eq!({ let d = catalog::canyon_minotaur(); (d.power, d.toughness) }, (3, 3));
+    assert_eq!({ let d = catalog::runeclaw_bear(); (d.power, d.toughness) }, (2, 2));
+    assert_eq!({ let d = catalog::alpine_grizzly(); (d.power, d.toughness) }, (4, 2));
+    assert_eq!({ let d = catalog::pheres_band_centaurs(); (d.power, d.toughness) }, (3, 7));
+    assert_eq!({ let d = catalog::axebane_stag(); (d.power, d.toughness) }, (6, 7));
+    assert!(catalog::brazen_scourge().keywords.contains(&Keyword::Haste));
+    assert!(catalog::boggart_brute().keywords.contains(&Keyword::Menace));
+    assert!(catalog::colossal_dreadmaw().keywords.contains(&Keyword::Trample));
+    assert!(catalog::snapping_drake().keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn torch_fiend_sacs_to_destroy_an_artifact() {
+    let mut g = two_player_game();
+    let fiend = g.add_card_to_battlefield(0, catalog::torch_fiend());
+    let art = g.add_card_to_battlefield(1, catalog::worn_powerstone());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fiend, ability_index: 0,
+        target: Some(Target::Permanent(art)), x_value: None,
+    }).expect("activate Torch Fiend");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+    assert!(g.battlefield_find(fiend).is_none(), "Torch Fiend was sacrificed");
+}
+
+#[test]
+fn goblin_arsonist_pings_on_death() {
+    let mut g = two_player_game();
+    let arsonist = g.add_card_to_battlefield(0, catalog::goblin_arsonist());
+    let l1 = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    kill_with_bolt(&mut g, arsonist);
+    assert_eq!(g.players[1].life, l1 - 1, "death ping hit the opponent for 1");
+}
+
+#[test]
+fn garruks_packleader_draws_on_big_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::garruks_packleader());
+    let before = g.players[0].hand.len();
+    // A 5/5 (power ≥ 3) entering triggers the draw.
+    let ape = g.add_card_to_battlefield(0, catalog::silverback_ape());
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::PermanentEntered { card_id: ape }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew off the big creature ETB");
+}
+
+#[test]
+fn wing_snare_destroys_only_flyers() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::snapping_drake());
+    let id = g.add_card_to_hand(0, catalog::wing_snare());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(flyer)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wing Snare a flyer");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(flyer).is_none(), "the flyer is destroyed");
+}
