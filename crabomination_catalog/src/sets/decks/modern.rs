@@ -7258,6 +7258,96 @@ pub fn cling_to_dust() -> CardDefinition {
     }
 }
 
+/// Chromatic Sphere — {1} Artifact. {1}, {T}, Sacrifice this: Add one mana of
+/// any color, then draw a card.
+pub fn chromatic_sphere() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Chromatic Sphere",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cabal Ritual — {1}{B} Instant. Add {B}{B}{B}; Threshold — add {B}{B}{B}{B}{B}
+/// instead if seven or more cards are in your graveyard.
+pub fn cabal_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Cabal Ritual",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::GraveyardSizeOf(PlayerRef::You),
+                Value::Const(7),
+            ),
+            then: Box::new(Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Black; 5]),
+            }),
+            else_: Box::new(Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Black; 3]),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Staggershock — {2}{R} Instant. Deal 2 damage to any target. Rebound (CR
+/// 702.88).
+pub fn staggershock() -> CardDefinition {
+    CardDefinition {
+        name: "Staggershock",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Bump in the Night — {B} Sorcery. Target opponent loses 3 life. Flashback
+/// {5}{R}.
+pub fn bump_in_the_night() -> CardDefinition {
+    CardDefinition {
+        name: "Bump in the Night",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), r()]))],
+        effect: Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Death's Shadow — {B} 13/13 Creature — Avatar. Gets −X/−X where X is your
+/// life total (dynamic P/T via `DynamicPt::BaseMinusControllerLife`).
+pub fn deaths_shadow() -> CardDefinition {
+    CardDefinition {
+        name: "Death's Shadow",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        power: 13,
+        toughness: 13,
+        ..Default::default()
+    }
+}
+
 /// Beacon of Immortality — {5}{W} Instant. Double target player's life total
 /// (CR 701.10d). Then shuffle it into its owner's library.
 pub fn beacon_of_immortality() -> CardDefinition {

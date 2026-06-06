@@ -1211,6 +1211,9 @@ pub enum DynamicPt {
     /// graveyard. Wight of the Reliquary (base 1/1, +1/+1 per land in
     /// your graveyard).
     BasePlusLandsInControllerGraveyard { base_p: i32, base_t: i32 },
+    /// Power = base_p − controller's life total, toughness = base_t − life.
+    /// Death's Shadow (13/13 that "gets −X/−X where X is your life total").
+    BaseMinusControllerLife { base_p: i32, base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

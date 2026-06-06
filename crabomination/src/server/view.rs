@@ -960,6 +960,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Destroy { .. } => "Destroy permanent",
         Effect::Exile { .. } => "Exile permanent",
         Effect::GainLife { .. } => "Gain life",
+        Effect::DoubleLife { .. } => "Double life total",
+        Effect::ShuffleSelfIntoLibrary => "Shuffle into library",
         Effect::Mill { .. } => "Mill",
         Effect::Scry { .. } => "Scry",
         Effect::Surveil { .. } => "Surveil",

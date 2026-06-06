@@ -2038,6 +2038,10 @@ impl GameState {
                         .filter(|c| c.definition.is_land()).count() as i32;
                     (base_p + n, base_t + n)
                 }
+                crate::card::DynamicPt::BaseMinusControllerLife { base_p, base_t } => {
+                    let life = self.players[card.controller].life;
+                    (base_p - life, base_t - life)
+                }
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.id.0 as u64,
@@ -5383,6 +5387,9 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
         }),
         "Wight of the Reliquary" => Some(DynamicPt::BasePlusLandsInControllerGraveyard {
             base_p: 1, base_t: 1,
+        }),
+        "Death's Shadow" => Some(DynamicPt::BaseMinusControllerLife {
+            base_p: 13, base_t: 13,
         }),
         _ => None,
     }

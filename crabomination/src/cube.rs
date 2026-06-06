@@ -217,6 +217,7 @@ fn colorless_pool() -> Vec<CardFactory> {
     vec![
         // ── modern_decks: cube staples ──
         scrapheap_scrounger,
+        chromatic_sphere,
 
         // ── modern_decks: draw-engine artifact ──
         the_endstone,
@@ -1020,6 +1021,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: cube planeswalkers ──
         liliana_of_the_veil,
         liliana_the_last_hope,
+        deaths_shadow,
+        cabal_ritual,
+        bump_in_the_night,
         // ── Eternalize (CR 702.91) ──
         dreamstealer,
         // ── Afflict (CR 702.130) ──
@@ -1333,6 +1337,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: aggro goblin lord ──
         legion_warboss,
+        staggershock,
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,

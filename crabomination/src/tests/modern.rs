@@ -30063,6 +30063,87 @@ fn uro_escaped_stays_gains_life_and_draws() {
 }
 
 #[test]
+fn staggershock_deals_two_and_rebounds() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::staggershock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1 = g.players[1].life;
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, p1 - 2, "dealt 2 damage");
+    // Rebound: exiled (not graveyard) + a delayed trigger queued.
+    assert!(g.exile.iter().any(|c| c.id == id), "rebounded into exile");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id), "not in graveyard");
+}
+
+#[test]
+fn bump_in_the_night_drains_three_and_has_flashback() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::bump_in_the_night());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let p1 = g.players[1].life;
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, p1 - 3, "opponent lost 3 life");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "in graveyard for flashback");
+    // Flashback from the graveyard for {5}{R}.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashback castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 6, "flashback drained another 3");
+    assert!(g.exile.iter().any(|c| c.id == id), "flashback exiles the card");
+}
+
+#[test]
+fn chromatic_sphere_fixes_mana_and_cantrips() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::chromatic_sphere());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+        .expect("Chromatic Sphere ability activates");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "sacrificed itself");
+}
+
+#[test]
+fn cabal_ritual_scales_with_threshold() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cabal_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3, "no threshold → BBB");
+    // With seven cards in the graveyard, threshold yields BBBBB.
+    let mut g = two_player_game();
+    for _ in 0..7 { g.add_card_to_graveyard(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::cabal_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 5, "threshold → BBBBB");
+}
+
+#[test]
+fn deaths_shadow_scales_inversely_with_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::deaths_shadow());
+    g.players[0].life = 5;
+    let c = g.computed_permanent(id).expect("shadow");
+    assert_eq!((c.power, c.toughness), (8, 8), "13 - 5 life = 8/8");
+    // At >=13 life it's 0/0 and dies to SBA.
+    g.players[0].life = 13;
+    g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "0/0 Death's Shadow dies at 13 life");
+}
+
+#[test]
 fn silverquill_silencer_punishes_named_spell() {
     let mut g = two_player_game();
     let silencer = g.add_card_to_battlefield(0, catalog::silverquill_silencer());
