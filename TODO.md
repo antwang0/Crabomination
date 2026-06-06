@@ -700,8 +700,17 @@ picking an item up.
   - ✅ **"with no counters on it" target filter** — added
     `SelectionRequirement::HasNoCounters`; ships Heartless Act (modal:
     destroy a no-counter creature / remove-all counters).
-  - **Forest/typecycling** (Generous Ent) — typed cycling that fetches a
-    land of the named type; today only plain Cycling ships.
+  - ✅ **Typecycling / Landcycling** (CR 702.29e) — `Keyword::Landcycling`
+    + `GameAction::Landcycle`; ships Wirewood/Daru/Shoreline/Twisted
+    Abomination/Skirk. Follow-up: a UI search-prompt to choose *which* land
+    among multiple matches (today auto-fetches the first match), and
+    nonbasic-type cycling (e.g. Mistcycling) once those land types exist.
+  - **"Discard unless they discard an artifact" conditional discard**
+    (Wrench Mind) — needs a discard whose count flexes on the discarder's
+    revealed choice; today only fixed-count `Discard` ships.
+  - **Fixed different-damage to N distinct targets** (Cone of Flame: 1/2/3
+    to three targets) — distinct from `DealDamageDivided` (a shared pool);
+    needs per-slot fixed amounts across additional_targets.
 
 - 🟡 **Energy ({E}) follow-ups.** (b) **✅ "pay {E}{E} or sacrifice/bounce"
   rider** — `Effect::PayEnergyOrElse { amount, otherwise }` ships Lathnu
