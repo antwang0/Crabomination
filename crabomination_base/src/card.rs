@@ -171,6 +171,10 @@ pub struct Subtypes {
 pub enum CounterType {
     PlusOnePlusOne,
     MinusOneMinusOne,
+    /// -0/-1 counter (Shield Sphere-adjacent block-cost counters).
+    MinusZeroMinusOne,
+    /// -1/-0 counter.
+    MinusOneMinusZero,
     Loyalty,
     Charge,
     Time,
@@ -1773,13 +1777,15 @@ impl CardInstance {
     pub fn power(&self) -> i32 {
         let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
-        self.definition.base_power() + self.power_bonus + plus - minus
+        let minus_one_zero = self.counter_count(CounterType::MinusOneMinusZero) as i32;
+        self.definition.base_power() + self.power_bonus + plus - minus - minus_one_zero
     }
 
     pub fn toughness(&self) -> i32 {
         let plus = self.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = self.counter_count(CounterType::MinusOneMinusOne) as i32;
-        self.definition.base_toughness() + self.toughness_bonus + plus - minus
+        let minus_zero_one = self.counter_count(CounterType::MinusZeroMinusOne) as i32;
+        self.definition.base_toughness() + self.toughness_bonus + plus - minus - minus_zero_one
     }
 
     pub fn counter_count(&self, ct: CounterType) -> u32 {

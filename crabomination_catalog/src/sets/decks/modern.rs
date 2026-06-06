@@ -19628,6 +19628,28 @@ pub fn expedition_map() -> CardDefinition {
     }
 }
 
+/// Shield Sphere — {0} Artifact Creature — Wall 0/6. Defender. "Whenever this
+/// creature blocks, put a -0/-1 counter on it."
+pub fn shield_sphere() -> CardDefinition {
+    CardDefinition {
+        name: "Shield Sphere",
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 6,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::MinusZeroMinusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Reliquary Tower — Land. "You have no maximum hand size. {T}: Add {C}."
 pub fn reliquary_tower() -> CardDefinition {
     use crate::card::{ActivatedAbility, StaticAbility};

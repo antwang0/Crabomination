@@ -233,6 +233,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         reliquary_tower,
         thought_vessel,
         crucible_of_worlds,
+        // -0/-1 block counter.
+        shield_sphere,
         // ── classic colorless core-set bodies (claude/modern_decks) ──
         obsianus_golem,
         yotian_soldier,

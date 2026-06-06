@@ -16,9 +16,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   picker and the seat degrades to the AutoDecider default. `ChooseMode` needs
   the mode label strings threaded onto `Decision::ChooseMode` (today it carries
   only `source` + `num_modes`); `effect_short_text` already renders each mode.
-- **Card primitives skipped this run (each small + reusable):**
-  - **`-0/-1` (and `-1/-0`) counter types** (Shield Sphere's block-counter,
-    Spike Feeder-adjacent). Add to `CounterType` + the P/T layer.
 - **Amped Raptor energy free-cast (still 🟡).** Needs a `MayPlayPermission`
   alt-cost slot ("cast without paying mana by paying {E}{E}") + a cast-from-
   exile path that substitutes the energy cost.

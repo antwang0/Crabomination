@@ -30594,3 +30594,27 @@ fn coiling_oracle_puts_revealed_nonland_into_hand() {
     assert!(g.players[0].hand.iter().any(|c| c.id == spell), "revealed nonland goes to hand");
     assert!(!g.battlefield.iter().any(|c| c.id == spell), "nonland does not enter the battlefield");
 }
+
+// ── Shield Sphere (-0/-1 block counter) ────────────────────────────────────
+
+#[test]
+fn shield_sphere_gains_minus_zero_minus_one_counter_when_it_blocks() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let shield = g.add_card_to_battlefield(0, catalog::shield_sphere());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(0),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(shield, attacker)])).unwrap();
+    drain_stack(&mut g);
+    let s = g.battlefield_find(shield).expect("shield still alive");
+    assert_eq!(s.counter_count(CounterType::MinusZeroMinusOne), 1, "gained a -0/-1 counter");
+    assert_eq!(s.power(), 0, "power unchanged at 0");
+    assert_eq!(s.toughness(), 5, "toughness dropped from 6 to 5");
+}

@@ -313,10 +313,15 @@ fn compute_permanent(
     // Base P/T from definition + counters (applied after layer 7c).
     let base_power = card.definition.base_power() + card.power_bonus;
     let base_toughness = card.definition.base_toughness() + card.toughness_bonus;
-    let counter_delta = {
+    // CR 613.7f — +1/+1, -1/-1, and the rarer -0/-1 / -1/-0 counters. The
+    // last two affect only one of power/toughness, so track per-stat deltas.
+    let (counter_power_delta, counter_toughness_delta) = {
         let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
         let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;
-        plus - minus
+        let minus_zero_one = card.counter_count(CounterType::MinusZeroMinusOne) as i32;
+        let minus_one_zero = card.counter_count(CounterType::MinusOneMinusZero) as i32;
+        let base = plus - minus;
+        (base - minus_one_zero, base - minus_zero_one)
     };
 
     let mut set_pt: Option<(i32, i32)> = None;
@@ -398,8 +403,8 @@ fn compute_permanent(
     power += mod_power;
     toughness += mod_toughness;
     // Counters applied after 7c (CR 613.7f).
-    power += counter_delta;
-    toughness += counter_delta;
+    power += counter_power_delta;
+    toughness += counter_toughness_delta;
     if switched {
         std::mem::swap(&mut power, &mut toughness);
     }

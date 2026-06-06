@@ -631,6 +631,8 @@ fn counter_label(kind: CounterType) -> &'static str {
     match kind {
         CounterType::PlusOnePlusOne => "+1/+1",
         CounterType::MinusOneMinusOne => "-1/-1",
+        CounterType::MinusZeroMinusOne => "-0/-1",
+        CounterType::MinusOneMinusZero => "-1/-0",
         CounterType::Loyalty => "Loyalty",
         CounterType::Charge => "Charge",
         CounterType::Stun => "Stun",
