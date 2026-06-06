@@ -783,6 +783,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         careful_study,
         exclude,
         miscalculation,
+        jaces_ingenuity,
 
         // ── modern_decks: Persist counter-mage ──
         glen_elendra_archmage,
@@ -1050,6 +1051,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cabal_coffers,
         // Repeatable board-sweep enchantment ({B}: ping all).
         pestilence,
+        // Swamps-matters drain (damage + lifegain).
+        corrupt,
+        tendrils_of_corruption,
         bump_in_the_night,
         // ── Eternalize (CR 702.91) ──
         dreamstealer,

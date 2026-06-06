@@ -30861,3 +30861,39 @@ fn skyshroud_claim_fetches_two_forests_untapped() {
         assert!(!c.tapped, "Skyshroud forests enter untapped");
     }
 }
+
+// ── Jace's Ingenuity / Corrupt (Swamps-matters drain) ──────────────────────
+
+#[test]
+fn jaces_ingenuity_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::jaces_ingenuity());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    // -1 for the spell leaving hand, +3 drawn.
+    assert_eq!(g.players[0].hand.len(), before - 1 + 3);
+}
+
+#[test]
+fn corrupt_damages_and_gains_life_per_swamp() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::swamp()); }
+    let id = g.add_card_to_hand(0, catalog::corrupt());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let p1 = g.players[1].life;
+    let p0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Corrupt at P1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 3, "3 damage = 3 swamps");
+    assert_eq!(g.players[0].life, p0 + 3, "gained 3 life");
+}

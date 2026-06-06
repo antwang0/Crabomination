@@ -19729,6 +19729,61 @@ pub fn shield_sphere() -> CardDefinition {
     }
 }
 
+/// Jace's Ingenuity — {4}{U} Instant. "Draw three cards."
+pub fn jaces_ingenuity() -> CardDefinition {
+    CardDefinition {
+        name: "Jace's Ingenuity",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Corrupt — {5}{B} Sorcery. "Corrupt deals damage to any target equal to the
+/// number of Swamps you control. You gain that much life."
+pub fn corrupt() -> CardDefinition {
+    use crate::card::LandType;
+    let swamps = || Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(LandType::Swamp)
+            .and(SelectionRequirement::ControlledByYou),
+    )));
+    CardDefinition {
+        name: "Corrupt",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_filtered(SelectionRequirement::Any), amount: swamps() },
+            Effect::GainLife { who: Selector::You, amount: swamps() },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tendrils of Corruption — {3}{B} Instant. "Tendrils of Corruption deals
+/// damage to target creature equal to the number of Swamps you control. You
+/// gain that much life."
+pub fn tendrils_of_corruption() -> CardDefinition {
+    use crate::card::LandType;
+    let swamps = || Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(LandType::Swamp)
+            .and(SelectionRequirement::ControlledByYou),
+    )));
+    CardDefinition {
+        name: "Tendrils of Corruption",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: swamps(),
+            },
+            Effect::GainLife { who: Selector::You, amount: swamps() },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Cursed Totem — {2} Artifact. "Activated abilities of creatures can't be
 /// activated unless they're mana abilities."
 pub fn cursed_totem() -> CardDefinition {
