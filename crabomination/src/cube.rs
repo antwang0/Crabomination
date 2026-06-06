@@ -1727,6 +1727,10 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         ramunap_excavator,
         // CR 701.10f mana-doubling enchantment.
         mana_reflection,
+        // Two-land ramp sorceries.
+        explosive_vegetation,
+        circuitous_route,
+        skyshroud_claim,
 
         // ── Poisonous (CR 702.70) ──
         marsh_viper,

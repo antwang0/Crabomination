@@ -30815,3 +30815,49 @@ fn cursed_totem_locks_creature_nonmana_abilities_but_not_mana() {
     }).expect("mana ability is exempt");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
 }
+
+// ── Explosive Vegetation / Skyshroud Claim (two-land ramp) ─────────────────
+
+#[test]
+fn explosive_vegetation_fetches_two_basics_tapped() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::forest());
+    let b = g.add_card_to_library(0, catalog::mountain());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(b)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::explosive_vegetation());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Explosive Vegetation castable");
+    drain_stack(&mut g);
+    for land in [a, b] {
+        let c = g.battlefield.iter().find(|c| c.id == land).expect("basic on battlefield");
+        assert!(c.tapped, "basic enters tapped");
+    }
+}
+
+#[test]
+fn skyshroud_claim_fetches_two_forests_untapped() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::forest());
+    let b = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(b)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::skyshroud_claim());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skyshroud Claim castable");
+    drain_stack(&mut g);
+    for land in [a, b] {
+        let c = g.battlefield.iter().find(|c| c.id == land).expect("forest on battlefield");
+        assert!(!c.tapped, "Skyshroud forests enter untapped");
+    }
+}

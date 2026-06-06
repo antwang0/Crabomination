@@ -5356,6 +5356,53 @@ pub fn rampant_growth() -> CardDefinition {
     }
 }
 
+/// Explosive Vegetation — {3}{G} Sorcery. Search your library for up to two
+/// basic land cards, put them onto the battlefield tapped, then shuffle.
+pub fn explosive_vegetation() -> CardDefinition {
+    CardDefinition {
+        name: "Explosive Vegetation",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+            search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Circuitous Route — {3}{G} Sorcery. Search your library for up to two
+/// basic land cards, put them onto the battlefield tapped, then shuffle.
+/// (The real card also fetches Gate lands; collapsed to basics for parity.)
+pub fn circuitous_route() -> CardDefinition {
+    CardDefinition {
+        name: "Circuitous Route",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+            search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Skyshroud Claim — {3}{G}{G} Sorcery. Search your library for two Forest
+/// cards, put them onto the battlefield untapped, then shuffle.
+pub fn skyshroud_claim() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Skyshroud Claim",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            search_to_battlefield(SelectionRequirement::HasLandType(LandType::Forest), false),
+            search_to_battlefield(SelectionRequirement::HasLandType(LandType::Forest), false),
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Cultivate — {2}{G} Sorcery. Search your library for up to two basic
 /// land cards, put one onto the battlefield tapped and the other into
 /// your hand.
