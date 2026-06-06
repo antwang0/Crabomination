@@ -22852,6 +22852,45 @@ fn clone_enters_as_a_copy_of_a_creature() {
     assert!(clone.definition.keywords.contains(&Keyword::Flying));
 }
 
+/// Phyrexian Metamorph copies a creature and is an artifact in addition to
+/// the copied types (the `extra_card_types` rider).
+#[test]
+fn phyrexian_metamorph_copies_creature_and_stays_artifact() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 Flying Vigilance
+    let id = g.add_card_to_hand(0, catalog::phyrexian_metamorph());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Metamorph castable for {3}{U/P}");
+    drain_stack(&mut g);
+    let m = g.battlefield.iter().find(|c| c.id == id).expect("Metamorph on battlefield");
+    assert_eq!(m.definition.name, "Serra Angel");
+    assert_eq!((m.definition.power, m.definition.toughness), (4, 4));
+    assert!(m.definition.card_types.contains(&CardType::Artifact),
+        "an artifact in addition to its copied types");
+    assert!(m.definition.card_types.contains(&CardType::Creature));
+}
+
+/// Phyrexian Metamorph can copy a noncreature artifact too (and the copy is
+/// still an artifact, naturally).
+#[test]
+fn phyrexian_metamorph_can_copy_an_artifact() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::phyrexian_metamorph());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let m = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    assert_eq!(m.definition.name, "Sol Ring");
+    assert!(m.definition.card_types.contains(&CardType::Artifact));
+}
+
 #[test]
 fn clone_with_no_creature_to_copy_dies_as_zero_zero() {
     let mut g = two_player_game();

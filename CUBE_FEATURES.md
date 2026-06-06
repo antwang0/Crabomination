@@ -103,7 +103,7 @@ are listed in `DECK_FEATURES.md`.
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
 | Saga lore counters + DFC | ⏳ | The Everflowing Well; future sagas. |
 | Hideaway lands | ⏳ | Shelldock Isle. |
-| Verge / surveil land family expansion | 🟡 | All five enemy/allied `*verge` lands (Blazemire/Thornspire/Bleachbone/Riverpyre/Wastewood) ship via `verge_land` (conditional second-color mana ability). Horizon-canopy cycle is complete (`horizon_land` helper; all six). Surveil-land expansion still ⏳. |
+| Verge / surveil land family expansion | ✅ | All five enemy/allied `*verge` lands ship via `verge_land`. Horizon-canopy cycle complete (`horizon_land`; all six). All ten MKM surveil lands ship via `dual_land_with` + `etb_tap_then_surveil_one`. |
 | ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Creature-ETB / death **trigger** suppression ships via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` (Torpor Orb, Tocatli Honor Guard, Hushbringer ✅). Remaining: Gather Specimens (steal-instead). |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | ✅ | Damping Sphere (`AdditionalCostAfterFirstSpell`), flat `AdditionalCost`, and the Trinisphere "minimum cost" floor (`SpellCostFloor`, untapped-gated) all ship. Elite Spellbinder reuses the existing tax static. |
 | "Cast spells without paying mana" static | ⏳ | Omniscience, Maelstrom Archangel (combat-damage variant), Aluren (free-cast under-3 creatures). |

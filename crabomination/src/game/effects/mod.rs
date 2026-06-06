@@ -447,6 +447,7 @@ impl GameState {
         // copy rewrite stamped the source's name over it.
         if (!spec.extra_triggered.is_empty()
             || !spec.extra_keywords.is_empty()
+            || !spec.extra_card_types.is_empty()
             || spec.keep_name)
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
         {
@@ -456,6 +457,11 @@ impl GameState {
             for kw in &spec.extra_keywords {
                 if !def.keywords.contains(kw) {
                     def.keywords.push(kw.clone());
+                }
+            }
+            for t in &spec.extra_card_types {
+                if !def.card_types.contains(t) {
+                    def.card_types.push(t.clone());
                 }
             }
             if spec.keep_name {

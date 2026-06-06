@@ -1131,8 +1131,9 @@ pub fn tocatli_honor_guard() -> CardDefinition {
     }
 }
 
-/// Hushbringer — {1}{W}, 2/1 Faerie with Flying. "Creatures entering the
-/// battlefield or dying don't cause triggered abilities to trigger."
+/// Hushbringer — {1}{W}, 1/2 Faerie with Flying and Lifelink. "Creatures
+/// entering the battlefield or dying don't cause triggered abilities to
+/// trigger."
 pub fn hushbringer() -> CardDefinition {
     use crate::effect::{StaticAbility, StaticEffect};
     CardDefinition {
@@ -1143,9 +1144,9 @@ pub fn hushbringer() -> CardDefinition {
             creature_types: vec![CreatureType::Faerie],
             ..Default::default()
         },
-        power: 2,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
         static_abilities: vec![StaticAbility {
             description: "Creatures entering the battlefield or dying don't cause triggered abilities to trigger.",
             effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: true },
@@ -2108,6 +2109,7 @@ pub fn spark_double() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             }],
+            extra_card_types: vec![],
         }),
         ..Default::default()
     }
@@ -2405,6 +2407,33 @@ pub fn clone_card() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![],
             keep_name: false,
+            extra_card_types: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Metamorph — {3}{U/P}, 0/0 Phyrexian Shapeshifter artifact.
+/// "You may have this enter as a copy of any artifact or creature, except
+/// it's an artifact in addition to its other types." Rides the
+/// `enters_as_copy` hook with an artifact/creature filter + `extra_card_types`.
+pub fn phyrexian_metamorph() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Phyrexian Metamorph",
+        cost: cost(&[generic(3), crate::mana::phyrexian(crate::mana::Color::Blue)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+            extra_creature_types: vec![],
+            extra_triggered: vec![],
+            extra_keywords: vec![],
+            keep_name: false,
+            extra_card_types: vec![CardType::Artifact],
         }),
         ..Default::default()
     }
@@ -2430,6 +2459,7 @@ pub fn mirror_image() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![],
             keep_name: false,
+            extra_card_types: vec![],
         }),
         ..Default::default()
     }
@@ -2456,6 +2486,7 @@ pub fn stunt_double() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![Keyword::Flash],
             keep_name: false,
+            extra_card_types: vec![],
         }),
         ..Default::default()
     }
@@ -2487,6 +2518,7 @@ pub fn phantasmal_image() -> CardDefinition {
             }],
             extra_keywords: vec![],
             keep_name: false,
+            extra_card_types: vec![],
         }),
         ..Default::default()
     }
@@ -2513,6 +2545,7 @@ pub fn mockingbird() -> CardDefinition {
             extra_triggered: vec![],
             extra_keywords: vec![],
             keep_name: true,
+            extra_card_types: vec![],
         }),
         ..Default::default()
     }

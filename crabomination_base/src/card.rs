@@ -1106,6 +1106,11 @@ pub struct EntersAsCopy {
     /// copied object's. Used by Mockingbird.
     #[serde(default)]
     pub keep_name: bool,
+    /// Card types layered on top of the copy ("except it's an artifact in
+    /// addition to its other types" — Phyrexian Metamorph). Added after the
+    /// copiable characteristics are stamped, so they survive the rewrite.
+    #[serde(default)]
+    pub extra_card_types: Vec<CardType>,
 }
 
 fn one_u32() -> u32 { 1 }
