@@ -200,8 +200,21 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         if !lines.is_empty() {
             lines.push(String::from("─────────"));
         }
-        for (kind, n) in counters {
-            lines.push(format!("{} ×{}", counter_label(kind), n));
+        for (kind, n) in &counters {
+            lines.push(format!("{} ×{}", counter_label(*kind), n));
+        }
+        // Dim reminder line per counter kind that has one, deduped — the
+        // counter analogue of the keyword-reminder lines below, so newer
+        // players see what "Stun" / "Finality" / "Luck" actually do.
+        let mut reminders: Vec<String> = counters
+            .iter()
+            .filter_map(|(k, _)| counter_reminder(*k))
+            .map(|r| format!("· {r}"))
+            .collect();
+        reminders.sort();
+        reminders.dedup();
+        for r in reminders {
+            lines.push(r);
         }
     }
 
@@ -653,7 +666,23 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Finality => "Finality",
         CounterType::Indestructible => "Indestructible",
         CounterType::Silver => "Silver",
+        CounterType::Luck => "Luck",
     }
+}
+
+/// Short reminder text for counters whose effect isn't obvious from the
+/// label. `None` for self-explanatory counters (+1/+1, Loyalty, …) so the
+/// tooltip stays compact.
+fn counter_reminder(kind: CounterType) -> Option<&'static str> {
+    Some(match kind {
+        CounterType::Stun => "Skips its next untap (remove instead of untapping).",
+        CounterType::Finality => "If it would die, exile it instead.",
+        CounterType::Shield => "Remove to prevent the next damage/destruction.",
+        CounterType::Indestructible => "Can't be destroyed.",
+        CounterType::Poison => "Ten poison counters and that player loses.",
+        CounterType::Luck => "Chance Encounter wins the game at ten.",
+        _ => return None,
+    })
 }
 
 #[cfg(test)]
@@ -750,6 +779,24 @@ mod tests {
         if let Some(s) = body {
             assert!(!s.contains("marked:"), "no damage marked, should not surface: {s}");
         }
+    }
+
+    #[test]
+    fn counter_reminder_line_shows_for_counters_with_reminder_text() {
+        let mut p = make_permanent_view(0, 3);
+        p.counters = vec![(CounterType::Stun, 1)];
+        let body = build_tooltip_body(&p).expect("body should render");
+        assert!(body.contains("Stun ×1"), "counter label present: {body}");
+        assert!(body.contains("Skips its next untap"), "reminder line present: {body}");
+    }
+
+    #[test]
+    fn counter_without_reminder_shows_no_reminder_line() {
+        let mut p = make_permanent_view(0, 3);
+        p.counters = vec![(CounterType::PlusOnePlusOne, 2)];
+        let body = build_tooltip_body(&p).expect("body should render");
+        assert!(body.contains("+1/+1 ×2"), "counter label present: {body}");
+        assert!(!body.contains("·"), "no reminder bullet for self-explanatory counters: {body}");
     }
 
     #[test]

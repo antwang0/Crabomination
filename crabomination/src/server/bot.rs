@@ -1519,7 +1519,15 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             let score = if kills_attacker && !dies_to_attacker {
                 1000 + *a_pow
             } else if kills_attacker && dies_to_attacker {
-                500 + *a_pow
+                // Even trade (both die). Prefer trading up: score by the
+                // stat delta (proxy = power + toughness). Don't sacrifice a
+                // much bigger creature for a small attacker unless we're
+                // under pressure — keep the body and take the hit.
+                let delta = (*a_pow + *a_tough) - (b_pow + b_tough);
+                if !life_threatened && delta < -2 {
+                    continue;
+                }
+                500 + delta
             } else if life_threatened {
                 // Chump-block to stop lethal damage. A trampler tramples
                 // over a chump (CR 702.19e), so a lone chump only stops
@@ -2479,6 +2487,31 @@ mod tests {
         g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(blk, atk)], "protected 3/3 kills the red 3/3 and takes no damage");
+    }
+
+    /// The bot won't throw a much bigger creature into an even trade with a
+    /// small attacker when it isn't under pressure (keeps the body, takes the
+    /// hit). A 5/5 should not block a 5/1 at healthy life.
+    #[test]
+    fn bot_keeps_big_body_over_bad_even_trade() {
+        use crate::card::{CardDefinition, CardType, Subtypes};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let glass = CardDefinition {
+            name: "Glass Cannon", card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(), power: 5, toughness: 1, ..Default::default()
+        };
+        let atk = g.add_card_to_battlefield(0, glass);
+        let beater = CardDefinition {
+            name: "Big Beater", card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(), power: 5, toughness: 5, ..Default::default()
+        };
+        let big = g.add_card_to_battlefield(1, beater);
+        g.players[1].life = 20; // not threatened by 5 damage
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(!blocks.iter().any(|(b, _)| *b == big),
+            "won't trade a 5/5 to kill a 5/1 when healthy");
     }
 
     /// CR 509.1b — the bot must not assign a power-2 blocker to a Steel Leaf
