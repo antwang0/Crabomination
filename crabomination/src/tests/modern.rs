@@ -31234,6 +31234,44 @@ fn butcher_of_malakir_edicts_when_your_creature_dies() {
     assert!(g.battlefield_find(theirs).is_none(), "opponent sacrificed a creature");
 }
 
+// ── Red combat tricks + menace anthem ──────────────────────────────────────
+
+#[test]
+fn assault_strobe_grants_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::assault_strobe());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+#[test]
+fn uncaged_fury_pumps_and_grants_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::uncaged_fury());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "2/2 + 1/1");
+    assert!(cp.keywords.contains(&Keyword::DoubleStrike));
+}
+
+#[test]
+fn goblin_war_drums_grants_menace_to_your_creatures() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::goblin_war_drums());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    assert!(g.computed_permanent(mine).unwrap().keywords.contains(&Keyword::Menace), "yours get menace");
+    assert!(!g.computed_permanent(theirs).unwrap().keywords.contains(&Keyword::Menace), "opponent's don't");
+}
+
 // ── Green bodies + Eldrazi Spawn ramp ──────────────────────────────────────
 
 #[test]

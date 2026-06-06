@@ -20635,6 +20635,88 @@ pub fn butcher_of_malakir() -> CardDefinition {
     }
 }
 
+/// Assault Strobe — {R} Sorcery. "Target creature gains double strike EOT."
+pub fn assault_strobe() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Assault Strobe",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::DoubleStrike,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Uncaged Fury — {2}{R} Instant. "Target creature gets +1/+1 and gains double
+/// strike until end of turn."
+pub fn uncaged_fury() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Uncaged Fury",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Built to Smash — {R} Instant. "Target attacking creature gets +3/+3 until
+/// end of turn." (The artifact-creature trample rider is dropped.)
+pub fn built_to_smash() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Built to Smash",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            ),
+            power: Value::Const(3),
+            toughness: Value::Const(3),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Goblin War Drums — {2}{R} Enchantment. "Creatures you control have menace."
+pub fn goblin_war_drums() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Goblin War Drums",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have menace.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Menace,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Silverback Ape — {3}{G}{G} 5/5 Ape (vanilla).
 pub fn silverback_ape() -> CardDefinition {
     CardDefinition {

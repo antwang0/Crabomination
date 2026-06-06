@@ -1422,6 +1422,11 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Battalion + sac-for-haste goblins.
         legion_loyalist,
         torch_courier,
+        // Red combat tricks + menace anthem.
+        assault_strobe,
+        uncaged_fury,
+        built_to_smash,
+        goblin_war_drums,
         // CR 705.1 win-a-flip payoff (luck counters → win the game).
         chance_encounter,
         // CR 706.4 die-roll payoff (d20 → Treasure tokens).
