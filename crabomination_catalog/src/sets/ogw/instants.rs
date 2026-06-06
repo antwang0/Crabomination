@@ -47,6 +47,31 @@ pub fn tar_snare() -> CardDefinition {
     }
 }
 
+/// Witness the End — {3}{B} Devoid Sorcery. Target opponent loses 2 life
+/// and discards two cards. (The printed "exiles two cards from hand" is
+/// approximated as a discard — no exile-from-hand-by-the-owner primitive.)
+pub fn witness_the_end() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Witness the End",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Devoid],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+                random: false,
+            },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Oblivion Strike — {3}{B} Devoid Sorcery. Exile target creature.
 pub fn oblivion_strike() -> CardDefinition {
     CardDefinition {

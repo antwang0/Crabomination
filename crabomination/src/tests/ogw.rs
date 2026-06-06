@@ -251,6 +251,46 @@ fn tar_snare_kills_a_two_two() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 → -2 toughness → dies");
 }
 
+/// Dread Drone mints two 0/1 Eldrazi Spawn on ETB.
+#[test]
+fn dread_drone_makes_two_spawn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::dread_drone());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    crate::game::cast(&mut g, id);
+    let spawn = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
+    assert_eq!(spawn, 2, "two Eldrazi Spawn on ETB");
+}
+
+/// Slaughter Drone's {C} ability grants deathtouch until end of turn.
+#[test]
+fn slaughter_drone_gains_deathtouch() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::slaughter_drone());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("grant deathtouch");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&crate::card::Keyword::Deathtouch));
+}
+
+/// Witness the End makes the opponent discard two and lose 2 life.
+#[test]
+fn witness_the_end_discard_two_lose_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let hand_before = g.players[1].hand.len();
+    let life_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::witness_the_end());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    crate::game::cast(&mut g, id);
+    assert_eq!(g.players[1].hand.len(), hand_before - 2, "opponent discards two");
+    assert_eq!(g.players[1].life, life_before - 2, "opponent loses 2 life");
+}
+
 /// Kozilek's Channeler and Hedron Crawler are colorless mana producers.
 #[test]
 fn colorless_mana_dorks_produce_colorless() {

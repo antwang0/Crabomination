@@ -295,6 +295,17 @@ pub fn eldrazi_scion_token() -> TokenDefinition {
     }
 }
 
+/// 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this: Add
+/// {C}." The weaker sibling of the Scion token (no power, same sac-for-mana).
+pub fn eldrazi_spawn_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Eldrazi Spawn".into(),
+        power: 0,
+        toughness: 1,
+        ..eldrazi_scion_token()
+    }
+}
+
 /// 1/1 white-and-black Inkling creature token with flying. Used by several
 /// SOS Silverquill / White cards.
 pub fn inkling_token() -> TokenDefinition {

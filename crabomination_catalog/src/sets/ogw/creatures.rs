@@ -1,7 +1,7 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::effect::shortcut::{dies_mint_token, etb_mint_token, ingest, prowess_trigger};
 use crate::mana::{b, cost, g, generic, r, u};
-use crabomination_base::tokens::eldrazi_scion_token;
+use crabomination_base::tokens::{eldrazi_scion_token, eldrazi_spawn_token};
 
 /// Eldrazi Drone body shared by the Scion-making creatures below.
 fn drone(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> CardDefinition {
@@ -122,6 +122,34 @@ pub fn cultivator_drone() -> CardDefinition {
             ..Default::default()
         }],
         ..drone("Cultivator Drone", cost(&[generic(3), crate::mana::colorless(1)]), 2, 2)
+    }
+}
+
+/// Dread Drone — {4}{B} 4/1 Eldrazi Drone. Devoid, ETB make two 0/1
+/// Eldrazi Spawn.
+pub fn dread_drone() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_mint_token(eldrazi_spawn_token(), 2)],
+        ..drone("Dread Drone", cost(&[generic(4), b()]), 4, 1)
+    }
+}
+
+/// Slaughter Drone — {1}{B} 2/2 Eldrazi Drone. Devoid, {C}: gains
+/// deathtouch until end of turn.
+pub fn slaughter_drone() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Duration, Selector};
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::colorless(1)]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Deathtouch,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..drone("Slaughter Drone", cost(&[generic(1), b()]), 2, 2)
     }
 }
 
