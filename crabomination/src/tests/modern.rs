@@ -31178,6 +31178,49 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── Tempo illusions + Spiketail Hatchling ──────────────────────────────────
+
+#[test]
+fn jaces_phantasm_grows_with_opponent_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::jaces_phantasm());
+    assert_eq!(g.computed_permanent(id).unwrap().power, 1, "1/1 with a small graveyard");
+    for _ in 0..10 { g.add_card_to_graveyard(1, catalog::forest()); }
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (5, 5), "+4/+4 once an opponent has ten in graveyard");
+}
+
+#[test]
+fn phantasmal_bear_sacrifices_when_targeted() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::phantasmal_bear());
+    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: bear, caster: 1 }]);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != bear), "sacrificed when it became a target");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "in its owner's graveyard");
+}
+
+#[test]
+fn spiketail_hatchling_counters_unless_paid() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt on the stack");
+    // P1 has spent their only mana and can't pay the {1}.
+    g.priority.player_with_priority = 0;
+    let spike = g.add_card_to_battlefield(0, catalog::spiketail_hatchling());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spike, ability_index: 0, target: Some(Target::Permanent(bolt)), x_value: None,
+    }).expect("sacrifice Spiketail to counter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "bolt countered (controller couldn't pay)");
+    assert!(g.battlefield.iter().all(|c| c.id != spike), "Spiketail Hatchling sacrificed");
+}
+
 // ── Utility artifacts (Icy Manipulator + monoliths) ────────────────────────
 
 #[test]

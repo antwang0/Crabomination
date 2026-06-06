@@ -799,8 +799,11 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Evoke Incarnation (MH2) ──
         subtlety,
-        // ── unblocked-draw snake ──
+        // ── unblocked-draw snake + tempo illusions ──
         ophidian,
+        spiketail_hatchling,
+        phantasmal_bear,
+        jaces_phantasm,
         // ── modern_decks: cube staples ──
         careful_study,
         exclude,

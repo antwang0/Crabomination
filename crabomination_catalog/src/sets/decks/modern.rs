@@ -20524,6 +20524,81 @@ pub fn chance_encounter() -> CardDefinition {
     }
 }
 
+/// Spiketail Hatchling — {1}{U} 1/1 Drake, Flying. "Sacrifice this: Counter
+/// target spell unless its controller pays {1}."
+pub fn spiketail_hatchling() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Spiketail Hatchling",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drake], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::CounterUnlessPaid {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                mana_cost: cost(&[generic(1)]),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phantasmal Bear — {U} 2/2 Bear Illusion. "When this becomes the target of
+/// a spell or ability, sacrifice it."
+pub fn phantasmal_bear() -> CardDefinition {
+    CardDefinition {
+        name: "Phantasmal Bear",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear, CreatureType::Illusion],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Graveyard },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Jace's Phantasm — {U} 1/1 Illusion, Flying. "Gets +4/+4 as long as an
+/// opponent has ten or more cards in their graveyard."
+pub fn jaces_phantasm() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{StaticEffect, Value};
+    CardDefinition {
+        name: "Jace's Phantasm",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +4/+4 while an opponent has ten or more cards in their graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::EachOpponent),
+                    Value::Const(10),
+                ),
+                power: 4,
+                toughness: 4,
+                keyword: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Icy Manipulator — {4} Artifact. "{1}, {T}: Tap target artifact, creature,
 /// or land."
 pub fn icy_manipulator() -> CardDefinition {
