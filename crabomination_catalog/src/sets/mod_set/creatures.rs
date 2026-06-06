@@ -8169,3 +8169,35 @@ pub fn generous_ent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Magus of the Mirror — {4}{B}{B} 4/2 Human Wizard. "{T}, Sacrifice this
+/// creature: Exchange life totals with target opponent. Activate only during
+/// your upkeep." A creature-bodied Mirror Universe (CR 119.7 + upkeep gate).
+pub fn magus_of_the_mirror() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Magus of the Mirror",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::ExchangeLifeTotals {
+                a: Selector::You,
+                b: Selector::Player(PlayerRef::EachOpponent),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

@@ -483,6 +483,10 @@ pub enum Predicate {
     ValueIsOdd(Value),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
+    /// The game is currently in the given turn step (CR 500). Gates
+    /// "activate only during [your] upkeep / end step" abilities; pair with
+    /// `IsTurnOf(You)` for the "your" qualifier.
+    CurrentStepIs(crate::turn_step::TurnStep),
     /// The given entity's properties match the filter.
     EntityMatches { what: Selector, filter: SelectionRequirement },
     /// `who` has gained at least `at_least` total life this turn.

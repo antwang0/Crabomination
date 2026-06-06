@@ -16146,6 +16146,31 @@ fn fire_ambush_deals_three() {
     assert_eq!(g.players[1].life, life - 3, "3 damage to the player");
 }
 
+/// Magus of the Mirror exchanges life totals with an opponent — but only
+/// during its controller's upkeep.
+#[test]
+fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::magus_of_the_mirror());
+    g.clear_sickness(id);
+    g.players[0].life = 5;
+    g.players[1].life = 20;
+    // Outside upkeep (main phase): the activation is rejected by the gate.
+    g.step = TurnStep::PreCombatMain;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).is_err(),
+        "can't activate outside your upkeep");
+    // During the controller's upkeep: exchange goes through (and sacrifices Magus).
+    g.step = TurnStep::Upkeep;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+        .expect("activatable during upkeep");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "P0 took P1's 20");
+    assert_eq!(g.players[1].life, 5, "P1 took P0's 5");
+    assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
+}
+
 /// Repay in Kind sets every player's life to the lowest among all players.
 #[test]
 fn repay_in_kind_sets_all_life_to_lowest() {

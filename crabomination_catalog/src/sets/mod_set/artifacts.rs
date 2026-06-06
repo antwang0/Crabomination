@@ -1394,3 +1394,30 @@ pub fn patchwork_automaton() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mirror Universe — {6} Artifact. "{T}, Sacrifice this artifact: Exchange
+/// life totals with target opponent. Activate only during your upkeep."
+/// (CR 119.7 exchange + the upkeep-only timing gate.)
+pub fn mirror_universe() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Mirror Universe",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::ExchangeLifeTotals {
+                a: Selector::You,
+                b: Selector::Player(PlayerRef::EachOpponent),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

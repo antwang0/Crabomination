@@ -233,6 +233,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         icy_manipulator,
         basalt_monolith,
         grim_monolith,
+        mirror_universe,
         // No-maximum-hand-size + play-lands-from-graveyard statics.
         reliquary_tower,
         thought_vessel,
@@ -1279,6 +1280,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         plague_wind,
         bone_splinters,
         repay_in_kind,
+        magus_of_the_mirror,
         mind_twist,
         dismember,
         cling_to_dust,
