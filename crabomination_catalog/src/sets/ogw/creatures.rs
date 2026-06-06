@@ -1,5 +1,7 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
-use crate::effect::shortcut::{dies_mint_token, etb_mint_token, ingest, prowess_trigger};
+use crate::effect::shortcut::{
+    dies_mint_token, etb_mint_token, ingest, on_dies, prowess_trigger, target_filtered,
+};
 use crate::mana::{b, cost, g, generic, r, u};
 use crabomination_base::tokens::{eldrazi_scion_token, eldrazi_spawn_token};
 
@@ -122,6 +124,97 @@ pub fn cultivator_drone() -> CardDefinition {
             ..Default::default()
         }],
         ..drone("Cultivator Drone", cost(&[generic(3), crate::mana::colorless(1)]), 2, 2)
+    }
+}
+
+/// Salvage Drone — {U} 1/1 Eldrazi Drone. Devoid, Ingest; when it dies,
+/// you may draw a card. (The "if you do, lose 1 life" rider is dropped.)
+pub fn salvage_drone() -> CardDefinition {
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        triggered_abilities: vec![
+            ingest(),
+            on_dies(Effect::MayDo {
+                description: "draw a card".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            }),
+        ],
+        ..drone("Salvage Drone", cost(&[u()]), 1, 1)
+    }
+}
+
+/// Skitterskin — {3}{B} 4/3 Eldrazi Drone. Devoid, can't block, {1}{B}:
+/// Regenerate this creature. (The "only if you control another colorless
+/// creature" gate is dropped — colorless-matters filter gap.)
+pub fn skitterskin() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Selector;
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::CantBlock],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..drone("Skitterskin", cost(&[generic(3), b()]), 4, 3)
+    }
+}
+
+/// Mindmelter — {1}{U}{B} 2/2 Eldrazi Drone. Devoid, can't be blocked,
+/// {3}{C}: target opponent discards a card (sorcery-speed). (The printed
+/// "exiles a card from their hand" is approximated as a discard.)
+pub fn mindmelter() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{PlayerRef, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Unblockable],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), crate::mana::colorless(1)]),
+            sorcery_speed: true,
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+            ..Default::default()
+        }],
+        ..drone("Mindmelter", cost(&[generic(1), u(), b()]), 2, 2)
+    }
+}
+
+/// Deepfathom Skulker — {5}{U} 4/4 colorless Eldrazi. Devoid. Whenever a
+/// creature you control deals combat damage to a player, you may draw a
+/// card. {3}{C}: target creature can't be blocked this turn.
+pub fn deepfathom_skulker() -> CardDefinition {
+    use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, SelectionRequirement,
+        TriggeredAbility};
+    use crate::effect::{Duration, Selector, Value};
+    let draw_on_dmg = TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+        effect: Effect::MayDo {
+            description: "draw a card".into(),
+            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        },
+    };
+    CardDefinition {
+        name: "Deepfathom Skulker",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![draw_on_dmg],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), crate::mana::colorless(1)]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
     }
 }
 

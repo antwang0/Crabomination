@@ -268,6 +268,66 @@ fn vile_aggregate_power_scales_with_colorless_creatures() {
     assert_eq!(g.computed_permanent(id).unwrap().power, 3, "3 colorless creatures");
 }
 
+/// Salvage Drone optionally draws when it dies.
+#[test]
+fn salvage_drone_may_draw_on_death() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::salvage_drone());
+    // Accept the optional "may draw" on death.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[0].hand.len();
+    g.battlefield_find_mut(id).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on death");
+}
+
+/// Skitterskin regenerates for {1}{B} and can't block.
+#[test]
+fn skitterskin_regenerates() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::skitterskin());
+    assert!(catalog::skitterskin().keywords.contains(&crate::card::Keyword::CantBlock));
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("set up regen shield");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(id).unwrap().damage = 99;
+    g.check_state_based_actions();
+    assert!(g.battlefield.iter().any(|c| c.id == id), "regenerated instead of dying");
+}
+
+/// Mindmelter makes the opponent discard; Deepfathom Skulker grants
+/// unblockable to a target creature.
+#[test]
+fn mindmelter_discards_deepfathom_grants_unblockable() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    let mm = g.add_card_to_battlefield(0, catalog::mindmelter());
+    g.clear_sickness(mm);
+    let hand_before = g.players[1].hand.len();
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mm, ability_index: 0, target: None, x_value: None,
+    }).expect("opp discards");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before - 1, "opponent discarded one");
+
+    let skulker = g.add_card_to_battlefield(0, catalog::deepfathom_skulker());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(skulker);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skulker, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("grant unblockable");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&crate::card::Keyword::Unblockable));
+}
+
 /// Benthic Infiltrator can't be blocked and ingests; Culling Drone ingests.
 #[test]
 fn benthic_infiltrator_is_unblockable_and_ingests() {
