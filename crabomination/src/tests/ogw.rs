@@ -251,6 +251,23 @@ fn tar_snare_kills_a_two_two() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 → -2 toughness → dies");
 }
 
+/// Vile Aggregate's power equals the colorless creatures its controller
+/// controls (it counts itself; rises as more colorless creatures join).
+#[test]
+fn vile_aggregate_power_scales_with_colorless_creatures() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::vile_aggregate());
+    // Only itself (devoid → colorless) → power 1, toughness 5.
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 5));
+    // Add two more colorless creatures (Eldrazi Devastator + a Scion token).
+    g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
+    g.add_token_to_battlefield(0, &crabomination_base::tokens::eldrazi_scion_token());
+    // A colored creature does NOT count.
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "3 colorless creatures");
+}
+
 /// Dread Drone mints two 0/1 Eldrazi Spawn on ETB.
 #[test]
 fn dread_drone_makes_two_spawn() {

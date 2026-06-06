@@ -125,6 +125,18 @@ pub fn cultivator_drone() -> CardDefinition {
     }
 }
 
+/// Vile Aggregate — {2}{R} */5 Eldrazi Drone. Devoid, Trample, Ingest;
+/// its power equals the number of colorless creatures you control
+/// (characteristic-defining, wired via `DynamicPt::ColorlessCreaturesControlled`).
+pub fn vile_aggregate() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Trample],
+        toughness: 5,
+        triggered_abilities: vec![ingest()],
+        ..drone("Vile Aggregate", cost(&[generic(2), r()]), 0, 5)
+    }
+}
+
 /// Dread Drone — {4}{B} 4/1 Eldrazi Drone. Devoid, ETB make two 0/1
 /// Eldrazi Spawn.
 pub fn dread_drone() -> CardDefinition {

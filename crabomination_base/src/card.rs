@@ -1295,6 +1295,10 @@ pub enum DynamicPt {
     /// Power = base_p − controller's life total, toughness = base_t − life.
     /// Death's Shadow (13/13 that "gets −X/−X where X is your life total").
     BaseMinusControllerLife { base_p: i32, base_t: i32 },
+    /// Power = number of colorless creatures the controller controls,
+    /// toughness = `base_t`. Vile Aggregate (*/5). "Colorless" is read as
+    /// Devoid-or-no-colored-pips, covering every printed colorless creature.
+    ColorlessCreaturesControlled { base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

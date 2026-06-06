@@ -2186,6 +2186,14 @@ impl GameState {
                     let life = self.players[card.controller].life;
                     (base_p - life, base_t - life)
                 }
+                crate::card::DynamicPt::ColorlessCreaturesControlled { base_t } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && c.definition.is_creature()
+                            && is_colorless_by_cost(&c.definition)
+                    }).count() as i32;
+                    (n, base_t)
+                }
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.id.0 as u64,
@@ -5727,8 +5735,29 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
         "Death's Shadow" => Some(DynamicPt::BaseMinusControllerLife {
             base_p: 13, base_t: 13,
         }),
+        "Vile Aggregate" => Some(DynamicPt::ColorlessCreaturesControlled { base_t: 5 }),
         _ => None,
     }
+}
+
+/// True if a card definition is colorless from its printed characteristics:
+/// it has Devoid (CR 702.114) or its mana cost carries no colored pips.
+/// Used by the `ColorlessCreaturesControlled` dynamic-P/T formula; avoids the
+/// layer-pass circularity of reading computed colors during the same recompute.
+fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
+    use crate::mana::ManaSymbol;
+    if def.keywords.contains(&crate::card::Keyword::Devoid) {
+        return true;
+    }
+    !def.cost.symbols.iter().any(|s| {
+        matches!(
+            s,
+            ManaSymbol::Colored(_)
+                | ManaSymbol::Hybrid(_, _)
+                | ManaSymbol::Phyrexian(_)
+                | ManaSymbol::MonoHybrid(_, _)
+        )
+    })
 }
 
 /// Compute-time conditional self-pump table: cards whose printed Oracle

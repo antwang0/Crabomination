@@ -711,10 +711,12 @@ picking an item up.
 ## Suggested next-up tasks
 
 - ⏳ **Discovered during the Eldrazi/devoid pass (not yet done):**
-  - **Generalize variable-power CDA** (`*/N` from a count). Tarmogoyf et al.
-    are name-hardcoded in the layer gather; a `Modification::SetPowerToughness`
-    fed by a `Value` (e.g. colorless-creature count) would unblock Vile
-    Aggregate, Walker of the Wastes, and friends without per-card name checks.
+  - **Generalize variable-power CDA** (`*/N` from a count). Tarmogoyf, Vile
+    Aggregate (`DynamicPt::ColorlessCreaturesControlled`, shipped this run),
+    etc. are each a name-keyed row in `dynamic_pt_for_name`; a
+    `Modification::SetPowerToughness` fed directly by a `Value` would drop the
+    per-card name table entirely (e.g. Walker of the Wastes = lands named
+    Wastes you control).
   - **"Defending player exiles N permanents they control"** (opponent-chosen)
     — Bane of Bala Ged's attack trigger. No opponent-driven exile-N primitive
     yet (sacrifice/exile pickers are self-only today).
