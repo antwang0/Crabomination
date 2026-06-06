@@ -32344,3 +32344,26 @@ fn ragavan_combat_damage_makes_treasure_and_steals_top_card() {
     assert_eq!(stolen.may_play_until.as_ref().map(|m| m.player), Some(0),
         "Ragavan's controller may cast the exiled card");
 }
+
+/// Dragon's Rage Channeler: with delirium (4+ card types in graveyard) it's a
+/// 3/3 with flying; without delirium it's a vanilla 1/1.
+#[test]
+fn dragons_rage_channeler_delirium_makes_3_3_flyer() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let drc = g.add_card_to_battlefield(0, catalog::dragons_rage_channeler());
+    // No delirium yet: base 1/1, no flying.
+    let c0 = g.computed_permanent(drc).expect("computed");
+    assert_eq!((c0.power, c0.toughness), (1, 1));
+    assert!(!c0.keywords.contains(&Keyword::Flying));
+    // Seed 4 distinct card types into P0's graveyard (creature/instant/
+    // sorcery/land) to switch on delirium.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::duress());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let c1 = g.computed_permanent(drc).expect("computed");
+    assert_eq!((c1.power, c1.toughness), (3, 3), "delirium grows it to 3/3");
+    assert!(c1.keywords.contains(&Keyword::Flying), "delirium grants flying");
+    assert!(c1.keywords.contains(&Keyword::MustAttack), "delirium adds attacks-each-combat");
+}

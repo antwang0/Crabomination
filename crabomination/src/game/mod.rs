@@ -2058,7 +2058,7 @@ impl GameState {
                     condition,
                     power,
                     toughness,
-                    keyword,
+                    keywords,
                 } = &sa.effect
                 else {
                     continue;
@@ -2080,7 +2080,7 @@ impl GameState {
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::ModifyPowerToughness(*power, *toughness),
                 });
-                if let Some(kw) = keyword {
+                for kw in keywords {
                     all_effects.push(ContinuousEffect {
                         timestamp: card.id.0 as u64,
                         source: card.id,

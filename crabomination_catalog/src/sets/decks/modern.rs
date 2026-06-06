@@ -5555,13 +5555,13 @@ pub fn wild_nacatl() -> CardDefinition {
             StaticAbility {
                 description: "As long as you control a Mountain, this creature gets +1/+1.",
                 effect: StaticEffect::PumpSelfIf {
-                    condition: controls(LandType::Mountain), power: 1, toughness: 1, keyword: None,
+                    condition: controls(LandType::Mountain), power: 1, toughness: 1, keywords: vec![],
                 },
             },
             StaticAbility {
                 description: "As long as you control a Plains, this creature gets +1/+1.",
                 effect: StaticEffect::PumpSelfIf {
-                    condition: controls(LandType::Plains), power: 1, toughness: 1, keyword: None,
+                    condition: controls(LandType::Plains), power: 1, toughness: 1, keywords: vec![],
                 },
             },
         ],
@@ -5596,7 +5596,7 @@ pub fn skyshroud_elite() -> CardDefinition {
                 },
                 power: 1,
                 toughness: 2,
-                keyword: None,
+                keywords: vec![],
             },
         }],
         ..Default::default()
@@ -9486,7 +9486,7 @@ pub fn adanto_vanguard() -> CardDefinition {
                 },
                 power: 2,
                 toughness: 0,
-                keyword: None,
+                keywords: vec![],
             },
         }],
         activated_abilities: vec![ActivatedAbility {
@@ -12454,7 +12454,7 @@ pub fn borderland_marauder() -> CardDefinition {
                 },
                 power: 2,
                 toughness: 0,
-                keyword: None,
+                keywords: vec![],
             },
         }],
         ..Default::default()
@@ -12998,7 +12998,7 @@ pub fn inventors_apprentice() -> CardDefinition {
                 },
                 power: 1,
                 toughness: 1,
-                keyword: None,
+                keywords: vec![],
             },
         }],
         ..Default::default()
@@ -15459,7 +15459,7 @@ pub fn carnage_interpreter() -> CardDefinition {
                 condition: Predicate::ValueAtMost(Value::HandSizeOf(PlayerRef::You), Value::Const(1)),
                 power: 2,
                 toughness: 2,
-                keyword: Some(Keyword::Menace),
+                keywords: vec![Keyword::Menace],
             },
         }],
         ..Default::default()
@@ -15774,7 +15774,7 @@ pub fn keen_eyed_curator() -> CardDefinition {
                 ),
                 power: 4,
                 toughness: 4,
-                keyword: Some(Keyword::Trample),
+                keywords: vec![Keyword::Trample],
             },
         }],
         ..Default::default()
@@ -21075,7 +21075,7 @@ pub fn jaces_phantasm() -> CardDefinition {
                 ),
                 power: 4,
                 toughness: 4,
-                keyword: None,
+                keywords: vec![],
             },
         }],
         ..Default::default()
@@ -24211,7 +24211,7 @@ fn pump_self_if_landtype(land: LandType, power: i32, toughness: i32) -> crate::e
             },
             power,
             toughness,
-            keyword: None,
+            keywords: vec![],
         },
     }
 }
@@ -24639,7 +24639,7 @@ pub fn voice_of_the_blessed() -> CardDefinition {
                     condition: counters_at_least(4),
                     power: 0,
                     toughness: 0,
-                    keyword: Some(Keyword::Flying),
+                    keywords: vec![Keyword::Flying],
                 },
             },
             StaticAbility {
@@ -24648,7 +24648,7 @@ pub fn voice_of_the_blessed() -> CardDefinition {
                     condition: counters_at_least(4),
                     power: 0,
                     toughness: 0,
-                    keyword: Some(Keyword::Vigilance),
+                    keywords: vec![Keyword::Vigilance],
                 },
             },
             StaticAbility {
@@ -24657,7 +24657,7 @@ pub fn voice_of_the_blessed() -> CardDefinition {
                     condition: counters_at_least(10),
                     power: 0,
                     toughness: 0,
-                    keyword: Some(Keyword::Indestructible),
+                    keywords: vec![Keyword::Indestructible],
                 },
             },
         ],

@@ -52,7 +52,11 @@ pub enum StaticEffect {
         condition: Predicate,
         power: i32,
         toughness: i32,
-        keyword: Option<Keyword>,
+        /// Keywords granted only while the condition holds. Dragon's Rage
+        /// Channeler's delirium grants both Flying and "attacks each combat"
+        /// (`MustAttack`), so this is a list rather than a single keyword.
+        #[serde(default)]
+        keywords: Vec<Keyword>,
     },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },

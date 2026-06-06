@@ -7332,7 +7332,7 @@ pub fn pelt_collector() -> CardDefinition {
                 ),
                 power: 0,
                 toughness: 0,
-                keyword: Some(Keyword::Trample),
+                keywords: vec![Keyword::Trample],
             },
         }],
         ..Default::default()
@@ -7922,6 +7922,50 @@ pub fn ragavan_nimble_pilferer() -> CardDefinition {
             ]),
         }],
         alternative_cost: Some(dash(cost(&[generic(1), r()]))),
+        ..Default::default()
+    }
+}
+
+/// Dragon's Rage Channeler — {R} Human Shaman 1/1. "Whenever you cast a
+/// noncreature spell, surveil 1. Delirium — As long as four or more card
+/// types are among cards in your graveyard, this is a 3/3 with flying and
+/// attacks each combat if able." Delirium rides `PumpSelfIf` (+2/+2 + Flying
+/// + MustAttack while `DeliriumActive`).
+pub fn dragons_rage_channeler() -> CardDefinition {
+    use crate::card::{
+        EventKind, EventScope, EventSpec, Predicate, StaticAbility, TriggeredAbility,
+    };
+    use crate::effect::{PlayerRef, StaticEffect};
+    CardDefinition {
+        name: "Dragon's Rage Channeler",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                },
+            ),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "Delirium — As long as there are four or more card types among \
+                          cards in your graveyard, this creature is a 3/3, has flying, \
+                          and attacks each combat if able.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DeliriumActive { who: PlayerRef::You },
+                power: 2,
+                toughness: 2,
+                keywords: vec![Keyword::Flying, Keyword::MustAttack],
+            },
+        }],
         ..Default::default()
     }
 }

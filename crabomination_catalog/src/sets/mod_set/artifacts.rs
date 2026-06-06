@@ -1327,7 +1327,7 @@ pub fn court_homunculus() -> CardDefinition {
                 },
                 power: 1,
                 toughness: 1,
-                keyword: None,
+                keywords: vec![],
             },
         }],
         ..Default::default()
