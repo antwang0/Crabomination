@@ -284,6 +284,12 @@ impl GameState {
                 .iter()
                 .map(|p| p.creatures_died_this_turn as i32)
                 .sum(),
+            Value::LowestLifeTotal => self
+                .players
+                .iter()
+                .map(|p| p.life)
+                .min()
+                .unwrap_or(0),
             Value::Pow2(inner) => {
                 let exp = self.evaluate_value(inner, ctx).clamp(0, 30);
                 1i32.checked_shl(exp as u32).unwrap_or(i32::MAX)

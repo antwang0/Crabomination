@@ -1278,6 +1278,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         last_gasp,
         plague_wind,
         bone_splinters,
+        repay_in_kind,
         mind_twist,
         dismember,
         cling_to_dust,

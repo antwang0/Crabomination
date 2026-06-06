@@ -847,3 +847,19 @@ pub fn fire_ambush() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Repay in Kind — {5}{B}{B} Sorcery. "Each player's life total becomes the
+/// lowest life total among all players." (CR 119.7 — `SetLifeTotal` over
+/// every player, evaluated once via `Value::LowestLifeTotal`.)
+pub fn repay_in_kind() -> CardDefinition {
+    CardDefinition {
+        name: "Repay in Kind",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SetLifeTotal {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::LowestLifeTotal,
+        },
+        ..Default::default()
+    }
+}

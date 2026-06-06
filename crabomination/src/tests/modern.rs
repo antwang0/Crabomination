@@ -16146,6 +16146,23 @@ fn fire_ambush_deals_three() {
     assert_eq!(g.players[1].life, life - 3, "3 damage to the player");
 }
 
+/// Repay in Kind sets every player's life to the lowest among all players.
+#[test]
+fn repay_in_kind_sets_all_life_to_lowest() {
+    let mut g = two_player_game();
+    g.players[0].life = 25;
+    g.players[1].life = 6;
+    let id = g.add_card_to_hand(0, catalog::repay_in_kind());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Repay in Kind castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 6, "P0 drops to the lowest (6)");
+    assert_eq!(g.players[1].life, 6, "P1 unchanged at the lowest");
+}
+
 /// Trumpet Blast pumps attacking creatures +2/+0.
 #[test]
 fn trumpet_blast_pumps_attackers() {

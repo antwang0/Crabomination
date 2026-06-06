@@ -269,6 +269,10 @@ pub enum Value {
     PowerOf(Box<Selector>),
     ToughnessOf(Box<Selector>),
     LifeOf(PlayerRef),
+    /// Lowest life total among all players in the game (CR 119.7 — Repay
+    /// in Kind: "each player's life total becomes the lowest life total
+    /// among all players").
+    LowestLifeTotal,
     HandSizeOf(PlayerRef),
     GraveyardSizeOf(PlayerRef),
     /// Maximum graveyard size across **every alive player** in the game.
