@@ -377,6 +377,28 @@ pub struct GameState {
     /// distinguish a back-face MDFC cast from a normal hand cast.
     #[serde(skip, default)]
     pub(crate) pending_cast_face: CastFace,
+    /// Transient: the permanents a `wants_ui` caster picked to satisfy a
+    /// "sacrifice a permanent" additional cast cost (CR 601.2b). Set by
+    /// `submit_decision`'s `CastSacrifice` resume just before it re-invokes
+    /// the cast, and consumed (taken) by `pay_additional_costs` in lieu of
+    /// the auto-pick. `None` for the auto-pick path (bots/tests, or a single
+    /// legal choice). Never needs to survive a snapshot — it lives only
+    /// across the synchronous resume → cast call.
+    #[serde(skip, default)]
+    pub(crate) pending_cast_sacrifices: Option<Vec<CardId>>,
+    /// Transient: the permanent a `wants_ui` activator picked to satisfy an
+    /// activated ability's "Sacrifice another …" cost (`sac_other_filter`).
+    /// Set by `submit_decision`'s `ActivateAbilityChoice` resume just before it
+    /// replays `activate_ability`, and consumed there in lieu of the auto-pick.
+    /// `None` for the auto-pick path. Like `pending_cast_sacrifices`, it lives
+    /// only across the synchronous resume → activate call and never snapshots.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_sac_other: Option<CardId>,
+    /// Transient sibling of [`pending_ability_sac_other`] for an activated
+    /// ability's "Tap an untapped … you control" cost (`tap_other_filter`).
+    /// Set by the `ActivateAbilityChoice` resume, consumed by `activate_ability`.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_tap_other: Option<CardId>,
     /// Resolves player choices encountered during effect resolution. Used for
     /// *non-suspending* decisions (e.g. `AddManaAnyColor` auto-picks a color).
     /// Suspending decisions (currently Scry) surface through `pending_decision`
@@ -613,6 +635,9 @@ impl Clone for GameState {
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
+            pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
+            pending_ability_sac_other: self.pending_ability_sac_other,
+            pending_ability_tap_other: self.pending_ability_tap_other,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
@@ -699,6 +724,9 @@ impl GameState {
             permanents_destroyed_this_resolution: 0,
             named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,
+            pending_cast_sacrifices: None,
+            pending_ability_sac_other: None,
+            pending_ability_tap_other: None,
             decider: Box::new(AutoDecider),
             pending_decision: None,
             suspend_signal: None,
@@ -4536,6 +4564,74 @@ impl GameState {
                 }
                 return Ok(evs);
             }
+            ResumeContext::CastSacrifice {
+                caster,
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => {
+                // CR 601.2b — the caster picked which permanent to sacrifice.
+                // Validate the answer is a permanent they control matching the
+                // spell's additional-cost filter, then re-run the cast with the
+                // choice stashed for `pay_additional_costs`. The cast was
+                // suspended before any cost was paid, so re-invoking it from
+                // the top is a clean replay (no double-spend / double-removal).
+                let chosen = match answer {
+                    DecisionAnswer::Target(Target::Permanent(id))
+                        if self.cast_sacrifice_choice_is_legal(caster, card_id, id) =>
+                    {
+                        id
+                    }
+                    _ => {
+                        // Reject an illegal/ill-typed answer but put the card
+                        // back to a clean state: the card never left hand, so
+                        // simply surfacing the error is enough.
+                        return Err(GameError::DecisionAnswerMismatch);
+                    }
+                };
+                self.pending_cast_sacrifices = Some(vec![chosen]);
+                // Priority is still the caster's (we never advanced it), so
+                // `cast_spell` reads the right actor. Any cost failure (e.g.
+                // mana shortfall) surfaces as a normal cast error.
+                return self.cast_spell(card_id, target, additional_targets, mode, x_value);
+            }
+            ResumeContext::ActivateAbilityChoice {
+                activator,
+                card_id,
+                ability_index,
+                target,
+                x_value,
+                kind,
+            } => {
+                // CR 602.5 — the activator picked which permanent to pay one of
+                // the ability's "another …" costs. Validate it's a permanent
+                // they control (other than the source), stash it for the
+                // matching cost, and replay the activation from the top —
+                // nothing was paid before the suspend, so this is a clean
+                // replay (which may suspend again for a further choice).
+                let chosen = match answer {
+                    DecisionAnswer::Target(Target::Permanent(id))
+                        if id != card_id
+                            && self
+                                .battlefield_find(id)
+                                .is_some_and(|c| c.controller == activator) =>
+                    {
+                        id
+                    }
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                };
+                match kind {
+                    crate::game::types::AbilityCostChoice::SacOther => {
+                        self.pending_ability_sac_other = Some(chosen);
+                    }
+                    crate::game::types::AbilityCostChoice::TapOther => {
+                        self.pending_ability_tap_other = Some(chosen);
+                    }
+                }
+                return self.activate_ability(card_id, ability_index, target, x_value);
+            }
         };
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
@@ -4868,6 +4964,24 @@ impl GameState {
                     self.players[player].mana_pool.add(*c, 1);
                     events.push(GameEvent::ManaAdded { player, color: *c });
                 }
+                Ok(events)
+            }
+            PendingEffectState::SacrificePending { player } => {
+                // CR 701.16 — the player chose which permanent to sacrifice.
+                let DecisionAnswer::Target(Target::Permanent(id)) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Trust the option list that was posed (built from the legal
+                // candidates), but guard against a stale/hostile id: it must
+                // still be a permanent the sacrificing player controls.
+                let controlled = self
+                    .battlefield_find(*id)
+                    .is_some_and(|c| c.controller == player);
+                if !controlled {
+                    return Err(GameError::DecisionAnswerMismatch);
+                }
+                let mut events = Vec::new();
+                self.sacrifice_one(*id, player, &mut events);
                 Ok(events)
             }
             PendingEffectState::DiscardChosenPending { target_player } => {

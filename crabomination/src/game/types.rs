@@ -421,14 +421,41 @@ pub struct PendingDecision {
 
 impl PendingDecision {
     pub fn acting_player(&self) -> usize {
+        // A suspended effect usually wants its answer from the spell's caster
+        // / ability's controller. The exception is a forced sacrifice (CR
+        // 701.16), where the *sacrificing* player chooses — which for an Edict
+        // is the targeted opponent, not the caster. `SacrificePending` carries
+        // that player, so prefer it over the resume's owner.
         match &self.resume {
-            ResumeContext::Spell { caster, .. } => *caster,
-            ResumeContext::Trigger { controller, .. } => *controller,
-            ResumeContext::Ability { controller, .. } => *controller,
+            ResumeContext::Spell { in_progress, caster, .. } => {
+                in_progress.answering_player().unwrap_or(*caster)
+            }
+            ResumeContext::Trigger { in_progress, controller, .. } => {
+                in_progress.answering_player().unwrap_or(*controller)
+            }
+            ResumeContext::Ability { in_progress, controller, .. } => {
+                in_progress.answering_player().unwrap_or(*controller)
+            }
             ResumeContext::Mulligan { player, .. } => *player,
             ResumeContext::TriggerTargetPick { pending, .. } => pending.controller,
             ResumeContext::CleanupDiscard { player } => *player,
             ResumeContext::CombatDamage { player, .. } => *player,
+            ResumeContext::CastSacrifice { caster, .. } => *caster,
+            ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
+        }
+    }
+}
+
+impl PendingEffectState {
+    /// The player who must answer this suspended decision, when it isn't the
+    /// owning spell's caster / ability's controller. Currently only a forced
+    /// sacrifice (CR 701.16) re-points the answer to the sacrificing player
+    /// (an Edict's target). Everything else returns `None` (answered by the
+    /// resume's owner).
+    pub(crate) fn answering_player(&self) -> Option<usize> {
+        match self {
+            PendingEffectState::SacrificePending { player } => Some(*player),
+            _ => None,
         }
     }
 }
@@ -480,6 +507,17 @@ pub struct PendingTriggerPush {
     /// triggers whose filter is intended only as a trigger-time gate.
     #[serde(default)]
     pub intervening_if: Option<crate::card::Predicate>,
+}
+
+/// Which "another permanent" activated-ability cost a suspended
+/// [`ResumeContext::ActivateAbilityChoice`] is gathering a pick for, so the
+/// resume stashes the answer in the matching transient field.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AbilityCostChoice {
+    /// `sac_other_filter` — "Sacrifice another …".
+    SacOther,
+    /// `tap_other_filter` — "Tap an untapped … you control".
+    TapOther,
 }
 
 /// Recorded where resolution suspended so it can resume after the decision.
@@ -557,6 +595,38 @@ pub(crate) enum ResumeContext {
     TriggerTargetPick {
         pending: PendingTriggerPush,
         remaining: Vec<PendingTriggerPush>,
+    },
+    /// CR 601.2b — a `wants_ui` caster is choosing which permanent to
+    /// sacrifice for a spell's "as an additional cost, sacrifice a …"
+    /// requirement (Crop Rotation, Reckless Abandon). The cast suspended at
+    /// its very top — before the card left hand or any cost was paid — and
+    /// is fully re-run on answer with the chosen permanent stored in
+    /// `pending_cast_sacrifices`. Carries the original cast parameters so
+    /// the resume can re-invoke `cast_spell` verbatim.
+    CastSacrifice {
+        caster: usize,
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 602.5 — a `wants_ui` activator is choosing a battlefield permanent
+    /// to pay one of an activated ability's "another …" costs: sacrifice
+    /// (`sac_other_filter`) or tap (`tap_other_filter`). `kind` says which, so
+    /// the resume stashes the pick in the right transient field. The
+    /// activation suspended at its top — before any cost was paid — and is
+    /// fully re-run on answer; carries the activation parameters so the resume
+    /// can re-invoke `activate_ability` verbatim. (Graveyard-exile costs use
+    /// the auto-pick — the targeting cursor can't select graveyard cards.)
+    ActivateAbilityChoice {
+        activator: usize,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        x_value: Option<u32>,
+        kind: AbilityCostChoice,
     },
     /// CR 514.1 — the active player's hand is over the maximum hand size
     /// at cleanup and they have `wants_ui`, so the discard-down is surfaced
@@ -644,6 +714,13 @@ pub enum PendingEffectState {
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.
     DiscardChosenPending { target_player: usize },
+    /// CR 701.16 — suspended on a `ChooseTarget` decision for a forced
+    /// single-permanent sacrifice (Edicts, Annihilator with N=1, "sacrifice a
+    /// creature" riders). `player` is the one doing the sacrificing (the
+    /// chooser per the rules — the targeted player for an Edict). The apply
+    /// step removes the chosen permanent. Only the single-sacrifice case is
+    /// surfaced; multi-sacrifice keeps the auto-pick.
+    SacrificePending { player: usize },
     /// Suspended on an `ExileChosenUntilSourceLeaves` decision (Brain
     /// Maggot, Tidehollow Sculler, Kitesail Freebooter). The caster picks
     /// cards from `target_player`'s hand; the apply step exiles them linked

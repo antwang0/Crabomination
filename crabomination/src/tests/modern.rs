@@ -1613,6 +1613,123 @@ fn crop_rotation_sacrifices_land_and_searches_for_one() {
         "Tutored land should be on the battlefield");
 }
 
+/// CR 601.2b — a `wants_ui` caster picks *which* land to sacrifice for Crop
+/// Rotation's additional cost instead of the engine auto-picking. Casting
+/// suspends on a `ChooseTarget` decision; the chosen land is the one that
+/// dies.
+#[test]
+fn crop_rotation_ui_player_picks_which_land_to_sacrifice() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    // Two legal lands → a real choice.
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    let _fetch_target = g.add_card_to_library(0, catalog::plains());
+
+    let id = g.add_card_to_hand(0, catalog::crop_rotation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    // The cast suspends for the sacrifice choice rather than auto-picking.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast suspends for the sacrifice choice");
+
+    let pd = g.pending_decision.as_ref().expect("a sacrifice decision is pending");
+    assert_eq!(pd.acting_player(), 0);
+    match &pd.decision {
+        crate::decision::Decision::ChooseTarget { legal, .. } => {
+            assert_eq!(legal.len(), 2, "both lands offered as sacrifice options");
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+    assert!(g.players[0].has_in_hand(id), "card stays in hand until the choice is made");
+
+    // Pick the Island (not the cheapest auto-pick would necessarily choose).
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(
+        Target::Permanent(island),
+    )))
+    .expect("submit the sacrifice choice");
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == island),
+        "the chosen Island was sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == forest),
+        "the unchosen Forest stays on the battlefield");
+    assert!(!g.players[0].has_in_hand(id), "Crop Rotation left hand on the real cast");
+}
+
+/// A non-UI caster (bot / AutoDecider) keeps the auto-pick path — no
+/// sacrifice decision is surfaced, so bot play and tests are unchanged.
+#[test]
+fn crop_rotation_auto_picks_sacrifice_for_non_ui_player() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::island());
+    let target_land = g.add_card_to_library(0, catalog::plains());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target_land))]));
+
+    let id = g.add_card_to_hand(0, catalog::crop_rotation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast resolves without a sacrifice decision");
+    assert!(g.pending_decision.is_none(), "no sacrifice decision for a non-UI caster");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == target_land), "search resolved normally");
+}
+
+/// CR 701.16 — a `wants_ui` player hit by an Edict chooses *which* creature
+/// to sacrifice (Diabolic Edict, "target player sacrifices a creature")
+/// rather than the engine auto-dumping their weakest. The resolution suspends
+/// on a `ChooseTarget`; the chosen creature is the one that dies.
+#[test]
+fn diabolic_edict_ui_target_chooses_creature_to_sacrifice() {
+    let mut g = two_player_game();
+    g.players[1].wants_ui = true;
+    // The targeted player controls two creatures → a genuine choice.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let keep = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::diabolic_edict());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Diabolic Edict castable for {1}{B}");
+    // Resolve the spell: both players pass priority.
+    g.perform_action(GameAction::PassPriority).expect("active passes");
+    g.perform_action(GameAction::PassPriority).expect("non-active passes → resolve");
+
+    // Resolution suspended on the targeted player's sacrifice choice.
+    let pd = g.pending_decision.as_ref().expect("sacrifice choice is pending");
+    assert_eq!(pd.acting_player(), 1, "the targeted player chooses");
+    match &pd.decision {
+        crate::decision::Decision::ChooseTarget { legal, .. } => {
+            assert_eq!(legal.len(), 2, "both of the player's creatures are options");
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+
+    // Choose to sacrifice `bear`; `keep` survives.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(
+        Target::Permanent(bear),
+    )))
+    .expect("submit the sacrifice choice");
+
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "the chosen creature was sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == keep),
+        "the unchosen creature survives");
+}
+
 /// Coveted Jewel changes hands when an opponent's creature attacks its
 /// controller, and untaps under the new controller (CR 800.4 control flip).
 #[test]
@@ -31132,6 +31249,42 @@ fn ashnods_altar_sacrifices_a_creature_for_two_colorless() {
         card_id: altar, ability_index: 0, target: None, x_value: None,
     }).expect("altar activates by sacrificing a creature");
     assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "added two colorless");
+}
+
+/// CR 602.5b — a `wants_ui` activator chooses which creature to sacrifice for
+/// an activated ability's "Sacrifice a creature" cost (Ashnod's Altar) instead
+/// of the engine auto-dumping the weakest. Activation suspends on a
+/// `ChooseTarget`; the chosen creature is the one sacrificed.
+#[test]
+fn ashnods_altar_ui_activator_chooses_creature_to_sacrifice() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let altar = g.add_card_to_battlefield(0, catalog::ashnods_altar());
+    let sacked = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let kept = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: altar, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("activation suspends for the sacrifice choice");
+
+    let pd = g.pending_decision.as_ref().expect("a sacrifice choice is pending");
+    assert_eq!(pd.acting_player(), 0);
+    match &pd.decision {
+        crate::decision::Decision::ChooseTarget { legal, .. } => {
+            assert_eq!(legal.len(), 2, "both creatures are sacrifice options");
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(
+        Target::Permanent(sacked),
+    )))
+    .expect("submit the sacrifice choice");
+
+    assert!(!g.battlefield.iter().any(|c| c.id == sacked), "chosen creature sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == kept), "unchosen creature survives");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "added two colorless");
 }
 

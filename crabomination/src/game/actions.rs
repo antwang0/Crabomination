@@ -1714,6 +1714,80 @@ impl GameState {
         if !self.players[p].has_in_hand(card_id) {
             return Err(GameError::CardNotInHand(card_id));
         }
+
+        // CR 601.2b — interactive "as an additional cost, sacrifice a …"
+        // choice. A `wants_ui` caster on the plain cast path picks which
+        // permanent to sacrifice (Crop Rotation, Reckless Abandon) instead of
+        // the engine auto-picking the cheapest. Suspend *here* — before the
+        // card leaves hand or any cost is paid — and re-run the whole cast on
+        // answer with the pick stashed in `pending_cast_sacrifices`. Only the
+        // single-sacrifice case with more than one legal option is surfaced:
+        // a lone legal permanent has no real choice (auto-pick), and
+        // multi-sacrifice additional costs (none on the plain cast path today)
+        // keep the auto-pick. The alt-cost / convoke / delve paths are
+        // excluded so their own choice plumbing isn't disturbed.
+        if self.pending_cast_sacrifices.is_none()
+            && self.players[p].wants_ui
+            && convoke_creatures.is_empty()
+            && delve_cards.is_empty()
+            && !kicked
+            && !buyback
+            && !bestow
+        {
+            let card_info = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .map(|c| (c.definition.name.to_string(), c.definition.additional_cast_cost.clone()));
+            if let Some((name, costs)) = card_info {
+                for cost in &costs {
+                    if let crate::card::AdditionalCastCost::SacrificePermanent { filter, count } = cost
+                        && *count == 1
+                    {
+                        let legal: Vec<Target> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && self.evaluate_requirement_static(
+                                        filter,
+                                        &Target::Permanent(c.id),
+                                        p,
+                                        None,
+                                    )
+                            })
+                            .map(|c| Target::Permanent(c.id))
+                            .collect();
+                        if legal.len() > 1 {
+                            self.pending_decision = Some(crate::game::types::PendingDecision {
+                                decision: crate::decision::Decision::ChooseTarget {
+                                    source: card_id,
+                                    legal,
+                                    source_name: name,
+                                    description: "choose a permanent to sacrifice".into(),
+                                },
+                                resume: crate::game::types::ResumeContext::CastSacrifice {
+                                    caster: p,
+                                    card_id,
+                                    target,
+                                    additional_targets,
+                                    mode,
+                                    x_value,
+                                },
+                            });
+                            return Ok(vec![]);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Consume any sacrifice pick from the `CastSacrifice` resume now, so
+        // it's applied to *this* cast only — a later failure (timing, mana)
+        // can't leak it onto the next cast.
+        let chosen_sacrifices = self.pending_cast_sacrifices.take();
+
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
         // CR 702.32 — opt-in Kicker. Only stamp `kicked` if the card
@@ -2035,7 +2109,8 @@ impl GameState {
         // for "X = the sacrificed creature's power" riders (Tend the Pests).
         let mut sac_x = None;
         if !additional_costs.is_empty() {
-            let (mut cost_events, power) = self.pay_additional_costs(p, &additional_costs);
+            let (mut cost_events, power) =
+                self.pay_additional_costs(p, &additional_costs, chosen_sacrifices);
             auto_events.append(&mut cost_events);
             sac_x = power;
         }
@@ -2054,6 +2129,53 @@ impl GameState {
         );
 
         Ok(events)
+    }
+
+    /// Is `sac_id` a legal answer to `card_id`'s "sacrifice a permanent"
+    /// additional cast cost? True iff the card is in `caster`'s hand, the
+    /// card has such a cost, and `caster` controls `sac_id` and it matches
+    /// the cost's filter. Used by the `CastSacrifice` resume to vet a
+    /// client's chosen sacrifice before re-running the cast.
+    pub(crate) fn cast_sacrifice_choice_is_legal(
+        &self,
+        caster: usize,
+        card_id: CardId,
+        sac_id: CardId,
+    ) -> bool {
+        let Some(card) = self.players[caster].hand.iter().find(|c| c.id == card_id) else {
+            return false;
+        };
+        let Some(sac) = self.battlefield_find(sac_id) else {
+            return false;
+        };
+        if sac.controller != caster {
+            return false;
+        }
+        card.definition.additional_cast_cost.iter().any(|cost| {
+            matches!(
+                cost,
+                crate::card::AdditionalCastCost::SacrificePermanent { filter, .. }
+                    if self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(sac_id),
+                        caster,
+                        None,
+                    )
+            )
+        })
+    }
+
+    /// Pick the `count` lowest-power permanents from `candidates` (by id) —
+    /// the AutoDecider heuristic for a forced "Sacrifice another …" activation
+    /// cost, so the activator keeps their higher-power creatures. Ties keep the
+    /// candidates' (battlefield) order via a stable sort.
+    pub(crate) fn auto_pick_lowest_power(&self, candidates: &[CardId], count: usize) -> Vec<CardId> {
+        let mut ranked: Vec<(CardId, i32)> = candidates
+            .iter()
+            .filter_map(|id| self.battlefield_find(*id).map(|c| (*id, c.power())))
+            .collect();
+        ranked.sort_by_key(|(_, pow)| *pow);
+        ranked.into_iter().take(count).map(|(id, _)| id).collect()
     }
 
     /// CR 601.2b — can every additional cast cost be paid right now? Checked
@@ -2083,34 +2205,70 @@ impl GameState {
         &mut self,
         p: usize,
         costs: &[crate::card::AdditionalCastCost],
+        // A `wants_ui` caster's explicit sacrifice pick (from the
+        // `CastSacrifice` decision), if any. Applied to the first
+        // SacrificePermanent cost; everything else auto-picks. Owned by the
+        // caller (taken from `pending_cast_sacrifices` up front) so a failed
+        // cast can't leak it to a later one.
+        chosen_sacrifices: Option<Vec<CardId>>,
     ) -> (Vec<GameEvent>, Option<u32>) {
         use crate::card::AdditionalCastCost as A;
         let mut events = Vec::new();
         let mut sac_power = None;
+        let mut chosen_override = chosen_sacrifices;
         for cost in costs {
             match cost {
                 A::SacrificePermanent { filter, count } => {
-                    // Auto-pick the `count` cheapest matching permanents (tokens
-                    // first, then lowest mana value, then lowest power). The
-                    // first sacrifice's power becomes the spell's X.
+                    // Honor the player's explicit pick(s) when present and
+                    // valid; auto-pick the `count` cheapest matching permanents
+                    // (tokens first, then lowest mana value, then lowest power)
+                    // for any remainder. The first sacrifice's power becomes
+                    // the spell's X.
                     let chosen: Vec<(CardId, u32, bool)> = {
-                        let mut cands: Vec<&crate::card::CardInstance> = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| {
-                                c.controller == p
-                                    && self.evaluate_requirement_static(
-                                        filter,
-                                        &Target::Permanent(c.id),
-                                        p,
-                                        None,
-                                    )
-                            })
-                            .collect();
-                        cands.sort_by_key(|c| {
-                            (!c.is_token, c.definition.cost.cmc(), c.power())
-                        });
-                        cands
+                        let mut picked: Vec<&crate::card::CardInstance> = Vec::new();
+                        if let Some(ids) = chosen_override.take() {
+                            for id in ids {
+                                if picked.len() >= *count as usize {
+                                    break;
+                                }
+                                if let Some(c) = self.battlefield.iter().find(|c| {
+                                    c.id == id
+                                        && c.controller == p
+                                        && self.evaluate_requirement_static(
+                                            filter,
+                                            &Target::Permanent(c.id),
+                                            p,
+                                            None,
+                                        )
+                                }) {
+                                    picked.push(c);
+                                }
+                            }
+                        }
+                        if picked.len() < *count as usize {
+                            let already: std::collections::HashSet<CardId> =
+                                picked.iter().map(|c| c.id).collect();
+                            let mut cands: Vec<&crate::card::CardInstance> = self
+                                .battlefield
+                                .iter()
+                                .filter(|c| {
+                                    c.controller == p
+                                        && !already.contains(&c.id)
+                                        && self.evaluate_requirement_static(
+                                            filter,
+                                            &Target::Permanent(c.id),
+                                            p,
+                                            None,
+                                        )
+                                })
+                                .collect();
+                            cands.sort_by_key(|c| {
+                                (!c.is_token, c.definition.cost.cmc(), c.power())
+                            });
+                            let need = *count as usize - picked.len();
+                            picked.extend(cands.into_iter().take(need));
+                        }
+                        picked
                             .iter()
                             .take(*count as usize)
                             .map(|c| (c.id, c.power().max(0) as u32, c.definition.is_creature()))
@@ -2610,7 +2768,9 @@ impl GameState {
         // indices, so recompute the flashback card's position afterward.
         let mut cost_events = Vec::new();
         if !flashback_additional.is_empty() {
-            let (mut e, _sac_power) = self.pay_additional_costs(p, &flashback_additional);
+            // Flashback sac costs (Lava Dart, Dread Return) keep the auto-pick
+            // — no interactive choice is wired through the flashback path.
+            let (mut e, _sac_power) = self.pay_additional_costs(p, &flashback_additional, None);
             cost_events.append(&mut e);
         }
         let graveyard_pos = self.players[p]
@@ -4454,6 +4614,14 @@ impl GameState {
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
+        // Consume any "another permanent" cost picks from an
+        // `ActivateAbilityChoice` resume up front, so a failure anywhere below
+        // can't leak them onto the next activation. `None` on the first attempt
+        // (may suspend for the choice); `Some` on the replay (used in lieu of
+        // the auto-pick).
+        let chosen_sac_other = self.pending_ability_sac_other.take();
+        let chosen_tap_other = self.pending_ability_tap_other.take();
+
         // Source zone: battlefield by default, the controller's graveyard
         // when the ability is flagged `from_graveyard`, or the controller's
         // hand when flagged `from_hand` (Spirit Guides' exile-to-pitch mana
@@ -4728,6 +4896,13 @@ impl GameState {
         // higher-value cards in their graveyard). If fewer than `count`
         // match, reject cleanly so tap/mana aren't burned. The actual
         // exile happens after payment succeeds.
+        //
+        // Unlike the sacrifice / tap costs above, this keeps the auto-pick even
+        // for a `wants_ui` activator: the cost exiles graveyard cards, which the
+        // in-scene `ChooseTarget` cursor can't select (it only highlights
+        // battlefield permanents and players). Surfacing this interactively
+        // would need a graveyard-picker decision + client UI — tracked
+        // separately. Affects Grim Lavamancer, Scrapheap Scrounger, et al.
         let exile_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.exile_other_filter.as_ref()
         {
@@ -4752,45 +4927,115 @@ impl GameState {
         // permanents the activator controls match the cost's filter
         // (excluding the source itself, since activating from the
         // battlefield can pair this with `sac_cost: true` for the source).
-        // Picks the lowest-power matching permanents (so the activator
-        // keeps higher-value creatures alive). If fewer than `count`
-        // match, reject cleanly so tap/mana aren't burned.
+        // If fewer than `count` match, reject cleanly so tap/mana aren't burned.
+        //
+        // CR 602.5b — the activator chooses which permanent(s) to sacrifice as
+        // a cost. For a `wants_ui` activator making a *single* such sacrifice
+        // with a genuine choice (more than one legal candidate) we suspend on a
+        // `ChooseTarget` and replay the activation with the pick. Bots,
+        // multi-sacrifice (count > 1), and "no real choice" keep the
+        // lowest-power auto-pick (so the activator keeps better creatures).
         let sac_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.sac_other_filter.as_ref()
         {
             let count = *count as usize;
-            let mut picks: Vec<(CardId, i32)> = self.battlefield
+            let candidates: Vec<CardId> = self
+                .battlefield
                 .iter()
                 .filter(|c| c.id != card_id && c.controller == p)
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                .map(|c| (c.id, c.power()))
+                .map(|c| c.id)
                 .collect();
-            if picks.len() < count {
+            if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            picks.sort_by_key(|(_, pow)| *pow);
-            picks.into_iter().take(count).map(|(cid, _)| cid).collect()
+            if let Some(chosen) = chosen_sac_other {
+                // Replay path: honor the player's pick if it's still a valid
+                // candidate; otherwise fall back to the auto-pick.
+                if candidates.contains(&chosen) {
+                    vec![chosen]
+                } else {
+                    self.auto_pick_lowest_power(&candidates, count)
+                }
+            } else if count == 1 && candidates.len() > 1 && self.players[p].wants_ui {
+                let source_name = self
+                    .battlefield_find(card_id)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                self.pending_decision = Some(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseTarget {
+                        source: card_id,
+                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        source_name,
+                        description: "choose a permanent to sacrifice (cost)".into(),
+                    },
+                    resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                        activator: p,
+                        card_id,
+                        ability_index,
+                        target,
+                        x_value,
+                        kind: crate::game::types::AbilityCostChoice::SacOther,
+                    },
+                });
+                return Ok(vec![]);
+            } else {
+                self.auto_pick_lowest_power(&candidates, count)
+            }
         } else {
             Vec::new()
         };
 
         // Pre-flight tap-another gate (CR 602.5b): confirm an untapped
-        // permanent (other than the source) the activator controls matches
-        // the cost's filter. Picks the lowest-power match so higher-value
-        // creatures stay open. Tapped after payment succeeds.
+        // permanent (other than the source) the activator controls matches the
+        // cost's filter. A `wants_ui` activator with more than one candidate
+        // chooses which to tap (suspend + replay, like the sacrifice cost);
+        // bots and the no-real-choice case tap the lowest-power match so
+        // higher-value creatures stay open. Tapped after payment succeeds.
         let tap_other_pick: Option<CardId> = if let Some(filter) =
             ability.tap_other_filter.as_ref()
         {
-            let pick = self
+            let candidates: Vec<CardId> = self
                 .battlefield
                 .iter()
                 .filter(|c| c.id != card_id && c.controller == p && !c.tapped)
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
-                .min_by_key(|c| c.power())
-                .map(|c| c.id);
-            match pick {
-                Some(id) => Some(id),
-                None => return Err(GameError::SelectionRequirementViolated),
+                .map(|c| c.id)
+                .collect();
+            if candidates.is_empty() {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            if let Some(chosen) = chosen_tap_other {
+                // Replay path: honor the pick if still a valid candidate.
+                if candidates.contains(&chosen) {
+                    Some(chosen)
+                } else {
+                    self.auto_pick_lowest_power(&candidates, 1).first().copied()
+                }
+            } else if candidates.len() > 1 && self.players[p].wants_ui {
+                let source_name = self
+                    .battlefield_find(card_id)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                self.pending_decision = Some(crate::game::types::PendingDecision {
+                    decision: crate::decision::Decision::ChooseTarget {
+                        source: card_id,
+                        legal: candidates.iter().map(|id| Target::Permanent(*id)).collect(),
+                        source_name,
+                        description: "choose a permanent to tap (cost)".into(),
+                    },
+                    resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                        activator: p,
+                        card_id,
+                        ability_index,
+                        target,
+                        x_value,
+                        kind: crate::game::types::AbilityCostChoice::TapOther,
+                    },
+                });
+                return Ok(vec![]);
+            } else {
+                self.auto_pick_lowest_power(&candidates, 1).first().copied()
             }
         } else {
             None

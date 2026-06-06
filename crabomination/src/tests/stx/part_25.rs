@@ -1222,6 +1222,47 @@ fn opposition_requires_an_untapped_creature() {
     }).is_err(), "no creature to tap means no activation");
 }
 
+/// CR 602.5b — a `wants_ui` activator chooses *which* of their creatures to
+/// tap for Opposition's "Tap an untapped creature you control" cost, rather
+/// than the engine auto-tapping the weakest. Activation suspends on a
+/// `ChooseTarget`; the chosen creature is the one tapped.
+#[test]
+fn opposition_ui_activator_chooses_creature_to_tap() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let opp = g.add_card_to_battlefield(0, catalog::opposition());
+    let tapper = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let keep = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(tapper);
+    g.clear_sickness(keep);
+    let target = g.add_card_to_battlefield(1, catalog::island());
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: opp, ability_index: 0,
+        target: Some(Target::Permanent(target)), x_value: None,
+    })
+    .expect("activation suspends for the tap-cost choice");
+
+    let pd = g.pending_decision.as_ref().expect("a tap-cost choice is pending");
+    assert_eq!(pd.acting_player(), 0);
+    match &pd.decision {
+        crate::decision::Decision::ChooseTarget { legal, .. } => {
+            assert_eq!(legal.len(), 2, "both creatures are tap-cost options");
+        }
+        other => panic!("expected ChooseTarget, got {other:?}"),
+    }
+
+    g.perform_action(GameAction::SubmitDecision(crate::decision::DecisionAnswer::Target(
+        Target::Permanent(tapper),
+    )))
+    .expect("submit the tap-cost choice");
+
+    assert!(g.battlefield_find(tapper).unwrap().tapped, "chosen creature tapped to pay cost");
+    assert!(!g.battlefield_find(keep).unwrap().tapped, "unchosen creature stays untapped");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).unwrap().tapped, "target permanent tapped on resolve");
+}
+
 #[test]
 fn omniscience_casts_hand_spells_free() {
     let mut g = two_player_game();

@@ -541,6 +541,91 @@ impl GameState {
         Ok(events)
     }
 
+    /// Sacrifice one permanent `id` controlled by `who` (CR 701.16): emit the
+    /// sacrifice/death events (creature-specific ones first, then the generic
+    /// `PermanentSacrificed`) and route it to the graveyard, firing dies/LTB
+    /// triggers. Shared by the auto-pick path and the interactive
+    /// `SacrificePending` resume so both behave identically.
+    pub(crate) fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
+        let is_creature = self
+            .battlefield_find(id)
+            .map(|c| c.definition.is_creature())
+            .unwrap_or(false);
+        if is_creature {
+            // Cache snapshot for AnotherOfYours / death-matters triggers.
+            if let Some(c) = self.battlefield_find(id) {
+                self.died_card_snapshots.insert(id, c.clone());
+            }
+            events.push(GameEvent::CreatureSacrificed { card_id: id, who });
+            events.push(GameEvent::CreatureDied { card_id: id });
+        }
+        events.push(GameEvent::PermanentSacrificed { card_id: id, who });
+        let mut die_evs = self.remove_to_graveyard_with_triggers(id);
+        events.append(&mut die_evs);
+    }
+
+    /// The permanents `player` controls that satisfy a sacrifice `filter`
+    /// (CR 701.16), as a list of ids. `source` is the effect's source for
+    /// filter predicates that key off it ("another", self-exclusion).
+    pub(crate) fn sacrifice_candidates(
+        &self,
+        player: usize,
+        filter: &crate::card::SelectionRequirement,
+        source: Option<CardId>,
+    ) -> Vec<CardId> {
+        self.battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == player
+                    && self.evaluate_requirement_static(
+                        filter,
+                        &Target::Permanent(c.id),
+                        player,
+                        source,
+                    )
+            })
+            .map(|c| c.id)
+            .collect()
+    }
+
+    /// Auto-pick `count` permanents for `player` to sacrifice from `candidates`
+    /// (the AutoDecider heuristic used for bots / tests / multi-sacrifice):
+    /// non-source first (honours "another"), then tokens, then by mana value,
+    /// then by power. With `greatest`, the mana-value (or `by_power`) key is
+    /// reversed to pick the *largest* match (Soul Shatter / Crackling Doom).
+    pub(crate) fn auto_pick_sacrifices(
+        &self,
+        candidates: &[CardId],
+        count: usize,
+        source: Option<CardId>,
+        greatest: bool,
+        by_power: bool,
+    ) -> Vec<CardId> {
+        let mut cands: Vec<&CardInstance> = candidates
+            .iter()
+            .filter_map(|id| self.battlefield_find(*id))
+            .collect();
+        cands.sort_by_key(|c| {
+            let mv = c.definition.cost.cmc() as i64;
+            let pw = c.power() as i64;
+            // For `greatest`, negate the primary metric so the largest sorts
+            // first; ties fall back to lowest power (matching prior behaviour).
+            let primary = if greatest {
+                if by_power { -pw } else { -mv }
+            } else if by_power {
+                pw
+            } else {
+                mv
+            };
+            // The "tokens first" key only applies to the cheapest-pick
+            // (`Sacrifice`) heuristic — the greatest-pick (`SacrificeGreatestMV`)
+            // never used it, so keep it constant there to preserve ordering.
+            let token_key = if greatest { false } else { !c.is_token };
+            (Some(c.id) == source, token_key, primary, pw)
+        });
+        cands.into_iter().take(count).map(|c| c.id).collect()
+    }
+
     fn run_effect(
         &mut self,
         effect: &Effect,
@@ -3673,65 +3758,65 @@ impl GameState {
 
             Effect::Sacrifice { who, count, filter } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
                 // The source permanent (if any) — Daemogoth Titan-style
                 // "When this attacks, sacrifice another creature" triggers
-                // bind `ctx.source` to themselves. Prefer NOT picking the
-                // source when other legal candidates exist, so the printed
-                // "another" intent is honored even though the filter
-                // doesn't carry the source exclusion explicitly.
+                // bind `ctx.source` to themselves. The auto-picker prefers NOT
+                // picking the source when other legal candidates exist, so the
+                // printed "another" intent is honored.
                 let source_id = ctx.source;
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue; };
-                    // Prioritize sacrifice picks: non-source first
-                    // (deprioritizes self-sacrifice for "another creature"
-                    // semantics), then tokens (free), then by lowest mana
-                    // value, then by lowest power. Simple AutoDecider
-                    // heuristic — when forced to sacrifice, dump the
-                    // cheapest/weakest non-source candidate.
-                    let mut candidates: Vec<&CardInstance> = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| c.controller == p)
-                        .filter(|c| {
-                            let t = Target::Permanent(c.id);
-                            self.evaluate_requirement_static(filter, &t, p, ctx.source)
-                        })
-                        .collect();
-                    candidates.sort_by_key(|c| {
-                        (
-                            // Source last (true sorts after false), so any
-                            // non-source candidate is picked first.
-                            Some(c.id) == source_id,
-                            !c.is_token, // false (=0) sorts before true → tokens first
-                            c.definition.cost.cmc(),
-                            c.power(),
-                        )
-                    });
-                    let ids: Vec<CardId> =
-                        candidates.into_iter().take(n).map(|c| c.id).collect();
-                    for id in ids {
-                        let is_creature = self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false);
-                        if is_creature {
-                            // Cache snapshot for AnotherOfYours triggers.
-                            if let Some(c) = self.battlefield_find(id) {
-                                self.died_card_snapshots.insert(id, c.clone());
-                            }
-                            // Emit CreatureSacrificed before CreatureDied
-                            // so order-sensitive triggers (CR 701.16) see
-                            // the sacrifice-specific event first.
-                            events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
-                            events.push(GameEvent::CreatureDied { card_id: id });
-                        }
-                        // Every sacrifice emits a generic
-                        // PermanentSacrificed event (CR 701.16) so
-                        // "Whenever you sacrifice a permanent" payoffs
-                        // (Korvold, Mayhem Devil) catch artifact /
-                        // enchantment / land / planeswalker
-                        // sacrifices alongside creature sacrifices.
-                        events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
-                        let mut die_evs = self.remove_to_graveyard_with_triggers(id);
-                        events.append(&mut die_evs);
+                // CR 701.16 — the player doing the sacrificing chooses which
+                // permanent(s). For a `wants_ui` player making a *single*
+                // sacrifice with a genuine choice (more than one legal
+                // candidate) we suspend on a `ChooseTarget` decision; bots,
+                // multi-sacrifice (n > 1), and "no real choice" cases keep the
+                // auto-pick (cheapest/weakest non-source). Auto-pick players are
+                // resolved first so a deferred UI suspend doesn't strand them.
+                let players: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                let mut deferred_ui: Option<usize> = None;
+                for p in players {
+                    let candidates = self.sacrifice_candidates(p, filter, source_id);
+                    if candidates.is_empty() {
+                        continue;
                     }
+                    if n == 1
+                        && candidates.len() > 1
+                        && self.players[p].wants_ui
+                        && deferred_ui.is_none()
+                    {
+                        deferred_ui = Some(p);
+                        continue;
+                    }
+                    let ids = self.auto_pick_sacrifices(&candidates, n, source_id, false, false);
+                    for id in ids {
+                        self.sacrifice_one(id, p, events);
+                    }
+                }
+                if let Some(p) = deferred_ui {
+                    let candidates = self.sacrifice_candidates(p, filter, source_id);
+                    let options: Vec<Target> =
+                        candidates.iter().map(|id| Target::Permanent(*id)).collect();
+                    let decision = crate::decision::Decision::ChooseTarget {
+                        source: source_id.unwrap_or(crate::card::CardId(0)),
+                        legal: options,
+                        source_name: ctx.source_name.unwrap_or("").to_string(),
+                        description: "choose a permanent to sacrifice".into(),
+                    };
+                    self.suspend_signal = Some((
+                        decision,
+                        PendingEffectState::SacrificePending { player: p },
+                        Effect::Noop,
+                    ));
+                    return Ok(());
                 }
                 Ok(())
             }
@@ -3755,55 +3840,77 @@ impl GameState {
             }
 
             Effect::SacrificeGreatestMV { who, count, filter, by_power } => {
-                // Same picker as `Effect::Sacrifice` but reverses the CMC
-                // (or, with `by_power`, the power) sort to pick the
-                // greatest match. Used by Soul Shatter ("greatest mana
-                // value") and Crackling Doom ("greatest power"). When ties
-                // exist, the auto-picker breaks them by lowest power
-                // (matching Sacrifice's secondary key).
+                // Pick the greatest match by mana value (or power, with
+                // `by_power`). Used by Soul Shatter ("greatest mana value") and
+                // Crackling Doom ("greatest power"). The sacrificing player
+                // only has a choice among permanents *tied* at the greatest
+                // metric — so a `wants_ui` player making a single sacrifice
+                // with a real tie is offered the pick; otherwise auto-pick.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
                 let source_id = ctx.source;
-                for ent in self.resolve_selector(who, ctx) {
-                    let EntityRef::Player(p) = ent else { continue; };
-                    let mut candidates: Vec<&CardInstance> = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| c.controller == p)
-                        .filter(|c| {
-                            let t = Target::Permanent(c.id);
-                            self.evaluate_requirement_static(filter, &t, p, ctx.source)
-                        })
-                        .collect();
-                    // Sort key:
-                    // 1. Source last (preserves "another creature" intent).
-                    // 2. Descending CMC or power (highest first via negation).
-                    // 3. Ascending power (lowest first as tiebreaker).
-                    candidates.sort_by_key(|c| {
-                        let primary = if *by_power {
-                            -c.power()
-                        } else {
-                            -(c.definition.cost.cmc() as i32)
-                        };
-                        (Some(c.id) == source_id, primary, c.power())
-                    });
-                    let ids: Vec<CardId> =
-                        candidates.into_iter().take(n).map(|c| c.id).collect();
-                    for id in ids {
-                        let is_creature = self
-                            .battlefield_find(id)
-                            .map(|c| c.definition.is_creature())
-                            .unwrap_or(false);
-                        if is_creature {
-                            if let Some(c) = self.battlefield_find(id) {
-                                self.died_card_snapshots.insert(id, c.clone());
+                let players: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                    .collect();
+                let by_power = *by_power;
+                let metric = |this: &Self, id: CardId| -> i64 {
+                    this.battlefield_find(id)
+                        .map(|c| {
+                            if by_power {
+                                c.power() as i64
+                            } else {
+                                c.definition.cost.cmc() as i64
                             }
-                            events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
-                            events.push(GameEvent::CreatureDied { card_id: id });
-                        }
-                        events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
-                        let mut die_evs = self.remove_to_graveyard_with_triggers(id);
-                        events.append(&mut die_evs);
+                        })
+                        .unwrap_or(i64::MIN)
+                };
+                let mut deferred_ui: Option<(usize, Vec<CardId>)> = None;
+                for p in players {
+                    let candidates = self.sacrifice_candidates(p, filter, source_id);
+                    if candidates.is_empty() {
+                        continue;
                     }
+                    if n == 1 && self.players[p].wants_ui && deferred_ui.is_none() {
+                        let best = candidates.iter().map(|id| metric(self, *id)).max();
+                        if let Some(best) = best {
+                            let tied: Vec<CardId> = candidates
+                                .iter()
+                                .copied()
+                                .filter(|id| metric(self, *id) == best)
+                                .collect();
+                            if tied.len() > 1 {
+                                deferred_ui = Some((p, tied));
+                                continue;
+                            }
+                        }
+                    }
+                    let ids = self.auto_pick_sacrifices(&candidates, n, source_id, true, by_power);
+                    for id in ids {
+                        self.sacrifice_one(id, p, events);
+                    }
+                }
+                if let Some((p, tied)) = deferred_ui {
+                    let options: Vec<Target> =
+                        tied.iter().map(|id| Target::Permanent(*id)).collect();
+                    let decision = crate::decision::Decision::ChooseTarget {
+                        source: source_id.unwrap_or(crate::card::CardId(0)),
+                        legal: options,
+                        source_name: ctx.source_name.unwrap_or("").to_string(),
+                        description: "choose a permanent to sacrifice".into(),
+                    };
+                    self.suspend_signal = Some((
+                        decision,
+                        PendingEffectState::SacrificePending { player: p },
+                        Effect::Noop,
+                    ));
+                    return Ok(());
                 }
                 Ok(())
             }
