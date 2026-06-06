@@ -24925,19 +24925,6 @@ pub fn grizzled_outrider() -> CardDefinition {
     }
 }
 
-/// Walking Corpse — {1}{B} 2/2 Zombie (vanilla).
-pub fn walking_corpse() -> CardDefinition {
-    CardDefinition {
-        name: "Walking Corpse",
-        cost: cost(&[generic(1), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
-        power: 2,
-        toughness: 2,
-        ..Default::default()
-    }
-}
-
 /// Highborn Ghoul — {B}{B} 2/1 Zombie with Intimidate.
 pub fn highborn_ghoul() -> CardDefinition {
     CardDefinition {
