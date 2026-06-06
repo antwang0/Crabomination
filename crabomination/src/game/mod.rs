@@ -4671,21 +4671,16 @@ impl GameState {
                 // mana shortfall) surfaces as a normal cast error.
                 return self.cast_spell(card_id, target, additional_targets, mode, x_value);
             }
-            ResumeContext::CastFloatConfirm {
-                caster,
-                card_id,
-                target,
-                additional_targets,
-                mode,
-                x_value,
-            } => {
-                // CR 601.2g — the caster chose whether to spend floating mana.
+            ResumeContext::ActionFloatConfirm { actor, action } => {
+                // CR 601.2g — the payer chose whether to spend floating mana.
+                // Stash the choice and replay the exact originating action
+                // (priority is still theirs, so it reads the right actor).
                 let DecisionAnswer::Bool(spend) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                let _ = caster;
+                let _ = actor;
                 self.pending_cast_spend_float = Some(spend);
-                return self.cast_spell(card_id, target, additional_targets, mode, x_value);
+                return self.perform_action(*action);
             }
             ResumeContext::ActivateAbilityChoice {
                 activator,

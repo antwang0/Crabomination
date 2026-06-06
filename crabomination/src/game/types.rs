@@ -446,7 +446,7 @@ impl PendingDecision {
             ResumeContext::CleanupDiscard { player } => *player,
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
-            ResumeContext::CastFloatConfirm { caster, .. } => *caster,
+            ResumeContext::ActionFloatConfirm { actor, .. } => *actor,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
         }
     }
@@ -624,20 +624,17 @@ pub(crate) enum ResumeContext {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// CR 601.2g — a `wants_ui` caster is answering "spend your floating mana,
-    /// or tap lands instead?" before a cast's mana payment. The cast suspended
-    /// at its payment point (card returned to hand, taps rolled back) and is
-    /// re-run on answer with the choice stored in `pending_cast_spend_float`
+    /// CR 601.2g — a `wants_ui` payer is answering "spend your floating mana,
+    /// or tap lands instead?" before a mana payment (a cast, flashback,
+    /// alternative cost, or activated ability). The action suspended at its
+    /// payment point (any pre-payment mutation rolled back) and is re-run
+    /// verbatim on answer with the choice stored in `pending_cast_spend_float`
     /// (`Bool(true)` = spend the float, `Bool(false)` = keep it, pay from
-    /// sources). Carries the cast parameters so the resume replays `cast_spell`.
-    CastFloatConfirm {
-        caster: usize,
-        card_id: CardId,
-        target: Option<Target>,
-        #[serde(default)]
-        additional_targets: Vec<Target>,
-        mode: Option<usize>,
-        x_value: Option<u32>,
+    /// sources). Carries the originating `GameAction` so the resume replays the
+    /// exact action — kicker / buyback / flashback / etc. survive the round-trip.
+    ActionFloatConfirm {
+        actor: usize,
+        action: Box<GameAction>,
     },
     /// CR 602.5 — a `wants_ui` activator is choosing a battlefield permanent
     /// to pay one of an activated ability's "another …" costs: sacrifice

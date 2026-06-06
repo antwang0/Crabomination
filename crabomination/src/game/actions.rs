@@ -2116,6 +2116,17 @@ impl GameState {
             let float_summary = self.players[p].mana_pool.summary();
             let name = card.definition.name;
             self.players[p].hand.push(card);
+            // Replay the exact cast variant (kicker / buyback / bestow survive).
+            // Convoke / delve are excluded above, so they never reach here.
+            let action = if kicked {
+                GameAction::CastSpellKicked { card_id, target, additional_targets, mode, x_value }
+            } else if buyback {
+                GameAction::CastSpellBuyback { card_id, target, additional_targets, mode, x_value }
+            } else if bestow {
+                GameAction::CastBestow { card_id, target, additional_targets, mode, x_value }
+            } else {
+                GameAction::CastSpell { card_id, target, additional_targets, mode, x_value }
+            };
             self.pending_decision = Some(crate::game::types::PendingDecision {
                 decision: crate::decision::Decision::OptionalTrigger {
                     source: card_id,
@@ -2123,13 +2134,9 @@ impl GameState {
                         "Spend floating mana ({float_summary}) to cast {name}? (No taps lands instead)"
                     ),
                 },
-                resume: crate::game::types::ResumeContext::CastFloatConfirm {
-                    caster: p,
-                    card_id,
-                    target,
-                    additional_targets,
-                    mode,
-                    x_value,
+                resume: crate::game::types::ResumeContext::ActionFloatConfirm {
+                    actor: p,
+                    action: Box::new(action),
                 },
             });
             return Ok(vec![]);
@@ -2829,6 +2836,8 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // CR 601.2g float-spend choice (None until answered).
+        let spend_float = self.pending_cast_spend_float.take();
 
         // Find the card in the controller's graveyard.
         let graveyard_pos = self.players[p]
@@ -2888,8 +2897,41 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
         apply_spell_cost_floor(self, &mut cost);
+        // CR 601.2g — float-spend confirmation. Nothing is mutated yet (the
+        // card is still in the graveyard; additional costs unpaid), so suspend
+        // cleanly and replay the whole flashback on answer.
+        if spend_float.is_none()
+            && self.players[p].wants_ui
+            && !cost.symbols.is_empty()
+            && self.float_spend_is_optional(p, &cost, crate::mana::SpellKind::Other)
+        {
+            let float_summary = self.players[p].mana_pool.summary();
+            let name = card.definition.name;
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::OptionalTrigger {
+                    source: card_id,
+                    description: format!(
+                        "Spend floating mana ({float_summary}) to flashback {name}? (No taps lands instead)"
+                    ),
+                },
+                resume: crate::game::types::ResumeContext::ActionFloatConfirm {
+                    actor: p,
+                    action: Box::new(GameAction::CastFlashback {
+                        card_id,
+                        target: target.clone(),
+                        additional_targets: additional_targets.clone(),
+                        mode,
+                        x_value,
+                    }),
+                },
+            });
+            return Ok(vec![]);
+        }
         let forced_only = self.players[p].wants_ui;
-        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let snapshot = self.snapshot_payment_state(p);
+        let receipt = self.try_pay_after_snapshot_mode(
+            p, &cost, snapshot, forced_only, crate::mana::SpellKind::Other, spend_float,
+        )?;
         if receipt.side_effects.life_lost > 0 {
             self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
@@ -3537,6 +3579,8 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
+        // CR 601.2g float-spend choice (None until answered).
+        let spend_float = self.pending_cast_spend_float.take();
 
         if !self.players[p].has_in_hand(card_id) {
             return Err(GameError::CardNotInHand(card_id));
@@ -3770,8 +3814,43 @@ impl GameState {
             mana_cost.reduce_generic(reduction);
         }
         apply_spell_cost_floor(self, &mut mana_cost);
+        // CR 601.2g — float-spend confirmation. The spell card is back-in-hand
+        // safe to restore (nothing else is committed yet — pitch/gy-exile/
+        // return happen after payment), so suspend and replay the alt cast.
+        if spend_float.is_none()
+            && self.players[p].wants_ui
+            && !mana_cost.symbols.is_empty()
+            && self.float_spend_is_optional(p, &mana_cost, crate::mana::SpellKind::Other)
+        {
+            let float_summary = self.players[p].mana_pool.summary();
+            let name = card.definition.name;
+            self.players[p].hand.push(card);
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::OptionalTrigger {
+                    source: card_id,
+                    description: format!(
+                        "Spend floating mana ({float_summary}) to cast {name}? (No taps lands instead)"
+                    ),
+                },
+                resume: crate::game::types::ResumeContext::ActionFloatConfirm {
+                    actor: p,
+                    action: Box::new(GameAction::CastSpellAlternative {
+                        card_id,
+                        pitch_card,
+                        target,
+                        additional_targets,
+                        mode,
+                        x_value,
+                    }),
+                },
+            });
+            return Ok(vec![]);
+        }
         let forced_only = self.players[p].wants_ui;
-        let receipt = match self.try_pay_with_auto_tap_mode(p, &mana_cost, forced_only) {
+        let alt_snapshot = self.snapshot_payment_state(p);
+        let receipt = match self.try_pay_after_snapshot_mode(
+            p, &mana_cost, alt_snapshot, forced_only, crate::mana::SpellKind::Other, spend_float,
+        ) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].hand.push(card);
@@ -4844,6 +4923,9 @@ impl GameState {
         let chosen_sac_other = self.pending_ability_sac_other.take();
         let chosen_tap_other = self.pending_ability_tap_other.take();
         let chosen_exile_other = self.pending_ability_exile_other.take();
+        // CR 601.2g float-spend choice (None until answered; consumed up front
+        // so a failure can't leak it onto a later activation).
+        let spend_float = self.pending_cast_spend_float.take();
 
         // Source zone: battlefield by default, the controller's graveyard
         // when the ability is flagged `from_graveyard`, or the controller's
@@ -5349,6 +5431,41 @@ impl GameState {
             }
         }
 
+        // CR 601.2g — float-spend confirmation. Before tapping anything, if the
+        // activator has pre-existing floating mana the mana cost could either
+        // spend or avoid (untapped sources can cover it), ask first. Nothing is
+        // mutated yet at this point (tap-cost applies below), so suspending is a
+        // clean replay of the whole activation.
+        if spend_float.is_none()
+            && self.players[p].wants_ui
+            && !effective_mana_cost.symbols.is_empty()
+            && self.float_spend_is_optional(p, &effective_mana_cost, crate::mana::SpellKind::Other)
+        {
+            let float_summary = self.players[p].mana_pool.summary();
+            let name = self
+                .battlefield_find(card_id)
+                .map(|c| c.definition.name)
+                .unwrap_or("this ability");
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::OptionalTrigger {
+                    source: card_id,
+                    description: format!(
+                        "Spend floating mana ({float_summary}) to activate {name}? (No taps lands instead)"
+                    ),
+                },
+                resume: crate::game::types::ResumeContext::ActionFloatConfirm {
+                    actor: p,
+                    action: Box::new(GameAction::ActivateAbility {
+                        card_id,
+                        ability_index,
+                        target: target.clone(),
+                        x_value,
+                    }),
+                },
+            });
+            return Ok(vec![]);
+        }
+
         // Snapshot pristine state before applying tap-cost so a failed mana
         // payment rolls back both the auto-tap of mana sources AND the
         // tap-cost on the source itself.
@@ -5380,7 +5497,7 @@ impl GameState {
                 snapshot,
                 forced_only,
                 crate::mana::SpellKind::Other,
-                None,
+                spend_float,
             )?;
             if receipt.side_effects.life_lost > 0 {
                 self.adjust_life(p, -(receipt.side_effects.life_lost as i32));

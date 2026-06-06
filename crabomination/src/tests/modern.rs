@@ -1796,6 +1796,37 @@ fn cast_spends_floating_mana_when_player_confirms() {
     assert!(g.battlefield.iter().any(|c| c.id == bear), "Grizzly Bears resolved");
 }
 
+/// CR 601.2g — the float-spend confirmation also covers activated-ability mana
+/// costs (Gorilla Chieftain's {1}{G} regenerate): a `wants_ui` activator is
+/// asked before off-colour float is swept onto the generic pip.
+#[test]
+fn activated_ability_keeps_floating_mana_when_player_declines() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].mana_pool.add(Color::Blue, 1); // off-colour float to keep
+    let gorilla = g.add_card_to_battlefield(0, catalog::gorilla_chieftain());
+    g.clear_sickness(gorilla);
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+
+    // Regenerate ({1}{G}): the {1} could come from the float or a Forest.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gorilla, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("activation suspends for the float-spend confirmation");
+    let pd = g.pending_decision.as_ref().expect("a float-spend confirmation is pending");
+    assert_eq!(pd.acting_player(), 0);
+    assert!(matches!(pd.decision, crate::decision::Decision::OptionalTrigger { .. }));
+
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(false)))
+        .expect("decline spending the float");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "floating {{U}} kept");
+    assert!(
+        g.battlefield_find(f1).unwrap().tapped && g.battlefield_find(f2).unwrap().tapped,
+        "both Forests tapped to pay {{1}}{{G}} instead",
+    );
+}
+
 /// No prompt when the floating mana is the only legal source — it's auto-spent
 /// (CR 601.2g exemption), so a player with no lands isn't nagged.
 #[test]
