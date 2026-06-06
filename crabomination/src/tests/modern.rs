@@ -32270,3 +32270,49 @@ fn fauna_shaman_requires_a_creature_to_discard() {
     });
     assert!(r.is_err(), "activation rejected with no creature card to discard");
 }
+
+// ── Ohran Frostfang / Sheoldred's Edict (this branch) ───────────────────────
+
+/// Ohran Frostfang grants attacking creatures deathtouch and draws when one
+/// deals combat damage to a player.
+#[test]
+fn ohran_frostfang_attackers_have_deathtouch_and_draw_on_damage() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ohran_frostfang());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.add_card_to_library(0, catalog::forest()); // something to draw
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("declare attack");
+    let comp = g.computed_permanent(attacker).expect("computed");
+    assert!(comp.keywords.contains(&Keyword::Deathtouch),
+        "attacking creature gains deathtouch from Ohran's static");
+    let hand_before = g.players[0].hand.len();
+    for _ in 0..12 {
+        if g.players[0].hand.len() > hand_before { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[0].hand.len() > hand_before,
+        "drew a card when a creature dealt combat damage to a player");
+}
+
+/// Sheoldred's Edict mode 0 makes each opponent sacrifice a nontoken creature.
+#[test]
+fn sheoldreds_edict_sacrifices_nontoken_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sheoldreds_edict());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable for {1}{B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "opponent sacrificed their creature");
+}

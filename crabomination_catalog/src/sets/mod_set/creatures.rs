@@ -7857,3 +7857,29 @@ pub fn fauna_shaman() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ohran Frostfang — {3}{G}{G} Snow Snake 2/6. "Attacking creatures you
+/// control have deathtouch. Whenever a creature you control deals combat
+/// damage to a player, draw a card."
+pub fn ohran_frostfang() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, StaticAbility, Supertype, TriggeredAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Ohran Frostfang",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 2,
+        toughness: 6,
+        static_abilities: vec![StaticAbility {
+            description: "Attacking creatures you control have deathtouch.",
+            effect: StaticEffect::GrantKeywordToAttackers { keyword: Keyword::Deathtouch },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}

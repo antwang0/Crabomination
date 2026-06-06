@@ -1424,3 +1424,25 @@ pub fn trumpet_blast() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sheoldred's Edict — {1}{B} Instant. Choose one — each opponent sacrifices
+/// a nontoken creature of their choice; or a creature token; or a planeswalker.
+pub fn sheoldreds_edict() -> CardDefinition {
+    use crate::effect::Value;
+    let sac = |filter| Effect::Sacrifice {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        count: Value::Const(1),
+        filter,
+    };
+    CardDefinition {
+        name: "Sheoldred's Edict",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            sac(SelectionRequirement::Creature.and(SelectionRequirement::NotToken)),
+            sac(SelectionRequirement::Creature.and(SelectionRequirement::IsToken)),
+            sac(SelectionRequirement::Planeswalker),
+        ]),
+        ..Default::default()
+    }
+}
