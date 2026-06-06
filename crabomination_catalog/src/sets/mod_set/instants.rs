@@ -1570,3 +1570,22 @@ pub fn pulse_of_murasa() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cower in Fear — {1}{B}{B} Instant. "Creatures your opponents control get
+/// -1/-1 until end of turn."
+pub fn cower_in_fear() -> CardDefinition {
+    CardDefinition {
+        name: "Cower in Fear",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}

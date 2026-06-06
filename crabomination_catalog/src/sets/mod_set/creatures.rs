@@ -8286,3 +8286,22 @@ pub fn spidersilk_armor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fervor — {2}{R} Enchantment. "Creatures you control have haste."
+pub fn fervor() -> CardDefinition {
+    CardDefinition {
+        name: "Fervor",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        ..Default::default()
+    }
+}

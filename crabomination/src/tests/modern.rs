@@ -16171,6 +16171,63 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
 }
 
+/// Fervor grants your creatures haste.
+#[test]
+fn fervor_grants_haste() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fervor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Sizzle deals 3 to each opponent.
+#[test]
+fn sizzle_deals_three_to_each_opponent() {
+    let mut g = two_player_game();
+    let opp = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::sizzle());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sizzle castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 3);
+}
+
+/// Sunlance burns a nonwhite creature for 3 (and can't target a white one).
+#[test]
+fn sunlance_kills_nonwhite_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let id = g.add_card_to_hand(0, catalog::sunlance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sunlance castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 took 3 and died");
+}
+
+/// Cower in Fear shrinks opponents' creatures -1/-1.
+#[test]
+fn cower_in_fear_shrinks_opponents() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::cower_in_fear());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cower in Fear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 1, "opponent's bear -1/-1");
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 2, "your bear untouched");
+}
+
 /// Spidersilk Armor gives your creatures +0/+1 and reach.
 #[test]
 fn spidersilk_armor_grants_toughness_and_reach() {

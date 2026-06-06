@@ -863,3 +863,35 @@ pub fn repay_in_kind() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sizzle — {2}{R} Sorcery. "Sizzle deals 3 damage to each opponent."
+pub fn sizzle() -> CardDefinition {
+    CardDefinition {
+        name: "Sizzle",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sunlance — {W} Sorcery. "Sunlance deals 3 damage to target nonwhite creature."
+pub fn sunlance() -> CardDefinition {
+    CardDefinition {
+        name: "Sunlance",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::HasColor(crate::mana::Color::White),
+                ))),
+            ),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
