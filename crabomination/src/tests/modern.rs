@@ -16171,6 +16171,30 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
 }
 
+/// Mending Hands prevents the next 4 damage to a chosen target (here, a player).
+#[test]
+fn mending_hands_prevents_next_four_to_player() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mending_hands());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mending Hands castable");
+    drain_stack(&mut g);
+    // A 3-damage bolt aimed at P0: the next-4 shield prevents all of it.
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life, "all 3 prevented by the next-4 shield");
+}
+
 /// Underworld Dreams pings an opponent for 1 each time they draw.
 #[test]
 fn underworld_dreams_pings_opponent_on_draw() {

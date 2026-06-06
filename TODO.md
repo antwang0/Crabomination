@@ -620,7 +620,7 @@ picking an item up.
 - 🟡 **CR 704 — State-Based Actions** — Battle / Saga / Role / Dungeon / Speed SBAs; multi-SBA "collapse into one replacement" (704.7); strict spell-copy-off-stack identity (704.5e).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — no dependency analyzer (613.8); CDA-first pre-pass (613.3); Aura re-stamp on enchant (613.7e).
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
-- 🟡 **CR 119 — Life** — redistribute / exchange-life-totals clauses (119.7 tail); broad life-gain replacement (119.10).
+- 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror). Remaining: redistribute-life-totals; broad life-gain replacement (119.10).
 - 🟡 **CR 121 — Drawing a Card** — choose-to-draw (121.3); draw-count replacement (121.2a); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2). `StaticEffect::PreventUntap` now also honors `Selector::This` (self-referential — Basalt/Grim Monolith's "doesn't untap; pay to untap").
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e).
@@ -639,7 +639,8 @@ picking an item up.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework; true damage *redirection* (614.9) + damage *halving*; general skip-step/turn (614.10). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
-- 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth (Reverse Damage, Mending Hands).
+- 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); Reverse Damage (prevent-and-gain) still ⏳.
+- 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Phasing / extra-step insertion still ⏳.
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail.
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.

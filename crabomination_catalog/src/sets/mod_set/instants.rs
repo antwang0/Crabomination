@@ -1518,3 +1518,18 @@ pub fn reckless_spite() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mending Hands — {W} Instant. "Prevent the next 4 damage that would be
+/// dealt to any target this turn." (CR 615.7 — `PreventNextDamage` shield.)
+pub fn mending_hands() -> CardDefinition {
+    CardDefinition {
+        name: "Mending Hands",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventNextDamage {
+            target: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
