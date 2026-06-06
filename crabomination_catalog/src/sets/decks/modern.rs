@@ -20524,6 +20524,51 @@ pub fn chance_encounter() -> CardDefinition {
     }
 }
 
+/// Grave Pact — {1}{B}{B}{B} Enchantment. "Whenever a creature you control
+/// dies, each other player sacrifices a creature of their choice."
+pub fn grave_pact() -> CardDefinition {
+    CardDefinition {
+        name: "Grave Pact",
+        cost: cost(&[generic(1), b(), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Butcher of Malakir — {5}{B}{B} 5/4 Vampire Warrior, Flying. "Whenever this
+/// or another creature you control dies, each opponent sacrifices a creature."
+pub fn butcher_of_malakir() -> CardDefinition {
+    CardDefinition {
+        name: "Butcher of Malakir",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hornet Sting — {G} Instant. "Deals 1 damage to any target."
 pub fn hornet_sting() -> CardDefinition {
     use crate::effect::shortcut::{deal, target};

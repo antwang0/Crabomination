@@ -1082,6 +1082,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cabal_coffers,
         // Graveyard-hate replacement (CR 614.6).
         leyline_of_the_void,
+        // Edict-on-death enchantment + body (Dictate of Erebos siblings).
+        grave_pact,
+        butcher_of_malakir,
         // Repeatable board-sweep enchantment ({B}: ping all).
         pestilence,
         // Swamps-matters drain (damage + lifegain).

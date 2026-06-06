@@ -31178,6 +31178,38 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── Edict-on-death (Grave Pact / Butcher of Malakir) ───────────────────────
+
+fn kill_with_bolt(g: &mut crate::game::GameState, victim: CardId) {
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the creature");
+    drain_stack(g);
+}
+
+#[test]
+fn grave_pact_forces_opponent_sacrifice_on_your_creature_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grave_pact());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    kill_with_bolt(&mut g, mine);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent sacrificed a creature");
+}
+
+#[test]
+fn butcher_of_malakir_edicts_when_your_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::butcher_of_malakir());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    kill_with_bolt(&mut g, mine);
+    assert!(g.battlefield_find(theirs).is_none(), "opponent sacrificed a creature");
+}
+
 // ── Green burn + combat trick ──────────────────────────────────────────────
 
 #[test]
