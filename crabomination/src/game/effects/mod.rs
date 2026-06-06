@@ -603,6 +603,9 @@ impl GameState {
                 let n = self.evaluate_value(count, ctx).max(0);
                 for _ in 0..n {
                     if self.flip_one_coin(ctx.controller) {
+                        // CR 705.1 — the controller won this flip; fire any
+                        // "Whenever you win a coin flip" triggers.
+                        events.push(GameEvent::CoinFlipWon { player: ctx.controller });
                         self.run_effect(on_heads, ctx, events)?;
                     } else {
                         self.run_effect(on_tails, ctx, events)?;
@@ -629,6 +632,9 @@ impl GameState {
                 for _ in 0..1000 {
                     let my_flip = self.flip_one_coin(me);
                     let opp_flip = self.flip_one_coin(opp);
+                    // CR 705.1 — each player who won this round's flip.
+                    if my_flip { events.push(GameEvent::CoinFlipWon { player: me }); }
+                    if opp_flip { events.push(GameEvent::CoinFlipWon { player: opp }); }
                     if !my_flip {
                         self.deal_damage_to_from(EntityRef::Player(me), 1, src, events);
                     }
@@ -688,6 +694,9 @@ impl GameState {
                     if let Some((_, _, effect)) =
                         results.iter().find(|(lo, hi, _)| rolled >= *lo && rolled <= *hi)
                     {
+                        // CR 706.4 — expose the rolled face to the arm's
+                        // effect via `Value::LastDieRoll`.
+                        self.last_die_roll = rolled;
                         self.run_effect(effect, ctx, events)?;
                     }
                 }

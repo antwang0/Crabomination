@@ -226,6 +226,9 @@ pub enum CounterType {
     /// his −1 returns a card you own with a silver counter from exile to
     /// hand.
     Silver,
+    /// Luck counter — pure bookkeeping marker. Chance Encounter accrues one
+    /// per won coin flip and wins the game at ten (CR 705.1 payoff).
+    Luck,
 }
 
 /// Every zone a card can occupy.

@@ -31134,6 +31134,57 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── Chance Encounter (CR 705.1 — win-a-flip payoff) ────────────────────────
+
+#[test]
+fn chance_encounter_gains_luck_on_won_flip() {
+    use crate::card::CounterType;
+    use crate::effect::{Effect, Value};
+    let mut g = two_player_game();
+    let ce = g.add_card_to_battlefield(0, catalog::chance_encounter());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // heads
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    let events = g.resolve_effect(&Effect::FlipCoin {
+        count: Value::Const(1),
+        on_heads: Box::new(Effect::Noop),
+        on_tails: Box::new(Effect::Noop),
+    }, &ctx).unwrap();
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let n = g.battlefield.iter().find(|c| c.id == ce).unwrap()
+        .counters.get(&CounterType::Luck).copied().unwrap_or(0);
+    assert_eq!(n, 1, "won flip put a luck counter on Chance Encounter");
+}
+
+#[test]
+fn chance_encounter_wins_the_game_at_ten_luck() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let ce = g.add_card_to_battlefield(0, catalog::chance_encounter());
+    g.battlefield.iter_mut().find(|c| c.id == ce).unwrap()
+        .add_counters(CounterType::Luck, 10);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.is_game_over(), "ten luck counters wins the game at upkeep");
+    assert!(g.players[1].eliminated, "the opponent was eliminated");
+}
+
+// ── Ancient Copper Dragon (CR 706.4 — Value::LastDieRoll) ──────────────────
+
+#[test]
+fn ancient_copper_dragon_makes_treasures_equal_to_d20() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::ancient_copper_dragon());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DieRoll(7)]));
+    let effect = catalog::ancient_copper_dragon().triggered_abilities[0].effect.clone();
+    let before = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    let ctx = crate::game::effects::EffectContext::for_ability(dragon, 0, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let after = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(after - before, 7, "d20 = 7 → seven Treasure tokens");
+}
+
 // ── Rest in Peace / Leyline of the Void (CR 614.6 graveyard hate) ──────────
 
 #[test]

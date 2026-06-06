@@ -414,6 +414,12 @@ pub enum Value {
     /// resolution contexts (spells, activated abilities, delayed
     /// triggers that have moved past the original event).
     TriggerEventAmount,
+    /// CR 706.4 — the result of the most recent die roll in this resolution.
+    /// Set by the `Effect::RollDie` resolver just before it runs each result-
+    /// table arm, so an inner effect can reference the rolled face ("create
+    /// that many Treasure tokens" — Ancient Copper Dragon). Returns 0 outside
+    /// a die-roll context.
+    LastDieRoll,
     /// Number of creatures that died under `who`'s control so far this
     /// turn. Backed by `Player.creatures_died_this_turn` (bumped from the
     /// SBA death loop). Powers Witherbloom "harvest" payoffs that scale
@@ -977,6 +983,10 @@ pub enum EventKind {
     /// {E}"); the amount is exposed via `Value::TriggerEventAmount`. The
     /// event subject is the player; matched to `GameEvent::EnergyGained`.
     EnergyGained,
+    /// CR 705.1 — the player won a coin flip ("Whenever you win a coin
+    /// flip"). Fires once per won flip; the player is the event subject;
+    /// matched to `GameEvent::CoinFlipWon`. Chance Encounter listens here.
+    WonCoinFlip,
 }
 
 /// Whose events does this trigger listen for?

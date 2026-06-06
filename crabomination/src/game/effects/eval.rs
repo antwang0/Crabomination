@@ -108,6 +108,7 @@ impl GameState {
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
             Value::XFromCost => ctx.x_value as i32,
             Value::TriggerEventAmount => ctx.event_amount as i32,
+            Value::LastDieRoll => self.last_die_roll as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
             Value::DevotionTo(colors) => self.devotion_to(ctx.controller, colors),
             Value::CountersOn { what, kind } => self

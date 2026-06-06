@@ -20491,6 +20491,71 @@ pub fn leyline_of_the_void() -> CardDefinition {
     }
 }
 
+/// Chance Encounter — {2}{R}{R} Enchantment. "Whenever you win a coin flip,
+/// put a luck counter on this. At the beginning of your upkeep, if it has ten
+/// or more luck counters, you win the game." (CR 705.1.)
+pub fn chance_encounter() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Chance Encounter",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::WonCoinFlip, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This, kind: CounterType::Luck, amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::Luck },
+                        Value::Const(10),
+                    ),
+                    then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ancient Copper Dragon — {4}{R}{R} 6/5 Dragon, Flying. "Whenever this
+/// creature deals combat damage to a player, roll a d20 and create that many
+/// Treasure tokens." (CR 706.4 — `Value::LastDieRoll`.)
+pub fn ancient_copper_dragon() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Ancient Copper Dragon",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::RollDie {
+                sides: 20,
+                count: Value::Const(1),
+                modifier: Value::Const(0),
+                reroll_at_most: 0,
+                results: vec![(1, 20, Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::LastDieRoll,
+                    definition: treasure_token(),
+                })],
+                on_doubles: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Ramunap Excavator — {2}{G} 2/3 Naga Cleric. "You may play lands from your
 /// graveyard."
 pub fn ramunap_excavator() -> CardDefinition {

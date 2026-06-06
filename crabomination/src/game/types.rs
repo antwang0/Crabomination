@@ -736,6 +736,8 @@ pub enum GameEvent {
     LifeGained { player: usize, amount: u32 },
     /// CR 122 — a player got `amount` energy counters ({E}).
     EnergyGained { player: usize, amount: u32 },
+    /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
+    CoinFlipWon { player: usize },
     CreatureDied { card_id: CardId },
     /// A creature was sacrificed by `who` (CR 701.16). Fires before the
     /// corresponding `CreatureDied` event so order-sensitive sacrifice

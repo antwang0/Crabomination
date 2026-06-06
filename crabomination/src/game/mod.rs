@@ -281,6 +281,10 @@ pub struct GameState {
     /// independent resolutions.
     #[serde(skip)]
     pub(crate) last_created_token: Option<CardId>,
+    /// CR 706.4 — the result of the most recent die roll, read by
+    /// `Value::LastDieRoll`. Set by the `Effect::RollDie` resolver.
+    #[serde(skip)]
+    pub(crate) last_die_roll: u8,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -597,6 +601,7 @@ impl Clone for GameState {
             sacrificed_power: self.sacrificed_power,
             sacrificed_toughness: self.sacrificed_toughness,
             last_created_token: self.last_created_token,
+            last_die_roll: self.last_die_roll,
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
@@ -682,6 +687,7 @@ impl GameState {
             sacrificed_power: None,
             sacrificed_toughness: None,
             last_created_token: None,
+            last_die_roll: 0,
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
@@ -3674,6 +3680,7 @@ impl GameState {
                         | crate::effect::EventKind::LifeGained
                         | crate::effect::EventKind::LifeLost
                         | crate::effect::EventKind::EnergyGained
+                        | crate::effect::EventKind::WonCoinFlip
                         | crate::effect::EventKind::BecameTarget
                         // Enrage fires once per instance of damage
                         // (CR 702.130a) — fan out across the batch.

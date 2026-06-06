@@ -1394,6 +1394,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         staggershock,
         // CR 705.2 coin-flip-off burn.
         mana_clash,
+        // CR 705.1 win-a-flip payoff (luck counters → win the game).
+        chance_encounter,
+        // CR 706.4 die-roll payoff (d20 → Treasure tokens).
+        ancient_copper_dragon,
         // Attack-trigger tokens + firebreathing aggro.
         hanweir_garrison,
         pyre_charger,

@@ -1274,6 +1274,8 @@ pub enum GameEventWire {
     LifeGained { player: usize, amount: u32 },
     /// Wire mirror of `GameEvent::EnergyGained`.
     EnergyGained { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::CoinFlipWon` (CR 705.1).
+    CoinFlipWon { player: usize },
     CreatureDied { card_id: CardId },
     /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
@@ -1397,6 +1399,7 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 amount: *amount,
             },
+            GameEvent::CoinFlipWon { player } => GameEventWire::CoinFlipWon { player: *player },
             GameEvent::CreatureDied { card_id } => {
                 GameEventWire::CreatureDied { card_id: *card_id }
             }
@@ -1578,6 +1581,7 @@ impl GameEventWire {
             E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
             E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
             E::EnergyGained { player, amount } => format!("P{player} gets {amount} energy"),
+            E::CoinFlipWon { player } => format!("P{player} won a coin flip"),
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
             E::CreatureSacrificed { card_id, who } => {
                 format!("P{who} sacrificed creature {}", name(*card_id))
