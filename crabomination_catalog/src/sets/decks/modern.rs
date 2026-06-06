@@ -7305,6 +7305,122 @@ pub fn cabal_ritual() -> CardDefinition {
     }
 }
 
+/// Goblin Grenade — {R} Sorcery. As an additional cost, sacrifice a Goblin.
+/// Deal 5 damage to any target. (Sac is modeled at resolution like Fling.)
+pub fn goblin_grenade() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Grenade",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Groundbreaker — {1}{G}{G} Creature — Elemental 6/1, Trample, Haste. Sacrifice
+/// it at the beginning of the end step.
+pub fn groundbreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Groundbreaker",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 6,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        triggered_abilities: vec![sacrifice_at_end_step()],
+        ..Default::default()
+    }
+}
+
+/// Empty the Warrens — {3}{R} Sorcery. Create two 1/1 red Goblin tokens.
+/// Storm (CR 702.40).
+pub fn empty_the_warrens() -> CardDefinition {
+    CardDefinition {
+        name: "Empty the Warrens",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Goblin".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Red],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Burning Inquiry — {R} Sorcery. Each player draws three cards, then discards
+/// three cards at random.
+pub fn burning_inquiry() -> CardDefinition {
+    CardDefinition {
+        name: "Burning Inquiry",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3) },
+            Effect::Discard { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(3), random: true },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Desperate Ritual — {1}{R} Instant — Arcane. Add {R}{R}{R}. (The Splice onto
+/// Arcane rider is omitted — no splice primitive.)
+pub fn desperate_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Desperate Ritual",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes { creature_types: vec![], ..Default::default() },
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::Colors(vec![Color::Red; 3]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cabal Coffers — Land. {2}, {T}: Add {B} for each Swamp you control.
+pub fn cabal_coffers() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Cabal Coffers",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Black,
+                    Value::CountOf(Box::new(Selector::EachPermanent(
+                        SelectionRequirement::HasLandType(LandType::Swamp)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Staggershock — {2}{R} Instant. Deal 2 damage to any target. Rebound (CR
 /// 702.88).
 pub fn staggershock() -> CardDefinition {

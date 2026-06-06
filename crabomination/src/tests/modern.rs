@@ -30063,6 +30063,81 @@ fn uro_escaped_stays_gains_life_and_draws() {
 }
 
 #[test]
+fn goblin_grenade_sacrifices_a_goblin_for_five() {
+    let mut g = two_player_game();
+    let gob = g.add_card_to_battlefield(0, catalog::raging_goblin());
+    let id = g.add_card_to_hand(0, catalog::goblin_grenade());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, p1 - 5, "dealt 5 damage");
+    assert!(!g.battlefield.iter().any(|c| c.id == gob), "sacrificed a Goblin");
+}
+
+#[test]
+fn groundbreaker_is_sacrificed_at_end_step() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::groundbreaker());
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Haste));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "sacrificed at end step");
+}
+
+#[test]
+fn empty_the_warrens_makes_two_goblins_plus_storm() {
+    let mut g = two_player_game();
+    // Cast a prior spell so Storm copies once → 4 goblins total.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    let id = g.add_card_to_hand(0, catalog::empty_the_warrens());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    let goblins = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Goblin" && c.controller == 0).count();
+    assert_eq!(goblins, 4, "two from the base + two from one Storm copy");
+}
+
+#[test]
+fn burning_inquiry_wheels_three_each() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); g.add_card_to_library(1, catalog::island()); }
+    for _ in 0..2 { g.add_card_to_hand(0, catalog::lightning_bolt()); g.add_card_to_hand(1, catalog::lightning_bolt()); }
+    let id = g.add_card_to_hand(0, catalog::burning_inquiry());
+    let h0 = g.players[0].hand.len(); // includes the inquiry until cast
+    let h1 = g.players[1].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, id);
+    // P0: -1 (cast) +3 draw -3 discard = h0-1; P1: +3 -3 = h1.
+    assert_eq!(g.players[0].hand.len(), h0 - 1, "caster net -1 (the spell itself)");
+    assert_eq!(g.players[1].hand.len(), h1, "opponent net zero (drew 3, discarded 3)");
+}
+
+#[test]
+fn desperate_ritual_makes_three_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::desperate_ritual());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "added RRR");
+}
+
+#[test]
+fn cabal_coffers_scales_with_swamps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::cabal_coffers());
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::swamp()); }
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+        .expect("Cabal Coffers activates");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3, "B per Swamp (3 swamps)");
+}
+
+#[test]
 fn staggershock_deals_two_and_rebounds() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::staggershock());

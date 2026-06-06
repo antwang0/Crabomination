@@ -1023,6 +1023,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         liliana_the_last_hope,
         deaths_shadow,
         cabal_ritual,
+        cabal_coffers,
         bump_in_the_night,
         // ── Eternalize (CR 702.91) ──
         dreamstealer,
@@ -1338,6 +1339,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: aggro goblin lord ──
         legion_warboss,
         staggershock,
+        empty_the_warrens,
+        burning_inquiry,
+        desperate_ritual,
+        goblin_grenade,
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
@@ -1758,6 +1763,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         craw_wurm,
         arrogant_wurm,
         cryptolith_rite,
+        groundbreaker,
         call_of_the_herd,
         springbloom_druid,
         pelakka_wurm,
