@@ -75,6 +75,41 @@ pub fn eldrazi_devastator() -> CardDefinition {
     }
 }
 
+/// Warden of Geometries — {3}{C} 2/4 Eldrazi Drone. Devoid, {T}: Add {C}.
+pub fn warden_of_geometries() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{ManaPayload, PlayerRef, Value};
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..drone("Warden of Geometries", cost(&[generic(3), crate::mana::colorless(1)]), 2, 4)
+    }
+}
+
+/// Cultivator Drone — {3}{C} 2/2 Eldrazi Drone. Devoid, {T}: Add {C}{C}.
+/// (The "spend only to cast colorless spells" restriction is dropped.)
+pub fn cultivator_drone() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{ManaPayload, PlayerRef, Value};
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        ..drone("Cultivator Drone", cost(&[generic(3), crate::mana::colorless(1)]), 2, 2)
+    }
+}
+
 /// Eldrazi Skyspawner — {2}{U} 2/1 Eldrazi Drone. Devoid, Flying, ETB make
 /// a 1/1 Eldrazi Scion.
 pub fn eldrazi_skyspawner() -> CardDefinition {

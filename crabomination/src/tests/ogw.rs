@@ -156,6 +156,23 @@ fn incubator_and_catacomb_sifter_make_scions() {
     assert_eq!(scion_count(&g), 2, "Catacomb Sifter adds a second Scion");
 }
 
+/// Warden of Geometries taps for {C}; Cultivator Drone taps for {C}{C}.
+#[test]
+fn devoid_mana_dorks_tap_for_colorless() {
+    let mut g = two_player_game();
+    let w = g.add_card_to_battlefield(0, catalog::warden_of_geometries());
+    let c = g.add_card_to_battlefield(0, catalog::cultivator_drone());
+    g.clear_sickness(w);
+    g.clear_sickness(c);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: w, ability_index: 0, target: None, x_value: None,
+    }).expect("warden taps");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: c, ability_index: 0, target: None, x_value: None,
+    }).expect("cultivator taps");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 3, "{{C}} + {{C}}{{C}}");
+}
+
 /// Reality Hemorrhage is a Devoid burn instant dealing 2.
 #[test]
 fn reality_hemorrhage_deals_two_and_is_colorless() {
