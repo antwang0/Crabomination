@@ -536,6 +536,10 @@ pub enum Predicate {
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
     SourceIsMonstrous,
+    /// CR 701.60 — the source permanent is suspected. Backed by
+    /// `CardInstance.suspected`. Powers Repeat Offender's "if this creature
+    /// is suspected, … otherwise, suspect it."
+    SourceIsSuspected,
     /// CR 702.139 — Revolt: a permanent left the battlefield under `who`'s
     /// control this turn. Backed by
     /// `Player.permanent_left_battlefield_this_turn`.
@@ -1479,6 +1483,23 @@ pub enum Effect {
     /// than a goader if able, until that goader's next turn. Disrupt Decorum
     /// (mass goad), Bloodthirsty Blade.
     Goad { what: Selector },
+    /// CR 701.60 — *suspect* each creature `what` resolves to: set its
+    /// `suspected` flag so it gains menace and can't block (injected as
+    /// computed keywords). Repeat Offender, Reasonable Doubt.
+    Suspect { what: Selector },
+    /// CR 701.59 — *collect evidence N*: the controller may exile cards with
+    /// total mana value `amount` or greater from their graveyard; if they do,
+    /// `then` resolves (the "when you do" reflexive payoff). The exile is the
+    /// cost, so `then` only fires when it's paid. Sample Collector. (The
+    /// engine auto-picks the cheapest qualifying set to exile; `then`'s
+    /// targets are chosen when the ability goes on the stack.)
+    CollectEvidence { amount: Value, then: Box<Effect> },
+    /// CR 701.57 — *discover N*: exile cards from the top of the controller's
+    /// library until exiling a nonland card with mana value `n` or less, then
+    /// either cast it without paying its mana cost or put it into hand; the
+    /// rest go to the bottom in a random order. Geological Appraiser,
+    /// Trumpeting Carnosaur.
+    Discover { n: Value },
     /// CR 702.39 — *provoke*: untap the creature `what` resolves to and force
     /// it to block this combat's source attacker if able. Sets the target's
     /// `must_block` to the effect source. Used by `shortcut::provoke`.

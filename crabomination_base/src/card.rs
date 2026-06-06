@@ -1751,6 +1751,11 @@ pub struct CardInstance {
     /// and any "as long as ~ is monstrous" state. Round-trips through
     /// `CardInstanceWire` with `#[serde(default)]`.
     pub monstrous: bool,
+    /// CR 701.60 — true while this creature is suspected. A suspected
+    /// creature has menace and can't block (injected as computed keywords).
+    /// Persistent until it leaves the battlefield. Round-trips through
+    /// `CardInstanceWire` with a `#[serde(default)]`.
+    pub suspected: bool,
     /// CR 715 — true while this card is on the stack as its adventure
     /// (instant/sorcery) half. The resolver runs `definition.adventure`'s
     /// effect instead of the creature body and exiles the card (setting
@@ -1827,6 +1832,7 @@ impl CardInstance {
             chosen_color: None,
             goaded_by: Vec::new(),
             monstrous: false,
+            suspected: false,
             adventuring: false,
             on_adventure: false,
             saddled: false,
@@ -2040,6 +2046,10 @@ struct CardInstanceWire {
     /// as `false`.
     #[serde(default)]
     monstrous: bool,
+    /// CR 701.60 suspected flag. `#[serde(default)]` so older snapshots load
+    /// as `false`.
+    #[serde(default)]
+    suspected: bool,
     /// CR 715 Adventure flags. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
@@ -2099,6 +2109,7 @@ impl serde::Serialize for CardInstance {
             chosen_color: self.chosen_color,
             goaded_by: self.goaded_by.clone(),
             monstrous: self.monstrous,
+            suspected: self.suspected,
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
             saddled: self.saddled,
@@ -2148,6 +2159,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.chosen_color = wire.chosen_color;
         c.goaded_by = wire.goaded_by;
         c.monstrous = wire.monstrous;
+        c.suspected = wire.suspected;
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;
         c.saddled = wire.saddled;

@@ -1845,6 +1845,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Suspect { what } => {
+                // CR 701.60 — mark each target creature as suspected (menace +
+                // can't block, injected as computed keywords).
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid)
+                        && c.definition.is_creature()
+                    {
+                        c.suspected = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Provoke { what } => {
                 // CR 702.39 — untap the target creature and force it to block
                 // the source attacker this combat if able.
@@ -5487,6 +5501,129 @@ impl GameState {
                         );
                     }
                 }
+                Ok(())
+            }
+
+            Effect::Discover { n } => {
+                // CR 701.57: exile cards from the top of the controller's
+                // library until a nonland card with MV ≤ n is exiled; the
+                // controller casts it for free or puts it into hand. The rest
+                // go to the bottom of the library in a random order.
+                use crate::card::{CardType, Zone};
+                use crate::effect::{LibraryPosition, ZoneDest};
+                let p = ctx.controller;
+                let cap = self.evaluate_value(n, ctx).max(0) as u32;
+                let mut exiled: Vec<crate::card::CardId> = Vec::new();
+                let mut hit: Option<crate::card::CardId> = None;
+                while !self.players[p].library.is_empty() {
+                    let top = &self.players[p].library[0];
+                    let cid = top.id;
+                    let is_land = top.definition.card_types.contains(&CardType::Land);
+                    let mv = top.definition.cost.cmc();
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    exiled.push(cid);
+                    if !is_land && mv <= cap {
+                        hit = Some(cid);
+                        break;
+                    }
+                }
+                if let Some(cid) = hit {
+                    use crate::decision::{Decision, DecisionAnswer};
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    if let Some(card_def) = card_def {
+                        let src = ctx.source.unwrap_or(CardId(0));
+                        let answer = self.decider.decide(&Decision::OptionalTrigger {
+                            source: src,
+                            description:
+                                "Discover: cast the exiled card without paying its mana cost? \
+                                 (Otherwise put it into your hand.)"
+                                    .to_string(),
+                        });
+                        let cast = matches!(answer, DecisionAnswer::Bool(true));
+                        exiled.retain(|&x| x != cid);
+                        if cast {
+                            let auto_target = self.auto_target_for_effect_avoiding(
+                                &card_def.effect,
+                                p,
+                                Some(cid),
+                            );
+                            let cast_events = self.cast_card_for_free(
+                                p, cid, Zone::Exile, auto_target, vec![], None, None, false,
+                            )?;
+                            events.extend(cast_events);
+                        } else {
+                            // Decline → put the matched card into hand.
+                            self.move_card_to(cid, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+                        }
+                    }
+                }
+                // Bottom the remaining exiled cards (random order ≈ bottom).
+                for cid in exiled {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library {
+                                who: PlayerRef::Seat(p),
+                                pos: LibraryPosition::Bottom,
+                            },
+                            ctx,
+                            events,
+                        );
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CollectEvidence { amount, then } => {
+                // CR 701.59 — the controller may exile cards with total MV ≥
+                // `amount` from their graveyard; if they do, the reflexive
+                // `then` payoff resolves. Engine auto-picks the cheapest
+                // qualifying set.
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let need = self.evaluate_value(amount, ctx).max(0) as u32;
+                let mut gy: Vec<(CardId, u32)> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .map(|c| (c.id, c.definition.cost.cmc()))
+                    .collect();
+                gy.sort_by_key(|&(_, mv)| mv);
+                let total: u32 = gy.iter().map(|&(_, mv)| mv).sum();
+                if total < need {
+                    return Ok(()); // can't collect enough evidence
+                }
+                let src = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source: src,
+                    description: format!(
+                        "Collect evidence {need}? (exile cards from your graveyard \
+                         with total mana value {need} or greater)"
+                    ),
+                });
+                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    return Ok(());
+                }
+                let mut acc = 0u32;
+                let mut to_exile = Vec::new();
+                for (cid, mv) in gy {
+                    if acc >= need {
+                        break;
+                    }
+                    acc += mv;
+                    to_exile.push(cid);
+                }
+                for cid in to_exile {
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                }
+                // The "when you do" payoff is a reflexive trigger: its targets
+                // are chosen now, after collecting. Auto-target `then` and
+                // thread the picks through a derived context.
+                let (slot0, additional) =
+                    self.auto_targets_for_effect_all_slots(then, p, None);
+                let mut then_ctx = ctx.clone();
+                then_ctx.targets = slot0.into_iter().chain(additional).collect();
+                self.run_effect(then, &then_ctx, events)?;
                 Ok(())
             }
 

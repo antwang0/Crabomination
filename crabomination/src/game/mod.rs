@@ -60,6 +60,9 @@ mod tests_ktk;
 #[cfg(test)]
 #[path = "../tests/akh.rs"]
 mod tests_akh;
+#[cfg(test)]
+#[path = "../tests/mkm.rs"]
+mod tests_mkm;
 pub mod types;
 
 #[cfg(test)]
@@ -2328,6 +2331,22 @@ impl GameState {
                     duration: EffectDuration::WhileSourceOnBattlefield,
                     modification: Modification::AddKeyword(Keyword::CantBlock),
                 });
+            }
+            // CR 701.60 — a suspected creature has menace and can't block.
+            // Injected as computed keywords so combat-legality enforcement
+            // honors them.
+            if card.suspected && card.definition.is_creature() {
+                for kw in [Keyword::Menace, Keyword::CantBlock] {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(kw),
+                    });
+                }
             }
         }
         // Graveyard-resident static-ability injection — covers Anger / Wonder /

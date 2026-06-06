@@ -138,6 +138,9 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
+            Effect::CollectEvidence { amount, then } => {
+                value_has_target(amount) || then.requires_target()
+            }
             Effect::IfRevealFromHand { then, else_, .. } => {
                 then.requires_target() || else_.requires_target()
             }
@@ -191,6 +194,8 @@ impl Effect {
             }
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),
+            Effect::Suspect { what } => sel_has_target(what),
+            Effect::Discover { n } => value_has_target(n),
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
@@ -420,6 +425,7 @@ impl Effect {
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
+            | Effect::Suspect { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }
@@ -744,6 +750,8 @@ impl Effect {
             Effect::SacrificeSource => "sacrifice this".into(),
             Effect::Explore { .. } => "explore".into(),
             Effect::Goad { .. } => "goad target creature".into(),
+            Effect::Suspect { .. } => "suspect target creature".into(),
+            Effect::Discover { .. } => "discover".into(),
             // Walk every child and concatenate the non-empty pieces. The
             // earlier "first non-empty wins" version produced a misleading
             // summary for cards like Artistic Process mode 2 — Seq([
@@ -1012,6 +1020,7 @@ impl Effect {
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode, kicked)
                 }
+                Effect::CollectEvidence { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::IfRevealFromHand { then, else_, .. } => {
                     eff_find(then, slot, mode, kicked).or_else(|| eff_find(else_, slot, mode, kicked))
                 }
@@ -1062,6 +1071,7 @@ impl Effect {
                 | Effect::CounterAbility { what }
                 | Effect::CounterUnlessPaid { what, .. }
                 | Effect::CounterUnless { what, .. }
+                | Effect::Suspect { what }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
                 Effect::Tap { what } | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))

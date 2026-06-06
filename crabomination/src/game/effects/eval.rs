@@ -398,6 +398,11 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.monstrous)
                 .unwrap_or(false),
+            Predicate::SourceIsSuspected => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .map(|c| c.suspected)
+                .unwrap_or(false),
             Predicate::SourceSaddled => ctx
                 .source
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
