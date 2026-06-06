@@ -30618,3 +30618,52 @@ fn shield_sphere_gains_minus_zero_minus_one_counter_when_it_blocks() {
     assert_eq!(s.power(), 0, "power unchanged at 0");
     assert_eq!(s.toughness(), 5, "toughness dropped from 6 to 5");
 }
+
+// ── CR 122.2 — counters cease to exist on zone change ──────────────────────
+
+#[test]
+fn counters_are_removed_when_a_creature_changes_zones() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    // Blink it with Ephemerate (exile then return = a new object, CR 400.7).
+    let eph = g.add_card_to_hand(0, catalog::ephemerate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eph, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ephemerate blinks the bear");
+    drain_stack(&mut g);
+    let returned = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears")
+        .expect("bear returned to the battlefield");
+    assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 0,
+        "the new object enters with no +1/+1 counters (CR 122.2)");
+}
+
+// ── CR 705.2 — Mana Clash (two-player flip-off loop) ───────────────────────
+
+#[test]
+fn mana_clash_damages_the_player_who_flips_tails_until_both_heads() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // Round 1: caster (P0) tails → takes 1; opp (P1) heads. Round 2: both heads → stop.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(false), // P0 round 1 → tails
+        DecisionAnswer::Bool(true),  // P1 round 1 → heads
+        DecisionAnswer::Bool(true),  // P0 round 2 → heads
+        DecisionAnswer::Bool(true),  // P1 round 2 → heads (loop ends)
+    ]));
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::mana_clash());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mana Clash at P1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life - 1, "caster took 1 from their tails flip");
+    assert_eq!(g.players[1].life, p1_life, "opponent flipped heads, took no damage");
+}

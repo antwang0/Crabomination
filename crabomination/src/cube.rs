@@ -1353,6 +1353,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: aggro goblin lord ──
         legion_warboss,
         staggershock,
+        // CR 705.2 coin-flip-off burn.
+        mana_clash,
         empty_the_warrens,
         burning_inquiry,
         desperate_ritual,

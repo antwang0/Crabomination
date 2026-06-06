@@ -1095,6 +1095,11 @@ pub enum Effect {
         on_heads: Box<Effect>,
         on_tails: Box<Effect>,
     },
+    /// CR 705.2 — Mana Clash: the controller and `opponent` each flip a coin;
+    /// each player whose coin is tails takes 1 damage from `source`. Repeat
+    /// until both come up heads on the same flip. `opponent` resolves to the
+    /// target opponent (Target(0)).
+    ManaClash { opponent: Selector },
     /// CR 706 — roll `count` N-sided dice. For each die, ask the
     /// controller's decider for `Decision::DieRoll { sides }` (which
     /// returns `DecisionAnswer::DieRoll(n)` with `1 <= n <= sides`),

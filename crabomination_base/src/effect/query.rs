@@ -117,6 +117,7 @@ impl Effect {
                     || on_heads.requires_target()
                     || on_tails.requires_target()
             }
+            Effect::ManaClash { opponent } => sel_has_target(opponent),
             Effect::RollDie { count, results, .. } => {
                 value_has_target(count) || results.iter().any(|(_, _, e)| e.requires_target())
             }

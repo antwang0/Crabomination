@@ -595,8 +595,8 @@ picking an item up.
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); same-target rejection across slots (115.3); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange).
 - 🟡 **CR 116 — Special Actions** — morph / face-down (116.2b); Companion from outside the game (116.2g). (Foretell/Plot/Suspend special actions now ✅.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
-- 🟡 **CR 705 — Flipping a Coin** — heads/tails-distinct + Mana Clash two-player flip loop (705.2); needs a real catalog card. (705.3 advantage/Krark's Thumb ✅. The old duplicate CR 705 "historical" row was dropped.)
-- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g); strict counter-clear on zone change (122.2).
+- 🟡 **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2) ✅ via `Effect::ManaClash` + `flip_one_coin` helper (Mana Clash carded + tested). 705.3 advantage/Krark's Thumb ✅. Remaining: heads/tails-distinct *win/lose-the-flip* trigger events (Karplusan Minotaur).
+- 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
 - 🟡 **CR 401 — Library** — cast-with-top-of-library-revealed recompute (401.5/401.6); multi-card same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
 - 🟡 **CR 706 — Rolling a Die** — ignore/observe-roll triggers (706.6); stored rolls (706.8); needs a real catalog card. (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9).
@@ -614,7 +614,7 @@ picking an item up.
 - 🟡 **CR 702.29 — Cycling** — see git.
 - 🟡 **CR 117.1 — Order of priority** — APNAP corner cases; see git.
 - 🟡 **CR 301 — Artifacts** — see git.
-- 🟡 **CR 701.8 — Destroy** — Regenerate (701.19).
+- ✅ **CR 701.8 — Destroy / 701.19 Regenerate** — `regeneration_shields` replace destruction on the SBA lethal-damage path, `Effect::Destroy`, and consume one shield (tap + remove-from-combat + heal). `DestroyNoRegen` bypasses. Toughness≤0 SBA correctly ignores shields.
 - 🟡 **CR 800 — Multiplayer / leaving the game** — see git.
 - 🟡 **CR 903 — Commander Variant** — MDFC back-face color identity (903.4d); 903.9 optional rider.
 

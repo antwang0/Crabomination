@@ -19628,6 +19628,21 @@ pub fn expedition_map() -> CardDefinition {
     }
 }
 
+/// Mana Clash — {R} Sorcery. "You and target opponent each flip a coin. Mana
+/// Clash deals 1 damage to each player whose coin comes up tails. Repeat this
+/// process until both players' coins come up heads on the same flip."
+pub fn mana_clash() -> CardDefinition {
+    CardDefinition {
+        name: "Mana Clash",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ManaClash {
+            opponent: target_filtered(SelectionRequirement::Player),
+        },
+        ..Default::default()
+    }
+}
+
 /// Shield Sphere — {0} Artifact Creature — Wall 0/6. Defender. "Whenever this
 /// creature blocks, put a -0/-1 counter on it."
 pub fn shield_sphere() -> CardDefinition {

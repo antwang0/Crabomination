@@ -598,33 +598,45 @@ impl GameState {
             // ScriptedDecider can override per-flip via DecisionAnswer::
             // Bool(false) for tails.
             Effect::FlipCoin { count, on_heads, on_tails } => {
+                // CR 705.3 — `flip_one_coin` applies Krark's-Thumb advantage
+                // (replay + treat as heads if any replay is heads).
                 let n = self.evaluate_value(count, ctx).max(0);
-                // CR 705.3 — Krark's Thumb-style flip advantage. If the
-                // controller has `coin_flip_advantage` > 0, each flip is
-                // resolved as "do 1 + N extra flips and treat as heads
-                // if any came up heads." Standard 1-Thumb behaviour: 2
-                // flips, take the better one. Stacks: 2 Thumbs = 3
-                // flips, etc. The decider returns a `Bool` per flip and
-                // the engine performs the disjunction here.
-                let advantage = self.players.get(ctx.controller)
-                    .map(|p| p.coin_flip_advantage)
-                    .unwrap_or(0)
-                    + self.coin_flip_advantage_now(ctx.controller);
-                let extra_flips = advantage as usize;
                 for _ in 0..n {
-                    let mut heads_seen = false;
-                    for _ in 0..(extra_flips + 1) {
-                        let answer = self.decider.decide(&crate::decision::Decision::CoinFlip {
-                            player: ctx.controller,
-                        });
-                        if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
-                            heads_seen = true;
-                        }
-                    }
-                    if heads_seen {
+                    if self.flip_one_coin(ctx.controller) {
                         self.run_effect(on_heads, ctx, events)?;
                     } else {
                         self.run_effect(on_tails, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ManaClash { opponent } => {
+                // CR 705.2 — both players flip each round; whoever is tails
+                // takes 1 damage; repeat until both heads on the same flip.
+                let me = ctx.controller;
+                let Some(opp) = self.resolve_selector(opponent, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Player(p) => Some(p),
+                        _ => None,
+                    })
+                else {
+                    return Ok(());
+                };
+                let src = ctx.source;
+                // Cap the loop so a degenerate decider can't spin forever.
+                for _ in 0..1000 {
+                    let my_flip = self.flip_one_coin(me);
+                    let opp_flip = self.flip_one_coin(opp);
+                    if !my_flip {
+                        self.deal_damage_to_from(EntityRef::Player(me), 1, src, events);
+                    }
+                    if !opp_flip {
+                        self.deal_damage_to_from(EntityRef::Player(opp), 1, src, events);
+                    }
+                    if my_flip && opp_flip {
+                        break;
                     }
                 }
                 Ok(())

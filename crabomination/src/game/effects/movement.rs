@@ -480,6 +480,17 @@ impl GameState {
                 card.power_bonus = 0;
                 card.toughness_bonus = 0;
                 card.attached_to = None;
+                // CR 122.2 — counters cease to exist when a permanent leaves
+                // the battlefield; the new object enters with none. Re-seed a
+                // planeswalker's starting loyalty (CR 306.5b) so a reanimated
+                // / blinked planeswalker enters with full base loyalty rather
+                // than its last-known (possibly 0) value.
+                card.counters.clear();
+                card.keyword_counters.clear();
+                if card.definition.is_planeswalker() && card.definition.base_loyalty > 0 {
+                    card.counters
+                        .insert(CounterType::Loyalty, card.definition.base_loyalty);
+                }
                 let cid = card.id;
                 // CR 614.12 — apply "enters with N counters" replacement
                 // BEFORE the new permanent is exposed to state-based-action

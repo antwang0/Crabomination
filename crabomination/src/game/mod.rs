@@ -1591,6 +1591,22 @@ impl GameState {
     /// `StaticEffect::CoinFlipAdvantage` permanents (Krark's Thumb). Summed
     /// so multiple sources stack; added to `Player.coin_flip_advantage` by
     /// the `Effect::FlipCoin` resolver.
+    /// CR 705.1/705.3 — flip one coin for `player`, honoring Krark's-Thumb
+    /// style advantage (replay + treat as heads if any replay is heads).
+    /// Returns true for heads.
+    pub(crate) fn flip_one_coin(&mut self, player: usize) -> bool {
+        let advantage = self.players.get(player).map(|p| p.coin_flip_advantage).unwrap_or(0)
+            + self.coin_flip_advantage_now(player);
+        let mut heads = false;
+        for _ in 0..(advantage as usize + 1) {
+            let answer = self.decider.decide(&crate::decision::Decision::CoinFlip { player });
+            if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
+                heads = true;
+            }
+        }
+        heads
+    }
+
     pub fn coin_flip_advantage_now(&self, seat: usize) -> u32 {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
         self.battlefield.iter().map(|src| {
