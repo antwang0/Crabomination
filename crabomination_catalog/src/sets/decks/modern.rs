@@ -25385,3 +25385,124 @@ pub fn rishadan_airship() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Lay of the Land — {G} Sorcery. Search your library for a basic land card,
+/// reveal it, put it into your hand, then shuffle.
+pub fn lay_of_the_land() -> CardDefinition {
+    CardDefinition {
+        name: "Lay of the Land",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Tranquility — {2}{G}{G} Sorcery. Destroy all enchantments.
+pub fn tranquility() -> CardDefinition {
+    CardDefinition {
+        name: "Tranquility",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: Selector::EachPermanent(SelectionRequirement::Enchantment),
+        },
+        ..Default::default()
+    }
+}
+
+/// Flashfreeze — {1}{U} Instant. Counter target red or green spell.
+pub fn flashfreeze() -> CardDefinition {
+    CardDefinition {
+        name: "Flashfreeze",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasColor(Color::Red)
+                        .or(SelectionRequirement::HasColor(Color::Green)),
+                ),
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Coral Merfolk — {1}{U} 2/1 Merfolk (vanilla).
+pub fn coral_merfolk() -> CardDefinition {
+    CardDefinition {
+        name: "Coral Merfolk",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Crush — {1}{R} Instant. Destroy target artifact.
+pub fn crush() -> CardDefinition {
+    CardDefinition {
+        name: "Crush",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ..Default::default()
+    }
+}
+
+/// Smash to Smithereens — {2}{R} Instant. Destroy target artifact; deal 3
+/// damage to its controller.
+pub fn smash_to_smithereens() -> CardDefinition {
+    CardDefinition {
+        name: "Smash to Smithereens",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            // Deal the damage first, while the artifact's controller is still
+            // determinable from the target.
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(3),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mark of Mutiny — {2}{R} Sorcery. Gain control of target creature until end
+/// of turn; untap it, it gains haste, and put a +1/+1 counter on it.
+pub fn mark_of_mutiny() -> CardDefinition {
+    CardDefinition {
+        name: "Mark of Mutiny",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}

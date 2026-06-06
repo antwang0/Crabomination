@@ -858,6 +858,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         befuddle,
         coral_barrier,
         rishadan_airship,
+        flashfreeze,
+        coral_merfolk,
         // aura-anchored untap-prevention (modern_decks)
         claustrophobia,
         dehydration,
@@ -1517,6 +1519,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         skirk_marauder,
         // classic batch (modern_decks)
         lava_axe,
+        crush,
+        smash_to_smithereens,
+        mark_of_mutiny,
         // ── modern_decks: red beaters batch 2 ──
         canyon_minotaur,
         brazen_scourge,
@@ -1900,6 +1905,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // landcycling (modern_decks)
         wirewood_guardian,
+        // classic batch (modern_decks)
+        lay_of_the_land,
+        tranquility,
         // ── Evoke Incarnation (MH2) ──
         endurance,
         // ── green burn + combat trick ──

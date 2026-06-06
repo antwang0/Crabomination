@@ -33494,3 +33494,87 @@ fn weakness_shrinks_the_creature() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (0, 1), "2/2 becomes 0/1");
 }
+
+/// Lay of the Land tutors a basic land to hand.
+#[test]
+fn lay_of_the_land_fetches_a_basic() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::lay_of_the_land());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, id);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"),
+        "basic land fetched to hand");
+}
+
+/// Tranquility wipes all enchantments from the board.
+#[test]
+fn tranquility_destroys_all_enchantments() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    let ench = g.add_card_to_battlefield(0, catalog::rancor());
+    let id = g.add_card_to_hand(0, catalog::tranquility());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert!(g.battlefield_find(aura).is_none() && g.battlefield_find(ench).is_none(),
+        "all enchantments destroyed");
+    assert!(g.battlefield_find(bear).is_some(), "creature untouched");
+}
+
+/// Flashfreeze counters a red spell; it can't target a blue one.
+#[test]
+fn flashfreeze_counters_red_spell() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt on stack");
+    // P0 responds with Flashfreeze targeting the red spell.
+    g.priority.player_with_priority = 0;
+    let ff = g.add_card_to_hand(0, catalog::flashfreeze());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ff, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("flashfreeze targets the red spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "bolt was countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "bolt in graveyard");
+}
+
+/// Smash to Smithereens destroys an artifact and burns its controller for 3.
+#[test]
+fn smash_to_smithereens_destroys_and_burns() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::smash_to_smithereens());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(art));
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+    assert_eq!(g.players[1].life, 17, "controller took 3");
+}
+
+/// Mark of Mutiny steals a creature and pumps it with a +1/+1 counter.
+#[test]
+fn mark_of_mutiny_steals_and_grows() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mark_of_mutiny());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.controller, 0, "stolen for the turn");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "got a +1/+1 counter");
+}
