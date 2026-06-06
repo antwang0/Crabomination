@@ -440,7 +440,7 @@ impl PendingDecision {
             ResumeContext::TriggerTargetPick { pending, .. } => pending.controller,
             ResumeContext::CleanupDiscard { player } => *player,
             ResumeContext::CombatDamage { player, .. } => *player,
-            ResumeContext::CastSacrifice { caster, .. } => *caster,
+            ResumeContext::CastAdditionalCost { caster, .. } => *caster,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
         }
     }
@@ -596,14 +596,16 @@ pub(crate) enum ResumeContext {
         pending: PendingTriggerPush,
         remaining: Vec<PendingTriggerPush>,
     },
-    /// CR 601.2b — a `wants_ui` caster is choosing which permanent to
-    /// sacrifice for a spell's "as an additional cost, sacrifice a …"
-    /// requirement (Crop Rotation, Reckless Abandon). The cast suspended at
-    /// its very top — before the card left hand or any cost was paid — and
-    /// is fully re-run on answer with the chosen permanent stored in
-    /// `pending_cast_sacrifices`. Carries the original cast parameters so
-    /// the resume can re-invoke `cast_spell` verbatim.
-    CastSacrifice {
+    /// CR 601.2b — a `wants_ui` caster is choosing how to pay one of a spell's
+    /// additional cast costs: which permanent to sacrifice ("sacrifice a …" —
+    /// Crop Rotation, Reckless Abandon) or which card(s) to discard ("discard a
+    /// card" — Big Score, Illuminate History). The cast suspended at its very
+    /// top — before the card left hand or any cost was paid — and is fully
+    /// re-run on answer with the pick stored in `pending_cast_sacrifices` /
+    /// `pending_cast_discards` (the resume picks the field by answer type).
+    /// Carries the original cast parameters so the resume can re-invoke
+    /// `cast_spell` verbatim (which may suspend again for a further cost).
+    CastAdditionalCost {
         caster: usize,
         card_id: CardId,
         target: Option<Target>,

@@ -386,6 +386,13 @@ pub struct GameState {
     /// across the synchronous resume → cast call.
     #[serde(skip, default)]
     pub(crate) pending_cast_sacrifices: Option<Vec<CardId>>,
+    /// Transient sibling of [`pending_cast_sacrifices`] for a spell's
+    /// "as an additional cost, discard a card" requirement
+    /// (`AdditionalCastCost::Discard` — Big Score, Illuminate History). The
+    /// cards a `wants_ui` caster picked to discard; consumed by
+    /// `pay_additional_costs` in lieu of the first-N auto-pick. Never snapshots.
+    #[serde(skip, default)]
+    pub(crate) pending_cast_discards: Option<Vec<CardId>>,
     /// Transient: the permanent a `wants_ui` activator picked to satisfy an
     /// activated ability's "Sacrifice another …" cost (`sac_other_filter`).
     /// Set by `submit_decision`'s `ActivateAbilityChoice` resume just before it
@@ -636,6 +643,7 @@ impl Clone for GameState {
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
             pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
+            pending_cast_discards: self.pending_cast_discards.clone(),
             pending_ability_sac_other: self.pending_ability_sac_other,
             pending_ability_tap_other: self.pending_ability_tap_other,
             decider: self.decider.kind().into_boxed(),
@@ -725,6 +733,7 @@ impl GameState {
             named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
+            pending_cast_discards: None,
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
             decider: Box::new(AutoDecider),
@@ -4564,7 +4573,7 @@ impl GameState {
                 }
                 return Ok(evs);
             }
-            ResumeContext::CastSacrifice {
+            ResumeContext::CastAdditionalCost {
                 caster,
                 card_id,
                 target,
@@ -4572,26 +4581,27 @@ impl GameState {
                 mode,
                 x_value,
             } => {
-                // CR 601.2b — the caster picked which permanent to sacrifice.
-                // Validate the answer is a permanent they control matching the
-                // spell's additional-cost filter, then re-run the cast with the
-                // choice stashed for `pay_additional_costs`. The cast was
-                // suspended before any cost was paid, so re-invoking it from
-                // the top is a clean replay (no double-spend / double-removal).
-                let chosen = match answer {
+                // CR 601.2b — the caster paid an additional cost choice. The
+                // answer type says which: a permanent target (sacrifice) or a
+                // discard list. Validate, stash it for `pay_additional_costs`,
+                // and re-run the cast. The cast was suspended before any cost
+                // was paid, so re-invoking from the top is a clean replay (no
+                // double-spend / double-removal); it may suspend again for a
+                // further additional cost.
+                match &answer {
                     DecisionAnswer::Target(Target::Permanent(id))
-                        if self.cast_sacrifice_choice_is_legal(caster, card_id, id) =>
+                        if self.cast_sacrifice_choice_is_legal(caster, card_id, *id) =>
                     {
-                        id
+                        self.pending_cast_sacrifices = Some(vec![*id]);
                     }
-                    _ => {
-                        // Reject an illegal/ill-typed answer but put the card
-                        // back to a clean state: the card never left hand, so
-                        // simply surfacing the error is enough.
-                        return Err(GameError::DecisionAnswerMismatch);
+                    DecisionAnswer::Discard(ids) => {
+                        // Trust the option list that was posed (the caster's
+                        // hand minus the card being cast); the apply path in
+                        // `pay_additional_costs` re-checks each id is in hand.
+                        self.pending_cast_discards = Some(ids.clone());
                     }
-                };
-                self.pending_cast_sacrifices = Some(vec![chosen]);
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                }
                 // Priority is still the caster's (we never advanced it), so
                 // `cast_spell` reads the right actor. Any cost failure (e.g.
                 // mana shortfall) surfaces as a normal cast error.

@@ -1715,19 +1715,18 @@ impl GameState {
             return Err(GameError::CardNotInHand(card_id));
         }
 
-        // CR 601.2b — interactive "as an additional cost, sacrifice a …"
-        // choice. A `wants_ui` caster on the plain cast path picks which
-        // permanent to sacrifice (Crop Rotation, Reckless Abandon) instead of
-        // the engine auto-picking the cheapest. Suspend *here* — before the
-        // card leaves hand or any cost is paid — and re-run the whole cast on
-        // answer with the pick stashed in `pending_cast_sacrifices`. Only the
-        // single-sacrifice case with more than one legal option is surfaced:
-        // a lone legal permanent has no real choice (auto-pick), and
-        // multi-sacrifice additional costs (none on the plain cast path today)
-        // keep the auto-pick. The alt-cost / convoke / delve paths are
-        // excluded so their own choice plumbing isn't disturbed.
-        if self.pending_cast_sacrifices.is_none()
-            && self.players[p].wants_ui
+        // CR 601.2b — interactive additional-cost choices for a `wants_ui`
+        // caster on the plain cast path: which permanent to sacrifice
+        // ("sacrifice a …" — Crop Rotation, Reckless Abandon) or which card to
+        // discard ("discard a card" — Big Score, Illuminate History) instead of
+        // the engine auto-picking. Suspend *here* — before the card leaves hand
+        // or any cost is paid — and re-run the whole cast on answer with the
+        // pick stashed. Each cost type guards on its own stash so a card with
+        // several such costs chains (suspend → replay → suspend). Only a genuine
+        // choice is surfaced (more legal options than required); lone options
+        // and multi-count costs keep the auto-pick. The alt-cost / convoke /
+        // delve paths are excluded so their own choice plumbing isn't disturbed.
+        if self.players[p].wants_ui
             && convoke_creatures.is_empty()
             && delve_cards.is_empty()
             && !kicked
@@ -1741,52 +1740,87 @@ impl GameState {
                 .map(|c| (c.definition.name.to_string(), c.definition.additional_cast_cost.clone()));
             if let Some((name, costs)) = card_info {
                 for cost in &costs {
-                    if let crate::card::AdditionalCastCost::SacrificePermanent { filter, count } = cost
-                        && *count == 1
-                    {
-                        let legal: Vec<Target> = self
-                            .battlefield
-                            .iter()
-                            .filter(|c| {
-                                c.controller == p
-                                    && self.evaluate_requirement_static(
-                                        filter,
-                                        &Target::Permanent(c.id),
-                                        p,
-                                        None,
-                                    )
-                            })
-                            .map(|c| Target::Permanent(c.id))
-                            .collect();
-                        if legal.len() > 1 {
-                            self.pending_decision = Some(crate::game::types::PendingDecision {
-                                decision: crate::decision::Decision::ChooseTarget {
-                                    source: card_id,
-                                    legal,
-                                    source_name: name,
-                                    description: "choose a permanent to sacrifice".into(),
-                                },
-                                resume: crate::game::types::ResumeContext::CastSacrifice {
-                                    caster: p,
-                                    card_id,
-                                    target,
-                                    additional_targets,
-                                    mode,
-                                    x_value,
-                                },
-                            });
-                            return Ok(vec![]);
+                    match cost {
+                        crate::card::AdditionalCastCost::SacrificePermanent { filter, count }
+                            if *count == 1 && self.pending_cast_sacrifices.is_none() =>
+                        {
+                            let legal: Vec<Target> = self
+                                .battlefield
+                                .iter()
+                                .filter(|c| {
+                                    c.controller == p
+                                        && self.evaluate_requirement_static(
+                                            filter,
+                                            &Target::Permanent(c.id),
+                                            p,
+                                            None,
+                                        )
+                                })
+                                .map(|c| Target::Permanent(c.id))
+                                .collect();
+                            if legal.len() > 1 {
+                                self.pending_decision = Some(crate::game::types::PendingDecision {
+                                    decision: crate::decision::Decision::ChooseTarget {
+                                        source: card_id,
+                                        legal,
+                                        source_name: name,
+                                        description: "choose a permanent to sacrifice".into(),
+                                    },
+                                    resume: crate::game::types::ResumeContext::CastAdditionalCost {
+                                        caster: p,
+                                        card_id,
+                                        target,
+                                        additional_targets,
+                                        mode,
+                                        x_value,
+                                    },
+                                });
+                                return Ok(vec![]);
+                            }
                         }
-                        break;
+                        crate::card::AdditionalCastCost::Discard { count }
+                            if *count >= 1 && self.pending_cast_discards.is_none() =>
+                        {
+                            // The card being cast is still in hand here but is
+                            // moving to the stack — exclude it as a discard
+                            // option (you can't discard the spell to pay its
+                            // own cost).
+                            let hand: Vec<(CardId, String)> = self.players[p]
+                                .hand
+                                .iter()
+                                .filter(|c| c.id != card_id)
+                                .map(|c| (c.id, c.definition.name.to_string()))
+                                .collect();
+                            if hand.len() > *count as usize {
+                                self.pending_decision = Some(crate::game::types::PendingDecision {
+                                    decision: crate::decision::Decision::Discard {
+                                        player: p,
+                                        count: *count,
+                                        hand,
+                                    },
+                                    resume: crate::game::types::ResumeContext::CastAdditionalCost {
+                                        caster: p,
+                                        card_id,
+                                        target,
+                                        additional_targets,
+                                        mode,
+                                        x_value,
+                                    },
+                                });
+                                return Ok(vec![]);
+                            }
+                        }
+                        _ => {}
                     }
                 }
             }
         }
 
-        // Consume any sacrifice pick from the `CastSacrifice` resume now, so
-        // it's applied to *this* cast only — a later failure (timing, mana)
-        // can't leak it onto the next cast.
+        // Consume any additional-cost picks from a `CastAdditionalCost` resume
+        // now, so they're applied to *this* cast only — a later failure
+        // (timing, mana) can't leak them onto the next cast.
         let chosen_sacrifices = self.pending_cast_sacrifices.take();
+        let chosen_discards = self.pending_cast_discards.take();
 
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
@@ -2110,7 +2144,7 @@ impl GameState {
         let mut sac_x = None;
         if !additional_costs.is_empty() {
             let (mut cost_events, power) =
-                self.pay_additional_costs(p, &additional_costs, chosen_sacrifices);
+                self.pay_additional_costs(p, &additional_costs, chosen_sacrifices, chosen_discards);
             auto_events.append(&mut cost_events);
             sac_x = power;
         }
@@ -2205,17 +2239,19 @@ impl GameState {
         &mut self,
         p: usize,
         costs: &[crate::card::AdditionalCastCost],
-        // A `wants_ui` caster's explicit sacrifice pick (from the
-        // `CastSacrifice` decision), if any. Applied to the first
-        // SacrificePermanent cost; everything else auto-picks. Owned by the
-        // caller (taken from `pending_cast_sacrifices` up front) so a failed
-        // cast can't leak it to a later one.
+        // A `wants_ui` caster's explicit picks (from the `CastAdditionalCost`
+        // decision), if any. `chosen_sacrifices` is applied to the first
+        // SacrificePermanent cost, `chosen_discards` to the first Discard cost;
+        // everything else auto-picks. Owned by the caller (taken from the
+        // transient stashes up front) so a failed cast can't leak them.
         chosen_sacrifices: Option<Vec<CardId>>,
+        chosen_discards: Option<Vec<CardId>>,
     ) -> (Vec<GameEvent>, Option<u32>) {
         use crate::card::AdditionalCastCost as A;
         let mut events = Vec::new();
         let mut sac_power = None;
         let mut chosen_override = chosen_sacrifices;
+        let mut discard_override = chosen_discards;
         for cost in costs {
             match cost {
                 A::SacrificePermanent { filter, count } => {
@@ -2291,11 +2327,34 @@ impl GameState {
                     }
                 }
                 A::Discard { count } => {
-                    for _ in 0..*count {
-                        let pick = self.players[p].hand.first().map(|c| c.id);
-                        if let Some(id) = pick {
-                            self.discard_card(p, id, &mut events);
+                    // Honor the player's explicit discard picks when present and
+                    // still in hand; auto-pick the first cards in hand for any
+                    // remainder (bots/tests, or an under-specified answer).
+                    let mut chosen_ids: Vec<CardId> = Vec::new();
+                    if let Some(ids) = discard_override.take() {
+                        for id in ids {
+                            if chosen_ids.len() >= *count as usize {
+                                break;
+                            }
+                            if self.players[p].hand.iter().any(|c| c.id == id) {
+                                chosen_ids.push(id);
+                            }
                         }
+                    }
+                    while chosen_ids.len() < *count as usize {
+                        let Some(id) = self
+                            .players[p]
+                            .hand
+                            .iter()
+                            .find(|c| !chosen_ids.contains(&c.id))
+                            .map(|c| c.id)
+                        else {
+                            break;
+                        };
+                        chosen_ids.push(id);
+                    }
+                    for id in chosen_ids {
+                        self.discard_card(p, id, &mut events);
                     }
                 }
             }
@@ -2770,7 +2829,7 @@ impl GameState {
         if !flashback_additional.is_empty() {
             // Flashback sac costs (Lava Dart, Dread Return) keep the auto-pick
             // — no interactive choice is wired through the flashback path.
-            let (mut e, _sac_power) = self.pay_additional_costs(p, &flashback_additional, None);
+            let (mut e, _sac_power) = self.pay_additional_costs(p, &flashback_additional, None, None);
             cost_events.append(&mut e);
         }
         let graveyard_pos = self.players[p]

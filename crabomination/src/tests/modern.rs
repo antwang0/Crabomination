@@ -4055,6 +4055,46 @@ fn big_score_discards_one_creates_two_treasures_draws_two() {
     let _ = bf_before;
 }
 
+/// CR 601.2b — a `wants_ui` caster chooses *which* card to discard for Big
+/// Score's "as an additional cost, discard a card" rather than the engine
+/// dumping the first card in hand. Casting suspends on a `Decision::Discard`;
+/// the chosen card is the one discarded.
+#[test]
+fn big_score_ui_caster_chooses_which_card_to_discard() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    // Two discardable cards → a genuine choice (the card being cast is excluded).
+    let pitch = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let keep = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let big = g.add_card_to_hand(0, catalog::big_score());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast suspends for the discard choice");
+
+    let pd = g.pending_decision.as_ref().expect("a discard choice is pending");
+    assert_eq!(pd.acting_player(), 0);
+    match &pd.decision {
+        crate::decision::Decision::Discard { count, hand, .. } => {
+            assert_eq!(*count, 1);
+            assert_eq!(hand.len(), 2, "both other cards offered; Big Score itself excluded");
+            assert!(hand.iter().all(|(id, _)| *id != big), "cannot discard the spell being cast");
+        }
+        other => panic!("expected Discard, got {other:?}"),
+    }
+
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Discard(vec![pitch])))
+        .expect("submit the discard choice");
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pitch), "chosen card discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == keep), "unchosen card kept");
+}
+
 #[test]
 fn restoration_angel_blinks_a_friendly_non_angel() {
     let mut g = two_player_game();
