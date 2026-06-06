@@ -669,7 +669,13 @@ picking an item up.
 - 🟡 **CR 702.15 — Lifelink** — LKI corner (702.15c): triggered-ability source leaving the battlefield mid-resolution.
 - 🟡 **CR 701.34 — Proliferate** — see git for detail.
 - 🟡 **CR 601 — Casting Spells** (logged as "CR 706 — Casting spells") — minor; see git.
-- 🟡 **CR 702.29 — Cycling** — see git.
+- 🟡 **CR 702.29 — Cycling** — plain Cycling ✅. Typecycling/Landcycling
+  (702.29e) ✅ via `Keyword::Landcycling(cost, LandType)` +
+  `GameAction::Landcycle` (pay + discard → fetch a land of the named type to
+  hand, shuffle; fires cycle triggers); surfaced in `KnownCard.has_landcycling`
+  + a client Landcycle keybind. Ships Wirewood Guardian (Forestcycling), Daru
+  Lancer (Plainscycling). Remaining: a UI search-prompt to choose *which*
+  land among multiple matches (today it auto-fetches the first match).
 - 🟡 **CR 117.1 — Order of priority** — APNAP corner cases; see git.
 - 🟡 **CR 301 — Artifacts** — see git.
 - ✅ **CR 701.8 — Destroy / 701.19 Regenerate** — `regeneration_shields` replace destruction on the SBA lethal-damage path, `Effect::Destroy`, and consume one shield (tap + remove-from-combat + heal). `DestroyNoRegen` bypasses. Toughness≤0 SBA correctly ignores shields.

@@ -353,6 +353,13 @@ fn known_card(card: &CardInstance) -> KnownCard {
             None
         }
     });
+    let landcycling_cost = card.definition.keywords.iter().find_map(|kw| {
+        if let crate::card::Keyword::Landcycling(c, _) = kw {
+            Some(c.clone())
+        } else {
+            None
+        }
+    });
     let (modal_descriptions, modal_needs_target) =
         if let crate::effect::Effect::ChooseMode(modes) = &card.definition.effect {
             let descs = modes.iter().map(|m| m.effect_short_text()).collect();
@@ -375,6 +382,11 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .map(|b| b.name.to_string()),
         has_cycling: cycling_cost.is_some(),
         cycling_cost_label: cycling_cost
+            .as_ref()
+            .map(format_mana_cost_for_label)
+            .unwrap_or_default(),
+        has_landcycling: landcycling_cost.is_some(),
+        landcycling_cost_label: landcycling_cost
             .as_ref()
             .map(format_mana_cost_for_label)
             .unwrap_or_default(),

@@ -540,6 +540,15 @@ pub struct KnownCard {
     /// cycle activation hint. Defaults to "" for older clients.
     #[serde(default)]
     pub cycling_cost_label: String,
+    /// True if this card has `Keyword::Landcycling(cost, type)` (CR 702.29e).
+    /// Drives the client's "Landcycle" hand action (`GameAction::Landcycle`):
+    /// discard + fetch a land of the named type. Defaults to `false`.
+    #[serde(default)]
+    pub has_landcycling: bool,
+    /// Pre-rendered landcycling cost label (e.g. "{1}"). Empty when
+    /// `has_landcycling == false`.
+    #[serde(default)]
+    pub landcycling_cost_label: String,
     /// One short description per mode for a "Choose one —" modal spell
     /// (Artistic Process, Charms, the Command cycle, etc.). Drawn from
     /// `Effect::ChooseMode(modes).iter().map(effect_short_text)`. Empty

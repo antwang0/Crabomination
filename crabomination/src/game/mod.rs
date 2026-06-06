@@ -2935,6 +2935,7 @@ impl GameState {
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),
             GameAction::Cycle { card_id } => self.cycle_card(card_id),
+            GameAction::Landcycle { card_id } => self.landcycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
             GameAction::Reconfigure { equipment, target } => {
                 self.reconfigure(equipment, target)
@@ -3136,6 +3137,50 @@ impl GameState {
         }
         // Draw a card (Dredge can replace this draw, CR 702.52).
         self.draw_one(seat, &mut events);
+        Ok(events)
+    }
+
+    /// CR 702.29e — Activate a Landcycling ability. Pays the cost, discards the
+    /// card (firing cycle/discard triggers, since typecycling *is* a cycling
+    /// ability), then searches the library for a land of the keyword's land
+    /// type and puts it into hand (shuffling after). The fetched land is the
+    /// first matching card (a minor approximation for the rare multi-match
+    /// case — usually a basic land).
+    fn landcycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::Keyword;
+        use rand::seq::SliceRandom;
+        let seat = self.player_with_priority();
+        let (cycling_cost, land_type) = self.players[seat]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| {
+                c.definition.keywords.iter().find_map(|kw| match kw {
+                    Keyword::Landcycling(mc, lt) => Some((mc.clone(), *lt)),
+                    _ => None,
+                })
+            })
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        self.players[seat].mana_pool.pay(&cycling_cost).map_err(GameError::Mana)?;
+        let mut events = vec![];
+        if self.discard_card(seat, card_id, &mut events) {
+            events.push(GameEvent::CardCycled { player: seat, card_id });
+        }
+        // Search the library for a land of the named type; reveal + to hand.
+        if let Some(pos) = self.players[seat]
+            .library
+            .iter()
+            .position(|c| c.definition.is_land() && c.definition.subtypes.land_types.contains(&land_type))
+        {
+            let fetched = self.players[seat].library.remove(pos);
+            self.place_card_in_dest(
+                fetched,
+                seat,
+                &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(seat)),
+                &mut events,
+            );
+        }
+        self.players[seat].library.shuffle(&mut rand::rng());
         Ok(events)
     }
 

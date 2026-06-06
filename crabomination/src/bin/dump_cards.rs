@@ -100,6 +100,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Fading(_) => "Fading",
         Keyword::Vanishing(_) => "Vanishing",
         Keyword::Cycling(_) => "Cycling",
+        Keyword::Landcycling(_, _) => "Landcycling",
         Keyword::Madness(_) => "Madness",
         Keyword::Morph(_) => "Morph",
         Keyword::Megamorph(_) => "Megamorph",

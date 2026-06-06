@@ -3351,6 +3351,17 @@ pub fn handle_game_input(
             });
             if has_cycling {
                 outbox.submit(GameAction::Cycle { card_id });
+            } else {
+                // No plain Cycling — fall back to Landcycling (CR 702.29e) if
+                // the card has it (fetch a land of the named type to hand).
+                let has_landcycling = cv.players[your_seat].hand.iter().any(|h| {
+                    matches!(h,
+                        crabomination::net::HandCardView::Known(k)
+                        if k.id == card_id && k.has_landcycling)
+                });
+                if has_landcycling {
+                    outbox.submit(GameAction::Landcycle { card_id });
+                }
             }
         }
 

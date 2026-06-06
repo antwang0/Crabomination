@@ -25185,3 +25185,41 @@ pub fn heartless_act() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wirewood Guardian — {5}{G} 5/4 Elf Giant. Forestcycling {2} (CR 702.29e:
+/// {2}, discard this card: search for a Forest, reveal it, put it into hand).
+pub fn wirewood_guardian() -> CardDefinition {
+    CardDefinition {
+        name: "Wirewood Guardian",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Forest)],
+        ..Default::default()
+    }
+}
+
+/// Daru Lancer — {4}{W} 3/3 Human Soldier with first strike. Plainscycling {2}.
+pub fn daru_lancer() -> CardDefinition {
+    CardDefinition {
+        name: "Daru Lancer",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![
+            Keyword::FirstStrike,
+            Keyword::Landcycling(cost(&[generic(2)]), LandType::Plains),
+        ],
+        ..Default::default()
+    }
+}

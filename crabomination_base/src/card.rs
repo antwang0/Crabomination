@@ -390,6 +390,11 @@ pub enum Keyword {
     Delve,
     Cascade,
     Cycling(crate::mana::ManaCost),
+    /// CR 702.29e — Typecycling (landcycling). A variant of Cycling: pay the
+    /// cost + discard this card, then search your library for a land card with
+    /// the given land type, reveal it, and put it into your hand (then
+    /// shuffle). "When you cycle" triggers still fire (it is a cycling ability).
+    Landcycling(crate::mana::ManaCost, LandType),
     Echo(crate::mana::ManaCost),
     CumulativeUpkeep(crate::mana::ManaCost),
     /// CR 702.32 — Fading N. Enters with N fade counters. At the beginning

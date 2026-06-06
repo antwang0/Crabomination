@@ -33378,3 +33378,21 @@ fn heartless_act_mode_one_removes_counters() {
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
         "counters removed");
 }
+
+/// Wirewood Guardian's Forestcycling discards it and fetches a Forest to hand
+/// (CR 702.29e).
+#[test]
+fn forestcycling_fetches_a_forest() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // non-land decoy
+    let id = g.add_card_to_hand(0, catalog::wirewood_guardian());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Landcycle { card_id: id }).expect("landcycle");
+    // The cycler is in the graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded");
+    // A Forest is now in hand; the decoy stays in the library.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "fetched a Forest");
+    assert!(g.players[0].library.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "non-land left in library");
+}

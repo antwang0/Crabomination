@@ -425,6 +425,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // landcycling (modern_decks)
+        daru_lancer,
         // ── modern_decks: aggro / lifegain supplement ──
         loam_lion,
         ajanis_pridemate,
@@ -1879,6 +1881,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // landcycling (modern_decks)
+        wirewood_guardian,
         // ── Evoke Incarnation (MH2) ──
         endurance,
         // ── green burn + combat trick ──
