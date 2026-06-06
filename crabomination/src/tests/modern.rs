@@ -30063,6 +30063,31 @@ fn uro_escaped_stays_gains_life_and_draws() {
 }
 
 #[test]
+fn tarfire_deals_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::tarfire());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, p1 - 2, "Tarfire dealt 2");
+    assert!(catalog::tarfire().subtypes.creature_types.contains(&crate::card::CreatureType::Goblin),
+        "Tarfire is a Goblin (Kindred) for tribal synergies");
+}
+
+#[test]
+fn endless_one_enters_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::endless_one());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Endless One for X=3");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(id).expect("endless one");
+    assert_eq!((c.power, c.toughness), (3, 3), "X=3 → 3/3");
+}
+
+#[test]
 fn cruel_celebrant_drains_when_your_creature_dies() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::cruel_celebrant());

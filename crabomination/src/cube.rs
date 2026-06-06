@@ -218,6 +218,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks: cube staples ──
         scrapheap_scrounger,
         chromatic_sphere,
+        endless_one,
 
         // ── modern_decks: draw-engine artifact ──
         the_endstone,
@@ -1346,6 +1347,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: aggro goblin lord ──
         legion_warboss,
         staggershock,
+        tarfire,
         empty_the_warrens,
         burning_inquiry,
         desperate_ritual,
