@@ -791,6 +791,8 @@ pub enum CounteredSpellZone {
     OwnerLibraryTop,
     /// Bottom of the spell-owner's library.
     OwnerLibraryBottom,
+    /// Owner's choice of top or bottom of their library (Subtlety).
+    OwnerLibraryTopOrBottom,
     /// Owner's hand (Remand).
     OwnerHand,
     /// Exile (Spell Crumple).

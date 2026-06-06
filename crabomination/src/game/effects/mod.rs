@@ -3363,11 +3363,31 @@ impl GameState {
                     if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
                         let owner = card.owner;
                         match zone {
+                            // Index 0 is the top (draw = `library.remove(0)`).
                             CounteredSpellZone::OwnerLibraryTop => {
-                                self.players[owner].library.push(*card);
+                                self.players[owner].library.insert(0, *card);
                             }
                             CounteredSpellZone::OwnerLibraryBottom => {
-                                self.players[owner].library.insert(0, *card);
+                                self.players[owner].library.push(*card);
+                            }
+                            CounteredSpellZone::OwnerLibraryTopOrBottom => {
+                                // CR 701.5g — the spell's owner chooses top or
+                                // bottom (Subtlety). Ask via OptionalTrigger
+                                // (true = top, false = bottom); AutoDecider
+                                // bottoms it.
+                                let cid = card.id;
+                                let on_top = matches!(
+                                    self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                                        source: cid,
+                                        description: "Put countered spell on top of library? (no = bottom)".into(),
+                                    }),
+                                    crate::decision::DecisionAnswer::Bool(true)
+                                );
+                                if on_top {
+                                    self.players[owner].library.insert(0, *card);
+                                } else {
+                                    self.players[owner].library.push(*card);
+                                }
                             }
                             CounteredSpellZone::OwnerHand => {
                                 self.players[owner].hand.push(*card);

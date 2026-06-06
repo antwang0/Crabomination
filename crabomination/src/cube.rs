@@ -793,6 +793,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Evoke Incarnation (MH2) ──
+        subtlety,
         // ── modern_decks: cube staples ──
         careful_study,
         exclude,
@@ -1752,6 +1754,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Evoke Incarnation (MH2) ──
+        endurance,
         // ── modern_decks: cube staples ──
         ancient_stirrings,
         arbor_elf,

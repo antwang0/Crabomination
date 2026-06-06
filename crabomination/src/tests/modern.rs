@@ -10799,6 +10799,50 @@ fn grief_etb_discards_a_nonland_card() {
 }
 
 #[test]
+fn subtlety_etb_bounces_a_spell_to_top_of_library() {
+    let mut g = two_player_game();
+    // P1 casts a creature spell.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bears on the stack");
+    // P0 flashes Subtlety, scripting "top of library".
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let sub = g.add_card_to_hand(0, catalog::subtlety());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sub, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Subtlety flashed in response");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != bears), "the bears spell was countered");
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(bears),
+        "the countered spell is on top of its owner's library");
+}
+
+#[test]
+fn endurance_etb_shuffles_opponent_graveyard_into_library() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let lib_before = g.players[1].library.len();
+    let id = g.add_card_to_hand(0, catalog::endurance());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Endurance castable for {1}{G}{G}");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.is_empty(), "opponent's graveyard shuffled away");
+    assert_eq!(g.players[1].library.len(), lib_before + 2, "two cards returned to the library");
+}
+
+#[test]
 fn fury_evoke_etb_deals_four_damage() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::fury());

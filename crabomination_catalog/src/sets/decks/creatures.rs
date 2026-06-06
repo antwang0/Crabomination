@@ -430,6 +430,70 @@ pub fn fury() -> CardDefinition {
     }
 }
 
+/// Subtlety — {2}{U}{U} Creature — Elemental Incarnation, 3/3, Flash, Flying.
+/// Evoke—exile a blue card from hand. ETB: counter target spell on the stack;
+/// its owner puts it on top or bottom of their library. (Printed restriction
+/// to creature/planeswalker spells is widened to any spell.)
+pub fn subtlety() -> CardDefinition {
+    use crate::effect::CounteredSpellZone;
+    CardDefinition {
+        name: "Subtlety",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CounterSpellToZone {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
+            },
+        }],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: ManaCost::default(),
+            exile_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
+            evoke_sacrifice: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Endurance — {1}{G}{G} Creature — Elemental Incarnation, 3/4, Flash, Reach.
+/// Evoke—exile a green card from hand. ETB shuffles each opponent's graveyard
+/// into their library (printed "up to one target player" narrowed to
+/// opponents — the standard graveyard-hate use).
+pub fn endurance() -> CardDefinition {
+    CardDefinition {
+        name: "Endurance",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flash, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::EachOpponent },
+        }],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: ManaCost::default(),
+            exile_filter: Some(SelectionRequirement::HasColor(Color::Green)),
+            evoke_sacrifice: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 // ── Sideboard creatures ──────────────────────────────────────────────────────
 
 /// Chancellor of the Annex — {4}{W}{W}, 5/6 Avatar. Flying. "You may reveal

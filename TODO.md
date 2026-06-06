@@ -8,6 +8,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Evoke Incarnation faithfulness (MH2).** Subtlety's ETB targets any
+  `IsSpellOnStack` rather than only creature/planeswalker spells (no
+  card-type-on-stack filter yet). Endurance's "up to one target player"
+  is narrowed to `EachOpponent` (no single-effect player-target slot —
+  `ShuffleGraveyardIntoLibrary` takes a `PlayerRef`, not a targetable
+  `Selector`). Add an `IsCreatureOrPlaneswalkerSpellOnStack` requirement
+  (+ auto-target hook in `targeting.rs`) and a targetable player slot to
+  promote both to fully faithful.
 - **Graveyard-hate dies-trigger nuance.** `route_to_graveyard` /
   `ExileCardsBoundForGraveyard` redirect the *placement* to exile, but
   `remove_to_graveyard_with_triggers` still collects `CreatureDied` /

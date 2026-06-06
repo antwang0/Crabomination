@@ -3988,10 +3988,10 @@ fn memory_lapse_routes_countered_spell_to_library_top_per_cr_701_6a() {
         gy_before,
         "Bolt did NOT go to graveyard"
     );
-    let top = g.players[1].library.last().expect("library not empty");
+    let top = g.players[1].library.first().expect("library not empty");
     assert_eq!(
         top.definition.name, "Lightning Bolt",
-        "top card is the Memory-Lapse'd Bolt"
+        "top card (index 0) is the Memory-Lapse'd Bolt"
     );
     // P0 still at 20 (Bolt didn't resolve).
     assert_eq!(g.players[0].life, 20, "Bolt was countered");
