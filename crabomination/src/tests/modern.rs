@@ -16171,6 +16171,107 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
 }
 
+/// Underworld Dreams pings an opponent for 1 each time they draw.
+#[test]
+fn underworld_dreams_pings_opponent_on_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::underworld_dreams());
+    g.add_card_to_library(1, catalog::island());
+    let opp = g.players[1].life;
+    let mut events = Vec::new();
+    g.draw_one(1, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "opponent took 1 on their draw");
+}
+
+/// Megrim deals 2 to an opponent each time they discard.
+#[test]
+fn megrim_pings_opponent_on_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::megrim());
+    let card = g.add_card_to_hand(1, catalog::island());
+    let opp = g.players[1].life;
+    let mut events = Vec::new();
+    g.discard_card(1, card, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 2, "opponent took 2 on their discard");
+}
+
+/// Howl from Beyond gives +X/+0 (X from the cast cost).
+#[test]
+fn howl_from_beyond_pumps_by_x() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::howl_from_beyond());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Howl castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + 3, "+3/+0");
+}
+
+/// Reckless Spite destroys two nonblack creatures and costs 5 life.
+#[test]
+fn reckless_spite_destroys_two_and_loses_five() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::reckless_spite());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("Reckless Spite castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both destroyed");
+    assert_eq!(g.players[0].life, life - 5, "lost 5 life");
+}
+
+/// Wall of Blood pumps itself +1/+1 per life paid.
+#[test]
+fn wall_of_blood_pays_life_to_pump() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::wall_of_blood());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().power(), 1, "0/2 → 1/3");
+    assert_eq!(g.players[0].life, life - 1, "paid 1 life");
+}
+
+/// Disrupting Scepter makes a player discard — only on your own turn.
+#[test]
+fn disrupting_scepter_discards_only_on_your_turn() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::disrupting_scepter());
+    g.add_card_to_hand(1, catalog::island());
+    // Not your turn → rejected.
+    g.active_player_idx = 1;
+    g.players[0].mana_pool.add_colorless(3);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None }).is_err(),
+        "can't activate on the opponent's turn");
+    // Your turn → opponent discards.
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None })
+        .expect("activatable on your turn");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.is_empty(), "opponent discarded their card");
+}
+
 /// Repay in Kind sets every player's life to the lowest among all players.
 #[test]
 fn repay_in_kind_sets_all_life_to_lowest() {

@@ -8201,3 +8201,64 @@ pub fn magus_of_the_mirror() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Underworld Dreams — {B}{B}{B} Enchantment. "Whenever an opponent draws a
+/// card, this enchantment deals 1 damage to that player."
+pub fn underworld_dreams() -> CardDefinition {
+    CardDefinition {
+        name: "Underworld Dreams",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Megrim — {2}{B} Enchantment. "Whenever an opponent discards a card, this
+/// enchantment deals 2 damage to that player."
+pub fn megrim() -> CardDefinition {
+    CardDefinition {
+        name: "Megrim",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wall of Blood — {2}{B} 0/2 Wall with Defender. "Pay 1 life: This creature
+/// gets +1/+1 until end of turn."
+pub fn wall_of_blood() -> CardDefinition {
+    CardDefinition {
+        name: "Wall of Blood",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 2,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 1,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

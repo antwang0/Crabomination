@@ -1421,3 +1421,23 @@ pub fn mirror_universe() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Disrupting Scepter — {3} Artifact. "{3}, {T}: Target player discards a
+/// card. Activate only during your turn."
+pub fn disrupting_scepter() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::effect::shortcut::discard;
+    CardDefinition {
+        name: "Disrupting Scepter",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(3)]),
+            condition: Some(Predicate::IsTurnOf(PlayerRef::You)),
+            effect: discard(Selector::Target(0), 1, false),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

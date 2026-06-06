@@ -1479,3 +1479,42 @@ pub fn evacuation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Howl from Beyond — {X}{B} Instant. "Target creature gets +X/+0 until end
+/// of turn." (X from the cast's generic cost.)
+pub fn howl_from_beyond() -> CardDefinition {
+    CardDefinition {
+        name: "Howl from Beyond",
+        cost: ManaCost::new(vec![crate::mana::x(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::XFromCost,
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Reckless Spite — {1}{B}{B} Instant. "Destroy two target nonblack
+/// creatures. You lose 5 life." Slots 0 and 1 each target a nonblack creature.
+pub fn reckless_spite() -> CardDefinition {
+    let nonblack_creature = || {
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(Color::Black))))
+    };
+    CardDefinition {
+        name: "Reckless Spite",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(nonblack_creature()) },
+            Effect::Destroy {
+                what: Selector::TargetFiltered { slot: 1, filter: nonblack_creature() },
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(5) },
+        ]),
+        ..Default::default()
+    }
+}
