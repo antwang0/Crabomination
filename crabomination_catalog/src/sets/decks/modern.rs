@@ -20524,6 +20524,35 @@ pub fn chance_encounter() -> CardDefinition {
     }
 }
 
+/// Hornet Sting — {G} Instant. "Deals 1 damage to any target."
+pub fn hornet_sting() -> CardDefinition {
+    use crate::effect::shortcut::{deal, target};
+    CardDefinition {
+        name: "Hornet Sting",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: deal(1, target()),
+        ..Default::default()
+    }
+}
+
+/// Titanic Growth — {1}{G} Instant. "Target creature gets +4/+4 until EOT."
+pub fn titanic_growth() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Titanic Growth",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(4),
+            toughness: Value::Const(4),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 /// Reprisal — {1}{W} Instant. "Destroy target creature with power 4 or
 /// greater. It can't be regenerated."
 pub fn reprisal() -> CardDefinition {

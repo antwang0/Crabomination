@@ -1774,6 +1774,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Evoke Incarnation (MH2) ──
         endurance,
+        // ── green burn + combat trick ──
+        hornet_sting,
+        titanic_growth,
         // ── modern_decks: cube staples ──
         ancient_stirrings,
         arbor_elf,

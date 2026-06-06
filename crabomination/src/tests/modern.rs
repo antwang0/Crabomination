@@ -31178,6 +31178,29 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── Green burn + combat trick ──────────────────────────────────────────────
+
+#[test]
+fn hornet_sting_pings_any_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::hornet_sting());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, 19, "1 damage to the opponent");
+}
+
+#[test]
+fn titanic_growth_pumps_four_four() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::titanic_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "2/2 + 4/4 = 6/6");
+}
+
 // ── White removal + utility ────────────────────────────────────────────────
 
 #[test]
