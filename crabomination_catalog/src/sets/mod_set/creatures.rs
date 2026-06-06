@@ -8062,3 +8062,31 @@ pub fn loxodon_hierarch() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fleecemane Lion — {G}{W}, 3/3 Cat. "{3}{G}{W}: Monstrosity 1. As long as
+/// this creature is monstrous, it has hexproof and indestructible."
+pub fn fleecemane_lion() -> CardDefinition {
+    use crate::card::{Predicate, StaticAbility};
+    use crate::effect::shortcut::monstrosity;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Fleecemane Lion",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![monstrosity(cost(&[generic(3), g(), w()]), 1)],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this creature is monstrous, it has hexproof and \
+                          indestructible.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SourceIsMonstrous,
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Hexproof, Keyword::Indestructible],
+            },
+        }],
+        ..Default::default()
+    }
+}

@@ -513,6 +513,10 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
+    /// CR 701.31 — the source permanent is monstrous. Backed by
+    /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
+    /// statics (Fleecemane Lion's hexproof + indestructible).
+    SourceIsMonstrous,
     /// CR 702.139 — Revolt: a permanent left the battlefield under `who`'s
     /// control this turn. Backed by
     /// `Player.permanent_left_battlefield_this_turn`.

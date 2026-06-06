@@ -32429,3 +32429,26 @@ fn loxodon_hierarch_sac_regenerates_your_creatures() {
     g.check_state_based_actions();
     assert!(g.battlefield_find(bear).is_some(), "regen shield saved the bear from lethal damage");
 }
+
+/// Fleecemane Lion gains hexproof + indestructible once it becomes monstrous.
+#[test]
+fn fleecemane_lion_monstrous_grants_hexproof_indestructible() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let lion = g.add_card_to_battlefield(0, catalog::fleecemane_lion());
+    g.clear_sickness(lion);
+    let c0 = g.computed_permanent(lion).expect("computed");
+    assert!(!c0.keywords.contains(&Keyword::Hexproof), "not monstrous yet");
+    // Pay {3}{G}{W} for Monstrosity 1.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lion, ability_index: 0, target: None, x_value: None,
+    }).expect("monstrosity activates");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(lion).unwrap().monstrous, "became monstrous");
+    let c1 = g.computed_permanent(lion).expect("computed");
+    assert!(c1.keywords.contains(&Keyword::Hexproof), "monstrous → hexproof");
+    assert!(c1.keywords.contains(&Keyword::Indestructible), "monstrous → indestructible");
+}
