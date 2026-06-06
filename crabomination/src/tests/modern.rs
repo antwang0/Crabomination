@@ -29976,6 +29976,121 @@ fn crackling_doom_pings_and_forces_a_sacrifice() {
 }
 
 #[test]
+fn crackling_doom_forces_sacrifice_of_greatest_power() {
+    let mut g = two_player_game();
+    // Opp has a cheap big-power creature and an expensive small-power one.
+    // Crackling Doom takes the greatest *power*, not greatest mana value.
+    let big_power = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let small_power = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flier, MV 5
+    // Make grizzly the highest power so MV vs power diverge.
+    g.battlefield_find_mut(big_power).unwrap().add_counters(CounterType::PlusOnePlusOne, 5);
+    let id = g.add_card_to_hand(0, catalog::crackling_doom());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == big_power), "sacrificed the 7-power creature");
+    assert!(g.battlefield.iter().any(|c| c.id == small_power), "kept the higher-MV but lower-power creature");
+}
+
+#[test]
+fn kroxa_hardcast_sacrifices_itself() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt()); // opp has a nonland to discard
+    let id = g.add_card_to_hand(0, catalog::kroxa());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, id);
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "hard-cast Kroxa sacrificed itself (didn't escape)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Kroxa went to the graveyard");
+}
+
+#[test]
+fn kroxa_escaped_stays_and_drains_on_land_discard() {
+    let mut g = two_player_game();
+    let kroxa = g.add_card_to_graveyard(0, catalog::kroxa());
+    let fodder: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::lightning_bolt())).collect();
+    // Opponent's only card is a land → no nonland discarded → loses 3 life.
+    g.add_card_to_hand(1, catalog::tropical_island());
+    let life1 = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastEscape {
+        card_id: kroxa, exile_cards: fodder, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Kroxa escapable for BBRR + exile five");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == kroxa), "escaped Kroxa stays on the battlefield");
+    assert_eq!(g.players[1].life, life1 - 3, "opponent discarded a land, so lost 3 life");
+}
+
+#[test]
+fn kroxa_no_drain_when_nonland_discarded() {
+    let mut g = two_player_game();
+    let kroxa = g.add_card_to_graveyard(0, catalog::kroxa());
+    let fodder: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::lightning_bolt())).collect();
+    g.add_card_to_hand(1, catalog::lightning_bolt()); // nonland in hand
+    let life1 = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastEscape {
+        card_id: kroxa, exile_cards: fodder, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Kroxa escapable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1, "opponent discarded a nonland — no life loss");
+}
+
+#[test]
+fn uro_escaped_stays_gains_life_and_draws() {
+    let mut g = two_player_game();
+    let uro = g.add_card_to_graveyard(0, catalog::uro());
+    let fodder: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::lightning_bolt())).collect();
+    g.add_card_to_library(0, catalog::lightning_bolt()); // something to draw
+    let life0 = g.players[0].life;
+    let hand0 = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastEscape {
+        card_id: uro, exile_cards: fodder, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Uro escapable for GGUU + exile five");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == uro), "escaped Uro stays on the battlefield");
+    assert_eq!(g.players[0].life, life0 + 3, "gained 3 life");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+}
+
+#[test]
+fn noble_hierarch_taps_for_a_color() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::noble_hierarch());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+        .expect("Noble Hierarch's mana ability activates");
+    // AutoDecider falls back to the first listed color (Green).
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+#[test]
+fn noble_hierarch_exalts_a_lone_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::noble_hierarch());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "Exalted pumped the lone attacker +1/+1");
+}
+
+#[test]
 fn legion_warboss_makes_a_goblin_at_combat() {
     let mut g = two_player_game();
     let boss = g.add_card_to_battlefield(0, catalog::legion_warboss());

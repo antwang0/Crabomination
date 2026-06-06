@@ -309,6 +309,13 @@ pub struct GameState {
     /// Reset to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) cards_discarded_per_player_this_resolution: std::collections::HashMap<usize, u32>,
+    /// Transient: per-player count of *nonland* cards discarded within the
+    /// current effect resolution. Read by `Predicate::DiscardedNonlandThisEffect`
+    /// — Kroxa's "each opponent who didn't discard a nonland card this way
+    /// loses 3 life." Reset to empty between independent resolutions.
+    #[serde(skip)]
+    pub(crate) nonland_cards_discarded_per_player_this_resolution:
+        std::collections::HashMap<usize, u32>,
     /// Transient: the `CardId`s of cards discarded within the current
     /// effect resolution. Populated alongside the count fields above. Used
     /// by Mind Roots's "Put up to one land card discarded this way onto
@@ -561,6 +568,7 @@ impl Clone for GameState {
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
+            nonland_cards_discarded_per_player_this_resolution: self.nonland_cards_discarded_per_player_this_resolution.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             named_card_this_resolution: self.named_card_this_resolution.clone(),
@@ -640,6 +648,7 @@ impl GameState {
             cards_discarded_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
+            nonland_cards_discarded_per_player_this_resolution: HashMap::new(),
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             named_card_this_resolution: None,
@@ -2827,6 +2836,7 @@ impl GameState {
             .definition
             .card_types
             .contains(&crate::card::CardType::Creature);
+        let was_nonland = !card.definition.card_types.contains(&crate::card::CardType::Land);
         let madness = card.definition.madness_cost().cloned();
 
         // The discard happens regardless of the destination zone (CR
@@ -2841,6 +2851,12 @@ impl GameState {
         self.discarded_card_ids_this_resolution.push(card_id);
         if was_creature {
             self.creature_cards_discarded_this_resolution += 1;
+        }
+        if was_nonland {
+            *self
+                .nonland_cards_discarded_per_player_this_resolution
+                .entry(p)
+                .or_insert(0) += 1;
         }
 
         match madness {

@@ -2906,6 +2906,7 @@ pub fn soul_shatter() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature
                     .or(SelectionRequirement::Planeswalker),
+                by_power: false,
             }),
         },
         activated_abilities: no_abilities(),

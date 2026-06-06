@@ -515,6 +515,10 @@ pub enum Predicate {
     /// 702.171). Backed by `CardInstance.saddled`; gates "whenever this
     /// attacks while saddled" triggers on Mounts.
     SourceSaddled,
+    /// True if the effect's source permanent was cast via Escape (CR
+    /// 702.139). Backed by `CardInstance.cast_from_escape`; gates the
+    /// "sacrifice it unless it escaped" ETB rider on Kroxa / Uro.
+    SourceCastFromEscape,
     /// True if any player `who` resolves to attacked with a creature this
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.
@@ -522,6 +526,13 @@ pub enum Predicate {
     /// True if any player `who` resolves to has cast a blue or black spell
     /// this turn (Veil of Summer's conditional cantrip).
     CastBlueOrBlackThisTurn { who: PlayerRef },
+    /// True if any player `who` resolves to discarded a *nonland* card within
+    /// the current effect resolution. Backed by
+    /// `GameState.nonland_cards_discarded_per_player_this_resolution`. Gates
+    /// Kroxa's "each opponent who didn't discard a nonland card this way loses
+    /// 3 life" — pair `Not(DiscardedNonlandThisEffect { Triggerer })` with a
+    /// per-opponent `ForEach` so each opponent is judged independently.
+    DiscardedNonlandThisEffect { who: PlayerRef },
     /// `who` has had at least `at_least` cards leave their graveyard
     /// this turn. Backed by `Player.cards_left_graveyard_this_turn`.
     /// Used by Lorehold "if a card left your graveyard this turn"
@@ -1982,8 +1993,15 @@ pub enum Effect {
     /// Used by Soul Shatter ("Each opponent sacrifices a creature or
     /// planeswalker with the greatest mana value among permanents
     /// that player controls"). Auto-decider picks the highest-CMC
-    /// matching permanent per player.
-    SacrificeGreatestMV { who: Selector, count: Value, filter: SelectionRequirement },
+    /// matching permanent per player. When `by_power` is set the sort
+    /// key is greatest *power* instead (Crackling Doom, Tribute to Hunger).
+    SacrificeGreatestMV {
+        who: Selector,
+        count: Value,
+        filter: SelectionRequirement,
+        #[serde(default)]
+        by_power: bool,
+    },
 
     /// "Punisher" choice (CR 601-style "unless"). Each player `chooser`
     /// resolves to may avoid `otherwise` by performing one of `options`.

@@ -526,6 +526,7 @@ impl GameState {
         self.cards_discarded_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
+        self.nonland_cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
         self.named_card_this_resolution = None;
@@ -3589,15 +3590,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::SacrificeGreatestMV { who, count, filter } => {
+            Effect::SacrificeGreatestMV { who, count, filter, by_power } => {
                 // Same picker as `Effect::Sacrifice` but reverses the CMC
-                // sort to pick the most-expensive match. Used by Soul
-                // Shatter ("Each opponent sacrifices a creature or
-                // planeswalker with the greatest mana value among
-                // permanents that player controls"). When ties exist
-                // (multiple matches at the same CMC), the auto-picker
-                // breaks them by lowest power (matching Sacrifice's
-                // secondary key).
+                // (or, with `by_power`, the power) sort to pick the
+                // greatest match. Used by Soul Shatter ("greatest mana
+                // value") and Crackling Doom ("greatest power"). When ties
+                // exist, the auto-picker breaks them by lowest power
+                // (matching Sacrifice's secondary key).
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let source_id = ctx.source;
                 for ent in self.resolve_selector(who, ctx) {
@@ -3613,14 +3612,15 @@ impl GameState {
                         .collect();
                     // Sort key:
                     // 1. Source last (preserves "another creature" intent).
-                    // 2. Descending CMC (highest first via i32 negation).
+                    // 2. Descending CMC or power (highest first via negation).
                     // 3. Ascending power (lowest first as tiebreaker).
                     candidates.sort_by_key(|c| {
-                        (
-                            Some(c.id) == source_id,
-                            -(c.definition.cost.cmc() as i32),
-                            c.power(),
-                        )
+                        let primary = if *by_power {
+                            -(c.power() as i32)
+                        } else {
+                            -(c.definition.cost.cmc() as i32)
+                        };
+                        (Some(c.id) == source_id, primary, c.power())
                     });
                     let ids: Vec<CardId> =
                         candidates.into_iter().take(n).map(|c| c.id).collect();

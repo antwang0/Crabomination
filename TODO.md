@@ -8,18 +8,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **`SacrificeGreatestPower` effect.** Crackling Doom (and Tribute to Hunger,
-  Sheoldred-style edicts) print "sacrifice a creature with the greatest
-  *power*"; today they ride `SacrificeGreatestMV` (greatest mana value) as an
-  approximation. A power-keyed picker (mirror the MV sort, swap the key) makes
-  them faithful.
-- **Kroxa / Uro escape titans.** Escape (`Keyword::Escape`) is wired, but the
-  "sacrifice it unless it escaped" ETB rider needs a `CardInstance.
-  cast_from_escape` flag (mirror `cast_from_suspend`) + a predicate to gate the
-  self-sac. Add it, then ship both titans.
-- **Noble Hierarch.** Easy add now that `exalted()` (CR 702.83) ships — {G} 0/1
-  with exalted + a `{T}: Add G/W/U` mana ability (needs a 3-color choose-one
-  mana ability, or model as `AnyOneColor` restricted to GWU).
 - **Amped Raptor energy free-cast (still 🟡).** Needs a `MayPlayPermission`
   alt-cost slot ("cast without paying mana by paying {E}{E}") + a cast-from-
   exile path that substitutes the energy cost.

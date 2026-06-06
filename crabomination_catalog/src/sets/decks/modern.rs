@@ -660,6 +660,36 @@ pub fn goldhound() -> CardDefinition {
     }
 }
 
+/// Noble Hierarch — {G} 0/1 Creature — Human Druid. Exalted (CR 702.83).
+/// {T}: Add {G}, {W}, or {U}.
+pub fn noble_hierarch() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Noble Hierarch",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::exalted()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(
+                    vec![Color::Green, Color::White, Color::Blue],
+                    Value::Const(1),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Spectacle (CR 702.111) ───────────────────────────────────────────────────
 
 /// Skewer the Critics — {2}{R} Sorcery. Deal 3 damage to any target.
@@ -7224,6 +7254,102 @@ pub fn cling_to_dust() -> CardDefinition {
                 }),
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Kroxa, Titan of Death's Hunger — {B}{R} Legendary Creature — Elder Giant
+/// 6/6. When it enters, sacrifice it unless it escaped. On enter-or-attack
+/// each opponent discards a card, then each opponent who didn't discard a
+/// nonland card this way loses 3 life. Escape—{B}{B}{R}{R}, exile five other
+/// graveyard cards (CR 702.139).
+pub fn kroxa() -> CardDefinition {
+    let plunder = Effect::ForEach {
+        selector: Selector::Player(PlayerRef::EachOpponent),
+        body: Box::new(Effect::Seq(vec![
+            Effect::Discard { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(1), random: false },
+            Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::DiscardedNonlandThisEffect {
+                    who: PlayerRef::Triggerer,
+                })),
+                then: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(3),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ])),
+    };
+    CardDefinition {
+        name: "Kroxa, Titan of Death's Hunger",
+        cost: cost(&[b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Escape(cost(&[b(), b(), r(), r()]), 5)],
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SourceCastFromEscape)),
+                then: Box::new(Effect::SacrificeSource),
+                else_: Box::new(Effect::Noop),
+            }),
+            etb(plunder.clone()),
+            crate::effect::shortcut::on_attack(plunder),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Uro, Titan of Nature's Wrath — {1}{G}{U} Legendary Creature — Elder Giant
+/// 6/6. When it enters, sacrifice it unless it escaped. On enter-or-attack you
+/// gain 3 life and draw a card, then you may put a land card from your hand
+/// onto the battlefield. Escape—{G}{G}{U}{U}, exile five other graveyard cards.
+pub fn uro() -> CardDefinition {
+    use crate::card::Zone;
+    let growth = Effect::Seq(vec![
+        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        Effect::MayDo {
+            description: "put a land card from your hand onto the battlefield".to_string(),
+            body: Box::new(Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: SelectionRequirement::Land,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+        },
+    ]);
+    CardDefinition {
+        name: "Uro, Titan of Nature's Wrath",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Escape(cost(&[g(), g(), u(), u()]), 5)],
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SourceCastFromEscape)),
+                then: Box::new(Effect::SacrificeSource),
+                else_: Box::new(Effect::Noop),
+            }),
+            etb(growth.clone()),
+            crate::effect::shortcut::on_attack(growth),
+        ],
         ..Default::default()
     }
 }
@@ -21974,7 +22100,7 @@ pub fn flame_of_anor() -> CardDefinition {
 
 /// Crackling Doom — {R}{W}{B} Instant. Deal 2 damage to each opponent. Each
 /// opponent sacrifices a creature with the greatest power among creatures they
-/// control. (Greatest-power approximated by `SacrificeGreatestMV`.)
+/// control.
 pub fn crackling_doom() -> CardDefinition {
     CardDefinition {
         name: "Crackling Doom",
@@ -21989,6 +22115,7 @@ pub fn crackling_doom() -> CardDefinition {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature,
+                by_power: true,
             },
         ]),
         ..Default::default()
