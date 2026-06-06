@@ -33694,3 +33694,44 @@ fn mark_of_mutiny_steals_and_grows() {
     assert_eq!(c.controller, 0, "stolen for the turn");
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "got a +1/+1 counter");
 }
+
+// ── Aluren ───────────────────────────────────────────────────────────────────
+
+/// Aluren lets any player free-cast a creature with MV ≤ 3, at flash speed.
+#[test]
+fn aluren_free_casts_cheap_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aluren());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}, MV 2
+    // Empty mana pool — only Aluren makes this castable.
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Aluren free-casts a cheap creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "Grizzly Bears entered for free");
+}
+
+/// Aluren grants flash: the creature can be cast outside the main phase.
+#[test]
+fn aluren_grants_flash_timing() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aluren());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.step = crate::TurnStep::DeclareAttackers; // not a main phase
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Aluren grants flash so a cheap creature casts in combat");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+}
+
+/// Aluren only covers MV ≤ 3 — a pricier creature is rejected.
+#[test]
+fn aluren_rejects_expensive_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aluren());
+    let big = g.add_card_to_hand(0, catalog::colossal_dreadmaw()); // MV 6
+    assert!(g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "MV 6 creature is outside Aluren's MV-3 cap");
+}

@@ -17335,18 +17335,22 @@ pub fn searing_blaze() -> CardDefinition {
     }
 }
 
-/// Aluren — {2}{G}{G} Enchantment.
-/// Each player may cast creature spells with mana value 3 or less without
-/// paying their mana costs.
-///
-/// Approximation: body-only enchantment. The static cost-reduction effect
-/// is beyond current engine scope; the card is included for its type line
-/// and mana value in cube draft context.
+/// Aluren — {2}{G}{G} Enchantment. "Any player may cast creature spells
+/// with mana value 3 or less without paying their mana cost and as though
+/// they had flash." (`StaticEffect::AnyoneCastsCheapCreaturesFree`, consumed
+/// by the `CastFromZoneWithoutPaying` action.)
 pub fn aluren() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Aluren",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Any player may cast creature spells with mana value 3 \
+                or less without paying their mana cost and as though they had flash.",
+            effect: StaticEffect::AnyoneCastsCheapCreaturesFree { max_mv: 3 },
+        }],
         ..Default::default()
     }
 }

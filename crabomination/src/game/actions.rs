@@ -316,6 +316,27 @@ impl crate::game::GameState {
                     .any(|sa| matches!(sa.effect, StaticEffect::CastHandSpellsFree))
         })
     }
+
+    /// Aluren — true if some battlefield permanent grants "any player may
+    /// cast creature spells with mana value N or less for free", and `def`
+    /// qualifies (a creature within the MV cap). The grant is global, so the
+    /// controller of the Aluren is irrelevant.
+    pub(crate) fn player_casts_cheap_creature_free(
+        &self,
+        def: &crate::card::CardDefinition,
+    ) -> bool {
+        use crate::effect::StaticEffect;
+        if !def.card_types.contains(&crate::card::CardType::Creature) {
+            return false;
+        }
+        let mv = def.cost.cmc();
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect,
+                    StaticEffect::AnyoneCastsCheapCreaturesFree { max_mv } if mv <= max_mv)
+            })
+        })
+    }
 }
 
 /// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
@@ -3386,6 +3407,9 @@ impl GameState {
         // standing static letting the controller free-cast their own hand
         // spells. The latter doesn't exile the spell afterwards (it goes
         // wherever it normally would).
+        // Aluren grants flash to the free creature cast; track it so the
+        // sorcery-speed gate below is relaxed for that path only.
+        let mut aluren_flash = false;
         let exile_after = match card_ref.may_play_until {
             Some(permission) => {
                 if permission.player != p {
@@ -3396,7 +3420,11 @@ impl GameState {
             None => {
                 let from_own_hand = zone == crate::card::Zone::Hand
                     && self.players[p].hand.iter().any(|c| c.id == card_id);
-                if !(from_own_hand && self.player_casts_hand_spells_free(p)) {
+                if from_own_hand && self.player_casts_hand_spells_free(p) {
+                    // Omniscience path — no timing relaxation.
+                } else if from_own_hand && self.player_casts_cheap_creature_free(&card_ref.definition) {
+                    aluren_flash = true;
+                } else {
                     return Err(GameError::CardNotInHand(card_id));
                 }
                 false
@@ -3405,7 +3433,8 @@ impl GameState {
         // Expiry check: EndOfThisTurn => only valid this turn;
         // EndOfControllersNextTurn => one full controller-turn later.
         // Defensive — the cleanup hook also clears expired permissions.
-        let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
+        let must_be_sorcery_speed =
+            !aluren_flash && (!is_instant || self.player_locked_to_sorcery_timing(p));
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }

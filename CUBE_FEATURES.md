@@ -50,7 +50,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
-| Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |
 
 ### Artifacts & Planeswalkers (mono / colorless)
@@ -106,7 +105,7 @@ are listed in `DECK_FEATURES.md`.
 | Verge / surveil land family expansion | ✅ | All five enemy/allied `*verge` lands ship via `verge_land`. Horizon-canopy cycle complete (`horizon_land`; all six). All ten MKM surveil lands ship via `dual_land_with` + `etb_tap_then_surveil_one`. |
 | ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Creature-ETB / death **trigger** suppression ships via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` (Torpor Orb, Tocatli Honor Guard, Hushbringer ✅). Remaining: Gather Specimens (steal-instead). |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | ✅ | Damping Sphere (`AdditionalCostAfterFirstSpell`), flat `AdditionalCost`, and the Trinisphere "minimum cost" floor (`SpellCostFloor`, untapped-gated) all ship. Elite Spellbinder reuses the existing tax static. |
-| "Cast spells without paying mana" static | ⏳ | Omniscience, Maelstrom Archangel (combat-damage variant), Aluren (free-cast under-3 creatures). |
+| "Cast spells without paying mana" static | 🟡 | Omniscience ✅ (`StaticEffect::CastHandSpellsFree`); Aluren ✅ (`StaticEffect::AnyoneCastsCheapCreaturesFree { max_mv }` — any player free-casts MV≤3 creatures at flash). Remaining: Maelstrom Archangel (combat-damage variant). |
 | Name-a-card primitive | 🟡 | `Effect::NameCard` + `Decision::NameCard` + `CardInstance.named_card` ship Pithing Needle / Phyrexian Revoker (ETB stamps a name; `activate_ability` suppresses non-mana abilities of matching sources). Same-name exile (Crumble to Dust) is wired via `Effect::ExileSameNameAsTarget`. Remaining consumers: reveal-until-find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy). |
 | Token-copy of permanent | 🟡 | Populate ✅ (`Effect::Populate`, CR 701.32 — Growing Ranks). `CreateTokenCopyOf` ✅, with a `non_legendary` rider (CR 707.2e — strips the copy's supertypes; Helm of the Host ✅). Mockingbird/Phantasmal Image clone-enter ✅ via `BecomeCopyOf`. Remaining: a true *continuous* "becomes a copy" layer-1 loop (Mirrorform aura). |
 | Multi-pick decisions over revealed library cards | 🟡 | Atraxa Draw-4 stand-in is wired. Reveal-and-sort by card type, Dig Through Time, Mind's Desire all need a richer multi-pick decision. |

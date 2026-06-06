@@ -308,6 +308,12 @@ pub enum StaticEffect {
     /// `GameState::player_casts_hand_spells_free`, which lets
     /// `CastFromZoneWithoutPaying` resolve a hand spell free of charge.
     CastHandSpellsFree,
+    /// Aluren (CR 601 alt-timing) — "Any player may cast creature spells
+    /// with mana value `max_mv` or less without paying their mana cost and
+    /// as though they had flash." Read by
+    /// `GameState::player_casts_cheap_creature_free` from the free-cast
+    /// action; grants instant-speed timing for the qualifying creature.
+    AnyoneCastsCheapCreaturesFree { max_mv: u32 },
     /// "Attacking creatures you control have <keyword>." Blade Historian
     /// (double strike), and any future combat anthem keyed on the
     /// declare-attackers set. Resolved at `compute_battlefield` time (which

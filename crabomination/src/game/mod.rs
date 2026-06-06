@@ -5987,6 +5987,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // CastHandSpellsFree (Omniscience) — read by the free-cast
             // action via `player_casts_hand_spells_free`; no layer effect.
             | StaticEffect::CastHandSpellsFree
+            // AnyoneCastsCheapCreaturesFree (Aluren) — read by the free-cast
+            // action via `player_casts_cheap_creature_free`; no layer effect.
+            | StaticEffect::AnyoneCastsCheapCreaturesFree { .. }
             // GrantKeywordToAttackers — needs live combat state, resolved in
             // `compute_battlefield` against `GameState.attacking`.
             | StaticEffect::GrantKeywordToAttackers { .. }
