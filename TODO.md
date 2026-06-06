@@ -8,6 +8,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Ferocious damage-can't-be-prevented rider (Wild Slash).** Need a
+  `Predicate` for "you control a creature with power ≥ N" to gate a
+  `DamageCantBePreventedThisTurn` rider before the burn; ship Wild Slash,
+  Temur Battle Rage-adjacent ferocious payoffs.
+- **Tap-down-target-player's-creatures (Sleep).** Need a selector for
+  "creatures controlled by Target(0) player" so a single spell can tap +
+  stun all of one player's creatures (Sleep, Sunscour-style).
+- **Color-change EOT (Crimson Wisps).** "Target creature becomes red until
+  end of turn" — no one-shot layer-5 color set; the haste/cantrip halves are
+  trivial once a `SetColorThisTurn` effect exists.
+- **Aura that grants +N/+N and a keyword (Untamed Hunger).** Confirm the
+  Aura-attach + `equipped_bonus`-style stat/keyword grant path covers a plain
+  creature Aura (not just Equipment/bestow); then ship a small Aura batch
+  (Untamed Hunger, Dehydration, Claustrophobia).
+- **Look-at-hand riders (Peek, Telepathy).** Informational "look at target
+  player's hand" has no mechanical primitive; only the cantrip half is
+  modelable today.
 - ✅ **Board-bounce to each card's owner (Aetherize / Evacuation).** Shipped
   via `PlayerRef::OwnerOfMoved`, resolved per-card in `place_card_in_dest`, so
   a single `Move { what: EachPermanent, to: Hand(OwnerOfMoved) }` routes each
