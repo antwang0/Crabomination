@@ -19765,6 +19765,34 @@ pub fn smite_the_monstrous() -> CardDefinition {
     }
 }
 
+/// Inspiration — {3}{U} Instant. "Target player draws two cards."
+pub fn inspiration() -> CardDefinition {
+    CardDefinition {
+        name: "Inspiration",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Opportunity — {5}{U} Instant. "Target player draws four cards."
+pub fn opportunity() -> CardDefinition {
+    CardDefinition {
+        name: "Opportunity",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
 /// Jace's Ingenuity — {4}{U} Instant. "Draw three cards."
 pub fn jaces_ingenuity() -> CardDefinition {
     CardDefinition {

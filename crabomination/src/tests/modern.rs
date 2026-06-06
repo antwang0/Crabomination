@@ -31080,3 +31080,21 @@ fn pyre_charger_firebreathing_pumps_power() {
     let cp = g.computed_permanent(pc).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 1), "1/1 + 1/0");
 }
+
+// ── Inspiration / Opportunity (targeted draw) ──────────────────────────────
+
+#[test]
+fn opportunity_draws_target_player_four() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::opportunity());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Opportunity at self");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 4);
+}

@@ -794,6 +794,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         exclude,
         miscalculation,
         jaces_ingenuity,
+        inspiration,
+        opportunity,
 
         // ── modern_decks: Persist counter-mage ──
         glen_elendra_archmage,
