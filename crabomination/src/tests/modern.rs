@@ -31178,6 +31178,61 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── Misc cube creatures ────────────────────────────────────────────────────
+
+#[test]
+fn kokusho_dies_drains_five() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::kokusho_the_evening_star());
+    g.battlefield_find_mut(id).unwrap().damage = 5;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 15, "each opponent lost 5");
+    assert_eq!(g.players[0].life, 25, "you gained the 5 lost");
+}
+
+#[test]
+fn ophidian_draws_when_unblocked() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_battlefield(0, catalog::ophidian());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let effect = catalog::ophidian().triggered_abilities[0].effect.clone();
+    let before = g.players[0].hand.len();
+    let ctx = crate::game::effects::EffectContext::for_ability(id, 0, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), before + 1, "Ophidian drew when unblocked");
+}
+
+#[test]
+fn legion_loyalist_battalion_grants_first_strike_and_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let ll = g.add_card_to_battlefield(0, catalog::legion_loyalist());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let effect = catalog::legion_loyalist().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_ability(ll, 0, None);
+    g.resolve_effect(&effect, &ctx).unwrap();
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::FirstStrike) && cp.keywords.contains(&Keyword::Trample),
+        "battalion grants first strike + trample to your creatures");
+}
+
+#[test]
+fn torch_courier_sacrifices_to_grant_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let tc = g.add_card_to_battlefield(0, catalog::torch_courier());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tc, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("sacrifice Torch Courier for haste");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().all(|c| c.id != tc), "Torch Courier was sacrificed");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Haste),
+        "the target creature gained haste");
+}
+
 // ── Chance Encounter (CR 705.1 — win-a-flip payoff) ────────────────────────
 
 #[test]

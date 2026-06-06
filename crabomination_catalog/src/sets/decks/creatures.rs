@@ -494,6 +494,104 @@ pub fn endurance() -> CardDefinition {
     }
 }
 
+/// Kokusho, the Evening Star — {4}{B}{B} 5/5 Legendary Dragon Spirit, Flying.
+/// "When Kokusho dies, each opponent loses 5 life and you gain that much."
+pub fn kokusho_the_evening_star() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Kokusho, the Evening Star",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![dies_drain(5)],
+        ..Default::default()
+    }
+}
+
+/// Ophidian — {2}{U} 1/3 Snake. "Whenever this attacks and isn't blocked, you
+/// may draw a card; if you do, it assigns no combat damage this turn."
+pub fn ophidian() -> CardDefinition {
+    use crate::effect::shortcut::on_unblocked;
+    CardDefinition {
+        name: "Ophidian",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![on_unblocked(Effect::MayDo {
+            description: "Draw a card (this assigns no combat damage)".into(),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::PreventAllCombatDamageInvolving { target: Selector::This },
+            ])),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Legion Loyalist — {R} 1/1 Goblin Soldier, Haste. Battalion: creatures you
+/// control gain first strike and trample until end of turn. (The "can't be
+/// blocked by creature tokens" rider is dropped.)
+pub fn legion_loyalist() -> CardDefinition {
+    use crate::effect::shortcut::battalion;
+    let pump = |kw: Keyword| Effect::GrantKeyword {
+        what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+        keyword: kw,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Legion Loyalist",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![battalion(Effect::Seq(vec![
+            pump(Keyword::FirstStrike),
+            pump(Keyword::Trample),
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Torch Courier — {R} 1/1 Goblin, Haste. "Sacrifice this: another target
+/// creature gains haste until end of turn."
+pub fn torch_courier() -> CardDefinition {
+    CardDefinition {
+        name: "Torch Courier",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Sideboard creatures ──────────────────────────────────────────────────────
 
 /// Chancellor of the Annex — {4}{W}{W}, 5/6 Avatar. Flying. "You may reveal

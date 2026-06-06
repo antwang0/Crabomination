@@ -795,6 +795,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Evoke Incarnation (MH2) ──
         subtlety,
+        // ── unblocked-draw snake ──
+        ophidian,
         // ── modern_decks: cube staples ──
         careful_study,
         exclude,
@@ -1074,6 +1076,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Swamps-matters drain (damage + lifegain).
         corrupt,
         tendrils_of_corruption,
+        // Dies-drain dragon.
+        kokusho_the_evening_star,
         // Aristocrat death payoffs.
         bastion_of_remembrance,
         dictate_of_erebos,
@@ -1396,6 +1400,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         staggershock,
         // CR 705.2 coin-flip-off burn.
         mana_clash,
+        // Battalion + sac-for-haste goblins.
+        legion_loyalist,
+        torch_courier,
         // CR 705.1 win-a-flip payoff (luck counters → win the game).
         chance_encounter,
         // CR 706.4 die-roll payoff (d20 → Treasure tokens).
