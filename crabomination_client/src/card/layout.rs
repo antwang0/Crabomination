@@ -147,9 +147,10 @@ fn opp_x_offset(seat: usize, viewer: usize, n_seats: usize) -> f32 {
 /// distance the piles sit at today.
 const TABLE_HALF_X: f32 = DECK_X;
 /// Wider half-width used for 3+ player tables, so two columns per edge each
-/// get room for a board, hand, and a pile strip. Paired with a pulled-back
-/// camera (`adjust_camera_for_seats` in `main.rs`).
-const MULTI_HALF_X: f32 = 21.0;
+/// get room for a board, hand, and a pile strip without the front hands
+/// overlapping at the centre. Paired with a pulled-back multiplayer camera
+/// (`CAM_HOME_POS_MULTI` in `systems::camera_zoom`).
+const MULTI_HALF_X: f32 = 30.0;
 /// Gap kept between adjacent columns so neighbouring boards don't touch.
 const COL_MARGIN: f32 = 0.6;
 /// Outer strip (X) of each multiplayer column reserved for the deck /
@@ -158,9 +159,6 @@ const PILE_STRIP: f32 = CARD_WIDTH * 1.4;
 /// Largest board half-width any single seat gets (keeps a lone back-edge
 /// player in a 3-player game from spreading absurdly wide).
 const BOARD_HALF_CAP: f32 = 13.0;
-/// Z lane for the command zone in 3+ player games — between the deck and
-/// graveyard piles at the column's outer edge.
-const COMMAND_Z_MULTI: f32 = (DECK_Z + GRAVEYARD_Z) * 0.5;
 
 /// Resolved table placement for a seat: which long edge and where along it.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -328,10 +326,13 @@ pub fn command_zone_card_transform(
         return Transform::from_xyz(x, y, sign * COMMAND_Z).with_rotation(face_rotation(sign));
     }
     let spot = seat_spot(seat, viewer, n_seats);
-    // Sits on the outer pile strip (same X as the deck/graveyard) in its own
-    // Z lane between them, so the commander is clear of the board area.
-    let x = pile_x(seat, viewer, &spot, CARD_WIDTH * 0.5);
-    Transform::from_xyz(x, y, spot.z_sign * COMMAND_Z_MULTI).with_rotation(face_rotation(spot.z_sign))
+    // Sits at the player's outer-front corner — in the gap just outside the
+    // board, pulled toward the player (near hand depth) — so the commander is
+    // prominent and clear of both the board rows and the hand fan.
+    let out = outward_sign(&spot, seat, viewer);
+    let x = spot.board_center + out * (spot.board_half + CARD_WIDTH);
+    let z = spot.z_sign * (HAND_CENTER_Z - 2.0);
+    Transform::from_xyz(x, y, z).with_rotation(face_rotation(spot.z_sign))
 }
 
 /// Rotation applied to a face-down card belonging to `seat` (deck pile,

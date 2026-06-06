@@ -748,7 +748,7 @@ fn setup(
 
     // Ground plane
     commands.spawn((
-        Mesh3d(meshes.add(Plane3d::default().mesh().size(50.0, 50.0).subdivisions(quality.ground_subdivisions()))),
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(90.0, 90.0).subdivisions(quality.ground_subdivisions()))),
         MeshMaterial3d(materials.add(Color::from(SILVER))),
         GroundPlane,
     ));
@@ -800,7 +800,7 @@ fn apply_render_quality_change(
 
     if let Ok(ground_mesh) = ground_query.single()
         && let Some(mesh) = meshes.get_mut(&ground_mesh.0) {
-            *mesh = Plane3d::default().mesh().size(50.0, 50.0)
+            *mesh = Plane3d::default().mesh().size(90.0, 90.0)
                 .subdivisions(new_quality.ground_subdivisions())
                 .into();
         }

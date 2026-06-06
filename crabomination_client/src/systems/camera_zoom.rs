@@ -23,7 +23,7 @@ use crate::systems::kb_cursor::KeyboardSelected;
 const CAM_HOME_POS: Vec3 = Vec3::new(0.0, 32.0, 14.0);
 /// Pulled-back home pose for 3+ player tables, so the wider two-per-side
 /// seating fits in frame.
-const CAM_HOME_POS_MULTI: Vec3 = Vec3::new(0.0, 44.0, 20.0);
+const CAM_HOME_POS_MULTI: Vec3 = Vec3::new(0.0, 46.0, 24.0);
 /// Fraction of the home distance used when zoomed (smaller = closer).
 const CAM_ZOOM_SCALE: f32 = 0.45;
 /// Lerp rate toward the target pose (per second, exponential approach).
