@@ -5013,6 +5013,7 @@ fn pest_summoning_creates_two_pest_tokens() {
     let id = g.add_card_to_hand(0, catalog::pest_summoning());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })

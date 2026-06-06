@@ -1,10 +1,7 @@
 //! Witherbloom (B/G) college cards from Strixhaven.
 //!
 //! Witherbloom's defining themes are Pest tokens (1/1 black-green creatures
-//! that gain you 1 life when they die) and small-drain magecraft. This
-//! module ships the Apprentice's drain trigger and a single Lesson token-
-//! creator (Pest Summoning) at the simplified one-token level — see
-//! STRIXHAVEN2.md for the death-trigger token TODO.
+//! that gain you 1 life when they die) and small-drain magecraft.
 
 use super::no_abilities;
 use super::shared::stx_pest_token;
@@ -19,7 +16,7 @@ use crate::effect::shortcut::{
     on_attack_gain_life, on_other_dies, on_other_dies_mint_token, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{cost, b, g, generic, Color, ManaCost};
+use crate::mana::{cost, b, g, generic, hybrid, Color, ManaCost};
 
 // ── Witherbloom Apprentice ──────────────────────────────────────────────────
 
@@ -66,20 +63,14 @@ pub fn witherbloom_apprentice() -> CardDefinition {
 
 // ── Pest Summoning (Lesson) ─────────────────────────────────────────────────
 
-/// Pest Summoning — {B}{G} Sorcery — Lesson. Real Oracle creates two 1/1
-/// black and green Pest tokens with "When this creature dies, you gain 1
-/// life."
-///
-/// life."
-///
-/// Promoted to ✅: the token's "When this creature dies, you gain 1
-/// life" trigger now rides on the new `TokenDefinition.triggered_abilities`
-/// field. Each Pest dies → controller gains 1.
+/// Pest Summoning — {1}{B/G}{B/G} Sorcery — Lesson. Creates two 1/1 black
+/// and green Pest tokens, each with "When this creature dies, you gain 1
+/// life" (baked into `stx_pest_token()` via `TokenDefinition.triggered_abilities`).
 pub fn pest_summoning() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
         name: "Pest Summoning",
-        cost: cost(&[b(), g()]),
+        cost: cost(&[generic(1), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         // Lesson is a sorcery sub-type. Add to the spell subtype list so
@@ -92,9 +83,6 @@ pub fn pest_summoning() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        // Real Oracle creates *two* Pests; we now mint two, matching the
-        // printed card. The token's "die → gain 1 life" trigger remains
-        // ⏳ pending token-with-trigger plumbing — see STRIXHAVEN2.md.
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),

@@ -1409,6 +1409,7 @@ fn pestmaster_pumps_on_pest_token_death_via_cached_controller() {
     let ps = g.add_card_to_hand(0, catalog::pest_summoning());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: ps, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pest Summoning castable");
@@ -1471,6 +1472,7 @@ fn felisa_pumps_inkling_on_pest_token_with_counter_death() {
     let ps = g.add_card_to_hand(0, catalog::pest_summoning());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: ps,
         target: None,
