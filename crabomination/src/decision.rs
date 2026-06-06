@@ -23,6 +23,21 @@ use crate::mana::Color;
 /// `'de: 'static`. The catalog's name slices are copied in at decision-
 /// construction time; the runtime overhead is negligible (decisions
 /// surface a few times per turn at most).
+/// What the "second bucket" of a `Decision::Scry` means to the UI. The engine
+/// resolves all three through the same `ScryOrder` answer; this only changes
+/// the modal's labels.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ScryMode {
+    /// Scry — unkept cards go to the bottom of the library.
+    #[default]
+    Scry,
+    /// Surveil — unkept cards go to the graveyard.
+    Surveil,
+    /// Rearrange (Index, Spire Owl) — every card stays on top; no second
+    /// bucket, the player only reorders.
+    Rearrange,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
     /// Pick a target satisfying the ability's selector.
@@ -49,10 +64,14 @@ pub enum Decision {
     ChooseColor { source: CardId, legal: Vec<Color> },
 
     /// After looking at the top cards of a library, partition them into
-    /// (kept on top in this order, sent to the bottom in this order).
+    /// (kept on top in this order, sent to the bottom in this order). `mode`
+    /// tells the UI what the second bucket means — bottom (Scry), graveyard
+    /// (Surveil), or nothing at all (Rearrange, all cards stay on top).
     Scry {
         player: usize,
         cards: Vec<(CardId, String)>,
+        #[serde(default)]
+        mode: ScryMode,
     },
 
     /// Choose `count` cards from the given hand to discard.

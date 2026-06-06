@@ -105,6 +105,10 @@ pub enum Selector {
     TargetFiltered { slot: u8, filter: SelectionRequirement },
     /// The object that caused this trigger (attacker, dying creature, etc).
     TriggerSource,
+    /// CR 509.1 — the attacker the source permanent is currently blocking.
+    /// Resolves via `GameState.block_map[source]`. Used by "whenever this
+    /// blocks a creature, [affect that creature]" triggers (Wall of Frost).
+    BlockedAttacker,
     /// The player/object that answered a pending decision.
     ChoiceResult(u8),
 
@@ -1389,6 +1393,10 @@ pub enum Effect {
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },
+    /// Look at the top `amount` cards of `who`'s library and put them back in
+    /// any order — all stay on top, none bottomed (Index, Spire Owl, Sage
+    /// Owl). Distinct from Scry, which may bottom cards.
+    RearrangeTop { who: PlayerRef, amount: Value },
     /// CR 701.31 — *monstrosity N*. If the source isn't already monstrous,
     /// put N +1/+1 counters on it and it becomes monstrous (emitting
     /// `GameEvent::BecameMonstrous`). Once monstrous, this is a no-op.

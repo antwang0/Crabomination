@@ -992,6 +992,8 @@ pub enum DecisionWire {
     Scry {
         player: usize,
         cards: Vec<(CardId, String)>,
+        #[serde(default)]
+        mode: crate::decision::ScryMode,
     },
     Discard {
         player: usize,
@@ -1130,9 +1132,10 @@ impl From<&Decision> for DecisionWire {
                 source: *source,
                 legal: legal.clone(),
             },
-            Decision::Scry { player, cards } => DecisionWire::Scry {
+            Decision::Scry { player, cards, mode } => DecisionWire::Scry {
                 player: *player,
                 cards: cards.iter().map(|(id, n)| (*id, (*n).to_string())).collect(),
+                mode: *mode,
             },
             Decision::Discard { player, count, hand } => DecisionWire::Discard {
                 player: *player,
@@ -1693,14 +1696,16 @@ mod tests {
         let d = Decision::Scry {
             player: 0,
             cards: vec![(CardId(1), "Island".into()), (CardId(2), "Forest".into())],
+            mode: crate::decision::ScryMode::Surveil,
         };
         let w: DecisionWire = (&d).into();
         let json = serde_json::to_string(&w).unwrap();
         let back: DecisionWire = serde_json::from_str(&json).unwrap();
         match back {
-            DecisionWire::Scry { player, cards } => {
+            DecisionWire::Scry { player, cards, mode } => {
                 assert_eq!(player, 0);
                 assert_eq!(cards[0].1, "Island");
+                assert_eq!(mode, crate::decision::ScryMode::Surveil);
             }
             _ => panic!("wrong variant"),
         }

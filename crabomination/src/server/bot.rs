@@ -1318,9 +1318,13 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
                 continue;
             }
             let target = if ability.effect.requires_target() {
-                let t = state.auto_target_for_effect(&ability.effect, seat);
-                t.as_ref()?;
-                t
+                // No legal target for *this* ability — skip it and try the
+                // next (formerly `?`-returned, which abandoned every other
+                // ability and planeswalker the bot controls).
+                match state.auto_target_for_effect(&ability.effect, seat) {
+                    Some(t) => Some(t),
+                    None => continue,
+                }
             } else {
                 None
             };
@@ -1944,6 +1948,51 @@ mod tests {
         );
         assert!(optional_trigger_beneficial(&g, id, "you may"),
             "a pure-upside 'you may draw' is taken by the bot");
+    }
+
+    /// A planeswalker whose highest-loyalty ability needs a target that
+    /// doesn't exist must not stop the bot from activating a lower targetless
+    /// ability (regression: the `?` on `auto_target_for_effect` used to bail
+    /// out of every ability and planeswalker).
+    #[test]
+    fn bot_skips_untargetable_loyalty_ability_for_a_usable_one() {
+        use crate::card::{CardType, LoyaltyAbility, Subtypes};
+        use crate::effect::shortcut::target_filtered;
+        use crate::card::SelectionRequirement;
+        use crate::effect::{Selector, Value};
+        let mut g = two_player_game();
+        let pw = CardDefinition {
+            name: "Test Walker",
+            card_types: vec![CardType::Planeswalker],
+            subtypes: Subtypes::default(),
+            base_loyalty: 3,
+            loyalty_abilities: vec![
+                // Highest loyalty, but needs a creature target (none exist).
+                LoyaltyAbility {
+                    loyalty_cost: 2,
+                    effect: Effect::DealDamage {
+                        to: target_filtered(SelectionRequirement::Creature),
+                        amount: Value::Const(2),
+                    },
+                },
+                // Lower loyalty, no target — the bot should fall through here.
+                LoyaltyAbility {
+                    loyalty_cost: 1,
+                    effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                },
+            ],
+            ..Default::default()
+        };
+        let id = g.add_card_to_battlefield(0, pw);
+        g.add_card_to_library(0, catalog::island());
+        let action = pick_loyalty_ability(&g, 0).expect("bot finds the targetless +1");
+        match action {
+            GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. } => {
+                assert_eq!(card_id, id);
+                assert_eq!(ability_index, 1, "picked the targetless draw, not the dead burn");
+            }
+            _ => panic!("expected a loyalty activation"),
+        }
     }
 
     #[test]

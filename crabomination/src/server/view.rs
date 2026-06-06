@@ -990,6 +990,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::FlipCoin { .. } => "Flip coin",
         Effect::Proliferate => "Proliferate",
         Effect::LookAtTop { .. } => "Look at top",
+        Effect::RearrangeTop { .. } => "Rearrange top",
         Effect::ShuffleGraveyardIntoLibrary { .. } => "Shuffle into library",
         Effect::PutOnLibraryFromHand { .. } => "Put on library",
         Effect::RevealTopAndDrawIf { .. } => "Reveal top",

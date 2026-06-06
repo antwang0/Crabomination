@@ -815,3 +815,28 @@ fn cr_505_1b_additional_combat_phase_lets_attacker_strike_twice() {
     assert_eq!(g.players[1].life, start - 6, "attacker dealt 3 in each of two combats");
     assert_eq!(g.additional_combat_phases, 0, "the banked phase was consumed");
 }
+
+// ── CR 509.1 "Whenever this blocks" + Stun (Wall of Frost) ────────────────────
+
+#[test]
+fn wall_of_frost_stuns_the_creature_it_blocks() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // P0 attacks with a 2/2; P1's Wall of Frost blocks it.
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_frost());
+    g.clear_sickness(atk);
+    let _ = wall;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, atk)])).expect("wall blocks");
+    drain_stack(&mut g);
+    // The blocked attacker carries a Stun counter (the BlockedAttacker selector
+    // bound it correctly), and survives the 0-power wall.
+    let a = g.battlefield_find(atk).expect("attacker survives the 0/7 wall");
+    assert_eq!(a.counter_count(CounterType::Stun), 1, "blocked creature got a Stun counter");
+}

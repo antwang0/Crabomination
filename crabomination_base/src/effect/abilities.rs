@@ -142,6 +142,10 @@ pub enum StaticEffect {
     /// Mountain, Forest])`; the engine's intrinsic-basic-land mana abilities
     /// then let each affected land tap for any color.
     GrantAllBasicLandTypes { applies_to: Selector },
+    /// "Permanents `applies_to` are all colors" (CR 105.2c — Leyline of the
+    /// Guildpact's color half). Emits a layer-5 `SetColors([W,U,B,R,G])`, so
+    /// devotion / protection-from-color / color matters reads see all five.
+    GrantAllColors { applies_to: Selector },
     /// Collector Ouphe / Karn-style lock: "Activated abilities of artifacts
     /// can't be activated unless they're mana abilities." Checked globally
     /// in `activate_ability` (affects every player). Mana abilities pass.

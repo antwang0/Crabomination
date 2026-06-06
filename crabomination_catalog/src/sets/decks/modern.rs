@@ -21,25 +21,58 @@ use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r
 // ── Cantrips & card selection ────────────────────────────────────────────────
 
 /// Ponder — {U} Sorcery. Look at the top three cards of your library, then
-/// put them back in any order. You may shuffle. Then draw a card.
-///
-/// Approximation: `Scry 3 + Draw 1` (Scry's "top or bottom" picks substitute
-/// for the "any order + may shuffle" decision; the gameplay-relevant outcome
-/// — taking the best one of the top three on the next draw — is preserved).
+/// put them back in any order, then draw a card. (The "you may shuffle" rider
+/// is dropped.)
 pub fn ponder() -> CardDefinition {
     CardDefinition {
         name: "Ponder",
         cost: cost(&[u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+            Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(3) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        triggered_abilities: vec![],
+        ..Default::default()
+    }
+}
+
+/// Index — {U} Sorcery. Look at the top five cards of your library, then put
+/// them back in any order.
+pub fn index() -> CardDefinition {
+    CardDefinition {
+        name: "Index",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(5) },
+        ..Default::default()
+    }
+}
+
+/// Spire Owl — {1}{U} 1/1 Bird with flying. ETB: look at the top four cards
+/// of your library, then put them back in any order.
+pub fn spire_owl() -> CardDefinition {
+    owl_rearranger("Spire Owl")
+}
+
+/// Sage Owl — {1}{U} 1/1 Bird with flying. ETB: look at the top four cards of
+/// your library, then put them back in any order.
+pub fn sage_owl() -> CardDefinition {
+    owl_rearranger("Sage Owl")
+}
+
+fn owl_rearranger(name: &'static str) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::RearrangeTop {
+            who: PlayerRef::You,
+            amount: Value::Const(4),
+        })],
         ..Default::default()
     }
 }
@@ -20387,9 +20420,9 @@ pub fn lion_sash() -> CardDefinition {
     }
 }
 
-/// Leyline of the Guildpact — {W}{U}{B}{R}{G} Enchantment. Lands you control
-/// are every basic land type (so they tap for any color). The "your permanents
-/// are all colors" half and the opening-hand Leyline rider are dropped.
+/// Leyline of the Guildpact — {W}{U}{B}{R}{G} Enchantment. Permanents you
+/// control are all colors and your lands are every basic land type (so they
+/// tap for any color). The opening-hand Leyline rider is dropped.
 pub fn leyline_of_the_guildpact() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
@@ -20397,14 +20430,22 @@ pub fn leyline_of_the_guildpact() -> CardDefinition {
         name: "Leyline of the Guildpact",
         cost: cost(&[w(), u(), b(), r(), g()]),
         card_types: vec![CardType::Enchantment],
-        static_abilities: vec![StaticAbility {
-            description: "Lands you control are every basic land type.",
-            effect: StaticEffect::GrantAllBasicLandTypes {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
-                ),
+        static_abilities: vec![
+            StaticAbility {
+                description: "Lands you control are every basic land type.",
+                effect: StaticEffect::GrantAllBasicLandTypes {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                },
             },
-        }],
+            StaticAbility {
+                description: "Permanents you control are all colors.",
+                effect: StaticEffect::GrantAllColors {
+                    applies_to: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                },
+            },
+        ],
         ..Default::default()
     }
 }
@@ -21554,4 +21595,482 @@ pub fn mask_of_memory() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
         ]))
+}
+
+// ── modern_decks: cube planeswalkers ─────────────────────────────────────────
+
+/// Narset, Parter of Veils — {1}{U}{U} Legendary Planeswalker. 5 loyalty.
+/// Static: each opponent can't draw more than one card each turn.
+/// **−2**: Look at the top four cards, you may put a noncreature, nonland
+/// card into your hand; rest to the bottom.
+pub fn narset_parter_of_veils() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, StaticAbility, Supertype as Sup};
+    use crate::effect::{PlayerStaticTarget, StaticEffect};
+    CardDefinition {
+        name: "Narset, Parter of Veils",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Narset],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Each opponent can't draw more than one card each turn.",
+            effect: StaticEffect::CapDrawsPerTurn {
+                target: PlayerStaticTarget::EachOpponent,
+                max: 1,
+            },
+        }],
+        loyalty_abilities: vec![LoyaltyAbility {
+            loyalty_cost: -2,
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: false,
+                pick_filter: Some(SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland)),
+                take: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Liliana of the Veil — {1}{B}{B} Legendary Planeswalker. 3 loyalty.
+/// **+1**: Each player discards a card. **−2**: Target player sacrifices a
+/// creature. **−6**: target player sacrifices half their permanents (the
+/// printed two-pile split is approximated by `SacrificeHalf`).
+pub fn liliana_of_the_veil() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Liliana of the Veil",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachPlayer),
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::SacrificeHalf {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    filter: SelectionRequirement::Permanent,
+                    rounded_up: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Liliana, the Last Hope — {1}{B}{B} Legendary Planeswalker. 3 loyalty.
+/// **+1**: Up to one target creature gets -2/-1 until your next turn.
+/// **−2**: Mill two, then return a creature card from your graveyard to hand.
+/// **−7**: emblem that mints Zombies each end step (approximated as a fixed
+/// two-token end-step emblem; the "+number of Zombies you control" scaling is
+/// dropped).
+pub fn liliana_the_last_hope() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup, TokenDefinition};
+    let zombie = TokenDefinition {
+        name: "Zombie".to_string(),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        colors: vec![Color::Black],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Liliana, the Last Hope",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-1),
+                    duration: Duration::UntilNextTurn,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Liliana, the Last Hope".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crate::game::TurnStep::End),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::CreateToken {
+                            who: PlayerRef::You,
+                            count: Value::Const(2),
+                            definition: zombie,
+                        },
+                    }],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Teferi, Hero of Dominaria — {3}{W}{U} Legendary Planeswalker. 4 loyalty.
+/// **+1**: Draw a card (the "untap two lands at the next end step" rider is
+/// dropped). **−3**: Put target nonland permanent into its owner's library
+/// third from the top. **−8**: emblem — whenever you draw a card, exile target
+/// permanent an opponent controls.
+pub fn teferi_hero_of_dominaria() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Teferi, Hero of Dominaria",
+        cost: cost(&[generic(3), w(), u()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Teferi],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Move {
+                    what: target_filtered(SelectionRequirement::Nonland),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        pos: LibraryPosition::FromTop(2),
+                    },
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Teferi, Hero of Dominaria".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                        effect: Effect::Exile {
+                            what: target_filtered(
+                                SelectionRequirement::Permanent
+                                    .and(SelectionRequirement::ControlledByOpponent),
+                            ),
+                        },
+                    }],
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── modern_decks: small cube staples on existing primitives ──────────────────
+
+/// Careful Study — {U} Sorcery. Draw two cards, then discard two cards.
+pub fn careful_study() -> CardDefinition {
+    CardDefinition {
+        name: "Careful Study",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ancient Stirrings — {G} Sorcery. Look at the top five cards of your library.
+/// You may reveal a colorless card from among them and put it into your hand.
+/// Put the rest on the bottom of your library in a random order.
+pub fn ancient_stirrings() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Stirrings",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Colorless),
+            take: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Condemn — {W} Instant. Put target attacking creature on the bottom of its
+/// owner's library. Its controller gains life equal to its toughness.
+pub fn condemn() -> CardDefinition {
+    CardDefinition {
+        name: "Condemn",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::IsAttacking),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Arbor Elf — {G} 1/1 Elf Druid. `{T}: Untap target Forest.`
+pub fn arbor_elf() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    CardDefinition {
+        name: "Arbor Elf",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Untap {
+                what: target_filtered(SelectionRequirement::HasLandType(LandType::Forest)),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Scrapheap Scrounger — {2} 3/2 Artifact Creature — Construct. Can't block.
+/// `{1}, Exile a creature card from your graveyard: Return this from your
+/// graveyard to your hand. Activate only as a sorcery.`
+pub fn scrapheap_scrounger() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Scrapheap Scrounger",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::CantBlock],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            from_graveyard: true,
+            sorcery_speed: true,
+            exile_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mental Note — {U} Instant. Mill two cards, then draw a card.
+pub fn mental_note() -> CardDefinition {
+    CardDefinition {
+        name: "Mental Note",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Izzet Charm — {U}{R} Instant. Choose one — counter target noncreature
+/// spell unless its controller pays {2}; or deal 2 damage to target creature;
+/// or draw two cards, then discard two cards.
+pub fn izzet_charm() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered as tf;
+    CardDefinition {
+        name: "Izzet Charm",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(2)]) },
+            Effect::DealDamage { to: tf(SelectionRequirement::Creature), amount: Value::Const(2) },
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flame of Anor — {1}{U}{R} Instant. Choose one — target player draws two
+/// cards; destroy target artifact; or deal 5 damage to target creature. (The
+/// "choose two if you control a Wizard" rider is dropped.)
+pub fn flame_of_anor() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered as tf;
+    CardDefinition {
+        name: "Flame of Anor",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+            Effect::Destroy { what: tf(SelectionRequirement::Artifact) },
+            Effect::DealDamage { to: tf(SelectionRequirement::Creature), amount: Value::Const(5) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Crackling Doom — {R}{W}{B} Instant. Deal 2 damage to each opponent. Each
+/// opponent sacrifices a creature with the greatest power among creatures they
+/// control. (Greatest-power approximated by `SacrificeGreatestMV`.)
+pub fn crackling_doom() -> CardDefinition {
+    CardDefinition {
+        name: "Crackling Doom",
+        cost: cost(&[r(), w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::SacrificeGreatestMV {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flusterstorm — {U} Instant. Counter target instant or sorcery spell unless
+/// its controller pays {1}. Storm (CR 702.40).
+pub fn flusterstorm() -> CardDefinition {
+    CardDefinition {
+        name: "Flusterstorm",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(1)]) },
+        ..Default::default()
+    }
+}
+
+/// Legion Warboss — {2}{R} 2/2 Goblin Soldier. Mentor (CR 702.134). At the
+/// beginning of combat on your turn, create a 1/1 red Goblin with haste. (The
+/// token's "attacks this combat if able" rider is dropped.)
+pub fn legion_warboss() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::mentor;
+    let haste_goblin = TokenDefinition {
+        name: "Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Legion Warboss",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            mentor(),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: haste_goblin,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wall of Frost — {1}{U}{U} 0/7 Wall with Defender. Whenever it blocks a
+/// creature, that creature doesn't untap during its controller's next untap
+/// step (a Stun counter, CR 701.46a / 122.1d).
+pub fn wall_of_frost() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::blocks;
+    CardDefinition {
+        name: "Wall of Frost",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 7,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![blocks(Effect::AddCounter {
+            what: Selector::BlockedAttacker,
+            kind: CounterType::Stun,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
 }

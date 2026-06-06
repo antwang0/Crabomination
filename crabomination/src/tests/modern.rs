@@ -795,6 +795,54 @@ fn ponder_resolves_and_draws_a_card() {
 }
 
 #[test]
+fn index_rearranges_top_five_all_stay_on_top() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Library top→down: a, b (plus filler). Swap them; both must stay on top.
+    let b = g.add_card_to_library(0, catalog::plains());
+    let a = g.add_card_to_library(0, catalog::forest());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder {
+        kept_top: vec![b, a], // put b on top, then a
+        bottom: vec![],
+    }]));
+    let id = g.add_card_to_hand(0, catalog::index());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    // No card was bottomed — library size unchanged and the chosen order holds.
+    assert_eq!(g.players[0].library.len(), lib_before, "rearrange never bottoms");
+    assert_eq!(g.players[0].library[0].id, b, "b is now on top");
+    assert_eq!(g.players[0].library[1].id, a, "a is second");
+}
+
+#[test]
+fn spire_owl_etb_rearranges_top_four() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    // AutoDecider keeps the peeked order; the ETB resolves without bottoming.
+    g.add_card_to_battlefield(0, catalog::spire_owl());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before, "owl ETB rearranges, never mills");
+    let owl = g.battlefield.iter().find(|c| c.definition.name == "Spire Owl").unwrap();
+    assert!(owl.definition.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn sage_owl_is_a_flying_etb_rearranger() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let lib_before = g.players[0].library.len();
+    g.add_card_to_battlefield(0, catalog::sage_owl());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before);
+    let owl = g.battlefield.iter().find(|c| c.definition.name == "Sage Owl").unwrap();
+    assert!(owl.definition.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
 fn manamorphose_adds_two_mana_and_draws_a_card() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -15338,6 +15386,124 @@ fn sorin_grim_nemesis_minus_nine_drains_each_opponent() {
 }
 
 #[test]
+fn narset_parter_caps_opponent_draws_at_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::narset_parter_of_veils());
+    let cp = g.compute_battlefield();
+    let _ = cp; // static is consulted via PlayerView/draw path
+    // Opponent's per-turn draw cap is now 1.
+    assert_eq!(g.draw_cap_for(1), Some(1), "opponent capped to one draw per turn");
+    // Controller is unaffected.
+    assert_eq!(g.draw_cap_for(0), None, "your own draws are uncapped");
+}
+
+#[test]
+fn narset_parter_minus_two_digs_for_a_noncreature() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let narset = g.add_card_to_battlefield(0, catalog::narset_parter_of_veils());
+    let spell = g.add_card_to_library(0, catalog::lightning_bolt()); // noncreature, nonland
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());   // creature → not takeable
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(spell))]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: narset, ability_index: 0, target: None,
+    }).expect("Narset -2");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spell), "took the noncreature spell");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == bear), "the creature stayed out of hand");
+}
+
+#[test]
+fn liliana_of_the_veil_plus_one_makes_each_player_discard() {
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(1, catalog::island());
+    let h0 = g.players[0].hand.len();
+    let h1 = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 0, target: None,
+    }).expect("Lily +1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 - 1, "you discarded one");
+    assert_eq!(g.players[1].hand.len(), h1 - 1, "opponent discarded one");
+}
+
+#[test]
+fn liliana_of_the_veil_minus_two_forces_a_sacrifice() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 1, target: Some(Target::Player(1)),
+    }).expect("Lily -2");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "target player sacrificed a creature");
+}
+
+#[test]
+fn liliana_last_hope_plus_one_shrinks_a_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_the_last_hope());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 0, target: Some(Target::Permanent(bear)),
+    }).expect("Lily +1");
+    drain_stack(&mut g);
+    // -2/-1 puts the 2/2 to 0/1; SBA keeps it (toughness 1).
+    let cp = g.compute_battlefield();
+    let b = cp.iter().find(|c| c.id == bear);
+    assert!(b.is_none() || b.unwrap().power == 0, "creature shrunk to 0 power");
+}
+
+#[test]
+fn liliana_last_hope_minus_two_mills_and_returns_a_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let lily = g.add_card_to_battlefield(0, catalog::liliana_the_last_hope());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lily, ability_index: 1, target: Some(Target::Permanent(dead)),
+    }).expect("Lily -2");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned the creature to hand");
+}
+
+#[test]
+fn teferi_hero_plus_one_draws() {
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_hero_of_dominaria());
+    g.add_card_to_library(0, catalog::island());
+    let h = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi, ability_index: 0, target: None,
+    }).expect("Teferi +1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h + 1, "drew a card");
+}
+
+#[test]
+fn teferi_hero_minus_three_tucks_a_permanent() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let teferi = g.add_card_to_battlefield(0, catalog::teferi_hero_of_dominaria());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..4 { g.add_card_to_library(1, catalog::island()); }
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: teferi, ability_index: 1, target: Some(Target::Permanent(bear)),
+    }).expect("Teferi -3");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "permanent left the battlefield");
+    // Third from top → library index 2.
+    assert_eq!(g.players[1].library.get(2).map(|c| c.id), Some(bear), "tucked third from top");
+}
+
+#[test]
 fn saheeli_rai_plus_one_pings_each_opponent() {
     let mut g = two_player_game();
     let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());
@@ -28096,6 +28262,20 @@ fn leyline_of_the_guildpact_makes_your_lands_all_basic_types() {
 }
 
 #[test]
+fn leyline_of_the_guildpact_makes_your_permanents_all_colors() {
+    let mut g = two_player_game();
+    // A colorless artifact-ish body: a plain Forest is mono-green; with the
+    // Leyline it should read as all five colors.
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::leyline_of_the_guildpact());
+    let cp = g.compute_battlefield();
+    let f = cp.iter().find(|c| c.id == forest).unwrap();
+    for col in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        assert!(f.colors.contains(&col), "your land is now {col:?}");
+    }
+}
+
+#[test]
 fn consult_the_star_charts_digs_x_equal_to_lands() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
@@ -29645,4 +29825,190 @@ fn mask_of_memory_draws_two_discards_one() {
         drain_stack(&mut g);
     }
     assert_eq!(g.players[0].hand.len(), hand + 1, "draw two, discard one → net +1");
+}
+
+#[test]
+fn careful_study_draws_two_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::careful_study());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let before = g.players[0].hand.len(); // includes Careful Study itself
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    // -1 (cast) +2 (draw) -2 (discard) = net -1 vs before.
+    assert_eq!(g.players[0].hand.len(), before - 1);
+    assert!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count() >= 1
+        || g.players[0].graveyard.len() >= 2, "discarded two cards");
+}
+
+#[test]
+fn ancient_stirrings_finds_a_colorless_card() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let rock = g.add_card_to_library(0, catalog::mind_stone()); // colorless artifact
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(rock))]));
+    let id = g.add_card_to_hand(0, catalog::ancient_stirrings());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == rock), "took the colorless card");
+}
+
+#[test]
+fn condemn_tucks_attacker_and_gains_life() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // P1 attacker (2/2). Mark it attacking.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.attacking.push(crate::game::types::Attack {
+        attacker: bear,
+        target: crate::game::types::AttackTarget::Player(0),
+    });
+    let lib_before = g.players[1].library.len();
+    let p1_life = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::condemn());
+    g.players[0].mana_pool.add(Color::White, 1);
+    cast_at(&mut g, id, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "attacker left the battlefield");
+    assert_eq!(g.players[1].library.len(), lib_before + 1, "tucked to library");
+    assert_eq!(g.players[1].library.last().unwrap().id, bear, "on the bottom");
+    assert_eq!(g.players[1].life, p1_life + 2, "controller gained life = toughness");
+}
+
+#[test]
+fn arbor_elf_untaps_a_forest() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(forest).unwrap().tapped = true;
+    let elf = g.add_card_to_battlefield(0, catalog::arbor_elf());
+    g.clear_sickness(elf);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: elf, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(forest)), x_value: None,
+    }).expect("Arbor Elf untaps a Forest");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(forest).unwrap().tapped, "Forest untapped");
+}
+
+#[test]
+fn scrapheap_scrounger_returns_itself_exiling_a_creature() {
+    let mut g = two_player_game();
+    let scrap = g.add_card_to_graveyard(0, catalog::scrapheap_scrounger());
+    let fodder = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scrap, ability_index: 0, target: None, x_value: None,
+    }).expect("Scrapheap recursion");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == scrap), "Scrapheap returned to hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == fodder), "exiled a creature as cost");
+}
+
+#[test]
+fn mental_note_mills_two_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let gy0 = g.players[0].graveyard.len();
+    let hand0 = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::mental_note());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    // milled two + the spell to gy = +3 graveyard; +1 hand from cast(-1)+draw(... net)
+    assert!(g.players[0].graveyard.len() >= gy0 + 3, "milled two plus the spell");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "add +1, cast -1, draw +1");
+}
+
+#[test]
+fn izzet_charm_burn_mode_kills_a_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::izzet_charm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Mode 1 = deal 2 damage to target creature.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Izzet Charm burn mode");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2 damage killed the 2/2");
+}
+
+#[test]
+fn flame_of_anor_can_destroy_an_artifact() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::flame_of_anor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Mode 1 = destroy target artifact.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Flame of Anor destroy mode");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == rock), "destroyed the artifact");
+}
+
+#[test]
+fn crackling_doom_pings_and_forces_a_sacrifice() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let p1 = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::crackling_doom());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 2, "each opponent took 2");
+    assert!(!g.battlefield.iter().any(|c| c.id == big), "opponent sacrificed a creature");
+}
+
+#[test]
+fn legion_warboss_makes_a_goblin_at_combat() {
+    let mut g = two_player_game();
+    let boss = g.add_card_to_battlefield(0, catalog::legion_warboss());
+    g.clear_sickness(boss);
+    let goblins_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Goblin").count();
+    g.fire_step_triggers(crate::game::TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let goblins_after = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Goblin").count();
+    assert_eq!(goblins_after, goblins_before + 1, "begin-combat made a Goblin");
+    let gob = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Goblin").unwrap();
+    assert!(gob.definition.keywords.contains(&Keyword::Haste), "the Goblin has haste");
+}
+
+#[test]
+fn flusterstorm_counters_an_instant_unless_paid() {
+    let mut g = two_player_game();
+    // P1 casts a bolt; P0 Flusterstorms it. With no mana to pay {1}, it's countered.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P1 casts Bolt");
+    let fs = g.add_card_to_hand(0, catalog::flusterstorm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fs, target: Some(crate::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P0 casts Flusterstorm at the Bolt");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt was countered (unpaid)");
 }

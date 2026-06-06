@@ -4551,6 +4551,28 @@ impl GameState {
                     bottomed,
                 }])
             }
+            PendingEffectState::RearrangePeeked { count, player } => {
+                // Index / Spire Owl — every peeked card returns to the top in
+                // the chosen order; the `bottom` list is treated as "kept on
+                // top, after kept_top" so nothing is ever bottomed.
+                let DecisionAnswer::ScryOrder { kept_top, bottom } = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut remaining: Vec<CardInstance> =
+                    self.players[player].library.drain(..count).collect();
+                let mut top_cards = Vec::with_capacity(count);
+                for id in kept_top.iter().chain(bottom.iter()) {
+                    if let Some(pos) = remaining.iter().position(|c| c.id == *id) {
+                        top_cards.push(remaining.remove(pos));
+                    }
+                }
+                top_cards.extend(remaining);
+                let lib = &mut self.players[player].library;
+                for c in top_cards.into_iter().rev() {
+                    lib.insert(0, c);
+                }
+                Ok(vec![GameEvent::ScryPerformed { player, looked_at: count, bottomed: 0 }])
+            }
             PendingEffectState::SurveilPeeked { count, player } => {
                 // Surveil: player chooses which cards go to the graveyard; rest go to top.
                 let DecisionAnswer::ScryOrder {
@@ -5510,6 +5532,27 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                             LandType::Swamp,
                             LandType::Mountain,
                             LandType::Forest,
+                        ]),
+                    }],
+                    None => vec![],
+                }
+            }
+            StaticEffect::GrantAllColors { applies_to } => {
+                use crate::mana::Color;
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L5Color,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::SetColors(vec![
+                            Color::White,
+                            Color::Blue,
+                            Color::Black,
+                            Color::Red,
+                            Color::Green,
                         ]),
                     }],
                     None => vec![],

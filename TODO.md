@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **`SacrificeGreatestPower` effect.** Crackling Doom (and Tribute to Hunger,
+  Sheoldred-style edicts) print "sacrifice a creature with the greatest
+  *power*"; today they ride `SacrificeGreatestMV` (greatest mana value) as an
+  approximation. A power-keyed picker (mirror the MV sort, swap the key) makes
+  them faithful.
+- **Kroxa / Uro escape titans.** Escape (`Keyword::Escape`) is wired, but the
+  "sacrifice it unless it escaped" ETB rider needs a `CardInstance.
+  cast_from_escape` flag (mirror `cast_from_suspend`) + a predicate to gate the
+  self-sac. Add it, then ship both titans.
+- **Noble Hierarch.** Easy add now that `exalted()` (CR 702.83) ships — {G} 0/1
+  with exalted + a `{T}: Add G/W/U` mana ability (needs a 3-color choose-one
+  mana ability, or model as `AnyOneColor` restricted to GWU).
+- **Amped Raptor energy free-cast (still 🟡).** Needs a `MayPlayPermission`
+  alt-cost slot ("cast without paying mana by paying {E}{E}") + a cast-from-
+  exile path that substitutes the energy cost.
+
 - **Split-card follow-ups (CR 709 shipped this run).** The split primitive
   (`CardDefinition.split` + `CastSplitRight` / `CastSplitFused` / `CastAftermath`)
   and the bot/affordance wiring are in. Remaining:
@@ -26,11 +42,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 - **Card primitives deferred this run (claude/modern_decks).** Real cards
   skipped for lack of a primitive — each is a small, reusable addition:
-  - **"Whenever this blocks a creature, [affect that creature]"** — a Blocks
-    trigger that binds the *blocked attacker* as the effect target (the
-    "doesn't untap" half is already covered by a Stun counter) — Wall of Frost.
-  - **Rearrange-top-N** (look at top N, reorder, all stay on top — distinct
-    from Scry which can bottom) — Spire Owl, Index.
+  - ✅ **"Whenever this blocks a creature, [affect that creature]"** — shipped
+    via `effect::shortcut::blocks` + `Selector::BlockedAttacker` (resolves
+    `block_map[source]`); Wall of Frost stuns the creature it blocks
+    (`wall_of_frost_stuns_the_creature_it_blocks`).
+  - ✅ **Rearrange-top-N** (look at top N, reorder, all stay on top — distinct
+    from Scry which can bottom) — `Effect::RearrangeTop`; ships Index, Spire
+    Owl, Sage Owl, and makes Ponder faithful. Tests in `modern.rs`.
   - **Protection-from-each-color as one keyword/state** (Metalcraft-gated
     multi-protection) — Etched Champion.
   - **Skyclave-Apparition-style "exile until leaves, then owner makes an X/X"**

@@ -158,7 +158,8 @@ impl Effect {
             Effect::SetMaxHandSize { who, size } => sel_has_target(who) || value_has_target(size),
             Effect::Scry { who, amount }
             | Effect::Surveil { who, amount }
-            | Effect::LookAtTop { who, amount } => {
+            | Effect::LookAtTop { who, amount }
+            | Effect::RearrangeTop { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
             }
             Effect::LookPickToHand { who, count, .. } => {

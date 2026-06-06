@@ -215,6 +215,9 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // ── modern_decks: cube staples ──
+        scrapheap_scrounger,
+
         // ── modern_decks: draw-engine artifact ──
         the_endstone,
         // ── modern_decks: Battle-cry artifact creature ──
@@ -389,6 +392,9 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: cube staples ──
+        condemn,
+
         // ── modern_decks: white value/aggro creatures ──
         solemn_recruit,
         fairgrounds_warden,
@@ -749,6 +755,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: cube staples ──
+        careful_study,
+
         // ── modern_decks: Persist counter-mage ──
         glen_elendra_archmage,
         // ── Embalm / Eternalize (CR 702.88 / 702.91) ──
@@ -761,6 +770,13 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         wingcrafter,
         deadeye_navigator,
         tandem_lookout,
+        // ── modern_decks: cube planeswalkers ──
+        narset_parter_of_veils,
+        teferi_hero_of_dominaria,
+        // ── modern_decks: blue staples ──
+        mental_note,
+        flusterstorm,
+        wall_of_frost,
         // ── modern_decks: land-scaled dig + storm payoff ──
         consult_the_star_charts,
         minds_desire,
@@ -938,6 +954,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Red) {
         v.push(stormchaser_mage);
+        v.push(izzet_charm);
+        v.push(flame_of_anor);
         v.push(talisman_of_creativity);
         v.push(fire_ice);
         v.push(silverbluff_bridge);
@@ -998,6 +1016,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: cube planeswalkers ──
+        liliana_of_the_veil,
+        liliana_the_last_hope,
         // ── Eternalize (CR 702.91) ──
         dreamstealer,
         // ── Afflict (CR 702.130) ──
@@ -1306,6 +1327,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: aggro goblin lord ──
+        legion_warboss,
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
@@ -1653,6 +1676,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: cube staples ──
+        ancient_stirrings,
+        arbor_elf,
+
         // ── Poisonous (CR 702.70) ──
         marsh_viper,
         mouth_feed,

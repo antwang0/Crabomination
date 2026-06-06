@@ -1530,7 +1530,10 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Scry { who, amount } | Effect::Surveil { who, amount } | Effect::LookAtTop { who, amount } => {
+            Effect::Scry { who, amount }
+            | Effect::Surveil { who, amount }
+            | Effect::LookAtTop { who, amount }
+            | Effect::RearrangeTop { who, amount } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
@@ -1565,12 +1568,16 @@ impl GameState {
                     return Ok(());
                 }
 
-                let decision = Decision::Scry { player: p, cards: peek.clone() };
-                let is_surveil = matches!(effect, Effect::Surveil { .. });
-                let pending_state = if is_surveil {
-                    PendingEffectState::SurveilPeeked { count: actual, player: p }
-                } else {
-                    PendingEffectState::ScryPeeked { count: actual, player: p }
+                let scry_mode = match effect {
+                    Effect::Surveil { .. } => crate::decision::ScryMode::Surveil,
+                    Effect::RearrangeTop { .. } => crate::decision::ScryMode::Rearrange,
+                    _ => crate::decision::ScryMode::Scry,
+                };
+                let decision = Decision::Scry { player: p, cards: peek.clone(), mode: scry_mode };
+                let pending_state = match effect {
+                    Effect::Surveil { .. } => PendingEffectState::SurveilPeeked { count: actual, player: p },
+                    Effect::RearrangeTop { .. } => PendingEffectState::RearrangePeeked { count: actual, player: p },
+                    _ => PendingEffectState::ScryPeeked { count: actual, player: p },
                 };
 
                 // If the acting player wants UI input, suspend — the outer
@@ -5421,6 +5428,13 @@ impl GameState {
                 .into_iter()
                 .collect(),
             Selector::TriggerSource => ctx.trigger_source.into_iter().collect(),
+            Selector::BlockedAttacker => ctx
+                .source
+                .and_then(|blocker| self.block_map.get(&blocker).copied())
+                .filter(|aid| self.battlefield.iter().any(|c| c.id == *aid))
+                .map(EntityRef::Permanent)
+                .into_iter()
+                .collect(),
             Selector::ChoiceResult(_) => vec![], // TODO when decision loop lands
             Selector::LastCreatedToken => self
                 .last_created_token

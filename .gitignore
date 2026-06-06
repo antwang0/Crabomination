@@ -49,3 +49,4 @@ crabomination_client/assets/cards/
 **/__pycache__/
 *.pyc
 .claude/scheduled_tasks.lock
+*.log
