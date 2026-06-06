@@ -429,7 +429,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - **Counter-mechanic follow-ons** (after Modular/Graft/Renown/Outlast/Melee/
   Bloodthirst this run): **Monstrosity** ✅ (`CardInstance.monstrous` +
   `Effect::Monstrosity` + `EventKind::BecameMonstrous`; Nessian Wilds Ravager,
-  Ember Swallower); **Devour** ✅ and **Amass** ✅ (`Effect::Amass` grows /
+  Ember Swallower). "As long as this is monstrous, …" statics ✅ via
+  `Predicate::SourceIsMonstrous` + `StaticEffect::PumpSelfIf` (now multi-keyword
+  — Fleecemane Lion gains hexproof + indestructible; Dragon's Rage Channeler's
+  delirium grants flying + attacks-each-combat); **Devour** ✅ and **Amass** ✅ (`Effect::Amass` grows /
   creates a 0/0 black Army with N +1/+1 counters; `CreatureType::Army`).
   **Melee** is a
   flat +1/+1 — wants a per-combat attacked-opponent tally for multiplayer.
@@ -631,12 +634,12 @@ picking an item up.
 - 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.
 - 🟡 **CR 401 — Library** — cast-with-top-of-library-revealed recompute (401.5/401.6); multi-card same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
 - 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
-- 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9).
+- 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact.)
 - 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7).
 - 🟡 **CR 605 — Mana Abilities** — triggered-mana-ability fast-path (605.4a).
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker.
-- 🟡 **CR 614 — Replacement Effects** — general "instead" framework; true damage *redirection* (614.9) + damage *halving*; general skip-step/turn (614.10). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅.)
+- 🟡 **CR 614 — Replacement Effects** — general "instead" framework; true damage *redirection* (614.9) + damage *halving*; general skip-step/turn (614.10). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
 - 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth (Reverse Damage, Mending Hands).
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail.
 - 🟡 **CR 701.48 — Learn** — populate Lesson sideboards in the format / draft deck-build paths (engine + cube ✅).
@@ -654,6 +657,21 @@ picking an item up.
 - ⏳ **CR 612 — Text-Changing Effects** — no `ReplaceWord`/text-box-swap primitive; no catalog card needs one (Mind Bend, Glamerdye, Spy Kit, Volrath's Shapeshifter, Exchange of Words).
 
 ## Suggested next-up tasks
+
+- ⏳ **Discovered this run (modern_decks card pass), not yet done:**
+  - **Rhystic "draw unless they pay X" rider** (Esper Sentinel, Mystic
+    Remora) — needs a "first noncreature spell each turn" trigger + a
+    pay-or-draw decision where X reads the source's power.
+  - **Power-gated keyword anthems** (Temur Ascendancy "creatures with power
+    4+ have haste") — `affected_from_requirement` drops `PowerAtLeast` (it's
+    layer-7 computed); needs a second-pass / CR 613.8 dependency in
+    `apply_layers`. Currently over-grants to all your creatures.
+  - **MV-scaled token on LTB** (Skyclave Apparition's "owner creates an X/X
+    Illusion where X = exiled card's MV") — needs a dynamic-P/T token mint.
+  - **"with no counters on it" target filter** (Heartless Act mode 0) —
+    add a `SelectionRequirement::HasNoCounters`.
+  - **Forest/typecycling** (Generous Ent) — typed cycling that fetches a
+    land of the named type; today only plain Cycling ships.
 
 - 🟡 **Energy ({E}) follow-ups.** (b) **✅ "pay {E}{E} or sacrifice/bounce"
   rider** — `Effect::PayEnergyOrElse { amount, otherwise }` ships Lathnu
@@ -733,14 +751,16 @@ picking an item up.
   claude/modern_decks — audit against `MagicCompRules_20260417.txt`).
   How the engine puts activated abilities on the stack and pays their
   costs. CR 602.1a is the costs/effect split (the colon).
-  (a) **602.1a** — ✅ (`ActivatedAbility::mana_cost`, `tap_cost`, `sac_cost`,
-  `life_cost`, `exile_self_cost`, `exile_other_filter` between them
-  cover the full cost vocabulary; tap/mana/life/sac are all paid in
-  `activate_ability` before the effect goes on stack. Push
-  claude/modern_decks: `from_hand` lets an ability be activated from the
-  controller's hand — paired with `exile_self_cost` it models the Spirit
-  Guides' "Exile this from your hand: Add {C}." pitch mana ability;
-  tap costs are rejected from a hand source).
+  (a) **602.1a / 602.5b** — ✅ (`ActivatedAbility::mana_cost`, `tap_cost`,
+  `sac_cost`, `life_cost`, `exile_self_cost`, `exile_other_filter`,
+  `sac_other_filter`, `tap_other_filter`, and now `discard_cost`
+  (`Option<(SelectionRequirement, u32)>` — "Discard a [filter] card:")
+  between them cover the cost vocabulary; tap/mana/life/sac/discard are all
+  paid in `activate_ability` before the effect goes on stack. Fauna Shaman
+  rides `discard_cost`. Push claude/modern_decks: `from_hand` lets an ability
+  be activated from the controller's hand — paired with `exile_self_cost` it
+  models the Spirit Guides' "Exile this from your hand: Add {C}." pitch mana
+  ability; tap costs are rejected from a hand source).
   (b) **602.1b** — 🟡 (`ActivatedAbility.condition` covers per-ability
   predicate gates ("Activate only if …"); `once_per_turn` /
   `sorcery_speed` / `from_graveyard` cover the canonical instructions.

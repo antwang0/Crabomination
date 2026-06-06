@@ -577,8 +577,10 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
 
 /// Bot heuristic for `Decision::SearchLibrary`: pick a basic land that
 /// adds the bot's least-covered color, else (no basic land among the
-/// candidates) grab the first candidate so tutors fetch *something*
-/// instead of fizzling like the stock `AutoDecider`.
+/// candidates) grab the highest-mana-value candidate — a creature/spell
+/// tutor (Fauna Shaman, Imperial Recruiter, Spellseeker) should fetch its
+/// most impactful hit, not the first one, and certainly not fizzle like the
+/// stock `AutoDecider`.
 fn decide_library_search(
     state: &GameState,
     seat: usize,
@@ -624,7 +626,20 @@ fn decide_library_search(
             best = Some((*id, score));
         }
     }
-    DecisionAnswer::Search(Some(best.map(|(id, _)| id).unwrap_or(candidates[0].0)))
+    if let Some((id, _)) = best {
+        return DecisionAnswer::Search(Some(id));
+    }
+    // No basic land among the candidates (a creature/spell tutor): fetch the
+    // highest-mana-value hit as a reasonable "best card" proxy, falling back
+    // to the first candidate when CMCs can't be read.
+    let pick = candidates
+        .iter()
+        .max_by_key(|(id, _)| {
+            lib.iter().find(|c| c.id == *id).map(|c| c.definition.cost.cmc()).unwrap_or(0)
+        })
+        .map(|(id, _)| *id)
+        .unwrap_or(candidates[0].0);
+    DecisionAnswer::Search(Some(pick))
 }
 
 /// Bot heuristic for `Decision::ChooseCards` ("exile any number of target
@@ -3118,6 +3133,23 @@ mod tests {
         let ans = decide_library_search(&g, 0, &candidates);
         assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == bolt),
             "bot fetches the only candidate");
+    }
+
+    /// A non-land tutor (e.g. Fauna Shaman) fetches the highest-mana-value
+    /// hit — the most impactful card — not just the first candidate offered.
+    #[test]
+    fn bot_search_fetches_highest_mv_nonland() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let bears = g.add_card_to_library(0, catalog::grizzly_bears()); // MV 2
+        let angel = g.add_card_to_library(0, catalog::serra_angel());   // MV 5
+        let candidates = vec![
+            (bears, "Grizzly Bears".into()),
+            (angel, "Serra Angel".into()),
+        ];
+        let ans = decide_library_search(&g, 0, &candidates);
+        assert!(matches!(ans, DecisionAnswer::Search(Some(id)) if id == angel),
+            "bot fetches the higher-MV creature");
     }
 
     /// The bot offers a Bestow cast (enchanting its own creature) when it's

@@ -502,6 +502,21 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         }
         K::Fading(_) => "Enters with that many fade counters; remove one each upkeep, and sacrifice it when you can't.",
         K::Vanishing(_) => "Enters with that many time counters; remove one each upkeep, and sacrifice it when the last is gone.",
+        K::Protection(_) => "Can't be blocked, targeted, dealt damage, enchanted, or equipped by anything of the named quality.",
+        K::Bushido(_) => "Whenever it blocks or becomes blocked, it gets +N/+N until end of turn.",
+        K::Rampage(_) => "Whenever it becomes blocked, it gets +N/+N for each blocker beyond the first.",
+        K::Crew(_) => "Tap any number of creatures with total power N or greater to turn this Vehicle into an artifact creature.",
+        K::Madness(_) => "If you discard it, you may cast it for its madness cost instead of putting it in your graveyard.",
+        K::Ward(_) => "Whenever it becomes the target of a spell or ability an opponent controls, counter it unless they pay the ward cost.",
+        K::Gravestorm => "When you cast it, copy it for each permanent put into a graveyard this turn.",
+        K::Unleash => "You may have it enter with a +1/+1 counter; if it has one, it can't block.",
+        K::AttacksAlone => "Can only attack alone.",
+        K::CantBlock => "Can't block.",
+        K::CantAttack => "Can't attack.",
+        K::MustAttack => "Attacks each combat if able.",
+        K::MustBlock | K::AllMustBlock | K::MustBeBlocked => "Is forced into combat by a block/attack requirement.",
+        K::CantBeCopied => "Can't be copied.",
+        K::DealsNoCombatDamage => "Assigns no combat damage.",
         _ => return None,
     })
 }
@@ -983,6 +998,22 @@ mod tests {
         for kw in [Keyword::Prowess, Keyword::Fear, Keyword::Skulk,
                    Keyword::Shadow, Keyword::Unblockable, Keyword::Changeling,
                    Keyword::Flash, Keyword::Intimidate, Keyword::Horsemanship] {
+            assert!(keyword_reminder(&kw).is_some(),
+                "expected reminder text for {kw:?}");
+        }
+    }
+
+    #[test]
+    fn combat_and_cost_keywords_carry_reminder_text() {
+        use crabomination::card::Keyword;
+        use crabomination::mana::{Color, ManaCost};
+        for kw in [
+            Keyword::MustAttack, Keyword::CantBlock, Keyword::CantAttack,
+            Keyword::Gravestorm, Keyword::Unleash, Keyword::AttacksAlone,
+            Keyword::CantBeCopied, Keyword::DealsNoCombatDamage,
+            Keyword::Protection(Color::Red), Keyword::Bushido(2),
+            Keyword::Rampage(1), Keyword::Crew(3), Keyword::Madness(ManaCost::default()),
+        ] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");
         }
