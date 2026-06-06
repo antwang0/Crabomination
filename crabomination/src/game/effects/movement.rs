@@ -438,8 +438,8 @@ impl GameState {
                 }
             }
             ZoneDest::Graveyard => {
-                let owner = card.owner;
-                self.players[owner].send_to_graveyard(card);
+                // CR 614.6 — graveyard-hate statics redirect to exile.
+                self.route_to_graveyard(card, events);
             }
             ZoneDest::Exile => {
                 let cid = card.id;
@@ -506,7 +506,8 @@ impl GameState {
                 // cast-time ctx, tracked separately.
                 let enters_spec = card.definition.enters_with_counters.clone();
                 self.battlefield.push(card);
-                if let Some((kind, value)) = enters_spec {
+                // CR 122.1 — Solemnity drops the enters-with-counters too.
+                if let Some((kind, value)) = enters_spec.filter(|_| !self.counters_locked()) {
                     let etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
                     let base = self.evaluate_value(&value, &etb_ctx);
                     if base > 0 {

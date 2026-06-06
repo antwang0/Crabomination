@@ -1529,6 +1529,58 @@ impl GameState {
             .sum()
     }
 
+    /// CR 122.1 — true if any active `StaticEffect::CountersCantBePlaced`
+    /// (Solemnity) is on the battlefield. While set, every counter-placement
+    /// site drops the counters instead of adding them.
+    pub fn counters_locked(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::CountersCantBePlaced))
+        })
+    }
+
+    /// CR 614.6 — true if cards bound for `owner`'s graveyard are exiled
+    /// instead (Rest in Peace exiles everyone's; Leyline of the Void exiles
+    /// an opponent's). Consulted by `route_to_graveyard` at every
+    /// graveyard-placement site.
+    pub fn graveyard_exiled_for(&self, owner: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                if let StaticEffect::ExileCardsBoundForGraveyard { opponents_only } = &sa.effect {
+                    !opponents_only || c.controller != owner
+                } else {
+                    false
+                }
+            })
+        })
+    }
+
+    /// Place `card` into its owner's graveyard, or exile it instead when a
+    /// graveyard-hate static (Rest in Peace / Leyline of the Void) is active
+    /// for that owner. Pushes a `PermanentExiled` event and returns `true`
+    /// when the card was redirected to exile, so callers can suppress their
+    /// own graveyard-specific event (CardMilled, etc.).
+    pub(crate) fn route_to_graveyard(
+        &mut self,
+        card: crate::card::CardInstance,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) -> bool {
+        let owner = card.owner;
+        if self.graveyard_exiled_for(owner) {
+            let cid = card.id;
+            self.exile.push(card);
+            events.push(crate::game::GameEvent::PermanentExiled { card_id: cid });
+            true
+        } else {
+            self.players[owner].send_to_graveyard(card);
+            false
+        }
+    }
+
     /// CR 702.66 — true if player `seat` controls a permanent granting
     /// "spells you cast have delve" (Teval, Arbiter of Virtue). Lets the
     /// cast path accept a delve-cards list on any spell, not just those
@@ -5044,7 +5096,9 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
-        self.players[caster].send_to_graveyard(card);
+        // CR 614.6 — an instant/sorcery bound for the graveyard is exiled
+        // instead under Rest in Peace / Leyline of the Void.
+        self.route_to_graveyard(card, &mut events);
         Ok(events)
     }
 
@@ -5724,7 +5778,14 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ManaProductionDoubled
             // CreatureActivatedAbilitiesLocked — consulted in
             // `activate_ability` (Cursed Totem); no layer effect.
-            | StaticEffect::CreatureActivatedAbilitiesLocked => vec![],
+            | StaticEffect::CreatureActivatedAbilitiesLocked
+            // CountersCantBePlaced (Solemnity) — consulted at every
+            // counter-placement site via `counters_locked`; no layer effect.
+            | StaticEffect::CountersCantBePlaced
+            // ExileCardsBoundForGraveyard (Rest in Peace / Leyline of the
+            // Void) — consulted at graveyard-placement time via
+            // `graveyard_exiled_for`; no layer effect.
+            | StaticEffect::ExileCardsBoundForGraveyard { .. } => vec![],
         })
         .collect()
 }

@@ -75,8 +75,13 @@ not how Magic works" moments.
    Authority of the Consuls, Blind Obedience, Kismet); "exile non-cast
    nontoken creatures instead" ships via
    `StaticEffect::ExileNontokenCreaturesNotCast` — Containment Priest),
-   damage *redirection* (Maze of Ith), draw/skip replacement, and
-   "if it would die, exile instead." Counter-doubling (Doubling Season,
+   damage *redirection* (Maze of Ith) and draw/skip replacement.
+   **Graveyard→exile hate** ships via
+   `StaticEffect::ExileCardsBoundForGraveyard { opponents_only }` +
+   `GameState::route_to_graveyard` (CR 614.6 — Rest in Peace, Leyline of
+   the Void), centralizing every graveyard-placement site. Counter
+   placement can be globally locked via `StaticEffect::CountersCantBePlaced`
+   (CR 122.1 — Solemnity). Counter-doubling (Doubling Season,
    Hardened Scales — `StaticEffect::DoubleCounters`) and damage-**doubling**
    (Furnace of Rath — `StaticEffect::DoubleDamageDealt`, applied to both the
    non-combat and combat damage paths, CR 614.2) now ship as multiplier

@@ -308,6 +308,7 @@ impl Effect {
             Effect::SacrificeAnyNumber { per_each, .. } => per_each.requires_target(),
             Effect::PayLifeLookTake { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
+            Effect::ExileAllGraveyards => false,
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

@@ -1567,6 +1567,9 @@ pub enum Effect {
     /// nothing (the conservative "up to" default); the bot exiles opponents'
     /// cards. Devious Cover-Up's graveyard-strip rider.
     ExileAnyNumberFromGraveyards { filter: crate::card::SelectionRequirement },
+    /// "Exile all cards from all graveyards." (Rest in Peace's ETB — a
+    /// non-optional graveyard wipe across every player.)
+    ExileAllGraveyards,
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the

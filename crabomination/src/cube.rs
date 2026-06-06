@@ -454,6 +454,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         shorikai_genesis_engine,
         // ── modern_decks: graveyard-hate equipment (counter-scaled) ──
         lion_sash,
+        // ── Counter-lock enchantment (CR 122.1) ──
+        solemnity,
+        // ── Graveyard-hate replacement (CR 614.6) ──
+        rest_in_peace,
         // ── modern_decks: Adventure enchantment (anthem + token) ──
         virtue_of_loyalty,
         // ── claude/modern_decks: Extort (CR 702.99) ──
@@ -1061,6 +1065,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         deaths_shadow,
         cabal_ritual,
         cabal_coffers,
+        // Graveyard-hate replacement (CR 614.6).
+        leyline_of_the_void,
         // Repeatable board-sweep enchantment ({B}: ping all).
         pestilence,
         // Swamps-matters drain (damage + lifegain).

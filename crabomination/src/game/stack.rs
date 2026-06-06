@@ -493,6 +493,8 @@ impl GameState {
                             }
                         }
                     }
+                    // CR 122.1 — Solemnity drops enters-with-counters.
+                    if self.counters_locked() { counter_specs.clear(); }
                     for (kind, value) in counter_specs {
                         let etb_ctx = crate::game::effects::EffectContext::for_spell_with_source(
                             card_id,
@@ -845,8 +847,9 @@ impl GameState {
             let card = self.players[p].library.remove(0);
             let cid = card.id;
             let is_land = card.definition.card_types.contains(&CardType::Land);
-            self.players[p].graveyard.push(card);
-            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+            if !self.route_to_graveyard(card, &mut events) {
+                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+            }
             if !is_land {
                 self.players[p].rad_counters = self.players[p].rad_counters.saturating_sub(1);
                 self.adjust_life(p, -1);
@@ -1887,6 +1890,9 @@ impl GameState {
         let mut card = card;
         card.soulbond_partner = None;
         match zone {
+            // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
+            // graveyard arrival to exile.
+            Zone::Graveyard if self.graveyard_exiled_for(owner) => self.exile.push(card),
             Zone::Graveyard => self.players[owner].send_to_graveyard(card),
             Zone::Exile => self.exile.push(card),
             Zone::Hand => self.players[owner].hand.push(card),

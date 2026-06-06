@@ -8,11 +8,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- **Graveyard-hate replacement statics.** Rest in Peace / Leyline of the Void
-  ("if a card would be put into a graveyard, exile it instead") need a
-  `StaticEffect`-driven graveyard→exile replacement in `place_card_in_dest`.
-- **Counter-prevention static (Solemnity).** "Counters can't be put on
-  permanents/players" — gate `Effect::AddCounter` on a battlefield scan.
+- **Graveyard-hate dies-trigger nuance.** `route_to_graveyard` /
+  `ExileCardsBoundForGraveyard` redirect the *placement* to exile, but
+  `remove_to_graveyard_with_triggers` still collects `CreatureDied` /
+  LTB-to-graveyard triggers before the redirect. Under Rest in Peace a
+  creature that's exiled-instead technically never "dies" (CR 700.4), so
+  those dies-triggers shouldn't fire. Check `graveyard_exiled_for` before
+  collecting dies-triggers to suppress them.
 - **Modal 3-mode charms with per-mode targets** (Esper/Golgari/Azorius Charm).
   `ChooseMode` + per-mode `target_filter_for_slot_in_mode` works, but the
   2-color cube pools can't slot 3-color Esper Charm; add a guild-charm batch

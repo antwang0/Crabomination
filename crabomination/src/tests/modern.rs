@@ -31081,6 +31081,109 @@ fn pyre_charger_firebreathing_pumps_power() {
     assert_eq!((cp.power, cp.toughness), (2, 1), "1/1 + 1/0");
 }
 
+// ── Solemnity (CR 122.1 — counters can't be placed) ────────────────────────
+
+#[test]
+fn solemnity_blocks_add_counter() {
+    use crate::card::CounterType;
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::solemnity());
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(bear)),
+    );
+    g.resolve_effect(&Effect::AddCounter {
+        what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::Const(2),
+    }, &ctx).unwrap();
+    let n = g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(n, 0, "Solemnity dropped the +1/+1 counters");
+}
+
+#[test]
+fn solemnity_blocks_proliferate() {
+    use crate::card::CounterType;
+    use crate::effect::Effect;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    g.add_card_to_battlefield(0, catalog::solemnity());
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    g.resolve_effect(&Effect::Proliferate, &ctx).unwrap();
+    let n = g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(n, 1, "proliferate did not grow the counter under Solemnity");
+}
+
+#[test]
+fn solemnity_blocks_enters_with_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::solemnity());
+    let id = g.add_card_to_hand(0, catalog::murktide_regent());
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {5}{U}{U}");
+    drain_stack(&mut g);
+    let n = g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
+}
+
+// ── Rest in Peace / Leyline of the Void (CR 614.6 graveyard hate) ──────────
+
+#[test]
+fn rest_in_peace_etb_exiles_all_graveyards() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::rest_in_peace());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {1}{W}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty() && g.players[1].graveyard.is_empty(),
+        "all graveyards emptied");
+    assert_eq!(g.exile.len(), 2, "both cards exiled");
+}
+
+#[test]
+fn rest_in_peace_exiles_dying_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rest_in_peace());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.remove_from_battlefield_to_graveyard(bear);
+    assert!(g.players[0].graveyard.is_empty(), "creature did not reach the graveyard");
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled instead");
+}
+
+#[test]
+fn leyline_of_the_void_exiles_only_opponents_cards() {
+    use crate::effect::{Effect, Selector, Value};
+    let mut g = two_player_game();
+    // Player 0 controls the Leyline; mills hit each library.
+    g.add_card_to_battlefield(0, catalog::leyline_of_the_void());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(1, catalog::forest());
+    let ctx = crate::game::effects::EffectContext::for_ability(crate::card::CardId(0), 0, None);
+    // Mill self — controller's own card still goes to the graveyard.
+    g.resolve_effect(&Effect::Mill { who: Selector::You, amount: Value::Const(1) }, &ctx).unwrap();
+    assert_eq!(g.players[0].graveyard.len(), 1, "own milled card stays in graveyard");
+    // Mill the opponent — exiled instead.
+    let octx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Player(1)),
+    );
+    g.resolve_effect(&Effect::Mill { who: Selector::Target(0), amount: Value::Const(1) }, &octx).unwrap();
+    assert!(g.players[1].graveyard.is_empty(), "opponent's milled card exiled");
+    assert_eq!(g.exile.len(), 1, "one card exiled");
+}
+
 // ── Inspiration / Opportunity (targeted draw) ──────────────────────────────
 
 #[test]

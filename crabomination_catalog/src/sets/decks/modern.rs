@@ -20438,6 +20438,59 @@ pub fn crucible_of_worlds() -> CardDefinition {
     }
 }
 
+/// Solemnity — {1}{W} Enchantment. "Counters can't be put on permanents or
+/// players." (CR 122.1 — enables the persist / Phyrexian Unlife combos.)
+pub fn solemnity() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Solemnity",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Counters can't be put on permanents or players.",
+            effect: StaticEffect::CountersCantBePlaced,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Rest in Peace — {1}{W} Enchantment. ETB exiles all graveyards; thereafter
+/// any card that would be put into a graveyard is exiled instead (CR 614.6).
+pub fn rest_in_peace() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{shortcut::etb, StaticEffect};
+    CardDefinition {
+        name: "Rest in Peace",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::ExileAllGraveyards)],
+        static_abilities: vec![StaticAbility {
+            description: "If a card would be put into a graveyard from anywhere, exile it instead.",
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Leyline of the Void — {2}{B}{B} Enchantment. "If a card would be put into
+/// an opponent's graveyard from anywhere, exile it instead." (CR 614.6.)
+/// (The opening-hand "begin the game with this in play" clause is dropped.)
+pub fn leyline_of_the_void() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Leyline of the Void",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If a card would be put into an opponent's graveyard from anywhere, exile it instead.",
+            effect: StaticEffect::ExileCardsBoundForGraveyard { opponents_only: true },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Ramunap Excavator — {2}{G} 2/3 Naga Cleric. "You may play lands from your
 /// graveyard."
 pub fn ramunap_excavator() -> CardDefinition {

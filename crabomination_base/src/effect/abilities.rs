@@ -352,6 +352,20 @@ pub enum StaticEffect {
     /// checked in `activate_ability` (sibling of
     /// `ArtifactActivatedAbilitiesLocked`).
     CreatureActivatedAbilitiesLocked,
+    /// CR 122.1 — Solemnity-style lock: "Counters can't be put on
+    /// permanents or players." A global replacement read at every
+    /// counter-placement site (`Effect::AddCounter`, `Effect::Proliferate`,
+    /// enters-with-counters). While any instance is on the battlefield the
+    /// placement is dropped. Powers Solemnity (the persist / Phyrexian
+    /// Unlife combo enabler).
+    CountersCantBePlaced,
+    /// CR 614.6 — graveyard-hate replacement: "If a card would be put into
+    /// a graveyard from anywhere, exile it instead." When `opponents_only`
+    /// the redirect applies only to cards bound for a graveyard belonging to
+    /// an *opponent* of the static's controller (Leyline of the Void);
+    /// otherwise it applies to every player's graveyard (Rest in Peace).
+    /// Consulted at every graveyard-placement site via `graveyard_exiled_for`.
+    ExileCardsBoundForGraveyard { opponents_only: bool },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

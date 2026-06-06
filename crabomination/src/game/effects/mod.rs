@@ -1149,8 +1149,9 @@ impl GameState {
                         if self.players[p].library.is_empty() { break; }
                         let card = self.players[p].library.remove(0);
                         let cid = card.id;
-                        self.players[p].graveyard.push(card);
-                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                        if !self.route_to_graveyard(card, events) {
+                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                        }
                         self.last_moved_cards.push(cid);
                     }
                 }
@@ -1490,8 +1491,9 @@ impl GameState {
                             if self.players[p].library.is_empty() { break; }
                             let card = self.players[p].library.remove(0);
                             let cid = card.id;
-                            self.players[p].graveyard.push(card);
-                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            if !self.route_to_graveyard(card, events) {
+                                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            }
                             // Stash the milled id so a follow-up
                             // `Selector::LastMoved` in the same Seq can
                             // target the milled card (Tablet of
@@ -2189,6 +2191,20 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileAllGraveyards => {
+                // Rest in Peace ETB — move every graveyard card to exile.
+                for p in 0..self.players.len() {
+                    let cards: Vec<CardInstance> =
+                        std::mem::take(&mut self.players[p].graveyard);
+                    for card in cards {
+                        let cid = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileSameNameAsTarget { what } => {
                 // Crumble to Dust: exile the anchor permanent, then exile every
                 // same-named card from its owner's graveyard, hand, and library,
@@ -2624,6 +2640,8 @@ impl GameState {
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }
+                // CR 122.1 — Solemnity: counters can't be put on anything.
+                if self.counters_locked() { return Ok(()); }
                 for ent in self.resolve_selector(what, ctx) {
                     match ent {
                         EntityRef::Permanent(cid) => {
@@ -2832,6 +2850,8 @@ impl GameState {
             }
 
             Effect::Proliferate => {
+                // CR 122.1 — Solemnity locks out all counter placement.
+                if self.counters_locked() { return Ok(()); }
                 // CR 701.34a — "To proliferate means to choose any number
                 // of permanents and/or players that have a counter, then
                 // give each one additional counter of each kind that
@@ -3299,8 +3319,8 @@ impl GameState {
                 }
                 to_remove.sort_unstable_by(|a, b| b.cmp(a));
                 for pos in to_remove {
-                    if let StackItem::Spell { card, caster, .. } = self.stack.remove(pos) {
-                        self.players[caster].send_to_graveyard(*card);
+                    if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
+                        self.route_to_graveyard(*card, events);
                     }
                 }
                 Ok(())
@@ -3382,9 +3402,9 @@ impl GameState {
                 self.priority.player_with_priority = saved_priority;
 
                 if !paid
-                    && let StackItem::Spell { card, caster, .. } = self.stack.remove(pos)
+                    && let StackItem::Spell { card, .. } = self.stack.remove(pos)
                 {
-                    self.players[caster].send_to_graveyard(*card);
+                    self.route_to_graveyard(*card, events);
                 }
                 Ok(())
             }
@@ -3479,7 +3499,12 @@ impl GameState {
                             for _ in 0..n {
                                 let card = self.players[affected_controller].hand.remove(0);
                                 let card_id = card.id;
-                                self.players[affected_controller].graveyard.push(card);
+                                // CR 614.6 — graveyard-hate exiles the discard.
+                                if self.graveyard_exiled_for(affected_controller) {
+                                    self.exile.push(card);
+                                } else {
+                                    self.players[affected_controller].graveyard.push(card);
+                                }
                                 self.cards_discarded_this_resolution =
                                     self.cards_discarded_this_resolution.saturating_add(1);
                                 *self.cards_discarded_per_player_this_resolution
@@ -3512,9 +3537,9 @@ impl GameState {
                 if !paid {
                     let removed = self.stack.remove(pos);
                     if is_spell
-                        && let StackItem::Spell { card, caster, .. } = removed
+                        && let StackItem::Spell { card, .. } = removed
                     {
-                        self.players[caster].send_to_graveyard(*card);
+                        self.route_to_graveyard(*card, events);
                     }
                     // Trigger items just drop off — nothing else to clean up.
                 }
@@ -4536,8 +4561,9 @@ impl GameState {
                     let cid = card.id;
                     match miss_dest {
                         crate::effect::RevealMissDest::Graveyard => {
-                            self.players[p].graveyard.push(card);
-                            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            if !self.route_to_graveyard(card, events) {
+                                events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                            }
                         }
                         crate::effect::RevealMissDest::BottomRandom => {
                             // No RNG hook in the engine yet — push to
