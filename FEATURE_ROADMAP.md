@@ -32,7 +32,8 @@ and the rules-coverage audit in `TODO.md`.
   Offspring/Plot/Saddle/Blitz/Spectacle/Escalate/Buyback/Bestow/Foretell/
   Suspend/Flashback/Madness/Escape/Adventure/Cascade/Storm/Convoke/Delve);
   plus Phasing-adjacent Fading/Vanishing, Cumulative Upkeep, Echo, Dredge,
-  Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift, Unleash.
+  Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift, Unleash,
+  Devoid (CDA colorless), Ingest.
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
   Convoke/Delve generic reduction; Commander tax; alternative (pitch) costs;
   energy-gated mana abilities; X-cost activated abilities.

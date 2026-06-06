@@ -710,6 +710,18 @@ picking an item up.
 
 ## Suggested next-up tasks
 
+- ⏳ **Discovered during the Eldrazi/devoid pass (not yet done):**
+  - **Generalize variable-power CDA** (`*/N` from a count). Tarmogoyf et al.
+    are name-hardcoded in the layer gather; a `Modification::SetPowerToughness`
+    fed by a `Value` (e.g. colorless-creature count) would unblock Vile
+    Aggregate, Walker of the Wastes, and friends without per-card name checks.
+  - **"Defending player exiles N permanents they control"** (opponent-chosen)
+    — Bane of Bala Ged's attack trigger. No opponent-driven exile-N primitive
+    yet (sacrifice/exile pickers are self-only today).
+  - **Computed-color-aware `Colorless` filter.** `SelectionRequirement::Colorless`
+    reads cost pips, so Devoid creatures (colored pips, colorless object) slip
+    through colorless-matters filters/anthems (Ruination Guide, Dominator
+    Drone). Route the filter through computed colors.
 - ⏳ **Discovered this run (modern_decks card pass), not yet done:**
   - **Rhystic "draw unless they pay X" rider** (Esper Sentinel, Mystic
     Remora) — needs a "first noncreature spell each turn" trigger + a
