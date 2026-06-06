@@ -31731,3 +31731,249 @@ fn opportunity_draws_target_player_four() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), before - 1 + 4);
 }
+
+// ── claude/modern_decks: aggro / tribal / aristocrat supplement tests ─────────
+
+#[test]
+fn kird_ape_grows_with_a_forest() {
+    let mut g = two_player_game();
+    let ape = g.add_card_to_battlefield(0, catalog::kird_ape());
+    let cp = g.computed_permanent(ape).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "1/1 with no Forest");
+    g.add_card_to_battlefield(0, catalog::forest());
+    let cp = g.computed_permanent(ape).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3), "+1/+2 with a Forest");
+}
+
+#[test]
+fn loam_lion_grows_with_a_forest() {
+    let mut g = two_player_game();
+    let lion = g.add_card_to_battlefield(0, catalog::loam_lion());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let cp = g.computed_permanent(lion).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 3));
+}
+
+#[test]
+fn sedge_troll_grows_with_a_swamp() {
+    let mut g = two_player_game();
+    let troll = g.add_card_to_battlefield(0, catalog::sedge_troll());
+    let cp = g.computed_permanent(troll).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let cp = g.computed_permanent(troll).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+#[test]
+fn young_wolf_returns_with_a_counter_via_undying() {
+    let mut g = two_player_game();
+    let wolf = g.add_card_to_battlefield(0, catalog::young_wolf());
+    kill_with_bolt(&mut g, wolf);
+    // Undying: returns as a fresh object with a +1/+1 counter (2/2).
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Young Wolf");
+    assert!(back.is_some(), "Young Wolf returns via undying");
+    let cp = g.computed_permanent(back.unwrap().id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+}
+
+#[test]
+fn servant_of_the_scale_moves_counters_on_death() {
+    let mut g = two_player_game();
+    let servant = g.add_card_to_battlefield(0, catalog::servant_of_the_scale());
+    g.fire_self_etb_triggers(servant, 0);
+    drain_stack(&mut g); // ETB counter
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let cp = g.computed_permanent(servant).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "enters with a +1/+1 counter");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(target))]));
+    kill_with_bolt(&mut g, servant);
+    let cp = g.computed_permanent(target).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "counter moved to the bear");
+}
+
+#[test]
+fn champion_of_the_perished_grows_on_zombie_etb() {
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::champion_of_the_perished());
+    let cp = g.computed_permanent(champ).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    // Another Zombie enters → +1/+1.
+    let champ2 = g.add_card_to_battlefield(0, catalog::champion_of_the_perished());
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::PermanentEntered { card_id: champ2 }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(champ).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "another Zombie ETB grew the Champion");
+}
+
+#[test]
+fn furnace_whelp_firebreathes_and_flies() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let whelp = g.add_card_to_battlefield(0, catalog::furnace_whelp());
+    assert!(g.computed_permanent(whelp).unwrap().keywords.contains(&Keyword::Flying));
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: whelp, ability_index: 0, target: None, x_value: None,
+    }).expect("firebreathe");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(whelp).unwrap();
+    assert_eq!(cp.power, 3, "{{R}} gave +1/+0");
+}
+
+
+#[test]
+fn falkenrath_noble_drains_on_any_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::falkenrath_noble());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    kill_with_bolt(&mut g, victim);
+    assert_eq!(g.players[0].life, l0 + 1, "you gain 1");
+    assert_eq!(g.players[1].life, l1 - 1, "target player loses 1");
+}
+
+#[test]
+fn carrier_thrall_makes_a_scion_on_death() {
+    let mut g = two_player_game();
+    let thrall = g.add_card_to_battlefield(0, catalog::carrier_thrall());
+    kill_with_bolt(&mut g, thrall);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Eldrazi Scion"),
+        "dying made an Eldrazi Scion");
+}
+
+#[test]
+fn blood_seeker_drains_on_opponent_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blood_seeker());
+    let l1 = g.players[1].life;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 1, "opponent's creature ETB drained them 1");
+}
+
+#[test]
+fn vicious_conquistador_drains_on_attack() {
+    let mut g = two_player_game();
+    let con = g.add_card_to_battlefield(0, catalog::vicious_conquistador());
+    g.battlefield.iter_mut().find(|c| c.id == con).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let l1 = g.players[1].life;
+    g.declare_attackers(vec![Attack { attacker: con, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 1);
+}
+
+#[test]
+fn child_of_night_has_lifelink() {
+    use crate::card::Keyword;
+    assert!(catalog::child_of_night().keywords.contains(&Keyword::Lifelink));
+}
+
+#[test]
+fn vampire_interloper_flies_and_cant_block() {
+    use crate::card::Keyword;
+    let def = catalog::vampire_interloper();
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::CantBlock));
+}
+
+#[test]
+fn bartizan_bats_is_a_three_one_flyer() {
+    use crate::card::Keyword;
+    let def = catalog::bartizan_bats();
+    assert_eq!((def.power, def.toughness), (3, 1));
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn ajanis_pridemate_grows_on_lifegain() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::ajanis_pridemate());
+    g.adjust_life(0, 3);
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::LifeGained { player: 0, amount: 3 }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(cat).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "one +1/+1 counter per lifegain event");
+}
+
+#[test]
+fn souls_attendant_gains_life_on_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::souls_attendant());
+    let l0 = g.players[0].life;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 + 1);
+}
+
+#[test]
+fn auriok_champion_has_protection_from_black_and_red() {
+    use crate::card::Keyword;
+    let def = catalog::auriok_champion();
+    assert!(def.keywords.contains(&Keyword::Protection(Color::Black)));
+    assert!(def.keywords.contains(&Keyword::Protection(Color::Red)));
+}
+
+#[test]
+fn voice_of_the_blessed_flies_at_four_counters() {
+    use crate::card::{CounterType, Keyword};
+    let mut g = two_player_game();
+    let voice = g.add_card_to_battlefield(0, catalog::voice_of_the_blessed());
+    assert!(!g.computed_permanent(voice).unwrap().keywords.contains(&Keyword::Flying));
+    g.battlefield.iter_mut().find(|c| c.id == voice).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 4);
+    let kws = g.computed_permanent(voice).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Flying) && kws.contains(&Keyword::Vigilance),
+        "4+ counters grant flying and vigilance");
+}
+
+#[test]
+fn scorch_spitter_pings_on_attack() {
+    let mut g = two_player_game();
+    let spitter = g.add_card_to_battlefield(0, catalog::scorch_spitter());
+    g.battlefield.iter_mut().find(|c| c.id == spitter).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let l1 = g.players[1].life;
+    g.declare_attackers(vec![Attack { attacker: spitter, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 1, "1 damage to the defending player on attack");
+}
+
+#[test]
+fn faerie_miscreant_draws_with_a_twin() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::faerie_miscreant());
+    let before = g.players[0].hand.len();
+    // Second copy ETB sees the first → draw.
+    let m2 = g.add_card_to_battlefield(0, catalog::faerie_miscreant());
+    g.fire_self_etb_triggers(m2, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "second Miscreant drew a card");
+}
+
+#[test]
+fn moan_of_the_unhallowed_makes_two_zombies_and_has_flashback() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::moan_of_the_unhallowed());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Moan");
+    drain_stack(&mut g);
+    let zombies = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Zombie").count();
+    assert_eq!(zombies, 2);
+    assert!(catalog::moan_of_the_unhallowed().keywords.iter()
+        .any(|k| matches!(k, Keyword::Flashback(_))));
+}

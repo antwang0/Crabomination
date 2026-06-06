@@ -24107,3 +24107,554 @@ pub fn wall_of_frost() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks: aggro / tribal / aristocrat supplement ───────────────
+
+/// Helper: "gets +p/+t as long as you control a [land type]" self-static.
+fn pump_self_if_landtype(land: LandType, power: i32, toughness: i32) -> crate::effect::StaticAbility {
+    crate::effect::StaticAbility {
+        description: "Conditional self pump while you control a land type.",
+        effect: crate::effect::StaticEffect::PumpSelfIf {
+            condition: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(land)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            },
+            power,
+            toughness,
+            keyword: None,
+        },
+    }
+}
+
+/// Helper: a firebreathing-style "{R}: this gets +1/+0 until end of turn".
+fn firebreathing_r() -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost(&[r()]),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Kird Ape — {R} 1/1 Ape. Gets +1/+2 as long as you control a Forest.
+pub fn kird_ape() -> CardDefinition {
+    CardDefinition {
+        name: "Kird Ape",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ape], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![pump_self_if_landtype(LandType::Forest, 1, 2)],
+        ..Default::default()
+    }
+}
+
+/// Loam Lion — {W} 1/1 Cat. Gets +1/+2 as long as you control a Forest.
+pub fn loam_lion() -> CardDefinition {
+    CardDefinition {
+        name: "Loam Lion",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![pump_self_if_landtype(LandType::Forest, 1, 2)],
+        ..Default::default()
+    }
+}
+
+/// Sedge Troll — {2}{R} 2/2 Troll. +1/+1 while you control a Swamp; {B}: regen.
+pub fn sedge_troll() -> CardDefinition {
+    CardDefinition {
+        name: "Sedge Troll",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Troll], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![pump_self_if_landtype(LandType::Swamp, 1, 1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Young Wolf — {G} 1/1 Wolf with Undying (CR 702.92).
+pub fn young_wolf() -> CardDefinition {
+    CardDefinition {
+        name: "Young Wolf",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Undying],
+        ..Default::default()
+    }
+}
+
+/// Servant of the Scale — {G} 0/0 Human Soldier; enters with a +1/+1 counter.
+/// When it dies, move that many +1/+1 counters to target creature you control.
+pub fn servant_of_the_scale() -> CardDefinition {
+    CardDefinition {
+        name: "Servant of the Scale",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: target_filtered(SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Champion of the Perished — {B} 1/1 Zombie. Whenever another Zombie you
+/// control enters, put a +1/+1 counter on this creature.
+pub fn champion_of_the_perished() -> CardDefinition {
+    CardDefinition {
+        name: "Champion of the Perished",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Furnace Whelp — {2}{R}{R} 2/2 Dragon. Flying; {R}: +1/+0 until end of turn.
+pub fn furnace_whelp() -> CardDefinition {
+    CardDefinition {
+        name: "Furnace Whelp",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![firebreathing_r()],
+        ..Default::default()
+    }
+}
+
+/// Falkenrath Noble — {3}{B} 2/2 Vampire Noble. Flying. Whenever this or
+/// another creature dies, target player loses 1 life and you gain 1 life.
+pub fn falkenrath_noble() -> CardDefinition {
+    CardDefinition {
+        name: "Falkenrath Noble",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Drain {
+                from: Selector::Target(0),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Carrier Thrall — {1}{B} 2/1 Vampire. When it dies, create a 1/1 colorless
+/// Eldrazi Scion with "Sacrifice this token: Add {C}."
+pub fn carrier_thrall() -> CardDefinition {
+    CardDefinition {
+        name: "Carrier Thrall",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Eldrazi Scion".to_string(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Eldrazi],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![ActivatedAbility {
+                        sac_cost: true,
+                        effect: Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::Colorless(Value::Const(1)),
+                        },
+                        ..Default::default()
+                    }],
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blood Seeker — {1}{B} 1/1 Vampire Shaman. Whenever a creature an opponent
+/// controls enters, you may have that player lose 1 life.
+pub fn blood_seeker() -> CardDefinition {
+    CardDefinition {
+        name: "Blood Seeker",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vicious Conquistador — {B} 1/2 Vampire Soldier. Whenever it attacks, each
+/// opponent loses 1 life.
+pub fn vicious_conquistador() -> CardDefinition {
+    CardDefinition {
+        name: "Vicious Conquistador",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Child of Night — {1}{B} 2/1 Vampire with Lifelink.
+pub fn child_of_night() -> CardDefinition {
+    CardDefinition {
+        name: "Child of Night",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Vampire Interloper — {1}{B} 2/1 Vampire Scout. Flying; can't block.
+pub fn vampire_interloper() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire Interloper",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CantBlock],
+        ..Default::default()
+    }
+}
+
+/// Bartizan Bats — {3}{B} 3/1 Bat with Flying.
+pub fn bartizan_bats() -> CardDefinition {
+    CardDefinition {
+        name: "Bartizan Bats",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Ajani's Pridemate — {1}{W} 2/2 Cat Soldier. Whenever you gain life, put a
+/// +1/+1 counter on this creature.
+pub fn ajanis_pridemate() -> CardDefinition {
+    CardDefinition {
+        name: "Ajani's Pridemate",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soul's Attendant — {W} 1/1 Human Cleric. Whenever another creature enters,
+/// you may gain 1 life.
+pub fn souls_attendant() -> CardDefinition {
+    CardDefinition {
+        name: "Soul's Attendant",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Auriok Champion — {W}{W} 1/1 Human Cleric. Protection from black and from
+/// red. Whenever another creature enters, you may gain 1 life.
+pub fn auriok_champion() -> CardDefinition {
+    CardDefinition {
+        name: "Auriok Champion",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![
+            Keyword::Protection(Color::Black),
+            Keyword::Protection(Color::Red),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Voice of the Blessed — {W}{W} 2/2 Spirit Cleric. Whenever you gain life,
+/// put a +1/+1 counter on it. 4+ counters: flying and vigilance.
+/// 10+ counters: indestructible.
+pub fn voice_of_the_blessed() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    let counters_at_least = |n| Predicate::ValueAtLeast(
+        Value::CountersOn { what: Box::new(Selector::This), kind: CounterType::PlusOnePlusOne },
+        Value::Const(n),
+    );
+    CardDefinition {
+        name: "Voice of the Blessed",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![
+            StaticAbility {
+                description: "With 4+ counters, has flying.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: counters_at_least(4),
+                    power: 0,
+                    toughness: 0,
+                    keyword: Some(Keyword::Flying),
+                },
+            },
+            StaticAbility {
+                description: "With 4+ counters, has vigilance.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: counters_at_least(4),
+                    power: 0,
+                    toughness: 0,
+                    keyword: Some(Keyword::Vigilance),
+                },
+            },
+            StaticAbility {
+                description: "With 10+ counters, has indestructible.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: counters_at_least(10),
+                    power: 0,
+                    toughness: 0,
+                    keyword: Some(Keyword::Indestructible),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Scorch Spitter — {R} 1/1 Elemental Lizard. Whenever it attacks, it deals 1
+/// damage to the player or planeswalker it's attacking.
+pub fn scorch_spitter() -> CardDefinition {
+    CardDefinition {
+        name: "Scorch Spitter",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Faerie Miscreant — {U} 1/1 Faerie Rogue with Flying. ETB: if you control
+/// another creature named Faerie Miscreant, draw a card.
+pub fn faerie_miscreant() -> CardDefinition {
+    CardDefinition {
+        name: "Faerie Miscreant",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        // "another creature named Faerie Miscreant" — counting all you
+        // control (self + another) and gating on ≥2 sidesteps source-exclusion
+        // in the ETB context.
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::HasName("Faerie Miscreant".to_string())
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(2),
+            },
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Moan of the Unhallowed — {2}{B}{B} Sorcery. Create two 2/2 black Zombie
+/// tokens. Flashback {5}{B}{B}.
+pub fn moan_of_the_unhallowed() -> CardDefinition {
+    CardDefinition {
+        name: "Moan of the Unhallowed",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Zombie".to_string(),
+                power: 2,
+                toughness: 2,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Black],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Zombie],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), b(), b()]))],
+        ..Default::default()
+    }
+}

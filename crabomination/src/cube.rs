@@ -423,6 +423,12 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: aggro / lifegain supplement ──
+        loam_lion,
+        ajanis_pridemate,
+        souls_attendant,
+        auriok_champion,
+        voice_of_the_blessed,
         // ── modern_decks: cube staples ──
         condemn,
         beacon_of_immortality,
@@ -806,6 +812,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: aggro supplement ──
+        faerie_miscreant,
         // ── Evoke Incarnation (MH2) ──
         subtlety,
         // ── unblocked-draw snake + tempo illusions ──
@@ -1079,6 +1087,16 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: aggro / aristocrat supplement ──
+        champion_of_the_perished,
+        falkenrath_noble,
+        carrier_thrall,
+        blood_seeker,
+        vicious_conquistador,
+        child_of_night,
+        vampire_interloper,
+        bartizan_bats,
+        moan_of_the_unhallowed,
         // ── modern_decks: cube planeswalkers ──
         liliana_of_the_veil,
         liliana_the_last_hope,
@@ -1414,6 +1432,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: aggro / firebreathing supplement ──
+        kird_ape,
+        sedge_troll,
+        furnace_whelp,
+        scorch_spitter,
         // ── modern_decks: aggro goblin lord ──
         legion_warboss,
         staggershock,
@@ -1531,7 +1554,6 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_piker,
         goblin_chariot,
         mountain_goat,
-        dragon_hatchling,
         hurloon_minotaur,
         wall_of_stone,
         wall_of_fire,
@@ -1790,6 +1812,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── green burn + combat trick ──
         hornet_sting,
         titanic_growth,
+        // ── modern_decks: undying / counters supplement ──
+        young_wolf,
+        servant_of_the_scale,
         // ── green bodies + Eldrazi Spawn ramp ──
         silverback_ape,
         greater_basilisk,
