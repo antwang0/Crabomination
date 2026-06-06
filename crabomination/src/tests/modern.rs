@@ -30698,3 +30698,48 @@ fn mana_reflection_does_not_double_a_ritual_spell() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3,
         "Dark Ritual still nets BBB (not doubled)");
 }
+
+// ── Font of Mythos / Venser's Journal / Sensei's Divining Top ───────────────
+
+#[test]
+fn font_of_mythos_draws_two_extra_on_your_draw_step() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_battlefield(0, catalog::font_of_mythos());
+    let before = g.players[0].hand.len();
+    g.fire_step_triggers(crate::game::types::TurnStep::Draw);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 2, "drew two additional cards");
+}
+
+#[test]
+fn vensers_journal_gains_life_per_card_in_hand() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 { g.add_card_to_hand(0, catalog::forest()); }
+    g.add_card_to_battlefield(0, catalog::vensers_journal());
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len() as i32;
+    g.fire_step_triggers(crate::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + hand, "gained 1 life per card in hand");
+}
+
+#[test]
+fn senseis_divining_top_draws_and_returns_itself_to_library() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::forest());
+    let top = g.add_card_to_battlefield(0, catalog::senseis_divining_top());
+    g.clear_sickness(top);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: top, ability_index: 1, target: None, x_value: None,
+    }).expect("Top's draw ability activates");
+    drain_stack(&mut g);
+    assert!(g.players[0].library.iter().any(|c| c.id == top),
+        "the Top is on top of the library");
+    assert!(!g.battlefield.iter().any(|c| c.id == top), "no longer on the battlefield");
+}

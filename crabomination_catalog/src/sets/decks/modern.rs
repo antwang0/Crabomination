@@ -19682,6 +19682,85 @@ pub fn shield_sphere() -> CardDefinition {
     }
 }
 
+/// Font of Mythos — {4} Artifact. "At the beginning of each player's draw
+/// step, that player draws two additional cards."
+pub fn font_of_mythos() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Font of Mythos",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::AnyPlayer),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Venser's Journal — {5} Artifact — Book. "You have no maximum hand size. At
+/// the beginning of your upkeep, you gain 1 life for each card in your hand."
+pub fn vensers_journal() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Venser's Journal",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "You have no maximum hand size.",
+            effect: StaticEffect::NoMaximumHandSize,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::HandSizeOf(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sensei's Divining Top — {1} Artifact. "{1}: Look at the top three cards of
+/// your library, then put them back in any order. {T}: Draw a card, then put
+/// this artifact on top of its owner's library."
+pub fn senseis_divining_top() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Sensei's Divining Top",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::RearrangeTop { who: PlayerRef::You, amount: Value::Const(3) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Library {
+                            who: PlayerRef::You,
+                            pos: crate::effect::LibraryPosition::Top,
+                        },
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Reliquary Tower — Land. "You have no maximum hand size. {T}: Add {C}."
 pub fn reliquary_tower() -> CardDefinition {
     use crate::card::{ActivatedAbility, StaticAbility};

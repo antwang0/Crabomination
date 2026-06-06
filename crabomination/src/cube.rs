@@ -233,6 +233,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         reliquary_tower,
         thought_vessel,
         crucible_of_worlds,
+        vensers_journal,
+        // Draw-step group draw + library-manipulation artifacts.
+        font_of_mythos,
+        senseis_divining_top,
         // -0/-1 block counter.
         shield_sphere,
         // ── classic colorless core-set bodies (claude/modern_decks) ──
