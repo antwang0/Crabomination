@@ -500,6 +500,34 @@ impl ManaPool {
         self.white + self.blue + self.black + self.red + self.green + self.colorless
     }
 
+    /// Render the floating mana as Oracle-style pips (`{R}{R}{U}{C}`) for UI
+    /// prompts (e.g. the "spend floating mana?" confirmation). Empty pool →
+    /// `{0}`. Spend-restricted mana isn't freely spendable, so it's omitted.
+    pub fn summary(&self) -> String {
+        let mut s = String::new();
+        for (color, n) in [
+            (Color::White, self.white),
+            (Color::Blue, self.blue),
+            (Color::Black, self.black),
+            (Color::Red, self.red),
+            (Color::Green, self.green),
+        ] {
+            for _ in 0..n {
+                s.push('{');
+                s.push(color_pip_letter(color));
+                s.push('}');
+            }
+        }
+        for _ in 0..self.colorless {
+            s.push_str("{C}");
+        }
+        if s.is_empty() {
+            "{0}".into()
+        } else {
+            s
+        }
+    }
+
     /// Pay a ManaCost atomically. On failure the pool is left unchanged.
     ///
     /// Returns side effects (e.g. life loss from Phyrexian mana) on success.
@@ -805,6 +833,23 @@ impl ManaPool {
 
     pub fn empty(&mut self) {
         *self = Self::default();
+    }
+
+    /// Fold every bucket of `other` into this pool (colors, colorless, snow,
+    /// and spend-restricted entries). Used to restore protected floating mana
+    /// after paying a cost from freshly-tapped sources (the "keep my floating
+    /// mana" branch of the float-spend confirmation).
+    pub fn absorb(&mut self, other: &ManaPool) {
+        self.white += other.white;
+        self.blue += other.blue;
+        self.black += other.black;
+        self.red += other.red;
+        self.green += other.green;
+        self.colorless += other.colorless;
+        self.snow += other.snow;
+        for (c, n, r) in &other.restricted {
+            self.add_restricted(*c, *n, *r);
+        }
     }
 
     fn slot(&self, color: Color) -> &u32 {

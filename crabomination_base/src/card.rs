@@ -795,6 +795,43 @@ impl SelectionRequirement {
         Self::Not(Box::new(self))
     }
 
+    /// A short noun for a *target* matching this filter — "creature",
+    /// "artifact", "creature you control" — for prompt / label text
+    /// (`Effect::effect_short_text`, the modal-mode picker, trigger prompts).
+    /// Returns `None` for filters we can't cleanly name (complex `Or`/`Not`
+    /// trees, stat gates), so callers fall back to a plain "target". Kept
+    /// deliberately small: it only needs to name the common targeting filters
+    /// well enough that a modal like Abrade reads "destroy target artifact".
+    pub fn target_noun(&self) -> Option<String> {
+        use SelectionRequirement as S;
+        let base = match self {
+            S::Player => "player",
+            S::Creature => "creature",
+            S::Artifact => "artifact",
+            S::Enchantment => "enchantment",
+            S::Planeswalker => "planeswalker",
+            S::Permanent => "permanent",
+            S::Land => "land",
+            S::Nonland => "nonland permanent",
+            S::Noncreature => "noncreature permanent",
+            S::IsBasicLand => "basic land",
+            S::IsNonbasicLand => "nonbasic land",
+            // A type noun plus a "you control / an opponent controls"
+            // modifier — the common targeting combo (e.g. "creature you
+            // control"). If neither side names a type, give up.
+            S::And(a, b) => {
+                let noun = a.target_noun().or_else(|| b.target_noun())?;
+                let suffix = controller_suffix(a).or_else(|| controller_suffix(b));
+                return Some(match suffix {
+                    Some(s) => format!("{noun} {s}"),
+                    None => noun,
+                });
+            }
+            _ => return None,
+        };
+        Some(base.to_string())
+    }
+
     /// Whether a *player* entity could satisfy this requirement — used by
     /// targeting heuristics that decide whether to consider player targets
     /// (e.g. "deal N damage divided among any target" allows players, but
@@ -808,6 +845,17 @@ impl SelectionRequirement {
             Self::Not(_) => true,
             _ => false,
         }
+    }
+}
+
+/// The "you control" / "an opponent controls" clause for a controller-scoped
+/// requirement, used by [`SelectionRequirement::target_noun`] to build phrases
+/// like "creature you control". `None` for non-controller requirements.
+fn controller_suffix(r: &SelectionRequirement) -> Option<String> {
+    match r {
+        SelectionRequirement::ControlledByYou => Some("you control".to_string()),
+        SelectionRequirement::ControlledByOpponent => Some("an opponent controls".to_string()),
+        _ => None,
     }
 }
 

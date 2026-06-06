@@ -1821,6 +1821,10 @@ impl GameState {
         // (timing, mana) can't leak them onto the next cast.
         let chosen_sacrifices = self.pending_cast_sacrifices.take();
         let chosen_discards = self.pending_cast_discards.take();
+        // CR 601.2g float-spend confirmation answer (None until the player
+        // has answered the prompt). Taken up front so a later failure can't
+        // leak it onto the next cast.
+        let spend_float_choice = self.pending_cast_spend_float.take();
 
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
@@ -2096,7 +2100,42 @@ impl GameState {
         } else {
             crate::mana::SpellKind::Other
         };
-        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, spell_kind) {
+        // CR 601.2g — float-spend confirmation. If the caster has pre-existing
+        // floating mana that the cost could *either* spend *or* avoid (untapped
+        // sources can cover it), ask before auto-spending it instead of silently
+        // consuming mana they may have been holding. Skipped for convoke/delve
+        // casts (their pool already carries cost-reduction mana). Nothing has
+        // been tapped yet on this no-convoke path, so we abort by simply
+        // returning the card to hand; the cast re-runs from the top on answer.
+        if forced_only
+            && spend_float_choice.is_none()
+            && convoke_creatures.is_empty()
+            && delve_cards.is_empty()
+            && self.float_spend_is_optional(p, &cost, spell_kind)
+        {
+            let float_summary = self.players[p].mana_pool.summary();
+            let name = card.definition.name;
+            self.players[p].hand.push(card);
+            self.pending_decision = Some(crate::game::types::PendingDecision {
+                decision: crate::decision::Decision::OptionalTrigger {
+                    source: card_id,
+                    description: format!(
+                        "Spend floating mana ({float_summary}) to cast {name}? (No taps lands instead)"
+                    ),
+                },
+                resume: crate::game::types::ResumeContext::CastFloatConfirm {
+                    caster: p,
+                    card_id,
+                    target,
+                    additional_targets,
+                    mode,
+                    x_value,
+                },
+            });
+            return Ok(vec![]);
+        }
+
+        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, spell_kind, spend_float_choice) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].hand.push(card);
@@ -4124,8 +4163,68 @@ impl GameState {
         let snapshot = self.snapshot_payment_state(payer);
         // The auto-tap wrappers fund non-spell costs (cycling, equip,
         // ability activations, engine-driven pays). Restricted "cast only"
-        // mana never applies to these, so pay as `Other`.
-        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, crate::mana::SpellKind::Other)
+        // mana never applies to these, so pay as `Other`. These paths don't
+        // pose the float-spend confirmation, so pass `None`.
+        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, crate::mana::SpellKind::Other, None)
+    }
+
+    /// CR 601.2g — would paying `cost` for `payer` spend pre-existing floating
+    /// mana *optionally*? True iff the player has floating mana AND the cost is
+    /// fully payable from untapped sources WITHOUT it — i.e. the engine would
+    /// otherwise auto-spend float the player could have kept. Drives the
+    /// "spend floating mana, or tap lands?" confirmation. The check dry-runs a
+    /// full auto-tap on a clone with the float removed.
+    pub(crate) fn float_spend_is_optional(
+        &self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        kind: crate::mana::SpellKind,
+    ) -> bool {
+        use crate::mana::ManaSymbol;
+        use std::collections::HashMap;
+        let pool = &self.players[payer].mana_pool;
+        if pool.total() == 0 {
+            return false;
+        }
+        // If the floating pool already covers the *whole* cost, the player has
+        // arranged their mana — pay from it via the fast path, no prompt (this
+        // is the deliberate "prefilled pool" behaviour). The confirmation is
+        // only for *partial* float that auto-tap would otherwise sweep up.
+        if pool.clone().pay_for_spell(cost, kind).is_ok() {
+            return false;
+        }
+        // (1) Would the GENERIC portion of the cost eat pre-existing float?
+        // Float that matches a *colored* pip is mana the player would spend on
+        // that pip anyway (and usually tapped deliberately for this cast), so
+        // it isn't the "wasteful" case. We only flag float consumed by the
+        // generic / {C} part — exactly where a land could have paid instead.
+        let mut colored_need: HashMap<crate::mana::Color, u32> = HashMap::new();
+        let mut generic_need = 0u32;
+        for s in &cost.symbols {
+            match s {
+                ManaSymbol::Colored(c) => *colored_need.entry(*c).or_default() += 1,
+                ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => generic_need += *n,
+                _ => {}
+            }
+        }
+        // Float left over after each colored pip consumes its matching colour.
+        let mut float_left = pool.total();
+        for (c, need) in &colored_need {
+            float_left = float_left.saturating_sub((*need).min(pool.amount(*c)));
+        }
+        if float_left.min(generic_need) == 0 {
+            return false; // float only pays colored pips (or none) — not wasteful
+        }
+        // (2) Could the cost be paid entirely from untapped sources WITHOUT the
+        // float? If so, spending the float was avoidable (not the only legal
+        // source, CR 601.2g) → the player should choose. Dry-run a full
+        // auto-tap on a clone with the float removed.
+        let mut probe = self.clone();
+        probe.players[payer].mana_pool.empty();
+        let snap = probe.snapshot_payment_state(payer);
+        probe
+            .try_pay_after_snapshot_mode(payer, cost, snap, false, kind, None)
+            .is_ok()
     }
 
     /// Pay `cost` for `payer`, auto-tapping mana sources as needed.
@@ -4154,8 +4253,35 @@ impl GameState {
         snapshot: PaymentSnapshot,
         forced_only: bool,
         kind: crate::mana::SpellKind,
+        // CR 601.2g float-spend choice: `Some(false)` = the player declined to
+        // spend their pre-existing floating mana, so pay from freshly-tapped
+        // sources and keep the float; `Some(true)`/`None` = normal payment
+        // (spend float if it covers the cost). Only meaningful on the
+        // `forced_only` (human) path.
+        spend_float: Option<bool>,
     ) -> Result<PaymentReceipt, GameError> {
         if forced_only {
+            // "Keep my floating mana": pay from freshly-tapped sources, then
+            // restore the protected float. We only reach here after the cast
+            // confirmed sources can cover the cost (see `float_spend_is_optional`),
+            // so the source pay normally succeeds; if it somehow can't, restore
+            // the float and fall through to spending it (it was forced after all).
+            if spend_float == Some(false) {
+                let float = self.players[payer].mana_pool.clone();
+                self.players[payer].mana_pool.empty();
+                let src_snapshot = self.snapshot_payment_state(payer);
+                match self.try_pay_after_snapshot_mode(payer, cost, src_snapshot, false, kind, None) {
+                    Ok(mut receipt) => {
+                        self.players[payer].mana_pool.absorb(&float);
+                        receipt.pool_before.absorb(&float);
+                        return Ok(receipt);
+                    }
+                    Err(_) => {
+                        self.players[payer].mana_pool.absorb(&float);
+                        // fall through to the normal (float-spending) path
+                    }
+                }
+            }
             // Fast path: the player already has the mana floating — pay it.
             if self.players[payer].mana_pool.clone().pay_for_spell(cost, kind).is_ok() {
                 let pool_before = self.players[payer].mana_pool.clone();
@@ -5254,6 +5380,7 @@ impl GameState {
                 snapshot,
                 forced_only,
                 crate::mana::SpellKind::Other,
+                None,
             )?;
             if receipt.side_effects.life_lost > 0 {
                 self.adjust_life(p, -(receipt.side_effects.life_lost as i32));

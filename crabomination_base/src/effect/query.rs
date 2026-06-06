@@ -597,6 +597,22 @@ impl Effect {
         }
     }
 
+    /// The slot-0 target phrase for label text — "target creature",
+    /// "any target", or a plain "target" when the slot-0 filter has no clean
+    /// noun (complex `Or`/`Not`/stat gates) or there is no slot-0 target.
+    /// Lets `effect_short_text` surface a target's restriction so a modal like
+    /// Abrade reads "destroy target artifact" rather than "destroy target".
+    fn target_phrase(&self) -> String {
+        match self.target_filter_for_slot(0) {
+            Some(crate::card::SelectionRequirement::Any) => "any target".to_string(),
+            Some(req) => match req.target_noun() {
+                Some(noun) => format!("target {noun}"),
+                None => "target".to_string(),
+            },
+            None => "target".to_string(),
+        }
+    }
+
     /// Short human-readable summary of this effect's target shape, used
     /// in trigger prompts ("<source name> — exile target card from a
     /// graveyard"). Covers the common cases (Move-to-zone, Destroy,
@@ -605,41 +621,53 @@ impl Effect {
     /// If / MayDo / ForEach to find the first informative inner effect.
     pub fn effect_short_text(&self) -> String {
         match self {
-            Effect::Move { to, .. } => match to {
-                ZoneDest::Exile => "exile target".into(),
-                ZoneDest::Hand(_) => "return target to its owner's hand".into(),
-                ZoneDest::Graveyard => "put target into its owner's graveyard".into(),
-                ZoneDest::Battlefield { .. } => "put target onto the battlefield".into(),
-                ZoneDest::Library { .. } => "put target into its owner's library".into(),
-            },
-            Effect::Destroy { .. } => "destroy target".into(),
+            Effect::Move { to, .. } => {
+                let t = self.target_phrase();
+                match to {
+                    ZoneDest::Exile => format!("exile {t}"),
+                    ZoneDest::Hand(_) => format!("return {t} to its owner's hand"),
+                    ZoneDest::Graveyard => format!("put {t} into its owner's graveyard"),
+                    ZoneDest::Battlefield { .. } => format!("put {t} onto the battlefield"),
+                    ZoneDest::Library { .. } => format!("put {t} into its owner's library"),
+                }
+            }
+            Effect::Destroy { .. } => format!("destroy {}", self.target_phrase()),
             Effect::DestroyNoRegen { .. } => {
-                "destroy target (can't be regenerated)".into()
+                format!("destroy {} (can't be regenerated)", self.target_phrase())
             }
-            Effect::Exile { .. } => "exile target".into(),
+            Effect::Exile { .. } => format!("exile {}", self.target_phrase()),
             Effect::ExileUntilSourceLeaves { .. } => {
-                "exile target until this leaves the battlefield".into()
+                format!("exile {} until this leaves the battlefield", self.target_phrase())
             }
-            Effect::DealDamage { amount, .. } => match amount {
-                Value::Const(n) => format!("deal {n} damage to target"),
-                _ => "deal damage to target".into(),
-            },
+            Effect::DealDamage { amount, .. } => {
+                let t = self.target_phrase();
+                match amount {
+                    Value::Const(n) => format!("deal {n} damage to {t}"),
+                    _ => format!("deal damage to {t}"),
+                }
+            }
             Effect::DealDamageDivided { total, .. } => match total {
                 Value::Const(n) => format!("deal {n} damage divided among targets"),
                 _ => "deal damage divided among targets".into(),
             },
-            Effect::AddCounter { kind, amount, .. } => match amount {
-                Value::Const(n) => format!("put {n} {kind:?} counter(s) on target"),
-                _ => format!("put {kind:?} counter(s) on target"),
-            },
-            Effect::PumpPT { power, toughness, .. } => match (power, toughness) {
-                (Value::Const(p), Value::Const(t)) => {
-                    format!("target gets {p:+}/{t:+} until end of turn")
+            Effect::AddCounter { kind, amount, .. } => {
+                let t = self.target_phrase();
+                match amount {
+                    Value::Const(n) => format!("put {n} {kind:?} counter(s) on {t}"),
+                    _ => format!("put {kind:?} counter(s) on {t}"),
                 }
-                _ => "pump target until end of turn".into(),
-            },
-            Effect::Tap { .. } => "tap target".into(),
-            Effect::Untap { .. } => "untap target".into(),
+            }
+            Effect::PumpPT { power, toughness, .. } => {
+                let t = self.target_phrase();
+                match (power, toughness) {
+                    (Value::Const(p), Value::Const(tn)) => {
+                        format!("{t} gets {p:+}/{tn:+} until end of turn")
+                    }
+                    _ => format!("pump {t} until end of turn"),
+                }
+            }
+            Effect::Tap { .. } => format!("tap {}", self.target_phrase()),
+            Effect::Untap { .. } => format!("untap {}", self.target_phrase()),
             Effect::CounterSpell { .. } | Effect::CounterSpellToZone { .. } => {
                 "counter target spell".into()
             }

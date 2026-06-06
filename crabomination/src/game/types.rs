@@ -446,6 +446,7 @@ impl PendingDecision {
             ResumeContext::CleanupDiscard { player } => *player,
             ResumeContext::CombatDamage { player, .. } => *player,
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
+            ResumeContext::CastFloatConfirm { caster, .. } => *caster,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
         }
     }
@@ -615,6 +616,21 @@ pub(crate) enum ResumeContext {
     /// Carries the original cast parameters so the resume can re-invoke
     /// `cast_spell` verbatim (which may suspend again for a further cost).
     CastAdditionalCost {
+        caster: usize,
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 601.2g — a `wants_ui` caster is answering "spend your floating mana,
+    /// or tap lands instead?" before a cast's mana payment. The cast suspended
+    /// at its payment point (card returned to hand, taps rolled back) and is
+    /// re-run on answer with the choice stored in `pending_cast_spend_float`
+    /// (`Bool(true)` = spend the float, `Bool(false)` = keep it, pay from
+    /// sources). Carries the cast parameters so the resume replays `cast_spell`.
+    CastFloatConfirm {
         caster: usize,
         card_id: CardId,
         target: Option<Target>,

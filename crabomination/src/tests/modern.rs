@@ -1730,6 +1730,91 @@ fn diabolic_edict_ui_target_chooses_creature_to_sacrifice() {
         "the unchosen creature survives");
 }
 
+/// A modal spell's mode descriptions (what the mode-pick modal shows) must
+/// name each mode's target restriction — Abrade reads "deal 3 damage to
+/// target creature" / "destroy target artifact", not a bare "target".
+#[test]
+fn abrade_mode_descriptions_name_the_target_restrictions() {
+    let def = catalog::abrade();
+    let crate::effect::Effect::ChooseMode(modes) = &def.effect else {
+        panic!("Abrade should be a ChooseMode spell");
+    };
+    let d0 = modes[0].effect_short_text();
+    let d1 = modes[1].effect_short_text();
+    assert!(d0.contains("target creature"), "mode 0 should name the restriction: {d0}");
+    assert!(d1.contains("target artifact"), "mode 1 should name the restriction: {d1}");
+}
+
+/// CR 601.2g — a `wants_ui` caster is asked before the engine auto-spends
+/// pre-existing floating mana that untapped sources could pay instead, and a
+/// "no" keeps the float (paying from lands).
+#[test]
+fn cast_keeps_floating_mana_when_player_declines_to_spend_it() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].mana_pool.add(Color::Blue, 1); // off-colour float to keep
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // {1}{G}
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast suspends for the float-spend confirmation");
+    let pd = g.pending_decision.as_ref().expect("a float-spend confirmation is pending");
+    assert_eq!(pd.acting_player(), 0);
+    assert!(matches!(pd.decision, crate::decision::Decision::OptionalTrigger { .. }));
+
+    // Decline: keep the {U}, pay {1}{G} from the two Forests.
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(false)))
+        .expect("decline spending the float");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "floating {{U}} kept");
+    assert!(g.battlefield_find(f1).unwrap().tapped && g.battlefield_find(f2).unwrap().tapped,
+        "both Forests tapped to pay instead");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "Grizzly Bears resolved");
+}
+
+/// Confirming the float-spend prompt spends the floating mana as before.
+#[test]
+fn cast_spends_floating_mana_when_player_confirms() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .unwrap();
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)))
+        .expect("confirm spending the float");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0, "floating {{U}} spent on the generic pip");
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "Grizzly Bears resolved");
+}
+
+/// No prompt when the floating mana is the only legal source — it's auto-spent
+/// (CR 601.2g exemption), so a player with no lands isn't nagged.
+#[test]
+fn cast_auto_spends_floating_mana_when_it_is_the_only_source() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1); // {1}{G} entirely from float, no lands
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("casts without a prompt");
+    assert!(g.pending_decision.is_none(), "no prompt when float is the only way to pay");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "Grizzly Bears resolved");
+}
+
 /// Coveted Jewel changes hands when an opponent's creature attacks its
 /// controller, and untaps under the new controller (CR 800.4 control flip).
 #[test]

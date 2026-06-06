@@ -115,6 +115,9 @@ pub enum DecisionKey {
     /// `Decision::ChooseCards` — keyed by the candidate ids + (min, max) so a
     /// re-posed pick (e.g. a chained second cost) re-spawns the modal.
     ChooseCards(Vec<CardId>, u32, u32),
+    /// `Decision::OptionalTrigger` — a yes/no prompt (e.g. the float-spend
+    /// confirmation), keyed by the source + description.
+    OptionalTrigger(CardId, String),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -151,6 +154,9 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
             *min,
             *max,
         )),
+        DecisionWire::OptionalTrigger { source, description } => {
+            Some(DecisionKey::OptionalTrigger(*source, description.clone()))
+        }
         _ => None,
     }
 }
@@ -299,6 +305,10 @@ pub fn spawn_decision_ui(
             state.discard_selected.clear();
             state.spawned_for = Some(key);
             spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, prompt, candidates);
+        }
+        DecisionWire::OptionalTrigger { description, .. } => {
+            state.spawned_for = Some(key);
+            spawn_optional_modal(&mut commands, &ui_fonts, description);
         }
         DecisionWire::OrderTriggers { triggers, .. } => {
             if state.trigger_order.is_empty() {
@@ -1619,6 +1629,112 @@ pub fn handle_mulligan_buttons(
 
 #[derive(Component)]
 pub struct ChooseColorButton(pub crabomination::mana::Color);
+
+/// A Yes/No button for a `Decision::OptionalTrigger` prompt; `.0` is the
+/// answer submitted (`true` = yes).
+#[derive(Component)]
+pub struct OptionalChoiceButton(pub bool);
+
+/// A yes/no confirmation modal for `Decision::OptionalTrigger` — currently the
+/// "spend your floating mana, or tap lands?" prompt. `description` carries the
+/// specifics; the buttons answer `Bool(true)` / `Bool(false)`.
+fn spawn_optional_modal(commands: &mut Commands, ui_fonts: &UiFonts, description: &str) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG),
+            DecisionModal,
+        ))
+        .id();
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(16.0),
+                align_items: AlignItems::Center,
+                max_width: Val::Percent(70.0),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+    commands.entity(root).add_child(panel);
+
+    commands.entity(panel).with_children(|p| {
+        p.spawn((
+            Text::new(description.to_string()),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+        p.spawn(Node {
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(12.0),
+            ..default()
+        })
+        .with_children(|row| {
+            for (answer, label, bg) in [
+                (true, "Yes", theme::BUTTON_PRIMARY_BG),
+                (false, "No", theme::BUTTON_INFO_BG),
+            ] {
+                row.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(bg),
+                    HoverTint::new(bg),
+                    OptionalChoiceButton(answer),
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        ui_fonts.tf(18.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        Pickable::IGNORE,
+                    ));
+                });
+            }
+        });
+    });
+}
+
+/// Submit the `Bool` answer for a pending `OptionalTrigger` when its Yes/No
+/// button is clicked.
+pub fn handle_optional_buttons(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut state: ResMut<DecisionUiState>,
+    buttons: Query<(&Interaction, &OptionalChoiceButton), Changed<Interaction>>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if !matches!(
+        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
+        Some(DecisionWire::OptionalTrigger { .. })
+    ) {
+        return;
+    }
+    let Some(outbox) = outbox else { return };
+    for (interaction, btn) in &buttons {
+        if *interaction == Interaction::Pressed {
+            outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(btn.0)));
+            state.spawned_for = None;
+            return;
+        }
+    }
+}
 
 fn spawn_choose_color_modal(
     commands: &mut Commands,

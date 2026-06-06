@@ -393,6 +393,14 @@ pub struct GameState {
     /// `pay_additional_costs` in lieu of the first-N auto-pick. Never snapshots.
     #[serde(skip, default)]
     pub(crate) pending_cast_discards: Option<Vec<CardId>>,
+    /// Transient: the answer to a "spend your floating mana, or tap lands
+    /// instead?" confirmation (CR 601.2g — the player chooses their mana
+    /// sources). `Some(true)` = spend the pre-existing float; `Some(false)` =
+    /// keep it and pay from freshly-tapped sources. Set by `submit_decision`'s
+    /// `CastFloatConfirm` resume just before it replays the cast, taken at the
+    /// top of the cast. Never snapshots.
+    #[serde(skip, default)]
+    pub(crate) pending_cast_spend_float: Option<bool>,
     /// Transient: the permanent a `wants_ui` activator picked to satisfy an
     /// activated ability's "Sacrifice another …" cost (`sac_other_filter`).
     /// Set by `submit_decision`'s `ActivateAbilityChoice` resume just before it
@@ -651,6 +659,7 @@ impl Clone for GameState {
             pending_cast_face: self.pending_cast_face,
             pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
             pending_cast_discards: self.pending_cast_discards.clone(),
+            pending_cast_spend_float: self.pending_cast_spend_float,
             pending_ability_sac_other: self.pending_ability_sac_other,
             pending_ability_tap_other: self.pending_ability_tap_other,
             pending_ability_exile_other: self.pending_ability_exile_other.clone(),
@@ -742,6 +751,7 @@ impl GameState {
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
             pending_cast_discards: None,
+            pending_cast_spend_float: None,
             pending_ability_sac_other: None,
             pending_ability_tap_other: None,
             pending_ability_exile_other: None,
@@ -4659,6 +4669,22 @@ impl GameState {
                 // Priority is still the caster's (we never advanced it), so
                 // `cast_spell` reads the right actor. Any cost failure (e.g.
                 // mana shortfall) surfaces as a normal cast error.
+                return self.cast_spell(card_id, target, additional_targets, mode, x_value);
+            }
+            ResumeContext::CastFloatConfirm {
+                caster,
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => {
+                // CR 601.2g — the caster chose whether to spend floating mana.
+                let DecisionAnswer::Bool(spend) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let _ = caster;
+                self.pending_cast_spend_float = Some(spend);
                 return self.cast_spell(card_id, target, additional_targets, mode, x_value);
             }
             ResumeContext::ActivateAbilityChoice {
