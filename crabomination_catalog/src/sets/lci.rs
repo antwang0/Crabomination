@@ -2,12 +2,13 @@
 //! (CR 701.57) keyword action.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Keyword, Subtypes, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement, Selector,
+    Subtypes, Value,
 };
-use crate::effect::shortcut::etb;
-use crate::effect::{Effect, PlayerRef};
+use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::{Effect, PlayerRef, ZoneDest};
 use crate::game::effects::map_token;
-use crate::mana::{cost, generic, r, u};
+use crate::mana::{b, cost, g, generic, r, u, x};
 
 /// Geological Appraiser — {2}{R}{R} 3/2 Human Artificer. "When this enters,
 /// if you cast it, discover 3." (The "if you cast it" gate is approximated as
@@ -67,6 +68,47 @@ pub fn spyglass_siren() -> CardDefinition {
             count: Value::Const(1),
             definition: map_token(),
         })],
+        ..Default::default()
+    }
+}
+
+/// Defossilize — {4}{B} Sorcery. "Return target creature card from your
+/// graveyard to the battlefield. That creature explores, then it explores
+/// again."
+pub fn defossilize() -> CardDefinition {
+    CardDefinition {
+        name: "Defossilize",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::Explore { who: Selector::LastMoved },
+            Effect::Explore { who: Selector::LastMoved },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goldvein Hydra — {X}{G} 0/0 Hydra with vigilance, trample, haste. Enters
+/// with X +1/+1 counters.
+///
+/// The printed "when it dies, create power-many tapped Treasures" rider is
+/// dropped: the dies trigger resolves off the stack after the death snapshot
+/// is cleared, so `Value::PowerOf(This)` can't recover the counter-boosted
+/// power (LKI for stack-resolution is unmodeled — CR 603.10, tracked in TODO).
+pub fn goldvein_hydra() -> CardDefinition {
+    CardDefinition {
+        name: "Goldvein Hydra",
+        cost: cost(&[x(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         ..Default::default()
     }
 }

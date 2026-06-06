@@ -335,3 +335,73 @@ fn get_a_leg_up_pumps_per_creature_and_grants_reach() {
     assert_eq!(cp.power, 4, "2/2 base + (2 creatures) = 4 power");
     assert!(cp.keywords.contains(&Keyword::Reach), "gained reach");
 }
+
+/// Inside Source makes a Detective token on enter.
+#[test]
+fn inside_source_makes_detective() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::inside_source());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Inside Source");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Detective"), "ETB Detective token");
+}
+
+/// Defossilize reanimates a creature and explores it twice.
+#[test]
+fn defossilize_reanimates_and_explores_twice() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // Two nonland cards on top so both explores land +1/+1 counters.
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::defossilize());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Defossilize");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(dead).expect("reanimated");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2, "explored twice → two counters");
+}
+
+/// Goldvein Hydra enters with X +1/+1 counters and keeps its keywords.
+#[test]
+fn goldvein_hydra_enters_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::goldvein_hydra());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3); // X = 3
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("cast Goldvein Hydra for X=3");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!(cp.power, 3, "0/0 + 3 counters = 3 power");
+    assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
+}
+
+/// Slimy Dualleech buffs a small creature at the start of combat.
+#[test]
+fn slimy_dualleech_buffs_small_creature_at_combat() {
+    let mut g = two_player_game();
+    let slimy = g.add_card_to_battlefield(0, catalog::slimy_dualleech());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2, power 2
+    drain_stack(&mut g);
+    // Advance into combat so the begin-combat trigger fires.
+    while g.step != TurnStep::BeginCombat {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    // The trigger buffs one of the two eligible (power ≤ 2) creatures.
+    let buffed = [slimy, bears].into_iter().any(|id| {
+        let cp = g.computed_permanent(id).unwrap();
+        cp.keywords.contains(&Keyword::Deathtouch)
+    });
+    assert!(buffed, "a small creature gained deathtouch from Slimy Dualleech");
+}

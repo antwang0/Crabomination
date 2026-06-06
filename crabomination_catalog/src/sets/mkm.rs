@@ -310,3 +310,68 @@ pub fn get_a_leg_up() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Inside Source — {2}{W} 1/1 Human Citizen. "When this enters, create a 2/2
+/// white and blue Detective creature token." (The pump-a-Detective activated
+/// ability is omitted.)
+pub fn inside_source() -> CardDefinition {
+    CardDefinition {
+        name: "Inside Source",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: detective_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Slimy Dualleech — {3}{B} 2/4 Leech. "At the beginning of combat on your
+/// turn, target creature you control with power 2 or less gets +1/+0 and gains
+/// deathtouch until end of turn."
+pub fn slimy_dualleech() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    use crate::effect::Duration;
+    let target = || Selector::TargetFiltered {
+        slot: 0,
+        filter: SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::PowerAtMost(2)),
+    };
+    CardDefinition {
+        name: "Slimy Dualleech",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Leech], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target(),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: target(),
+                    keyword: Keyword::Deathtouch,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

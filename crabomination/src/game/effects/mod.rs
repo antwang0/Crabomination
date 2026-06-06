@@ -1883,7 +1883,10 @@ impl GameState {
                 // is collapsed). An empty library still explores (counter,
                 // no card). Emits `Explored` so payoff triggers can fire.
                 for ent in self.resolve_selector(who, ctx) {
-                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    // `as_card_id` so a reanimated explorer reached via
+                    // `Selector::LastMoved` (an `EntityRef::Card`) is honored;
+                    // the `battlefield_find` below still gates to permanents.
+                    let Some(cid) = ent.as_card_id() else { continue };
                     let Some(controller) =
                         self.battlefield_find(cid).map(|c| c.controller)
                     else {
