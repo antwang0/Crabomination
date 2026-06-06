@@ -680,6 +680,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Red) {
         v.push(lightning_helix);
+        v.push(onward_victory);
         v.push(talisman_of_conviction);
         v.push(rustvale_bridge);
         v.push(commercial_district);
@@ -735,6 +736,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Blue) {
         v.push(teferi_time_raveler);
         v.push(dovins_veto);
+        v.push(stand_deliver);
         v.push(razortide_bridge);
         v.push(floodfarm_verge);
         v.push(hengegate_pathway);
@@ -917,6 +919,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
         v.push(talisman_of_curiosity);
+        v.push(spring_mind);
+        v.push(give_take);
         v.push(tanglepool_bridge);
         v.push(hedge_maze);
         // ── SOS Quandrix (G/U) ──
@@ -935,6 +939,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Red) {
         v.push(stormchaser_mage);
         v.push(talisman_of_creativity);
+        v.push(fire_ice);
         v.push(silverbluff_bridge);
         v.push(thundering_falls);
         // ── SOS Prismari (U/R) ──
@@ -967,6 +972,10 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(marauding_mako);
         v.push(mistvault_bridge);
         v.push(glimpse_the_unthinkable);
+        v.push(far_away);
+        v.push(consign_oblivion);
+        v.push(spite_malice);
+        v.push(profit_loss);
         v.push(gloomlake_verge);
         v.push(dimir_signet);
         v.push(clearwater_pathway);
@@ -1300,6 +1309,13 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
+        frontline_devastator,
+        rough_tumble,
+        cut_ribbons,
+        toil_trouble,
+        dead_gone,
+        pure_simple,
+        boom_bust,
         // ── modern_decks: devotion payoff ──
         fanatic_of_mogis,
         // ── modern_decks: red utility creatures ──
@@ -1595,6 +1611,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(ghor_clan_rampager);
         v.push(slagwoods_bridge);
         v.push(elegant_parlor);
+        v.push(assault_battery);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(stormchaser_mage);
@@ -1638,6 +1655,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Poisonous (CR 702.70) ──
         marsh_viper,
+        mouth_feed,
+        supply_demand,
         // ── modern_decks: +1/+1-counter green creatures ──
         avatar_of_the_resolute,
         pelt_collector,
@@ -1866,6 +1885,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(thornglint_bridge);
         v.push(lush_portico);
         v.push(torsten_founder_of_benalia);
+        v.push(wax_wane);
+        v.push(alive_well);
+        v.push(ready_willing);
         v.push(horizon_canopy);
         v.push(hushwood_verge);
         v.push(talisman_of_unity);

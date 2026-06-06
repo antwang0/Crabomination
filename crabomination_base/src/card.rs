@@ -56,7 +56,7 @@ pub enum CreatureType {
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Archon, Aetherborn,
     Construct, Golem, Myr, Robot, Hellion,
-    Ooze, Plant,
+    Ooze, Plant, Saproling,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,
     Orc, Warlock, Bard, Sorcerer, Pilot,
@@ -1003,6 +1003,48 @@ pub struct CardDefinition {
     /// `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub plot_cost: Option<crate::mana::ManaCost>,
+    /// CR 709 — Split card. When `Some`, the main definition fields describe
+    /// the **left** half (cast via the normal cast path); `right` holds the
+    /// right half (cast via `GameAction::CastSplitRight`). With `fuse`, both
+    /// halves can be cast as a single spell (`GameAction::CastSplitFused`).
+    /// Defaults to `None` for snapshot back-compat.
+    #[serde(default)]
+    pub split: Option<Box<SplitCard>>,
+}
+
+/// CR 709 — the split layout. The left half lives on the parent
+/// [`CardDefinition`]'s own `cost` / `card_types` / `effect`; this struct
+/// carries the right half plus the Fuse flag.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct SplitCard {
+    pub right: SplitHalf,
+    /// CR 702.102 — Fuse: may cast both halves as one spell from hand.
+    pub fuse: bool,
+    /// CR 702.127 — Aftermath: the right half can be cast *only* from the
+    /// graveyard (`GameAction::CastAftermath`), and is exiled on resolution.
+    /// The left half is cast from hand normally and lands in the graveyard,
+    /// where the aftermath half then becomes available.
+    pub aftermath: bool,
+}
+
+/// One half of a split card (the left half's data lives directly on the
+/// parent [`CardDefinition`]). The half's name isn't stored — the combined
+/// card name on the parent definition is used for the log.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(bound = "")]
+pub struct SplitHalf {
+    pub cost: ManaCost,
+    /// Instant or Sorcery (governs cast timing).
+    pub card_types: Vec<CardType>,
+    pub effect: crate::effect::Effect,
+}
+
+impl SplitHalf {
+    /// True if this half can be cast at instant speed.
+    pub fn is_instant_speed(&self) -> bool {
+        self.card_types.contains(&CardType::Instant)
+    }
 }
 
 /// CR 715 — the instant/sorcery "adventure" half of an Adventurer card. The
@@ -1371,6 +1413,10 @@ impl CardDefinition {
     pub fn has_adventure(&self) -> Option<&Adventure> {
         self.adventure.as_deref()
     }
+    /// CR 709 — the split definition, if this is a split card.
+    pub fn has_split(&self) -> Option<&SplitCard> {
+        self.split.as_deref()
+    }
     /// CR 702.27 — the Buyback mana cost, if this card has Buyback.
     pub fn has_buyback(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
@@ -1639,6 +1685,11 @@ pub struct CardInstance {
     /// to gate "whenever this attacks while saddled" triggers. Cleared by
     /// `clear_end_of_turn_effects`.
     pub saddled: bool,
+    /// CR 709 — which half of a split card this spell is being cast as while
+    /// on the stack: `None`/`0` = left (default cast path), `1` = right
+    /// (`CastSplitRight`), `2` = fused (`CastSplitFused`). Drives effect
+    /// selection in `continue_spell_resolution`. Cleared off the stack.
+    pub split_cast: Option<u8>,
 }
 
 impl CardInstance {
@@ -1697,6 +1748,7 @@ impl CardInstance {
             adventuring: false,
             on_adventure: false,
             saddled: false,
+            split_cast: None,
         }
     }
 
@@ -1912,6 +1964,10 @@ struct CardInstanceWire {
     /// load as `false`.
     #[serde(default)]
     saddled: bool,
+    /// CR 709 split-half marker. `#[serde(default)]` so older snapshots load
+    /// as `None`.
+    #[serde(default)]
+    split_cast: Option<u8>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1959,6 +2015,7 @@ impl serde::Serialize for CardInstance {
             adventuring: self.adventuring,
             on_adventure: self.on_adventure,
             saddled: self.saddled,
+            split_cast: self.split_cast,
         };
         wire.serialize(ser)
     }
@@ -2006,6 +2063,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.adventuring = wire.adventuring;
         c.on_adventure = wire.on_adventure;
         c.saddled = wire.saddled;
+        c.split_cast = wire.split_cast;
         Ok(c)
     }
 }

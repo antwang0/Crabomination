@@ -354,6 +354,7 @@ impl GameState {
                 intervening_if: None,
             });
         }
+
         self.give_priority_to_active();
         Ok(events)
     }

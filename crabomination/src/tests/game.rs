@@ -158,6 +158,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             foretell_cost: None,
             adventure: None,
             plot_cost: None,
+            split: None,
         }
     }
 
@@ -5276,6 +5277,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {
@@ -6387,6 +6389,29 @@ fn bushido_pumps_attacker_when_blocked() {
     let a = g.battlefield.iter().find(|c| c.id == attacker).unwrap();
     assert_eq!(a.power(), 4);
     assert_eq!(a.toughness(), 4);
+}
+
+#[test]
+fn frontline_devastator_afflict_drains_defender_when_blocked() {
+    // Card-wiring check: Frontline Devastator's Afflict 2 (CR 702.131) drains
+    // the defending player when it becomes blocked.
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::frontline_devastator());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    let life_before = g.players[1].life;
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 2, "Afflict 2 drained the defender");
 }
 
 #[test]

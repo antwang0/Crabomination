@@ -278,6 +278,12 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventurable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand that are split cards whose **right** half
+    /// they could cast right now (CR 709). Lets the client offer the right
+    /// half distinct from the default (left) cast. Empty off-priority.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub splittable_right_hand: Vec<CardId>,
     /// CardIds of permanents the viewer controls with an activated ability
     /// they could use right now (timing/mana/tap/target all checked). Lets
     /// the client highlight "this permanent can do something." Empty

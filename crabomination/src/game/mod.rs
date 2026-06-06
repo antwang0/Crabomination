@@ -182,6 +182,8 @@ pub struct HandAffordances {
     pub foretellable: Vec<CardId>,
     pub plottable: Vec<CardId>,
     pub adventurable: Vec<CardId>,
+    /// CR 709 — split cards whose **right** half is castable right now.
+    pub splittable_right: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
 }
 
@@ -2628,6 +2630,27 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_adventure_creature(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastSplitRight {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_split_half(card_id, target, additional_targets, mode, x_value, false),
+            GameAction::CastSplitFused {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_split_half(card_id, target, additional_targets, mode, x_value, true),
+            GameAction::CastAftermath {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_aftermath(card_id, target, additional_targets, mode, x_value),
             GameAction::CastSpellCasualty {
                 card_id,
                 sacrifice,
@@ -4719,6 +4742,17 @@ impl GameState {
                     .as_ref()
                     .map(|a| a.effect.clone())
                     .unwrap_or(Effect::Noop)
+            } else if let (Some(half), Some(split)) =
+                (card.split_cast, card.definition.split.as_ref())
+            {
+                // CR 709 — resolve the chosen half. Left (0) is the main body;
+                // right (1) is `split.right`. Fused (2) resolves the left body
+                // here, then the right half runs in a second pass below with
+                // its own target (slot 0 of `additional_targets`).
+                match half {
+                    1 => split.right.effect.clone(),
+                    _ => card.definition.effect.clone(),
+                }
             } else {
                 card.definition.effect.clone()
             }
@@ -4736,7 +4770,29 @@ impl GameState {
             card.cast_from_hand,
         );
         ctx.kicked = card.kicked;
-        let events = self.resolve_effect(&effect, &ctx)?;
+        let mut events = self.resolve_effect(&effect, &ctx)?;
+        // CR 709 / 702.102 — a fused split cast resolves its right half in a
+        // second pass, reading its target from `additional_targets` slot 0
+        // (the left half consumed `target`). Fusable halves are single-target.
+        if card.split_cast == Some(2)
+            && let Some(split) = card.definition.split.as_ref()
+        {
+            let right_effect = split.right.effect.clone();
+            let right_ctx = EffectContext::for_spell_with_source_and_origin(
+                card.id,
+                card.definition.name,
+                caster,
+                additional_targets.first().cloned(),
+                Vec::new(),
+                mode,
+                x_value,
+                converged_value,
+                mana_spent,
+                card.cast_from_hand,
+            );
+            let mut right_events = self.resolve_effect(&right_effect, &right_ctx)?;
+            events.append(&mut right_events);
+        }
         if let Some((decision, in_progress, remaining)) = self.suspend_signal.take() {
             self.pending_decision = Some(PendingDecision {
                 decision,
@@ -4802,6 +4858,14 @@ impl GameState {
         if card.bought_back {
             let owner = card.owner;
             self.players[owner].hand.push(card);
+            return Ok(events);
+        }
+        // CR 702.127e — an Aftermath half (right half cast from the graveyard)
+        // is exiled on resolution rather than returning to the graveyard.
+        if card.split_cast == Some(1)
+            && card.definition.split.as_ref().is_some_and(|s| s.aftermath)
+        {
+            self.exile.push(card);
             return Ok(events);
         }
         // CR 715 — an adventure spell goes to exile (not the graveyard) on

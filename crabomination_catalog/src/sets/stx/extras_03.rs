@@ -71,6 +71,7 @@ pub fn brackish_trudge() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -132,6 +133,7 @@ pub fn lurking_deadeye() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -190,6 +192,7 @@ pub fn aether_helix() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -240,6 +243,7 @@ pub fn reflective_golem() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -299,6 +303,7 @@ pub fn tempest_caller() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -365,6 +370,7 @@ pub fn pillardrop_warden() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -433,6 +439,7 @@ pub fn devourer_of_memory() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -487,6 +494,7 @@ pub fn mavindas_verdict() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -543,6 +551,7 @@ pub fn witherbloom_skillchaser() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -603,6 +612,7 @@ pub fn quandrix_pop_quiz() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -650,6 +660,7 @@ pub fn inkwood_scrivener() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -701,6 +712,7 @@ pub fn furnace_hellkite() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -746,6 +758,7 @@ pub fn pinion_lecturer() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -797,6 +810,7 @@ pub fn sparkling_insight() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -850,6 +864,7 @@ pub fn pop_quiz_coach() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -897,6 +912,7 @@ pub fn soothing_hush() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -943,6 +959,7 @@ pub fn vortex_runner() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1004,6 +1021,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1066,6 +1084,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1121,6 +1140,7 @@ pub fn inkfathom_divers() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1182,6 +1202,7 @@ pub fn quandrix_quickener() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1245,6 +1266,7 @@ pub fn search_for_glory() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1303,6 +1325,7 @@ pub fn fervent_strike() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1396,6 +1419,7 @@ pub fn waker_of_waves() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1453,6 +1477,7 @@ pub fn discover_the_formula() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1513,6 +1538,7 @@ pub fn mortician_beetle() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1566,6 +1592,7 @@ pub fn vespine_strix() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1630,6 +1657,7 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1682,6 +1710,7 @@ pub fn wandering_mind() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1746,6 +1775,7 @@ pub fn lecturing_loxodon() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1805,6 +1835,7 @@ pub fn sequence_engine() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1871,6 +1902,7 @@ pub fn curriculum_crab() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1920,6 +1952,7 @@ pub fn pyrotechnics() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1971,6 +2004,7 @@ pub fn stormwild_capridor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2031,6 +2065,7 @@ pub fn final_payment() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2118,6 +2153,7 @@ pub fn witchs_cauldron() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2176,6 +2212,7 @@ pub fn steady_stance() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2239,6 +2276,7 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2296,6 +2334,7 @@ pub fn revitalize() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2350,6 +2389,7 @@ pub fn grim_bounty() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2422,6 +2462,7 @@ pub fn growth_spiral() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2472,6 +2513,7 @@ pub fn idyllic_tutor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2534,6 +2576,7 @@ pub fn gift_of_estates() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2585,6 +2628,7 @@ pub fn pillage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2639,6 +2683,7 @@ pub fn slip_through_space() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2683,6 +2728,7 @@ pub fn doomskar() -> CardDefinition {
         soulbond_bonus: None,
         additional_cast_cost: vec![],
         bestow: None,
+        split: None,
     }
 }
 
@@ -2768,6 +2814,7 @@ pub fn mind_drain() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2823,6 +2870,7 @@ pub fn hindering_light() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2880,6 +2928,7 @@ pub fn soul_shatter() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2953,6 +3002,7 @@ pub fn lurking_predators() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3000,6 +3050,7 @@ pub fn prowling_caracal() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3052,6 +3103,7 @@ pub fn elvish_visionary() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3115,6 +3167,7 @@ pub fn sungrass_egg() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3183,6 +3236,7 @@ pub fn mascot_summoning() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3235,6 +3289,7 @@ pub fn scry_inversion() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3288,6 +3343,7 @@ pub fn cunning_rhetoric() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3346,6 +3402,7 @@ pub fn library_larcenist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3400,6 +3457,7 @@ pub fn deans_list() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3450,5 +3508,6 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }

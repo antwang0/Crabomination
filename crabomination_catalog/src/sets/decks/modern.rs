@@ -8,15 +8,15 @@
 
 use crate::card::{
     ActivatedAbility, Adventure, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect,
-    Keyword, LandType, SelectionRequirement, Selector, SoulbondBonus, Subtypes, Supertype,
-    TokenDefinition, TriggeredAbility, Value, WardCost,
+    Keyword, LandType, SelectionRequirement, Selector, SoulbondBonus, SplitCard, SplitHalf,
+    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
-use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r, u, w};
+use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r, u, w, x};
 
 // ── Cantrips & card selection ────────────────────────────────────────────────
 
@@ -12604,27 +12604,783 @@ pub fn heroic_intervention() -> CardDefinition {
     }
 }
 
-/// Wear // Tear — {1}{R} // {W} Sorcery — split card. Wear destroys
-/// target artifact; Tear destroys target enchantment. (Fuse: cast both
-/// halves for their combined cost.)
-///
-/// Cube-style approximation: the split-card primitive (CR 709) is
-/// engine-wide ⏳. We ship the Tear half (destroy target enchantment)
-/// at the Wear cost of {1}{R} as a single-spell approximation — the
-/// most expensive but most useful cast pattern. A real Split-Card
-/// primitive would expose both halves and the fuse cost. Sorting it
-/// under R so the cube fan-out picks it up.
+/// Wear // Tear — {1}{R} // {W} Instant — split card with Fuse (CR 709 /
+/// 702.102). Wear (left) destroys target artifact; Tear (right) destroys
+/// target enchantment. Cast either half, or both fused for {1}{R}{W}.
 pub fn wear_tear() -> CardDefinition {
     CardDefinition {
         name: "Wear // Tear",
         cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Artifact),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[w()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Enchantment),
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Fire // Ice — {1}{R} // {1}{U} Instant split (CR 709, no Fuse). Fire (left)
+/// deals 2 damage divided among one or two targets; Ice (right) taps target
+/// permanent and draws a card.
+pub fn fire_ice() -> CardDefinition {
+    CardDefinition {
+        name: "Fire // Ice",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamageDivided {
+            total: Value::Const(2),
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 2,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Far // Away — {1}{U} // {2}{B} Instant split with Fuse (CR 709 / 702.102).
+/// Far (left) returns target creature to its owner's hand; Away (right) makes
+/// target player sacrifice a creature.
+pub fn far_away() -> CardDefinition {
+    CardDefinition {
+        name: "Far // Away",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Sacrifice {
+                    who: Selector::Target(0),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Assault // Battery — {R} // {3}{G} Sorcery split (CR 709, no Fuse). Assault
+/// (left) deals 2 damage to any target; Battery (right) makes a 3/3 green
+/// Elephant.
+pub fn assault_battery() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Assault // Battery",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Elephant".into(),
+                        power: 3,
+                        toughness: 3,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Elephant],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Stand // Deliver — {W} // {2}{U} Instant split (CR 709, no Fuse). Stand
+/// (left) prevents the next 2 damage to target creature this turn; Deliver
+/// (right) returns target permanent to its owner's hand.
+pub fn stand_deliver() -> CardDefinition {
+    CardDefinition {
+        name: "Stand // Deliver",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventNextDamage {
+            target: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Move {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Wax // Wane — {G} // {W} Instant split (CR 709, no Fuse). Wax (left) gives
+/// target creature +2/+2 until end of turn; Wane (right) destroys target
+/// enchantment.
+pub fn wax_wane() -> CardDefinition {
+    CardDefinition {
+        name: "Wax // Wane",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[w()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Enchantment),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Spring // Mind — {2}{G} // {4}{U}{U} split with Aftermath (CR 702.127).
+/// Spring (left, Sorcery) searches a basic land onto the battlefield tapped;
+/// Mind (right, Instant) — castable only from the graveyard, then exiled —
+/// draws two cards.
+pub fn spring_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Spring // Mind",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: search_to_battlefield(SelectionRequirement::IsBasicLand, true),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(4), u(), u()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Onward // Victory — {2}{R} // {2}{W} split with Aftermath (CR 702.127).
+/// Onward (left, Instant) gives target creature +X/+0 where X is its power;
+/// Victory (right, Sorcery) — castable only from the graveyard, then exiled —
+/// gives target creature double strike until end of turn.
+pub fn onward_victory() -> CardDefinition {
+    CardDefinition {
+        name: "Onward // Victory",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::PowerOf(Box::new(Selector::Target(0))),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::GrantKeyword {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Alive // Well — {3}{G} // {W} Sorcery split with Fuse (CR 709 / 702.102).
+/// Alive (left) makes a 3/3 green Centaur; Well (right) gains 2 life for each
+/// creature you control.
+pub fn alive_well() -> CardDefinition {
+    CardDefinition {
+        name: "Alive // Well",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Centaur".into(),
+                power: 3,
+                toughness: 3,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Centaur],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Times(
+                        Box::new(Value::Const(2)),
+                        Box::new(Value::CreatureCountControlledBy(PlayerRef::You)),
+                    ),
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Rough // Tumble — {1}{R} // {5}{R} Sorcery split (CR 709, no Fuse). Rough
+/// (left) deals 2 damage to each creature without flying; Tumble (right) deals
+/// 6 damage to each creature with flying.
+pub fn rough_tumble() -> CardDefinition {
+    CardDefinition {
+        name: "Rough // Tumble",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+            ),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            }),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(5), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                    ),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::Const(6),
+                    }),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Cut // Ribbons — {1}{R} // {X}{B}{B} split with Aftermath (CR 702.127).
+/// Cut (left, Sorcery) deals 4 damage to target creature; Ribbons (right,
+/// castable only from the graveyard, then exiled) drains each opponent for X.
+pub fn cut_ribbons() -> CardDefinition {
+    CardDefinition {
+        name: "Cut // Ribbons",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[x(), b(), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::XFromCost,
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Consign // Oblivion — {1}{U} // {4}{B} split with Aftermath (CR 702.127).
+/// Consign (left, Instant) returns target nonland permanent to its owner's
+/// hand; Oblivion (right, castable only from the graveyard, then exiled) makes
+/// target opponent discard two cards.
+pub fn consign_oblivion() -> CardDefinition {
+    CardDefinition {
+        name: "Consign // Oblivion",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(4), b()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Discard {
+                    who: Selector::Target(0),
+                    amount: Value::Const(2),
+                    random: false,
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Mouth // Feed — {2}{G} // {3}{G} split with Aftermath (CR 702.127). Mouth
+/// (left) makes a 3/3 green Hippo; Feed (right, castable only from the
+/// graveyard, then exiled) draws a card for each creature you control with
+/// power 3 or greater.
+pub fn mouth_feed() -> CardDefinition {
+    CardDefinition {
+        name: "Mouth // Feed",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Hippo".into(),
+                power: 3,
+                toughness: 3,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Hippo],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), g()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::count(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::PowerAtLeast(3)),
+                    )),
+                },
+            },
+            fuse: false,
+            aftermath: true,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Profit // Loss — {1}{W} // {2}{B} Instant split with Fuse (CR 709 /
+/// 702.102). Profit (left) gives creatures you control +1/+1; Loss (right)
+/// gives creatures your opponents control -1/-1, both until end of turn.
+pub fn profit_loss() -> CardDefinition {
+    use crate::effect::shortcut::{each_opponent_creature, each_your_creature};
+    CardDefinition {
+        name: "Profit // Loss",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: each_your_creature(),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::PumpPT {
+                    what: each_opponent_creature(),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Supply // Demand — {X}{G}{W} // {1}{W}{U} Sorcery split (CR 709, no Fuse).
+/// Supply (left) creates X 1/1 green Saprolings; Demand (right) tutors a
+/// multicolored card to hand.
+pub fn supply_demand() -> CardDefinition {
+    CardDefinition {
+        name: "Supply // Demand",
+        cost: cost(&[x(), g(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: TokenDefinition {
+                name: "Saproling".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Saproling],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), w(), u()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Multicolored,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Toil // Trouble — {2}{B} // {2}{R} Sorcery split with Fuse (CR 709 /
+/// 702.102). Toil (left) makes target player draw two and lose 2 life;
+/// Trouble (right) deals damage to target player equal to the cards in their
+/// hand.
+pub fn toil_trouble() -> CardDefinition {
+    CardDefinition {
+        name: "Toil // Trouble",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::Target(0), amount: Value::Const(2) },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::HandSizeOf(PlayerRef::Target(0)),
+                },
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Dead // Gone — {R} // {2}{R} Instant split (CR 709, no Fuse). Dead (left)
+/// deals 2 damage to target creature; Gone (right) returns target creature you
+/// don't control to its owner's hand.
+pub fn dead_gone() -> CardDefinition {
+    CardDefinition {
+        name: "Dead // Gone",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), r()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou.negate()),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Give // Take — {2}{G} // {2}{U} Sorcery split with Fuse (CR 709 / 702.102).
+/// Give (left) puts three +1/+1 counters on target creature; Take (right)
+/// removes all +1/+1 counters from target creature you control and draws that
+/// many cards.
+pub fn give_take() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Give // Take",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(3),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(2), u()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::Target(0)),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                    },
+                    Effect::RemoveCounter {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::CountersOn {
+                            what: Box::new(Selector::Target(0)),
+                            kind: CounterType::PlusOnePlusOne,
+                        },
+                    },
+                ]),
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Ready // Willing — {1}{G}{W} // {1}{W}{B} Instant split with Fuse (CR 709 /
+/// 702.102). Ready (left) gives your creatures indestructible and untaps them;
+/// Willing (right) gives your creatures deathtouch and lifelink. All effects
+/// last until end of turn.
+pub fn ready_willing() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    CardDefinition {
+        name: "Ready // Willing",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: each_your_creature(), up_to: None },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), w(), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: each_your_creature(),
+                        keyword: Keyword::Deathtouch,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: each_your_creature(),
+                        keyword: Keyword::Lifelink,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            },
+            fuse: true,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Pure // Simple — {1}{R}{G} // {1}{G}{W} Sorcery split (CR 709, no Fuse).
+/// Pure (left) destroys target multicolored permanent; Simple (right) destroys
+/// all Auras and Equipment.
+pub fn pure_simple() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EnchantmentSubtype};
+    CardDefinition {
+        name: "Pure // Simple",
+        cost: cost(&[generic(1), r(), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Destroy {
             what: target_filtered(
-                SelectionRequirement::Artifact
-                    .or(SelectionRequirement::Enchantment),
+                SelectionRequirement::Permanent.and(SelectionRequirement::Multicolored),
             ),
         },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(1), g(), w()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura)
+                            .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+                    ),
+                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Spite // Malice — {3}{U} // {3}{B} Instant split (CR 709, no Fuse). Spite
+/// (left) counters target noncreature spell; Malice (right) destroys target
+/// nonblack creature (it can't be regenerated).
+pub fn spite_malice() -> CardDefinition {
+    CardDefinition {
+        name: "Spite // Malice",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
+            ),
+        },
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(3), b()]),
+                card_types: vec![CardType::Instant],
+                effect: Effect::DestroyNoRegen {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasColor(Color::Black).negate()),
+                    ),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Boom // Bust — {1}{R} // {5}{R} Sorcery split (CR 709, no Fuse). Boom
+/// (left) destroys a land you control and a land you don't (two targets);
+/// Bust (right) destroys all lands.
+pub fn boom_bust() -> CardDefinition {
+    CardDefinition {
+        name: "Boom // Bust",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou.negate()),
+                },
+            },
+        ]),
+        split: Some(Box::new(SplitCard {
+            right: SplitHalf {
+                cost: cost(&[generic(5), r()]),
+                card_types: vec![CardType::Sorcery],
+                effect: Effect::ForEach {
+                    selector: Selector::EachPermanent(SelectionRequirement::Land),
+                    body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                },
+            },
+            fuse: false,
+            aftermath: false,
+        })),
+        ..Default::default()
+    }
+}
+
+/// Frontline Devastator — {3}{R} 3/3 Zombie Minotaur Warrior. Afflict 2
+/// (CR 702.131 — becomes blocked → defending player loses 2 life).
+/// {1}{R}: +1/+0 until end of turn.
+pub fn frontline_devastator() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::afflict;
+    CardDefinition {
+        name: "Frontline Devastator",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![afflict(2)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

@@ -163,7 +163,8 @@ fn earthshaker_khenra_stops_a_blocker() {
 /// token-copy activated ability.
 #[test]
 fn akh_embalm_bodies_have_graveyard_ability() {
-    let cases: &[(fn() -> crate::card::CardDefinition, i32, i32)] = &[
+    type Case = (fn() -> crate::card::CardDefinition, i32, i32);
+    let cases: &[Case] = &[
         (catalog::unwavering_initiate, 3, 2),
         (catalog::steadfast_sentinel, 2, 3),
         (catalog::aven_initiate, 3, 2),

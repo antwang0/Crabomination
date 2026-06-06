@@ -82,6 +82,7 @@ pub fn quandrix_surge() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -134,6 +135,7 @@ pub fn magecraft_insight() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -189,6 +191,7 @@ pub fn sparkmages_mantra() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -237,6 +240,7 @@ pub fn witherbloom_drainage() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -310,6 +314,7 @@ pub fn mizzium_mortars() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -368,6 +373,7 @@ pub fn electrolyze() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -431,6 +437,7 @@ pub fn show_of_aggression() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -509,6 +516,7 @@ pub fn past_in_flames() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -568,6 +576,7 @@ pub fn inspired_idea() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -646,6 +655,7 @@ pub fn resurgent_belief() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -715,6 +725,7 @@ pub fn enthusiastic_study() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -780,6 +791,7 @@ pub fn forked_bolt() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -830,6 +842,7 @@ pub fn storms_wrath() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -884,6 +897,7 @@ pub fn cinderclasm() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -941,6 +955,7 @@ pub fn cathartic_pyre() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -988,6 +1003,7 @@ pub fn stern_dismissal() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1037,6 +1053,7 @@ pub fn krosan_grip() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1117,6 +1134,7 @@ pub fn sublime_epiphany() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1195,6 +1213,7 @@ pub fn persist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1247,6 +1266,7 @@ pub fn bone_to_ash() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1310,6 +1330,7 @@ pub fn ingenious_mastery() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1374,6 +1395,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1426,6 +1448,7 @@ pub fn damnable_pact() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1479,6 +1502,7 @@ pub fn shore_up() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1533,6 +1557,7 @@ pub fn symbol_of_strength() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1590,6 +1615,7 @@ pub fn magmatic_sinkhole() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1661,6 +1687,7 @@ pub fn sevinnes_reclamation() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1727,6 +1754,7 @@ pub fn light_of_promise() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1790,6 +1818,7 @@ pub fn skywarp_skaab() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1847,6 +1876,7 @@ pub fn anger() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -1942,6 +1972,7 @@ pub fn triskaidekaphile() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2000,6 +2031,7 @@ pub fn excellent_education() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2063,6 +2095,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2137,6 +2170,7 @@ pub fn wonder() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2189,6 +2223,7 @@ pub fn brawn() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2242,6 +2277,7 @@ pub fn deep_analysis() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2303,6 +2339,7 @@ pub fn kasminas_transmutation() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2367,6 +2404,7 @@ pub fn crippling_fear() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2432,6 +2470,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2482,6 +2521,7 @@ pub fn valor() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2532,6 +2572,7 @@ pub fn pigment_storm() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2587,6 +2628,7 @@ pub fn step_through() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2645,6 +2687,7 @@ pub fn inkfathom_witch() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2720,6 +2763,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2789,6 +2833,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2850,6 +2895,7 @@ pub fn drannith_stinger() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2906,6 +2952,7 @@ pub fn mage_mauler() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -2991,6 +3038,7 @@ pub fn heirloom_mirror() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3051,6 +3099,7 @@ pub fn quandrix_mascot() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3112,6 +3161,7 @@ pub fn witherbloom_mascot() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3174,6 +3224,7 @@ pub fn spiteful_squad() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3237,6 +3288,7 @@ pub fn master_symmetrist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3307,6 +3359,7 @@ pub fn stinging_cave_crawler() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3361,6 +3414,7 @@ pub fn cogwork_archivist() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3423,6 +3477,7 @@ pub fn lorehold_mascot() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3483,6 +3538,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3591,6 +3647,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3645,6 +3702,7 @@ pub fn awesome_presentation() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }
 
@@ -3712,5 +3770,6 @@ pub fn rise_of_extus() -> CardDefinition {
         foretell_cost: None,
         adventure: None,
         plot_cost: None,
+        split: None,
     }
 }

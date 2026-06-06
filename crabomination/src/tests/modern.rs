@@ -16126,6 +16126,486 @@ fn wear_tear_destroys_target_artifact() {
 }
 
 #[test]
+fn fire_ice_left_deals_two_divided() {
+    // Fire (left half): 2 damage to the opponent.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fire_ice());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fire castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, before - 2, "Fire dealt 2");
+}
+
+#[test]
+fn fire_ice_right_taps_and_draws() {
+    // Ice (right half): tap target permanent and draw a card.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fire_ice());
+    let cid = g.next_id();
+    g.players[0].add_to_library_top(cid, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ice castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Ice tapped the bear");
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card (cast -1, draw +1)");
+}
+
+#[test]
+fn assault_battery_right_makes_elephant() {
+    // Battery (right half): create a 3/3 green Elephant.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::assault_battery());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Battery castable");
+    drain_stack(&mut g);
+
+    let eleph = g.battlefield.iter().find(|c| c.definition.name == "Elephant").expect("Elephant token");
+    assert_eq!((eleph.power(), eleph.toughness()), (3, 3), "3/3 Elephant");
+    assert_eq!(eleph.controller, 0);
+}
+
+#[test]
+fn far_away_fused_bounces_and_sacrifices() {
+    // Fused: Far bounces our target creature; Away makes the opponent sac one.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::far_away());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None, x_value: None,
+    }).expect("fused cast");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(mine).is_none(), "Far bounced our creature");
+    assert!(g.players[0].hand.iter().any(|c| c.id == mine), "bounced creature in hand");
+    assert!(g.battlefield_find(theirs).is_none(), "Away forced opponent to sacrifice");
+}
+
+#[test]
+fn wax_wane_left_pumps_creature() {
+    // Wax (left half): +2/+2 until end of turn.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wax_wane());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wax castable");
+    drain_stack(&mut g);
+
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (4, 4), "Wax pumped to 4/4");
+}
+
+#[test]
+fn stand_deliver_right_bounces_permanent() {
+    // Deliver (right half): return target permanent to its owner's hand.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::stand_deliver());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Deliver castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "Deliver bounced the bear");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced to owner's hand");
+}
+
+#[test]
+fn alive_well_fused_makes_token_and_gains_life() {
+    // Fused: Alive makes a 3/3 Centaur; Well gains 2 life per creature you
+    // control (after the Centaur enters, that's at least 1 creature).
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::alive_well());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("fused cast");
+    drain_stack(&mut g);
+
+    let centaur = g.battlefield.iter().find(|c| c.definition.name == "Centaur").expect("Centaur token");
+    assert_eq!((centaur.power(), centaur.toughness()), (3, 3));
+    // Left (Alive) resolves first, so the Centaur is on the field for Well.
+    assert_eq!(g.players[0].life, life_before + 2, "gained 2 per creature (1 Centaur)");
+}
+
+#[test]
+fn rough_tumble_right_hits_only_fliers() {
+    // Tumble (right) deals 6 to each creature with flying; grounded creatures
+    // are untouched.
+    let mut g = two_player_game();
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 no flying
+    let id = g.add_card_to_hand(0, catalog::rough_tumble());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tumble castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(flier).is_none(), "flier took 6 and died");
+    assert!(g.battlefield_find(ground).is_some(), "grounded creature untouched");
+}
+
+#[test]
+fn boom_left_destroys_one_of_each_players_land() {
+    // Boom (left) destroys a land you control and a land you don't.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::mountain());
+    let theirs = g.add_card_to_battlefield(1, catalog::forest());
+    let safe = g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::boom_bust());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: None, x_value: None,
+    }).expect("Boom castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(mine).is_none(), "my land destroyed");
+    assert!(g.battlefield_find(theirs).is_none(), "their land destroyed");
+    assert!(g.battlefield_find(safe).is_some(), "untargeted land spared");
+}
+
+#[test]
+fn bust_right_destroys_all_lands() {
+    // Bust (right) destroys every land.
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_battlefield(0, catalog::mountain());
+    let l2 = g.add_card_to_battlefield(1, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::boom_bust());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bust castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(l1).is_none() && g.battlefield_find(l2).is_none(), "all lands gone");
+}
+
+#[test]
+fn pure_left_destroys_multicolored_only() {
+    // Pure (left) destroys a multicolored permanent but spares a mono one.
+    let mut g = two_player_game();
+    let gold = g.add_card_to_battlefield(1, catalog::watchwolf()); // GW multicolored
+    let mono = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pure_simple());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(gold)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pure castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gold).is_none(), "multicolored destroyed");
+    assert!(g.battlefield_find(mono).is_some(), "mono untouched");
+}
+
+#[test]
+fn spite_left_counters_noncreature_only() {
+    // Spite (left) counters a noncreature spell on the stack.
+    let mut g = two_player_game();
+    // Opponent casts a noncreature spell (Lightning Bolt) at us.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt cast");
+    // We respond with Spite (counters the noncreature spell).
+    let id = g.add_card_to_hand(0, catalog::spite_malice());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spite castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered to graveyard");
+    assert_eq!(g.players[0].life, 20, "Bolt never resolved");
+}
+
+#[test]
+fn dead_gone_left_kills_right_bounces() {
+    // Dead (left) deals 2 to a 2/2; Gone (right) bounces an opponent's creature.
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::dead_gone());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dead castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "Dead killed the bear");
+
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id2 = g.add_card_to_hand(0, catalog::dead_gone());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id2, target: Some(Target::Permanent(other)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gone castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == other), "Gone bounced it");
+}
+
+#[test]
+fn give_take_left_adds_three_counters() {
+    // Give (left) puts three +1/+1 counters on target creature.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::give_take());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Give castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.counter_count(crate::card::CounterType::PlusOnePlusOne), 3);
+    assert_eq!((b.power(), b.toughness()), (5, 5));
+}
+
+#[test]
+fn ready_left_grants_indestructible_and_untaps() {
+    // Ready (left) gives your creatures indestructible and untaps them.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::ready_willing());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ready castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.has_keyword(&crate::card::Keyword::Indestructible), "granted indestructible");
+    assert!(!b.tapped, "untapped");
+}
+
+#[test]
+fn profit_loss_fused_pumps_yours_shrinks_theirs() {
+    // Fused: Profit +1/+1 to my creatures, Loss -1/-1 to opponent's.
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 -> 3/3
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 -> 1/1
+    let id = g.add_card_to_hand(0, catalog::profit_loss());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("fused cast");
+    drain_stack(&mut g);
+
+    let m = g.battlefield_find(mine).unwrap();
+    let t = g.battlefield_find(theirs).unwrap();
+    assert_eq!((m.power(), m.toughness()), (3, 3), "Profit pumped mine");
+    assert_eq!((t.power(), t.toughness()), (1, 1), "Loss shrank theirs");
+}
+
+#[test]
+fn supply_left_makes_x_saprolings() {
+    // Supply (left) makes X 1/1 Saprolings with X=3.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::supply_demand());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Supply castable");
+    drain_stack(&mut g);
+
+    let n = g.battlefield.iter().filter(|c| c.definition.name == "Saproling").count();
+    assert_eq!(n, 3, "made 3 Saprolings");
+}
+
+#[test]
+fn trouble_right_burns_for_target_hand_size() {
+    // Trouble (right) deals damage = cards in the target player's hand.
+    let mut g = two_player_game();
+    for _ in 0..4 {
+        let cid = g.next_id();
+        g.players[1].hand.push(crate::card::CardInstance::new(cid, catalog::grizzly_bears(), 1));
+    }
+    let hand_n = g.players[1].hand.len() as i32;
+    let id = g.add_card_to_hand(0, catalog::toil_trouble());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Trouble castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, before - hand_n, "Trouble burned for hand size");
+}
+
+#[test]
+fn cut_ribbons_aftermath_drains_each_opponent_for_x() {
+    // Ribbons (aftermath) drains each opponent for X. Cast it from the
+    // graveyard with X=3.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cut_ribbons());
+    let card = g.players[0].remove_from_hand(id).unwrap();
+    g.players[0].graveyard.push(card);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[1].life;
+
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Ribbons castable from graveyard");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, before - 3, "Ribbons drained 3");
+    assert!(g.exile.iter().any(|c| c.id == id), "Ribbons exiled");
+}
+
+#[test]
+fn consign_oblivion_left_bounces_nonland() {
+    // Consign (left) returns a target nonland permanent to its owner's hand.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::consign_oblivion());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Consign castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "to owner's hand");
+}
+
+#[test]
+fn mouth_feed_left_makes_hippo() {
+    // Mouth (left) makes a 3/3 green Hippo.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mouth_feed());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mouth castable");
+    drain_stack(&mut g);
+
+    let hippo = g.battlefield.iter().find(|c| c.definition.name == "Hippo").expect("Hippo token");
+    assert_eq!((hippo.power(), hippo.toughness()), (3, 3));
+}
+
+#[test]
+fn spring_mind_aftermath_from_graveyard_then_exiled() {
+    // CR 702.127 — Mind (right half) is castable only from the graveyard,
+    // draws two, then is exiled.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spring_mind());
+    for _ in 0..3 {
+        let cid = g.next_id();
+        g.players[0].add_to_library_top(cid, catalog::grizzly_bears());
+    }
+    // Can't cast the aftermath half from hand.
+    assert!(g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "aftermath not castable from hand");
+
+    // Cast Spring (left) — lands in the graveyard.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spring castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Spring in graveyard");
+
+    // Now cast Mind (aftermath) from the graveyard: draw two, then exile.
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mind castable from graveyard");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "Mind drew two");
+    assert!(g.exile.iter().any(|c| c.id == id), "Mind exiled after resolving");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id), "no longer in graveyard");
+}
+
+#[test]
+fn onward_victory_aftermath_grants_double_strike() {
+    // Victory (aftermath half) gives target creature double strike.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::onward_victory());
+    // Move the card straight to the graveyard to cast its aftermath half.
+    let card = g.players[0].remove_from_hand(id).unwrap();
+    g.players[0].graveyard.push(card);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastAftermath {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Victory castable from graveyard");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&crate::card::Keyword::DoubleStrike),
+        "bear gained double strike");
+    assert!(g.exile.iter().any(|c| c.id == id), "Victory exiled");
+}
+
+#[test]
 fn stillmoon_cavalier_grants_flying_eot() {
     let mut g = two_player_game();
     let cav = g.add_card_to_battlefield(0, catalog::stillmoon_cavalier());
@@ -18498,19 +18978,44 @@ fn sinkhole_destroys_target_land() {
 }
 
 #[test]
-fn wear_tear_destroys_artifact_or_enchantment() {
+fn wear_tear_right_half_destroys_enchantment() {
+    // CR 709 — casting the Tear (right) half destroys target enchantment.
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::bad_moon());
+    let id = g.add_card_to_hand(0, catalog::wear_tear());
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSplitRight {
+        card_id: id, target: Some(Target::Permanent(ench)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tear castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment destroyed");
+}
+
+#[test]
+fn wear_tear_fused_destroys_both() {
+    // CR 702.102 — fused cast destroys an artifact (Wear) and an enchantment
+    // (Tear) for the combined cost {1}{R}{W}. Left target rides `target`,
+    // right target rides `additional_targets` slot 0.
     let mut g = two_player_game();
     let artifact = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let ench = g.add_card_to_battlefield(1, catalog::bad_moon());
     let id = g.add_card_to_hand(0, catalog::wear_tear());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(artifact)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Wear // Tear castable");
+    g.perform_action(GameAction::CastSplitFused {
+        card_id: id,
+        target: Some(Target::Permanent(artifact)),
+        additional_targets: vec![Target::Permanent(ench)],
+        mode: None, x_value: None,
+    }).expect("fused cast");
     drain_stack(&mut g);
 
     assert!(!g.battlefield.iter().any(|c| c.id == artifact), "artifact destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment destroyed");
 }
 
 #[test]

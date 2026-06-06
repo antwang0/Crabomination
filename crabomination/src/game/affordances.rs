@@ -606,6 +606,34 @@ impl GameState {
             .collect()
     }
 
+    /// Split cards in `caster`'s hand whose right half they could cast right
+    /// now (CR 709). The probe auto-targets the right half's effect.
+    fn splittable_right_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter_map(|c| {
+                let split = c.definition.has_split()?;
+                let (target, additional_targets) = if split.right.effect.requires_target() {
+                    let (t, extras) = template
+                        .auto_targets_for_effect_all_slots(&split.right.effect, caster, None);
+                    t.as_ref()?;
+                    (t, extras)
+                } else {
+                    (None, vec![])
+                };
+                let id = c.id;
+                Self::would_accept_on(
+                    template,
+                    GameAction::CastSplitRight {
+                        card_id: id, target, additional_targets, mode: None, x_value: None,
+                    },
+                )
+                .then_some(id)
+            })
+            .collect()
+    }
+
     /// Compute every from-hand affordance hint for `seat` in one pass.
     ///
     /// The individual `*_hand_cards` / `activatable_permanents` methods each
@@ -640,6 +668,7 @@ impl GameState {
             foretellable: self.foretellable_hand_cards_on(&template, seat),
             plottable: self.plottable_hand_cards_on(&template, seat),
             adventurable: self.adventurable_hand_cards_on(&template, seat),
+            splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
         }
     }

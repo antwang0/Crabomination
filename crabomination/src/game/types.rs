@@ -121,6 +121,38 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 709 — cast the **right** half of a split card from hand, paying the
+    /// right half's cost. Resolves the right half's effect and goes to the
+    /// graveyard like any spell.
+    CastSplitRight {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 702.102 — Fuse: cast both halves of a split card as one spell,
+    /// paying both costs. `target` is the left half's target; the right
+    /// half's target is `additional_targets` slot 0.
+    CastSplitFused {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
+    /// CR 702.127 — cast the **Aftermath** (right) half of a split card from
+    /// the graveyard, paying the right half's cost. Exiled on resolution.
+    CastAftermath {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.153 — cast a spell paying its optional Casualty cost,
     /// sacrificing `sacrifice` (a creature you control with power ≥ the
     /// casualty number) as an additional cost. On cast the spell is copied.
@@ -975,4 +1007,6 @@ pub enum GameError {
     NotEquipment(CardId),
     #[error("Not enough energy to pay this ability's {{E}} cost")]
     InsufficientEnergy,
+    #[error("This split card has no Fuse, so its halves can't be cast together")]
+    NotFusable,
 }
