@@ -1019,6 +1019,10 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::PreventAllCombatDamageInvolving { .. } => "Prevent combat damage to/from target",
         Effect::SkipTurns { .. } => "Skip turns",
         Effect::SetLifeTotal { .. } => "Set life total",
+        Effect::ExchangeLifeTotals { .. } => "Exchange life totals",
+        Effect::PreventNextDamage { .. } => "Prevent damage",
+        Effect::PreventAllDamageThisTurn { .. } => "Prevent all damage",
+        Effect::DamageCantBePreventedThisTurn => "Damage can't be prevented",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
         Effect::GrantSpellsUncounterableThisTurn { .. } => "Spells can't be countered",
         Effect::Explore { .. } => "Explore",
@@ -1516,6 +1520,20 @@ mod tests {
         let label = ability_effect_label(&good.activated_abilities[0].effect);
         assert_eq!(label, "Draw cards",
             "Greater Good's payoff label should be Draw cards");
+    }
+
+    #[test]
+    fn life_exchange_and_prevention_effects_have_labels() {
+        // Magus of the Mirror's activated ability should label as the
+        // exchange, not the generic "Activate" fallback.
+        let magus = catalog::magus_of_the_mirror();
+        assert_eq!(
+            ability_effect_label(&magus.activated_abilities[0].effect),
+            "Exchange life totals",
+        );
+        // Mending Hands's prevention effect.
+        let mh = catalog::mending_hands();
+        assert_eq!(ability_effect_label(&mh.effect), "Prevent damage");
     }
 
     #[test]
