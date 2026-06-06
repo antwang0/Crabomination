@@ -173,6 +173,84 @@ fn devoid_mana_dorks_tap_for_colorless() {
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 3, "{{C}} + {{C}}{{C}}");
 }
 
+/// Oblivion Strike exiles a creature; Complete Disregard only hits power ≤3.
+#[test]
+fn oblivion_strike_exiles_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::oblivion_strike());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear), "in exile");
+}
+
+#[test]
+fn complete_disregard_cannot_hit_big_creatures() {
+    let mut g = two_player_game();
+    let hill = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3 — power 3 OK
+    let id = g.add_card_to_hand(0, catalog::complete_disregard());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast_at(&mut g, id, Target::Permanent(hill));
+    assert!(g.exile.iter().any(|c| c.id == hill), "power-3 creature is exiled");
+}
+
+/// Spatial Contortion gives +3/-3; a 2/2 dies to the toughness drop.
+#[test]
+fn spatial_contortion_minus_three_toughness_kills_a_two_two() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::spatial_contortion());
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 → -3 toughness → dies");
+}
+
+/// Unnatural Endurance pumps +2/+0 and regenerates the target.
+#[test]
+fn unnatural_endurance_pumps_and_regenerates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::unnatural_endurance());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (4, 2), "+2/+0");
+    // Lethal damage is replaced by the regen shield → survives.
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    g.check_state_based_actions();
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "regenerated");
+}
+
+/// Warping Wail's third mode creates a 1/1 Eldrazi Scion.
+#[test]
+fn warping_wail_makes_a_scion() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::warping_wail());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("cast Warping Wail (scion mode)");
+    drain_stack(&mut g);
+    assert_eq!(scion_count(&g), 1, "mode 2 mints an Eldrazi Scion");
+}
+
+/// Tar Snare gives -3/-2; a 2/2 dies.
+#[test]
+fn tar_snare_kills_a_two_two() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tar_snare());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 → -2 toughness → dies");
+}
+
 /// Reality Hemorrhage is a Devoid burn instant dealing 2.
 #[test]
 fn reality_hemorrhage_deals_two_and_is_colorless() {
