@@ -31005,7 +31005,7 @@ fn bastion_of_remembrance_drains_when_your_creature_dies() {
     }).expect("bolt your own creature");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1 - 1, "opponent lost 1");
-    assert_eq!(g.players[0].life, p0 + 1 - 0, "you gained 1 (bolt didn't hit you)");
+    assert_eq!(g.players[0].life, p0 + 1, "you gained 1 (bolt didn't hit you)");
 }
 
 #[test]

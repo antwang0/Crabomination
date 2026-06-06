@@ -8,6 +8,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Board-bounce to each card's owner (Aetherize / Evacuation).** `Move` to
+  `ZoneDest::Hand` resolves the destination player once from the spell's ctx,
+  so a multi-target "return all attacking creatures to their owners' hands"
+  can't route each card to its own owner. Add an owner-of-moved-card player
+  ref (or special-case `Hand` to default to `card.owner`, mirroring the
+  `Graveyard` arm) and ship Aetherize / Evacuation / AEther Gale.
 - **Evoke Incarnation faithfulness (MH2).** Subtlety's ETB targets any
   `IsSpellOnStack` rather than only creature/planeswalker spells (no
   card-type-on-stack filter yet). Endurance's "up to one target player"
@@ -614,7 +620,7 @@ picking an item up.
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — redistribute / exchange-life-totals clauses (119.7 tail); broad life-gain replacement (119.10).
 - 🟡 **CR 121 — Drawing a Card** — choose-to-draw (121.3); draw-count replacement (121.2a); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
-- 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2).
+- 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2). `StaticEffect::PreventUntap` now also honors `Selector::This` (self-referential — Basalt/Grim Monolith's "doesn't untap; pay to untap").
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).
