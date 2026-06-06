@@ -29909,3 +29909,106 @@ fn scrapheap_scrounger_returns_itself_exiling_a_creature() {
     assert!(g.players[0].hand.iter().any(|c| c.id == scrap), "Scrapheap returned to hand");
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == fodder), "exiled a creature as cost");
 }
+
+#[test]
+fn mental_note_mills_two_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let gy0 = g.players[0].graveyard.len();
+    let hand0 = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::mental_note());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    // milled two + the spell to gy = +3 graveyard; +1 hand from cast(-1)+draw(... net)
+    assert!(g.players[0].graveyard.len() >= gy0 + 3, "milled two plus the spell");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "add +1, cast -1, draw +1");
+}
+
+#[test]
+fn izzet_charm_burn_mode_kills_a_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::izzet_charm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Mode 1 = deal 2 damage to target creature.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Izzet Charm burn mode");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2 damage killed the 2/2");
+}
+
+#[test]
+fn flame_of_anor_can_destroy_an_artifact() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::flame_of_anor());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Mode 1 = destroy target artifact.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Flame of Anor destroy mode");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == rock), "destroyed the artifact");
+}
+
+#[test]
+fn crackling_doom_pings_and_forces_a_sacrifice() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let p1 = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::crackling_doom());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 2, "each opponent took 2");
+    assert!(!g.battlefield.iter().any(|c| c.id == big), "opponent sacrificed a creature");
+}
+
+#[test]
+fn legion_warboss_makes_a_goblin_at_combat() {
+    let mut g = two_player_game();
+    let boss = g.add_card_to_battlefield(0, catalog::legion_warboss());
+    g.clear_sickness(boss);
+    let goblins_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Goblin").count();
+    g.fire_step_triggers(crate::game::TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let goblins_after = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Goblin").count();
+    assert_eq!(goblins_after, goblins_before + 1, "begin-combat made a Goblin");
+    let gob = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Goblin").unwrap();
+    assert!(gob.definition.keywords.contains(&Keyword::Haste), "the Goblin has haste");
+}
+
+#[test]
+fn flusterstorm_counters_an_instant_unless_paid() {
+    let mut g = two_player_game();
+    // P1 casts a bolt; P0 Flusterstorms it. With no mana to pay {1}, it's countered.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P1 casts Bolt");
+    let fs = g.add_card_to_hand(0, catalog::flusterstorm());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: fs, target: Some(crate::game::types::Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P0 casts Flusterstorm at the Bolt");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt was countered (unpaid)");
+}

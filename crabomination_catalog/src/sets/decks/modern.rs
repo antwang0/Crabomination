@@ -21918,3 +21918,136 @@ pub fn scrapheap_scrounger() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mental Note — {U} Instant. Mill two cards, then draw a card.
+pub fn mental_note() -> CardDefinition {
+    CardDefinition {
+        name: "Mental Note",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Izzet Charm — {U}{R} Instant. Choose one — counter target noncreature
+/// spell unless its controller pays {2}; or deal 2 damage to target creature;
+/// or draw two cards, then discard two cards.
+pub fn izzet_charm() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered as tf;
+    CardDefinition {
+        name: "Izzet Charm",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(2)]) },
+            Effect::DealDamage { to: tf(SelectionRequirement::Creature), amount: Value::Const(2) },
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flame of Anor — {1}{U}{R} Instant. Choose one — target player draws two
+/// cards; destroy target artifact; or deal 5 damage to target creature. (The
+/// "choose two if you control a Wizard" rider is dropped.)
+pub fn flame_of_anor() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered as tf;
+    CardDefinition {
+        name: "Flame of Anor",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+            Effect::Destroy { what: tf(SelectionRequirement::Artifact) },
+            Effect::DealDamage { to: tf(SelectionRequirement::Creature), amount: Value::Const(5) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Crackling Doom — {R}{W}{B} Instant. Deal 2 damage to each opponent. Each
+/// opponent sacrifices a creature with the greatest power among creatures they
+/// control. (Greatest-power approximated by `SacrificeGreatestMV`.)
+pub fn crackling_doom() -> CardDefinition {
+    CardDefinition {
+        name: "Crackling Doom",
+        cost: cost(&[r(), w(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+            Effect::SacrificeGreatestMV {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flusterstorm — {U} Instant. Counter target instant or sorcery spell unless
+/// its controller pays {1}. Storm (CR 702.40).
+pub fn flusterstorm() -> CardDefinition {
+    CardDefinition {
+        name: "Flusterstorm",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(1)]) },
+        ..Default::default()
+    }
+}
+
+/// Legion Warboss — {2}{R} 2/2 Goblin Soldier. Mentor (CR 702.134). At the
+/// beginning of combat on your turn, create a 1/1 red Goblin with haste. (The
+/// token's "attacks this combat if able" rider is dropped.)
+pub fn legion_warboss() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::mentor;
+    let haste_goblin = TokenDefinition {
+        name: "Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        keywords: vec![Keyword::Haste],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Legion Warboss",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            mentor(),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: haste_goblin,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

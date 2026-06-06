@@ -773,6 +773,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: cube planeswalkers ──
         narset_parter_of_veils,
         teferi_hero_of_dominaria,
+        // ── modern_decks: blue staples ──
+        mental_note,
+        flusterstorm,
         // ── modern_decks: land-scaled dig + storm payoff ──
         consult_the_star_charts,
         minds_desire,
@@ -950,6 +953,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Red) {
         v.push(stormchaser_mage);
+        v.push(izzet_charm);
+        v.push(flame_of_anor);
         v.push(talisman_of_creativity);
         v.push(fire_ice);
         v.push(silverbluff_bridge);
@@ -1321,6 +1326,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks: aggro goblin lord ──
+        legion_warboss,
         // ── modern_decks: red legends ──
         pia_and_kiran_nalaar,
         zo_zu_the_punisher,
