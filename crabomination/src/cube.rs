@@ -815,6 +815,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
         snapping_drake,
+        coral_eel,
+        horned_turtle,
+        mist_raven,
         // ── Evoke Incarnation (MH2) ──
         subtlety,
         // ── unblocked-draw snake + tempo illusions ──
@@ -1089,6 +1092,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: aggro / aristocrat supplement ──
+        walking_corpse,
+        highborn_ghoul,
         champion_of_the_perished,
         falkenrath_noble,
         carrier_thrall,
@@ -1822,7 +1827,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: undying / counters supplement ──
         young_wolf,
         servant_of_the_scale,
-        // ── modern_decks: green beaters batch 2 ──
+        // ── modern_decks: green beaters batch 2/3 ──
+        grizzled_outrider,
         runeclaw_bear,
         alpine_grizzly,
         pheres_band_centaurs,

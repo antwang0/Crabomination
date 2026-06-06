@@ -32049,3 +32049,28 @@ fn wing_snare_destroys_only_flyers() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(flyer).is_none(), "the flyer is destroyed");
 }
+
+// ── claude/modern_decks: beaters batch 3 tests ────────────────────────────────
+
+#[test]
+fn batch3_bodies_and_keywords() {
+    use crate::card::Keyword;
+    assert_eq!({ let d = catalog::coral_eel(); (d.power, d.toughness) }, (2, 1));
+    assert_eq!({ let d = catalog::horned_turtle(); (d.power, d.toughness) }, (1, 4));
+    assert_eq!({ let d = catalog::grizzled_outrider(); (d.power, d.toughness) }, (5, 5));
+    assert_eq!({ let d = catalog::walking_corpse(); (d.power, d.toughness) }, (2, 2));
+    assert!(catalog::highborn_ghoul().keywords.contains(&Keyword::Intimidate));
+    assert!(catalog::mist_raven().keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn mist_raven_bounces_a_creature_on_etb() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let raven = g.add_card_to_battlefield(0, catalog::mist_raven());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.fire_self_etb_triggers(raven, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "the bear was bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "bear is back in its owner's hand");
+}

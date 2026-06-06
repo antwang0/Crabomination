@@ -24861,3 +24861,93 @@ pub fn wing_snare() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks: beaters batch 3 ──────────────────────────────────────
+
+/// Coral Eel — {1}{U} 2/1 Fish (vanilla).
+pub fn coral_eel() -> CardDefinition {
+    CardDefinition {
+        name: "Coral Eel",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fish], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Horned Turtle — {2}{U} 1/4 Turtle (vanilla).
+pub fn horned_turtle() -> CardDefinition {
+    CardDefinition {
+        name: "Horned Turtle",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Turtle], ..Default::default() },
+        power: 1,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
+/// Mist Raven — {2}{U}{U} 2/2 Bird with Flying. ETB: return target creature to
+/// its owner's hand.
+pub fn mist_raven() -> CardDefinition {
+    CardDefinition {
+        name: "Mist Raven",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Grizzled Outrider — {4}{G} 5/5 Elf Warrior (vanilla).
+pub fn grizzled_outrider() -> CardDefinition {
+    CardDefinition {
+        name: "Grizzled Outrider",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        ..Default::default()
+    }
+}
+
+/// Walking Corpse — {1}{B} 2/2 Zombie (vanilla).
+pub fn walking_corpse() -> CardDefinition {
+    CardDefinition {
+        name: "Walking Corpse",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
+/// Highborn Ghoul — {B}{B} 2/1 Zombie with Intimidate.
+pub fn highborn_ghoul() -> CardDefinition {
+    CardDefinition {
+        name: "Highborn Ghoul",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Intimidate],
+        ..Default::default()
+    }
+}
