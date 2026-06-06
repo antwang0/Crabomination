@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Graveyard-hate replacement statics.** Rest in Peace / Leyline of the Void
+  ("if a card would be put into a graveyard, exile it instead") need a
+  `StaticEffect`-driven graveyard→exile replacement in `place_card_in_dest`.
+- **Counter-prevention static (Solemnity).** "Counters can't be put on
+  permanents/players" — gate `Effect::AddCounter` on a battlefield scan.
+- **Modal 3-mode charms with per-mode targets** (Esper/Golgari/Azorius Charm).
+  `ChooseMode` + per-mode `target_filter_for_slot_in_mode` works, but the
+  2-color cube pools can't slot 3-color Esper Charm; add a guild-charm batch
+  once a per-mode target picker / multicolor pool exists. Modes that need new
+  primitives: "creatures gain lifelink EOT" mass keyword grant, "put attacking
+  creature on top of library", split mill.
+- **Oracle of Mul Daya / play-from-top-of-library.** Needs a
+  "play lands from the top of your library" permission + top-card reveal.
+- **Echo + ETB land destruction (Avalanche Riders).** Echo keyword exists;
+  pair with `Effect::Destroy` over a land target.
+
 - **Client modals for `ChooseMode` / `ChooseModes` / `DivideDamage` /
   `ChooseAmount` / `NameCard`.** `decision_ui.rs` only renders Scry / Search /
   PutOnLibrary / Discard / Mulligan / ChooseColor / Learn / OrderTriggers /

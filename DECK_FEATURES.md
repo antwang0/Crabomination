@@ -20,10 +20,13 @@ All BRG cards are ✅ and elided. Full per-card history is in git.
 
 ## Modern supplement (catalog::sets::decks::modern)
 
-A pack of additional Modern-playable cards built entirely on existing
-engine primitives — no engine changes required. Each entry has at least
-one functionality test in `crabomination/src/tests/modern.rs` (registered
-via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
+A pack of additional Modern- and cube-playable cards. Most ride existing
+engine primitives; newer batches also ship small reusable primitives
+(no-max-hand-size / play-lands-from-graveyard / mana-doubling / creature
+ability-lock statics, reveal-top-land-else-hand, Mana Clash flip-off,
+-0/-1 & -1/-0 counters). Each entry has at least one functionality test in
+`crabomination/src/tests/modern.rs` (registered via
+`#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 
 All Modern-supplement cards are ✅ and elided. Karn, Scion of Urza and
 Tezzeret, Cruel Captain are now wired to their real oracle text (reveal-two /

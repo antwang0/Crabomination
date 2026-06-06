@@ -43,8 +43,14 @@ and the rules-coverage audit in `TODO.md`.
   MDFC front/back, split // fuse // aftermath, adventure, command zone + Commander,
   manlands (`BecomeCreature`), living weapon, clones/token-copies/spell-copies.
 - **Replacement effects:** enters-tapped, enters-with-counters, token/counter/
-  damage **doubling**, regeneration, EtbTriggerTax, Maze-of-Ith per-source
-  combat-damage prevention, prevention shields, finality exile-instead.
+  damage **doubling**, **mana-doubling** (CR 701.10f, `ManaProductionDoubled`),
+  regeneration, EtbTriggerTax, Maze-of-Ith per-source combat-damage prevention,
+  prevention shields, finality exile-instead. Counters cease on zone change
+  (CR 122.2). Counter types incl. `-0/-1` / `-1/-0`.
+- **Statics (misc):** no-maximum-hand-size, play-lands-from-graveyard
+  (`PlayLandFromGraveyard` action), artifact/creature non-mana-ability locks,
+  spell-tax (`AdditionalCost`, incl. nonartifact). Two-player coin-flip-off
+  (`Effect::ManaClash`), reveal-top-land-to-battlefield-else-hand.
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant (+ teams);
   singleplayer vs. bot, networked TCP multiplayer, draft + cube, Learn/Lessons
   sideboard, full-state serde snapshots (save/restore + replay foundation).
