@@ -426,6 +426,34 @@ pub fn card_back_face_asset_path(name: &str) -> String {
     format!("cards/{}", card_back_face_filename(name))
 }
 
+/// The name to query Scryfall with, stripped of a trailing deck-variant
+/// disambiguator the catalog appends to keep names unique (e.g. "Putrefy
+/// (Modern)" → "Putrefy"). The full catalog name is still used for the local
+/// filename, so the saved image lines up with the runtime asset path.
+///
+/// Only known format-name suffixes are stripped — the synthesized-audit
+/// `(bNNN)` suffix is deliberately left alone, since those cards aren't on
+/// Scryfall and stripping could make one accidentally resolve to a real
+/// card's art.
+fn scryfall_lookup_name(name: &str) -> &str {
+    const FORMAT_SUFFIXES: &[&str] = &[
+        " (Modern)",
+        " (Legacy)",
+        " (Vintage)",
+        " (Standard)",
+        " (Pioneer)",
+        " (Pauper)",
+        " (Commander)",
+        " (Historic)",
+    ];
+    for suffix in FORMAT_SUFFIXES {
+        if let Some(base) = name.strip_suffix(suffix) {
+            return base;
+        }
+    }
+    name
+}
+
 fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
     match spec {
         CardImage::Token { name } => download_token_image(name),
@@ -433,8 +461,8 @@ fn download_card_image(spec: &CardImage) -> Result<Vec<u8>, LookupError> {
             // Query parameters: which name to look up, and whether to ask
             // Scryfall for the back face.
             let (lookup_name, face_param) = match spec {
-                CardImage::Front(n) => (*n, ""),
-                CardImage::MdfcBack { front, .. } => (*front, "&face=back"),
+                CardImage::Front(n) => (scryfall_lookup_name(n), ""),
+                CardImage::MdfcBack { front, .. } => (scryfall_lookup_name(front), "&face=back"),
                 CardImage::Token { .. } => unreachable!("handled above"),
             };
             match try_lookup("exact", lookup_name, face_param) {
@@ -564,7 +592,7 @@ fn scryfall_get_bytes(url: &str) -> Result<Vec<u8>, LookupError> {
                 }
                 attempt += 1;
                 // 0.5s, 1s, 2s — gives Scryfall's limiter time to refill.
-                let wait = Duration::from_millis(500u64 << (attempt - 1));
+                let wait = Duration::from_millis(2000u64 << (attempt - 1));
                 eprintln!(
                     "  HTTP {code} (rate limited); retry {attempt}/{MAX_RATE_LIMIT_RETRIES} after {}ms",
                     wait.as_millis()
@@ -721,6 +749,21 @@ mod tests {
             path.display(),
         );
         let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn scryfall_lookup_strips_deck_variant_suffix() {
+        // A real card carrying a catalog disambiguator resolves to its true
+        // Scryfall name...
+        assert_eq!(scryfall_lookup_name("Putrefy (Modern)"), "Putrefy");
+        assert_eq!(scryfall_lookup_name("Lightning Bolt (Legacy)"), "Lightning Bolt");
+        // ...while plain names and the synthesized-audit `(bNNN)` suffix are
+        // left untouched (those aren't real Scryfall cards).
+        assert_eq!(scryfall_lookup_name("Lightning Bolt"), "Lightning Bolt");
+        assert_eq!(
+            scryfall_lookup_name("Witherbloom Verdance (b202)"),
+            "Witherbloom Verdance (b202)"
+        );
     }
 
     #[test]
