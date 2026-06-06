@@ -1533,3 +1533,40 @@ pub fn mending_hands() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Moment's Peace — {1}{G} Instant. "Prevent all combat damage that would be
+/// dealt this turn. Flashback {2}{G}." A fog you can recast from the graveyard.
+pub fn moments_peace() -> CardDefinition {
+    let flashback = ManaCost::new(vec![generic(2), g()]);
+    CardDefinition {
+        name: "Moment's Peace",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(flashback)],
+        effect: Effect::PreventAllCombatDamageThisTurn,
+        ..Default::default()
+    }
+}
+
+/// Pulse of Murasa — {2}{G} Instant. "Return target creature or land card
+/// from a graveyard to its owner's hand. You gain 6 life."
+pub fn pulse_of_murasa() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Pulse of Murasa",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    zone: Zone::Graveyard,
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                }),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(6) },
+        ]),
+        ..Default::default()
+    }
+}

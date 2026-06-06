@@ -2037,6 +2037,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         elvish_mystic,
         keen_eyed_curator,
         harmonize,
+        spidersilk_armor,
+        pulse_of_murasa,
+        moments_peace,
         wild_mongrel,
         carnage_tyrant,
         // elvish_reclaimer         — 🟡 Threshold pump (+3/+2 with 7+ in graveyard) omitted

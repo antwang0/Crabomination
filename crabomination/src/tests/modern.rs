@@ -16171,6 +16171,48 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
 }
 
+/// Spidersilk Armor gives your creatures +0/+1 and reach.
+#[test]
+fn spidersilk_armor_grants_toughness_and_reach() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spidersilk_armor());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.toughness, 3, "2/2 → 2/3");
+    assert!(c.keywords.contains(&Keyword::Reach), "gained reach");
+}
+
+/// Pulse of Murasa returns a creature card from the graveyard and gains 6 life.
+#[test]
+fn pulse_of_murasa_returns_creature_and_gains_six() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pulse_of_murasa());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pulse castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "bear returned to hand");
+    assert_eq!(g.players[0].life, life + 6, "gained 6 life");
+}
+
+/// Moment's Peace fogs combat damage for the turn.
+#[test]
+fn moments_peace_fogs_combat() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::moments_peace());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Moment's Peace castable");
+    drain_stack(&mut g);
+    assert!(g.prevent_combat_damage_this_turn, "combat damage prevention armed");
+}
+
 /// Mending Hands prevents the next 4 damage to a chosen target (here, a player).
 #[test]
 fn mending_hands_prevents_next_four_to_player() {

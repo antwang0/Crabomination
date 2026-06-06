@@ -8262,3 +8262,27 @@ pub fn wall_of_blood() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Spidersilk Armor — {2}{G} Enchantment. "Creatures you control get +0/+1
+/// and have reach."
+pub fn spidersilk_armor() -> CardDefinition {
+    let yours = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Spidersilk Armor",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Creatures you control get +0/+1.",
+                effect: StaticEffect::PumpPT { applies_to: yours(), power: 0, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Creatures you control have reach.",
+                effect: StaticEffect::GrantKeyword { applies_to: yours(), keyword: Keyword::Reach },
+            },
+        ],
+        ..Default::default()
+    }
+}
