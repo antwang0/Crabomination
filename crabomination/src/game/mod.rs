@@ -4682,7 +4682,7 @@ impl GameState {
                             return Err(GameError::DecisionAnswerMismatch);
                         };
                         if id == card_id
-                            || !self.battlefield_find(id).is_some_and(|c| c.controller == activator)
+                            || self.battlefield_find(id).is_none_or(|c| c.controller != activator)
                         {
                             return Err(GameError::DecisionAnswerMismatch);
                         }
