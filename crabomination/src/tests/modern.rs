@@ -30930,3 +30930,53 @@ fn smite_the_monstrous_only_hits_power_four_or_more() {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "can't target a 2/2");
 }
+
+// ── Sacrifice altars + aristocrat death payoffs ────────────────────────────
+
+#[test]
+fn ashnods_altar_sacrifices_a_creature_for_two_colorless() {
+    let mut g = two_player_game();
+    let altar = g.add_card_to_battlefield(0, catalog::ashnods_altar());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: altar, ability_index: 0, target: None, x_value: None,
+    }).expect("altar activates by sacrificing a creature");
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "added two colorless");
+}
+
+#[test]
+fn bastion_of_remembrance_drains_when_your_creature_dies() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bastion_of_remembrance());
+    let victim = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt your own creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 1, "opponent lost 1");
+    assert_eq!(g.players[0].life, p0 + 1 - 0, "you gained 1 (bolt didn't hit you)");
+}
+
+#[test]
+fn dictate_of_erebos_forces_opponent_sacrifice_on_your_death() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dictate_of_erebos());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt your own creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "opponent sacrificed their creature");
+}

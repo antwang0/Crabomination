@@ -242,6 +242,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         // Activated-ability lock stax (Cursed Totem / Damping Matrix).
         cursed_totem,
         damping_matrix,
+        // Sacrifice-for-mana altars.
+        ashnods_altar,
+        phyrexian_altar,
         // Draw-step group draw + library-manipulation artifacts.
         font_of_mythos,
         senseis_divining_top,
@@ -1057,6 +1060,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Swamps-matters drain (damage + lifegain).
         corrupt,
         tendrils_of_corruption,
+        // Aristocrat death payoffs.
+        bastion_of_remembrance,
+        dictate_of_erebos,
         bump_in_the_night,
         // ── Eternalize (CR 702.91) ──
         dreamstealer,

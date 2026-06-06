@@ -19820,6 +19820,88 @@ pub fn tendrils_of_corruption() -> CardDefinition {
     }
 }
 
+/// Ashnod's Altar — {3} Artifact. "Sacrifice a creature: Add {C}{C}."
+pub fn ashnods_altar() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Ashnod's Altar",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Altar — {3} Artifact. "Sacrifice a creature: Add one mana of any
+/// color."
+pub fn phyrexian_altar() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Phyrexian Altar",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bastion of Remembrance — {2}{B} Enchantment. "When this enters, create a
+/// 1/1 white Human Soldier creature token. Whenever a creature you control
+/// dies, each opponent loses 1 life and you gain 1 life." (The ETB token is
+/// dropped; the aristocrat drain is the engine-relevant half.)
+pub fn bastion_of_remembrance() -> CardDefinition {
+    CardDefinition {
+        name: "Bastion of Remembrance",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dictate of Erebos — {3}{B}{B} Enchantment, Flash. "Whenever a creature you
+/// control dies, each opponent sacrifices a creature."
+pub fn dictate_of_erebos() -> CardDefinition {
+    CardDefinition {
+        name: "Dictate of Erebos",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl),
+            effect: Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Cursed Totem — {2} Artifact. "Activated abilities of creatures can't be
 /// activated unless they're mana abilities."
 pub fn cursed_totem() -> CardDefinition {
