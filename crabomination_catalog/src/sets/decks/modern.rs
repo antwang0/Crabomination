@@ -2737,27 +2737,9 @@ pub fn mine_collapse() -> CardDefinition {
 }
 
 /// Elvish Spirit Guide — {2}{G} Creature — Elf Spirit. 2/2.
-/// "Exile this card from your hand: Add {G}."
-///
-/// Modeled via `AlternativeCost { mana_cost: {0}, exile_filter: Self }` —
-/// the only alt-cast path that exiles the spell itself rather than a
-/// pitch card. Wired by reusing the existing pitch-cost machinery: the
-/// caller passes `pitch_card: Some(<this card's id>)` to
-/// `cast_spell_alternative`. On resolution, the engine treats it as a
-/// regular cast — for Spirit Guide we route it through a tiny on-cast
-/// trigger that adds {G} to the controller's pool, then the spell
-/// (which has Effect::Noop) resolves and goes to the graveyard… but the
-/// alt cost has already exiled it, so it never lands. End result: pay
-/// nothing → exile from hand → +{G}.
-///
-/// Approximation: catalog ships an *activated* "exile from hand" ability
-/// rather than a true alt-cost path, since the engine's alt-cost gate
-/// requires removing the spell from hand and pushing it onto the stack
-/// (which then resolves as a creature). Activated path skips that. The
-/// activated ability's cost is `mana_cost: {0}` + a hand-exile move
-/// folded into the effect tree. Caller picks `ActivateAbility` from
-/// hand — currently not all activation paths walk the hand zone, so
-/// this card is **🟡** until a hand-activated-ability primitive lands.
+/// "Exile this card from your hand: Add {G}." Wired via a `from_hand`
+/// activated mana ability with `exile_self_cost` (the hand-activation
+/// path resolves it immediately, then exiles the source).
 pub fn elvish_spirit_guide() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::shortcut::add_mana;
