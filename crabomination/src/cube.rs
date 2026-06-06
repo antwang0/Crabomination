@@ -1347,7 +1347,6 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: aggro goblin lord ──
         legion_warboss,
         staggershock,
-        tarfire,
         empty_the_warrens,
         burning_inquiry,
         desperate_ritual,

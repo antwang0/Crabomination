@@ -7305,18 +7305,6 @@ pub fn cabal_ritual() -> CardDefinition {
     }
 }
 
-/// Tarfire — {R} Kindred Instant — Goblin. Deal 2 damage to any target.
-pub fn tarfire() -> CardDefinition {
-    CardDefinition {
-        name: "Tarfire",
-        cost: cost(&[r()]),
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
-        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
-        ..Default::default()
-    }
-}
-
 /// Endless One — {X} 0/0 Creature — Eldrazi. Enters with X +1/+1 counters
 /// (CR 614.12 replacement).
 pub fn endless_one() -> CardDefinition {

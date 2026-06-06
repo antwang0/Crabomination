@@ -8,6 +8,25 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Client modals for `ChooseMode` / `ChooseModes` / `DivideDamage` /
+  `ChooseAmount` / `NameCard`.** `decision_ui.rs` only renders Scry / Search /
+  PutOnLibrary / Discard / Mulligan / ChooseColor / Learn / OrderTriggers /
+  ChooseTarget; the rest fall through `_ => {}`, so a networked human casting a
+  modal spell (Commands, Callous Bloodmage) or an X-amount effect gets no
+  picker and the seat degrades to the AutoDecider default. `ChooseMode` needs
+  the mode label strings threaded onto `Decision::ChooseMode` (today it carries
+  only `source` + `num_modes`); `effect_short_text` already renders each mode.
+- **Card primitives skipped this run (each small + reusable):**
+  - **Coiling Oracle / Growth Spiral-style "reveal top; land→bf else→hand".**
+    No single effect; needs `Effect::RevealTopLandToBattlefieldElseHand` (or a
+    top-card predicate + conditional Move).
+  - **No-maximum-hand-size static** (Reliquary Tower, Thought Vessel,
+    Spellbook). `Effect::SetNoMaxHandSize` exists as a one-shot; add a
+    `StaticEffect::NoMaximumHandSize` for permanents.
+  - **Play-lands-from-graveyard static** (Crucible of Worlds, Ramunap
+    Excavator) — `StaticEffect::MayPlayLandsFromGraveyard`.
+  - **`-0/-1` (and `-1/-0`) counter types** (Shield Sphere's block-counter,
+    Spike Feeder-adjacent). Add to `CounterType` + the P/T layer.
 - **Amped Raptor energy free-cast (still 🟡).** Needs a `MayPlayPermission`
   alt-cost slot ("cast without paying mana by paying {E}{E}") + a cast-from-
   exile path that substitutes the energy cost.
