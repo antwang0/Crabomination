@@ -895,3 +895,54 @@ pub fn sunlance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Epic Confrontation — {1}{G} Sorcery. "Target creature you control gets
+/// +1/+2 until end of turn. It fights target creature you don't control."
+pub fn epic_confrontation() -> CardDefinition {
+    CardDefinition {
+        name: "Epic Confrontation",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                power: Value::Const(1),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Renegade Tactics — {R} Sorcery. "Target creature can't block this turn.
+/// Draw a card."
+pub fn renegade_tactics() -> CardDefinition {
+    CardDefinition {
+        name: "Renegade Tactics",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}

@@ -1589,3 +1589,19 @@ pub fn cower_in_fear() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Wring Flesh — {B} Instant. "Target creature gets -3/-1 until end of turn."
+pub fn wring_flesh() -> CardDefinition {
+    CardDefinition {
+        name: "Wring Flesh",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-3),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}

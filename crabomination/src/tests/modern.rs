@@ -16171,6 +16171,62 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
 }
 
+/// Wring Flesh shrinks a creature -3/-1.
+#[test]
+fn wring_flesh_shrinks_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wring_flesh());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wring Flesh castable");
+    drain_stack(&mut g);
+    // 2/2 → -1/1, dies to SBA (toughness 1 > 0 actually survives at 1).
+    let c = g.computed_permanent(bear);
+    assert!(c.is_none() || c.unwrap().toughness == 1, "shrunk to */1");
+}
+
+/// Epic Confrontation pumps your creature and fights an enemy.
+#[test]
+fn epic_confrontation_pumps_and_fights() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 → 3/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::epic_confrontation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("Epic Confrontation castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(theirs).is_none(), "enemy 2/2 took 3 and died");
+    assert!(g.battlefield_find(mine).is_some(), "your 3/4 survives 2 damage");
+}
+
+/// Renegade Tactics stops a creature from blocking and cantrips.
+#[test]
+fn renegade_tactics_cant_block_and_draws() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::renegade_tactics());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Renegade Tactics castable");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantBlock));
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one (net same)");
+}
+
 /// Fervor grants your creatures haste.
 #[test]
 fn fervor_grants_haste() {

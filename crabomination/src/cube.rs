@@ -1290,6 +1290,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         reckless_spite,
         wall_of_blood,
         cower_in_fear,
+        wring_flesh,
         mind_twist,
         dismember,
         cling_to_dust,
@@ -1688,6 +1689,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         flame_rift,
         fervor,
         sizzle,
+        renegade_tactics,
         dragon_fodder,
         krenkos_command,
         hordeling_outburst,
@@ -2044,6 +2046,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         spidersilk_armor,
         pulse_of_murasa,
         moments_peace,
+        epic_confrontation,
         wild_mongrel,
         carnage_tyrant,
         // elvish_reclaimer         — 🟡 Threshold pump (+3/+2 with 7+ in graveyard) omitted
