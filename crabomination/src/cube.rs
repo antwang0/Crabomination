@@ -578,8 +578,32 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mirror_image,
         stunt_double,
         mockingbird,
+        phyrexian_metamorph,
         cackling_counterpart,
         sunhome_stalwart,
+        // This-branch additions: hatebears, tutors, aggro staples + the
+        // engine primitives they exercise (trigger suppression, discard-cost
+        // activation, delirium/monstrous statics, extra_card_types copy).
+        torpor_orb,
+        tocatli_honor_guard,
+        hushbringer,
+        force_of_vigor,
+        spellseeker,
+        mystic_snake,
+        fauna_shaman,
+        ohran_frostfang,
+        sheoldreds_edict,
+        ragavan_nimble_pilferer,
+        dragons_rage_channeler,
+        glistener_elf,
+        imperial_recruiter,
+        goblin_matron,
+        loxodon_hierarch,
+        fleecemane_lion,
+        ignoble_hierarch,
+        elves_of_deep_shadow,
+        generous_ent,
+        patchwork_automaton,
         // Proliferate (CR 701.27) suite — grows the controller's counters
         // + poisons opponents via `Effect::Proliferate`.
         steady_progress,
