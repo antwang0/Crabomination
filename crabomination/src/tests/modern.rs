@@ -22891,6 +22891,48 @@ fn phyrexian_metamorph_can_copy_an_artifact() {
     assert!(m.definition.card_types.contains(&CardType::Artifact));
 }
 
+/// Force of Vigor destroys two artifact/enchantment targets when hard-cast.
+#[test]
+fn force_of_vigor_destroys_two_targets() {
+    let mut g = two_player_game();
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let arena = g.add_card_to_battlefield(1, catalog::phyrexian_arena());
+    let id = g.add_card_to_hand(0, catalog::force_of_vigor());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![Target::Permanent(arena)],
+        mode: None, x_value: None,
+    }).expect("hard-castable for {2}{G}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring).is_none(), "Sol Ring destroyed");
+    assert!(g.battlefield_find(arena).is_none(), "Phyrexian Arena destroyed");
+}
+
+/// Force of Vigor's pitch alt-cost works on the opponent's turn (exile a
+/// green card from hand instead of paying mana).
+#[test]
+fn force_of_vigor_pitch_cast_on_opponents_turn() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1; // opponent's turn
+    g.priority.player_with_priority = 0;
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::force_of_vigor());
+    let pitch = g.add_card_to_hand(0, catalog::grizzly_bears()); // a green card
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: Some(pitch),
+        target: Some(Target::Permanent(ring)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("pitch-castable on opponent's turn");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == pitch), "green card exiled to pitch");
+    assert!(g.battlefield_find(ring).is_none(), "Sol Ring destroyed");
+}
+
 #[test]
 fn clone_with_no_creature_to_copy_dies_as_zero_zero() {
     let mut g = two_player_game();

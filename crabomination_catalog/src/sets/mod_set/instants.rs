@@ -1381,6 +1381,32 @@ pub fn victim_of_night() -> CardDefinition {
     }
 }
 
+/// Force of Vigor — {2}{G}{G} Instant. "Destroy up to two target artifacts
+/// and/or enchantments." Alt cost: if it's not your turn, exile a green card
+/// from hand instead of paying mana (`not_your_turn_only`). Two-slot targets
+/// — slot 1 resolves to a no-op when only one was chosen.
+pub fn force_of_vigor() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    let art_or_ench = SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment);
+    CardDefinition {
+        name: "Force of Vigor",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(art_or_ench.clone()) },
+            Effect::Destroy {
+                what: Selector::TargetFiltered { slot: 1, filter: art_or_ench },
+            },
+        ]),
+        alternative_cost: Some(AlternativeCost {
+            exile_filter: Some(SelectionRequirement::HasColor(Color::Green)),
+            not_your_turn_only: true,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 /// Trumpet Blast — {1}{R} Instant. "Attacking creatures get +2/+0 until end
 /// of turn." (various)
 pub fn trumpet_blast() -> CardDefinition {
