@@ -6,6 +6,11 @@
 
 use super::*;
 
+/// One activated ability's probe data: `(is_mana_ability, optional effect to
+/// auto-target)`. The mana flag lets the probe loop skip mana abilities
+/// without re-walking the effect tree.
+type AbilityProbe = (bool, Option<Effect>);
+
 impl GameState {
     /// Dry-run an action: clone the state, apply the action on the
     /// clone, return whether the engine would accept it. The caller's
@@ -171,12 +176,9 @@ impl GameState {
     ///
     /// [`activatable_permanents`]: Self::activatable_permanents
     fn activatable_permanents_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
-        // Snapshot (id, [ability effects]) so the borrow of `self.battlefield`
+        // Snapshot (id, [ability probes]) so the borrow of `self.battlefield`
         // is released before the cloning probes run.
-        // Per ability: (is_mana_ability, optional effect to auto-target).
-        // We carry the mana flag so the probe loop can skip mana abilities
-        // without re-walking the effect tree.
-        let perms: Vec<(CardId, Vec<(bool, Option<Effect>)>)> = self
+        let perms: Vec<(CardId, Vec<AbilityProbe>)> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == seat && !c.definition.activated_abilities.is_empty())
