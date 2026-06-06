@@ -1093,6 +1093,67 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Torpor Orb — {2} Artifact. "Creatures entering the battlefield don't
+/// cause triggered abilities to trigger." (`SuppressCreatureEtbTriggers`.)
+pub fn torpor_orb() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Torpor Orb",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures entering the battlefield don't cause triggered abilities to trigger.",
+            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tocatli Honor Guard — {1}{W}, 1/3 Human Soldier. Same ETB-trigger
+/// suppression as Torpor Orb, on a creature body.
+pub fn tocatli_honor_guard() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Tocatli Honor Guard",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Creatures entering the battlefield don't cause triggered abilities to trigger.",
+            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hushbringer — {1}{W}, 2/1 Faerie with Flying. "Creatures entering the
+/// battlefield or dying don't cause triggered abilities to trigger."
+pub fn hushbringer() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Hushbringer",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures entering the battlefield or dying don't cause triggered abilities to trigger.",
+            effect: StaticEffect::SuppressCreatureEtbTriggers { also_dies: true },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Journey to Nowhere — {1}{W} Enchantment. ETB: exile target creature.
 /// When Journey to Nowhere leaves the battlefield, return that card.
 pub fn journey_to_nowhere() -> CardDefinition {

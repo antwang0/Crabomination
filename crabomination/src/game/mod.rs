@@ -3630,6 +3630,11 @@ impl GameState {
         // and call `&self.evaluate_predicate` to gate each candidate by
         // the optional `EventSpec::filter`.
         let mut candidates: Vec<TriggerCandidate> = Vec::new();
+        // Hushbringer (CR 614): suppress reaction creature-death triggers
+        // ("whenever a creature dies") while a `SuppressCreatureEtbTriggers
+        // { also_dies }` static is in play. (Self-death + SBA paths gate
+        // separately in `stack.rs`.)
+        let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
         // Resolve per-permanent layer state once so the dispatcher can
         // honour `Modification::RemoveAllAbilities` (Turn to Frog,
         // Mercurial Transformation, Lignify) — printed triggered abilities
@@ -3690,6 +3695,9 @@ impl GameState {
                 );
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {
+                        continue;
+                    }
+                    if dies_suppressed && matches!(ev, GameEvent::CreatureDied { .. }) {
                         continue;
                     }
                     if crate::game::effects::event_matches_spec(self, ev, &ta.event, card) {
@@ -3957,7 +3965,11 @@ impl GameState {
                 // Spotlight, 1 normally, 2+ with a doubler). Self-source ETB
                 // triggers go through the hardcoded path in `actions.rs`
                 // (also multiplied), so they aren't double-counted here.
-                let mult = crate::game::actions::etb_trigger_multiplier(self, controller);
+                let mult = crate::game::actions::etb_trigger_multiplier(
+                    self,
+                    controller,
+                    subject.as_ref().and_then(|s| s.as_permanent_id()),
+                );
                 for _ in 0..mult {
                     // Strict Proctor's CR 614 tax applies once per fire; a
                     // declined / unpayable tax sacrifices the source and
@@ -5723,6 +5735,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // trigger dispatch via `etb_trigger_multiplier`; no layer effect.
             | StaticEffect::EtbTriggerSpotlight
             | StaticEffect::DoubleControllerEtbTriggers
+            // SuppressCreatureEtbTriggers — read at trigger dispatch via
+            // `creature_etb_triggers_suppressed` / `creature_dies_triggers_suppressed`;
+            // no layer effect (Torpor Orb, Tocatli Honor Guard, Hushbringer).
+            | StaticEffect::SuppressCreatureEtbTriggers { .. }
             // UncounterableCreaturesOfChosenType — read at cast time by
             // `caster_grants_uncounterable_with_x`; no layer effect.
             | StaticEffect::UncounterableCreaturesOfChosenType

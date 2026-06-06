@@ -202,6 +202,17 @@ pub enum StaticEffect {
     /// ETB triggers — it never suppresses opponents'. Read at ETB-trigger
     /// dispatch via `etb_trigger_multiplier`.
     DoubleControllerEtbTriggers,
+    /// CR 614.x — "Creatures entering the battlefield don't cause triggered
+    /// abilities to trigger." Torpor Orb, Tocatli Honor Guard. When any
+    /// permanent with this static is in play, an entering **creature**
+    /// fires no ETB triggers at all (its own or other permanents'
+    /// "whenever a creature enters" reactions). `etb_trigger_multiplier`
+    /// returns 0 for creature entrants while this is active. `also_dies`
+    /// extends suppression to creature-death triggers (Hushbringer).
+    SuppressCreatureEtbTriggers {
+        #[serde(default)]
+        also_dies: bool,
+    },
     /// CR 702.x — "Creature spells you cast of the chosen type can't be
     /// countered." Cavern of Souls. The chosen creature type lives on
     /// the permanent's `chosen_creature_type` field (set at ETB) — the

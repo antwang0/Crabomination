@@ -688,8 +688,11 @@ impl GameState {
                     // ETB-trigger expressions like `Effect::AddCounter
                     // { amount: Value::XFromCost }` (Pterafractyl, Static
                     // Prison) read the actual paid X.
-                    let etb_multiplier =
-                        crate::game::actions::etb_trigger_multiplier(self, caster);
+                    let etb_multiplier = crate::game::actions::etb_trigger_multiplier(
+                        self,
+                        caster,
+                        Some(card_id),
+                    );
                     for effect in etb_triggers {
                         // Strict Proctor's CR 614 tax — pay {amount} or
                         // sacrifice the source. Applied once per fire.
@@ -1457,6 +1460,10 @@ impl GameState {
             .map(|c| c.id)
             .collect();
 
+        // Hushbringer (CR 614): suppress creature-death triggers while a
+        // `SuppressCreatureEtbTriggers { also_dies }` static is in play.
+        let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
+
         for id in dead {
             // CR 701.15 — regeneration shields replace destruction by
             // *damage* (lethal damage / deathtouch), but never destruction
@@ -1536,6 +1543,7 @@ impl GameState {
                         .triggered_abilities
                         .iter()
                         .chain(granted)
+                        .filter(|_| !dies_suppressed)
                         .filter(|t| t.event.kind == EventKind::CreatureDied)
                         .filter(|t| matches!(
                             t.event.scope,
@@ -1572,7 +1580,7 @@ impl GameState {
                 }
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
                 for ta in &bonus.triggered_abilities {
-                    if ta.event.kind == EventKind::CreatureDied {
+                    if ta.event.kind == EventKind::CreatureDied && !dies_suppressed {
                         die_triggers.push((id, ta.effect.clone(), controller_idx));
                     }
                 }
@@ -1932,6 +1940,9 @@ impl GameState {
         // PermanentLeavesBattlefield is the broader "when this leaves the
         // battlefield" hook used by Chromatic Star, Roomba-style cards,
         // and any future non-creature die-trigger.
+        // Hushbringer (CR 614): creature-death triggers are suppressed while
+        // a `SuppressCreatureEtbTriggers { also_dies }` static is in play.
+        let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
         let (leave_triggers, dying_creature_controller): (Vec<(CardId, Effect, usize)>, Option<usize>) = self
             .battlefield
             .iter()
@@ -1954,7 +1965,7 @@ impl GameState {
                     .filter(|t| matches!(t.event.scope, EventScope::SelfSource))
                     .filter(|t| match t.event.kind {
                         EventKind::PermanentLeavesBattlefield => true,
-                        EventKind::CreatureDied => is_creature,
+                        EventKind::CreatureDied => is_creature && !dies_suppressed,
                         _ => false,
                     })
                     .map(|t| (c.id, t.effect.clone(), c.controller))

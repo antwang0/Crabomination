@@ -383,8 +383,21 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
 pub(crate) fn etb_trigger_multiplier(
     state: &crate::game::GameState,
     etb_controller: usize,
+    entering: Option<CardId>,
 ) -> usize {
     use crate::effect::StaticEffect;
+    // Torpor Orb / Tocatli Honor Guard (CR 614): an entering *creature*
+    // causes no triggered abilities to trigger while a suppressor is in play.
+    if let Some(id) = entering
+        && state
+            .battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .is_some_and(|c| c.definition.is_creature())
+        && creature_etb_triggers_suppressed(state)
+    {
+        return 0;
+    }
     let mut your_norns = 0usize;
     let mut opp_norns = 0usize;
     // Yarok/Panharmonicon-style doublers add fires for the controller's own
@@ -415,6 +428,31 @@ pub(crate) fn etb_trigger_multiplier(
     } else {
         1 + your_norns + your_doublers
     }
+}
+
+/// True when any battlefield permanent carries a
+/// `SuppressCreatureEtbTriggers` static (Torpor Orb, Tocatli Honor Guard,
+/// Hushbringer). Applies globally — both players' creature ETB triggers.
+pub(crate) fn creature_etb_triggers_suppressed(state: &crate::game::GameState) -> bool {
+    use crate::effect::StaticEffect;
+    state.battlefield.iter().any(|c| {
+        c.definition
+            .static_abilities
+            .iter()
+            .any(|sa| matches!(sa.effect, StaticEffect::SuppressCreatureEtbTriggers { .. }))
+    })
+}
+
+/// True when any battlefield permanent carries a
+/// `SuppressCreatureEtbTriggers { also_dies: true }` static (Hushbringer).
+/// Suppresses creature-death triggers globally (CR 614).
+pub(crate) fn creature_dies_triggers_suppressed(state: &crate::game::GameState) -> bool {
+    use crate::effect::StaticEffect;
+    state.battlefield.iter().any(|c| {
+        c.definition.static_abilities.iter().any(|sa| {
+            matches!(sa.effect, StaticEffect::SuppressCreatureEtbTriggers { also_dies: true })
+        })
+    })
 }
 
 /// Strict Proctor ETB-trigger tax — CR 614 replacement effect.
@@ -915,7 +953,7 @@ impl GameState {
             .unwrap_or_default();
         // Elesh Norn replacement: zero or more copies depending on which
         // side controls a Mother of Machines.
-        let multiplier = etb_trigger_multiplier(self, controller);
+        let multiplier = etb_trigger_multiplier(self, controller, Some(card_id));
         for effect in etb_triggers {
             // Strict Proctor's CR 614 replacement: pay {2} or sacrifice
             // the source. Applied once per fire of the trigger.

@@ -18103,6 +18103,48 @@ fn blade_splicer_etb_creates_golem_token() {
         "A 3/3 Golem token should be on the battlefield");
 }
 
+/// Torpor Orb (CR 614): a creature's ETB trigger doesn't fire while it's in
+/// play — Blade Splicer enters but mints no Golem.
+#[test]
+fn torpor_orb_suppresses_creature_etb_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::torpor_orb());
+    let splicer = g.add_card_to_battlefield(0, catalog::blade_splicer());
+    g.fire_self_etb_triggers(splicer, 0);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Golem"),
+        "Torpor Orb suppresses the ETB Golem token");
+}
+
+/// Tocatli Honor Guard suppresses creature ETB triggers exactly like
+/// Torpor Orb (1/3 creature body).
+#[test]
+fn tocatli_honor_guard_suppresses_creature_etb_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tocatli_honor_guard());
+    let splicer = g.add_card_to_battlefield(1, catalog::blade_splicer());
+    g.fire_self_etb_triggers(splicer, 1);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Golem"),
+        "Tocatli Honor Guard suppresses an opponent's ETB token too");
+}
+
+/// Hushbringer suppresses both creature ETB *and* death triggers — a dying
+/// Wurmcoil Engine mints no Wurm tokens.
+#[test]
+fn hushbringer_suppresses_creature_dies_triggers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hushbringer());
+    let wurm = g.add_card_to_battlefield(0, catalog::wurmcoil_engine());
+    // Lethal damage → SBA death → dies trigger would mint two tokens.
+    g.battlefield_find_mut(wurm).unwrap().damage = 6;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(), "Wurmcoil died to lethal damage");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name.contains("Wurm")),
+        "Hushbringer suppresses the death-trigger Wurm tokens");
+}
+
 #[test]
 fn vendilion_clique_is_3_1_legendary_flash_flying() {
     use crate::card::Keyword;
