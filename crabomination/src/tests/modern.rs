@@ -30063,6 +30063,43 @@ fn uro_escaped_stays_gains_life_and_draws() {
 }
 
 #[test]
+fn exclude_counters_creature_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    // Active player P0 casts a creature; respond to its own spell with Exclude.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature");
+    let id = g.add_card_to_hand(0, catalog::exclude());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let h0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Exclude the creature spell");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "creature spell countered");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature never resolved");
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 1, "cast Exclude (-1) and drew (+1)");
+}
+
+#[test]
+fn miscalculation_can_be_cycled() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::miscalculation());
+    g.players[0].mana_pool.add_colorless(2);
+    let h0 = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: id })
+        .expect("Miscalculation cycles for {2}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cycled card in graveyard");
+    assert_eq!(g.players[0].hand.len(), h0, "discarded one, drew one");
+}
+
+#[test]
 fn goblin_grenade_sacrifices_a_goblin_for_five() {
     let mut g = two_player_game();
     let gob = g.add_card_to_battlefield(0, catalog::raging_goblin());

@@ -759,6 +759,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: cube staples ──
         careful_study,
+        exclude,
+        miscalculation,
 
         // ── modern_decks: Persist counter-mage ──
         glen_elendra_archmage,

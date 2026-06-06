@@ -7305,6 +7305,41 @@ pub fn cabal_ritual() -> CardDefinition {
     }
 }
 
+/// Exclude — {2}{U} Instant. Counter target creature spell, then draw a card.
+pub fn exclude() -> CardDefinition {
+    CardDefinition {
+        name: "Exclude",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasCardType(CardType::Creature)),
+                ),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Miscalculation — {1}{U} Instant. Counter target spell unless its controller
+/// pays {2}. Cycling {2}.
+pub fn miscalculation() -> CardDefinition {
+    CardDefinition {
+        name: "Miscalculation",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(2)]),
+        },
+        ..Default::default()
+    }
+}
+
 /// Goblin Grenade — {R} Sorcery. As an additional cost, sacrifice a Goblin.
 /// Deal 5 damage to any target. (Sac is modeled at resolution like Fling.)
 pub fn goblin_grenade() -> CardDefinition {
