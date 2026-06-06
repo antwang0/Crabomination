@@ -19628,6 +19628,23 @@ pub fn expedition_map() -> CardDefinition {
     }
 }
 
+/// Mana Reflection — {4}{G}{G} Enchantment. "If you tap a permanent for mana,
+/// it produces twice as much of that mana instead." (CR 701.10f)
+pub fn mana_reflection() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Mana Reflection",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If you tap a permanent for mana, it produces twice as much of that mana instead.",
+            effect: StaticEffect::ManaProductionDoubled,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Mana Clash — {R} Sorcery. "You and target opponent each flip a coin. Mana
 /// Clash deals 1 damage to each player whose coin comes up tails. Repeat this
 /// process until both players' coins come up heads on the same flip."

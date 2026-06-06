@@ -30667,3 +30667,34 @@ fn mana_clash_damages_the_player_who_flips_tails_until_both_heads() {
     assert_eq!(g.players[0].life, p0_life - 1, "caster took 1 from their tails flip");
     assert_eq!(g.players[1].life, p1_life, "opponent flipped heads, took no damage");
 }
+
+// ── CR 701.10f — Mana Reflection doubles mana production ────────────────────
+
+#[test]
+fn mana_reflection_doubles_a_tapped_for_mana_ability() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mana_reflection());
+    let dork = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.clear_sickness(dork);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dork, ability_index: 0, target: None, x_value: None,
+    }).expect("Llanowar Elves taps for mana");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2,
+        "Mana Reflection doubles the green to GG");
+}
+
+#[test]
+fn mana_reflection_does_not_double_a_ritual_spell() {
+    // Mana Reflection only doubles tapping a permanent for mana (CR 701.10f),
+    // not a ritual spell's mana.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mana_reflection());
+    let ritual = g.add_card_to_hand(0, catalog::dark_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ritual, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dark Ritual");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3,
+        "Dark Ritual still nets BBB (not doubled)");
+}

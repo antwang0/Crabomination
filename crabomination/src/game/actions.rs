@@ -650,6 +650,24 @@ impl crate::game::GameState {
                     .any(|sa| matches!(sa.effect, StaticEffect::MayPlayLandsFromGraveyard))
         })
     }
+
+    /// CR 701.10f — number of `StaticEffect::ManaProductionDoubled` permanents
+    /// `player` controls (Mana Reflection). Each doubles a mana ability's pip
+    /// output: the effective multiplier is `2^count`.
+    pub fn mana_production_doublers_for(&self, player: usize) -> u8 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::ManaProductionDoubled))
+                    .count() as u8
+            })
+            .sum()
+    }
 }
 
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
@@ -4959,9 +4977,13 @@ impl GameState {
 
         if is_mana_ab {
             let effect = ability.effect.clone();
-            let mut ability_events =
-                self.continue_ability_resolution(card_id, p, effect, target.clone())?;
-            events.append(&mut ability_events);
+            // CR 701.10f — Mana Reflection doubles a permanent tapped for mana.
+            // Stamp the transient doubler count so the `AddMana` resolver
+            // multiplies pip output; clear it afterward.
+            self.mana_production_doublers = self.mana_production_doublers_for(p);
+            let resolved = self.continue_ability_resolution(card_id, p, effect, target.clone());
+            self.mana_production_doublers = 0;
+            events.append(&mut resolved?);
         } else {
             // Non-mana activated ability goes on the stack.
             let ability_target = target.clone();

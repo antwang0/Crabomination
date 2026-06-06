@@ -403,6 +403,12 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
+    /// CR 701.10f — transient mana-production doubler count for the mana
+    /// ability currently resolving (Mana Reflection). Set before a tapped-
+    /// for-mana ability resolves and reset to 0 after; the `AddMana` resolver
+    /// multiplies each pip count by `2^doublers`. 0 = no doubling (1×).
+    #[serde(default)]
+    pub(crate) mana_production_doublers: u8,
     /// CR 505.1b — additional combat phases banked for the active player.
     /// `Effect::AdditionalCombatPhase` increments this; when the active
     /// player leaves the End of Combat step with it set, the turn loops back
@@ -606,6 +612,7 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
+            mana_production_doublers: self.mana_production_doublers,
             additional_combat_phases: self.additional_combat_phases,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
             prevention_shields: self.prevention_shields.clone(),
@@ -690,6 +697,7 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             prevent_combat_damage_this_turn: false,
+            mana_production_doublers: 0,
             additional_combat_phases: 0,
             combat_damage_prevented_creatures: Vec::new(),
             prevention_shields: Vec::new(),
@@ -5710,7 +5718,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::NoMaximumHandSize
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
-            | StaticEffect::MayPlayLandsFromGraveyard => vec![],
+            | StaticEffect::MayPlayLandsFromGraveyard
+            // ManaProductionDoubled — consulted at mana-ability resolution
+            // via `mana_production_doublers_for`; no layer effect.
+            | StaticEffect::ManaProductionDoubled => vec![],
         })
         .collect()
 }

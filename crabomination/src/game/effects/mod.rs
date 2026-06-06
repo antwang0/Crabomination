@@ -1746,9 +1746,13 @@ impl GameState {
                     ManaPayload::Restricted(inner, r) => (inner.as_ref(), Some(*r)),
                     other => (other, None),
                 };
+                // CR 701.10f — Mana Reflection doubles every pip this mana
+                // ability produces (`2^doublers`). 1× outside a doubled mana
+                // ability (the field is 0).
+                let mult = 1u32 << self.mana_production_doublers.min(8);
                 let add_one = |state: &mut Self, p: usize, c: Color| match restriction {
-                    Some(r) => state.players[p].mana_pool.add_restricted(c, 1, r),
-                    None => state.players[p].mana_pool.add(c, 1),
+                    Some(r) => state.players[p].mana_pool.add_restricted(c, mult, r),
+                    None => state.players[p].mana_pool.add(c, mult),
                 };
                 match pool {
                     ManaPayload::Colors(colors) => {
@@ -1760,7 +1764,7 @@ impl GameState {
                     ManaPayload::Colorless(v) => {
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
                         for _ in 0..n {
-                            self.players[p].mana_pool.add_colorless(1);
+                            self.players[p].mana_pool.add_colorless(mult);
                             events.push(GameEvent::ColorlessManaAdded { player: p });
                         }
                     }
@@ -1785,7 +1789,7 @@ impl GameState {
                                 events.push(GameEvent::ManaAdded { player: p, color: c });
                             }
                             None => {
-                                self.players[p].mana_pool.add_colorless(1);
+                                self.players[p].mana_pool.add_colorless(mult);
                                 events.push(GameEvent::ColorlessManaAdded { player: p });
                             }
                         }
@@ -1852,7 +1856,7 @@ impl GameState {
                         };
                         let n = self.devotion_to(p, &[color]).max(0) as u32;
                         for _ in 0..n {
-                            self.players[p].mana_pool.add(color, 1);
+                            self.players[p].mana_pool.add(color, mult);
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
@@ -1889,7 +1893,7 @@ impl GameState {
                             }
                         }
                         if legal.is_empty() {
-                            self.players[p].mana_pool.add_colorless(1);
+                            self.players[p].mana_pool.add_colorless(mult);
                             events.push(GameEvent::ColorlessManaAdded { player: p });
                         } else {
                             let source = ctx.source.unwrap_or(CardId(0));

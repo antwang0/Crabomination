@@ -1711,6 +1711,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         arbor_elf,
         // Play-lands-from-graveyard (MayPlayLandsFromGraveyard static).
         ramunap_excavator,
+        // CR 701.10f mana-doubling enchantment.
+        mana_reflection,
 
         // ── Poisonous (CR 702.70) ──
         marsh_viper,

@@ -341,6 +341,12 @@ pub enum StaticEffect {
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
     /// becomes a legal land play (still bound by the one-land-per-turn cap).
     MayPlayLandsFromGraveyard,
+    /// CR 701.10f — "If you tap a permanent for mana, it produces twice as
+    /// much of that mana instead." Mana Reflection. Each instance the
+    /// controller of the resolving mana ability has on the battlefield
+    /// doubles the produced pip count (2 instances → 4×, …). Read by
+    /// `mana_production_doublers_for` just before a mana ability resolves.
+    ManaProductionDoubled,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
