@@ -16171,6 +16171,52 @@ fn magus_of_the_mirror_exchanges_life_during_upkeep_only() {
     assert!(g.battlefield_find(id).is_none(), "Magus sacrificed as a cost");
 }
 
+/// Convolute counters a spell unless the caster pays {4}.
+#[test]
+fn convolute_counters_unpaid_spell() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // P1 casts a creature spell; P0 Convolutes it (P1 can't pay {4}).
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bear castable");
+    let conv = g.add_card_to_hand(0, catalog::convolute());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: conv, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Convolute castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "uncounterable-pay failed → countered");
+}
+
+/// Frost Breath taps two creatures and stuns them (skip-next-untap).
+#[test]
+fn frost_breath_taps_and_stuns() {
+    use crate::game::types::Target;
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::frost_breath());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("Frost Breath castable");
+    drain_stack(&mut g);
+    let ra = g.battlefield_find(a).unwrap();
+    assert!(ra.tapped, "tapped");
+    assert_eq!(ra.counter_count(CounterType::Stun), 1, "stun counter applied");
+}
+
 /// Furnace of Rath doubles damage: a 3-damage bolt deals 6.
 #[test]
 fn furnace_of_rath_doubles_damage() {

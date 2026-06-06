@@ -1605,3 +1605,39 @@ pub fn wring_flesh() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Convolute — {2}{U} Instant. "Counter target spell unless its controller
+/// pays {4}."
+pub fn convolute() -> CardDefinition {
+    CardDefinition {
+        name: "Convolute",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(4)]),
+        },
+        ..Default::default()
+    }
+}
+
+/// Frost Breath — {2}{U} Instant. "Tap up to two target creatures. Those
+/// creatures don't untap during their controller's next untap step." The
+/// "skip next untap" rider rides a Stun counter (removed instead of untapping).
+pub fn frost_breath() -> CardDefinition {
+    use crate::card::CounterType;
+    let tap_and_stun = |slot: u8| {
+        let sel = Selector::TargetFiltered { slot, filter: SelectionRequirement::Creature };
+        Effect::Seq(vec![
+            Effect::Tap { what: sel.clone() },
+            Effect::AddCounter { what: sel, kind: CounterType::Stun, amount: Value::Const(1) },
+        ])
+    };
+    CardDefinition {
+        name: "Frost Breath",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![tap_and_stun(0), tap_and_stun(1)]),
+        ..Default::default()
+    }
+}

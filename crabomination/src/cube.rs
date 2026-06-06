@@ -953,6 +953,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         upheaval,
         aetherize,
         evacuation,
+        convolute,
+        frost_breath,
         force_of_will,
         force_of_negation,
         consign_to_memory,
