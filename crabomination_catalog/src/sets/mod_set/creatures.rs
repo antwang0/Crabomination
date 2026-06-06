@@ -7883,3 +7883,45 @@ pub fn ohran_frostfang() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ragavan, Nimble Pilferer — {R} Legendary Monkey Pirate 2/1. "Whenever
+/// Ragavan deals combat damage to a player, create a Treasure token and
+/// exile the top card of that player's library. Until end of turn, you may
+/// cast that card." Dash {1}{R}.
+pub fn ragavan_nimble_pilferer() -> CardDefinition {
+    use crate::card::{
+        EventKind, EventScope, EventSpec, MayPlayDuration, Supertype, TriggeredAbility,
+    };
+    use crate::effect::shortcut::dash;
+    CardDefinition {
+        name: "Ragavan, Nimble Pilferer",
+        cost: cost(&[r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Monkey, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                },
+                // Exile the top of the *damaged* player's library; you may
+                // cast it until end of turn.
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::Target(0),
+                    count: Value::Const(1),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                },
+            ]),
+        }],
+        alternative_cost: Some(dash(cost(&[generic(1), r()]))),
+        ..Default::default()
+    }
+}

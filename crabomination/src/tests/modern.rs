@@ -32316,3 +32316,31 @@ fn sheoldreds_edict_sacrifices_nontoken_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "opponent sacrificed their creature");
 }
+
+/// Ragavan: on combat damage to a player, mints a Treasure and exiles the
+/// top of that player's library with a cast-this-turn permission.
+#[test]
+fn ragavan_combat_damage_makes_treasure_and_steals_top_card() {
+    let mut g = two_player_game();
+    let rag = g.add_card_to_battlefield(0, catalog::ragavan_nimble_pilferer());
+    g.clear_sickness(rag);
+    let loot = g.add_card_to_library(1, catalog::lightning_bolt()); // opp's top card
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: rag, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..12 {
+        if g.exile.iter().any(|c| c.id == loot) { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "minted a Treasure token");
+    assert!(g.exile.iter().any(|c| c.id == loot),
+        "exiled the top card of the damaged player's library");
+    let stolen = g.exile.iter().find(|c| c.id == loot).unwrap();
+    assert_eq!(stolen.may_play_until.as_ref().map(|m| m.player), Some(0),
+        "Ragavan's controller may cast the exiled card");
+}
