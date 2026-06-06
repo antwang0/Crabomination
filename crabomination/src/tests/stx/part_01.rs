@@ -1388,34 +1388,30 @@ fn killian_only_reduces_its_controllers_spells() {
 
 // ── Push XXXV: OtherThanSource + Hofri anthem + Shadrix attack trigger ──────
 
-/// When Hofri leaves the battlefield, the anthem expires and friendly
-/// creatures return to their printed P/T. Mirrors the Quintorius test
-/// pattern (anthem timestamp is `WhileSourceOnBattlefield`).
+/// Hofri's anthem buffs only Spirits (a Spirit is +1/+1, a non-Spirit is
+/// not), and expires when Hofri leaves the battlefield.
 #[test]
-fn hofri_ghostforge_anthem_expires_when_hofri_leaves() {
+fn hofri_ghostforge_anthem_buffs_spirits_only() {
     let mut g = two_player_game();
     let hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let spirit = g.add_card_to_battlefield(0, catalog::spectral_sailor());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
-    // Anthem active: bear is 3/2.
-    assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
+    // Spirit is buffed 1/1 → 2/2; the Bear is untouched.
+    assert_eq!(g.computed_permanent(spirit).unwrap().power, 2);
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 2);
 
-    // Kill Hofri via lethal damage. His base toughness is 4.
-    g.battlefield_find_mut(hofri).unwrap().damage = 4;
+    // Kill Hofri (base toughness 5); the Spirit reverts to 1/1.
+    g.battlefield_find_mut(hofri).unwrap().damage = 5;
     let _ = g.check_state_based_actions();
-
-    // Bear returns to printed 2/2.
-    let after = g.computed_permanent(bear).expect("bear still on bf");
-    assert_eq!(after.power, 2, "anthem gone");
-    assert_eq!(after.toughness, 2);
+    assert_eq!(g.computed_permanent(spirit).expect("spirit alive").power, 1, "anthem gone");
 }
 
+/// When another nontoken creature dies, Hofri exiles it and mints a
+/// Spirit-typed token copy.
 #[test]
-fn hofri_ghostforge_death_trigger_registers_delayed_exile() {
-    // Push (modern_decks, batch 80): Hofri's "non-token creature dies →
-    // exile and return, exile at next end step" trigger. Verify the
-    // trigger fires (delayed NextEndStep registration is the canonical
-    // signal) when a P0 nontoken creature dies via lethal damage.
+fn hofri_ghostforge_death_mints_spirit_token_copy() {
+    use crate::card::CreatureType;
     use crate::game::types::Target;
     let mut g = two_player_game();
     let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
@@ -1424,7 +1420,6 @@ fn hofri_ghostforge_death_trigger_registers_delayed_exile() {
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
 
-    let delayed_before = g.delayed_triggers.len();
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Permanent(bear)),
@@ -1434,16 +1429,13 @@ fn hofri_ghostforge_death_trigger_registers_delayed_exile() {
     }).expect("Bolt castable");
     drain_stack(&mut g);
 
-    // Hofri's trigger fired: a NextEndStep delayed trigger should be
-    // registered (one per dying-creature, regardless of whether the
-    // engine fully settled the gy→bf return mid-SBA-cycle).
-    let next_end_step_after = g.delayed_triggers.iter()
-        .filter(|dt| matches!(dt.kind, crate::game::types::DelayedKind::NextEndStep))
-        .count();
-    assert!(
-        next_end_step_after > delayed_before,
-        "Hofri registered a NextEndStep delayed exile (trigger fired on bear's death)",
-    );
+    // A token copy of the Bear that's also a Spirit (and gets Hofri's +1/+1).
+    let token = g.battlefield.iter().find(|c| {
+        c.is_token && c.definition.name == "Grizzly Bears"
+    }).expect("token copy of the dead bear");
+    let token_id = token.id;
+    assert!(token.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
+    assert_eq!(g.computed_permanent(token_id).unwrap().power, 3, "2/2 base + Hofri Spirit anthem");
 }
 
 /// `SelectionRequirement::OtherThanSource` now strictly excludes the

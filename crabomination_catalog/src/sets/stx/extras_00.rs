@@ -1121,57 +1121,37 @@ pub fn quandrix_cultivator() -> CardDefinition {
 
 // ── Hofri Ghostforge ───────────────────────────────────────────────────────
 
-/// Hofri Ghostforge — {2}{R}{W}, 3/4 Legendary Spirit Cleric. "Other
-/// creatures you control get +1/+0. / Whenever another nontoken
-/// creature you control dies, exile it. At the beginning of the next
-/// end step, return it to the battlefield as a 1/1 Spirit with flying."
-///
-/// 🟡 Body + keywords (legendary, P/T, types) ship full. The "Other
-/// creatures you control get +1/+0" anthem is **now wired** (push
-/// XXXV) via the new `SelectionRequirement::OtherThanSource` primitive
-/// flowing through `affected_from_requirement`, which flips the
-/// resulting `AffectedPermanents::All.exclude_source` flag so the
-/// anthem layer skips Hofri itself. Matches the printed "**other**
-/// creatures" wording exactly.
-///
-/// The "exile-on-death + return at end step as a 1/1 Spirit" cycle
-/// stays ⏳ pending a delayed-replacement-on-graveyard primitive
-/// (tracked in TODO.md). Hofri retains its 🟡 status until that
-/// closes; the anthem half is real-card-faithful.
+/// Hofri Ghostforge — {3}{R}{W}, 4/5 Legendary Dwarf Cleric. "Spirits you
+/// control get +1/+1 and have trample and haste. / Whenever another nontoken
+/// creature you control dies, exile it. If you do, create a token that's a
+/// copy of that creature, except it's a Spirit in addition to its other
+/// types."
 pub fn hofri_ghostforge() -> CardDefinition {
     use crate::card::{
-        EventKind, EventScope, EventSpec, Predicate, SelectionRequirement,
+        EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement,
         StaticAbility, TriggeredAbility,
     };
-    use crate::effect::{DelayedTriggerKind, Selector, StaticEffect, ZoneDest};
+    use crate::effect::{PlayerRef, Selector, StaticEffect, ZoneDest, Value};
+    let spirits = || {
+        Selector::EachPermanent(
+            SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                .and(SelectionRequirement::ControlledByYou),
+        )
+    };
     CardDefinition {
         name: "Hofri Ghostforge",
-        cost: cost(&[generic(2), r(), w()]),
+        cost: cost(&[generic(3), r(), w()]),
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 3,
-        toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        // Push (modern_decks, batch 80): "Whenever another nontoken
-        // creature you control dies, exile that card. Return it to the
-        // battlefield. Exile it at the beginning of the next end step."
-        // Wired as `Move(TriggerSource, gy → bf untapped)` +
-        // `DelayUntilNextEndStep { Move(TriggerSource, → Exile) }`. The
-        // brief exile-then-return half is collapsed to just "return" —
-        // the engine has no replacement primitive that routes a card
-        // through exile mid-resolution, but the net play pattern (card
-        // ends up on the battlefield, then exiles at next EOT) matches.
-        // The printed "It's a Spirit in addition to its other types"
-        // type-override (layer 4) is approximated as a no-op — the
-        // returned card keeps its printed creature types only. Filter:
-        // non-token via `Predicate::EntityMatches` against
-        // `Not(IsToken)`.
+        power: 4,
+        toughness: 5,
+        // Exile the dying creature, then mint a Spirit-typed token copy of it.
+        // `CreateTokenCopyOf` resolves the source from exile, so it sees the
+        // just-exiled card.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
                 .with_filter(Predicate::EntityMatches {
@@ -1179,52 +1159,32 @@ pub fn hofri_ghostforge() -> CardDefinition {
                     filter: SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken)),
                 }),
             effect: Effect::Seq(vec![
-                Effect::Move {
-                    what: Selector::TriggerSource,
-                    to: ZoneDest::Battlefield {
-                        controller: crate::effect::PlayerRef::You,
-                        tapped: false,
-                    },
-                },
-                Effect::DelayUntil {
-                    kind: DelayedTriggerKind::NextEndStep,
-                    body: Box::new(Effect::Move {
-                        what: Selector::TriggerSource,
-                        to: ZoneDest::Exile,
-                    }),
+                Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::TriggerSource,
+                    extra_creature_types: vec![CreatureType::Spirit],
+                    override_pt: None,
+                    non_legendary: false,
                 },
             ]),
         }],
-        static_abilities: vec![StaticAbility {
-            description: "Other creatures you control get +1/+0.",
-            effect: StaticEffect::PumpPT {
-                applies_to: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-                power: 1,
-                toughness: 0,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Spirits you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: spirits(), power: 1, toughness: 1 },
             },
-        }],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
+            StaticAbility {
+                description: "Spirits you control have trample.",
+                effect: StaticEffect::GrantKeyword { applies_to: spirits(), keyword: Keyword::Trample },
+            },
+            StaticAbility {
+                description: "Spirits you control have haste.",
+                effect: StaticEffect::GrantKeyword { applies_to: spirits(), keyword: Keyword::Haste },
+            },
+        ],
+        ..Default::default()
     }
 }
 
