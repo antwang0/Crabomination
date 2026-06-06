@@ -645,7 +645,7 @@ picking an item up.
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror). Remaining: redistribute-life-totals; broad life-gain replacement (119.10).
 - 🟡 **CR 121 — Drawing a Card** — choose-to-draw (121.3); draw-count replacement (121.2a); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
-- 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2). `StaticEffect::PreventUntap` now also honors `Selector::This` (self-referential — Basalt/Grim Monolith's "doesn't untap; pay to untap").
+- 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2). `StaticEffect::PreventUntap` honors `Selector::This` (self-referential — Basalt/Grim Monolith) and now `Selector::AttachedTo(This)` (aura-anchored "enchanted creature doesn't untap" — Claustrophobia/Dehydration).
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).
@@ -691,8 +691,9 @@ picking an item up.
     `apply_layers`. Currently over-grants to all your creatures.
   - **MV-scaled token on LTB** (Skyclave Apparition's "owner creates an X/X
     Illusion where X = exiled card's MV") — needs a dynamic-P/T token mint.
-  - **"with no counters on it" target filter** (Heartless Act mode 0) —
-    add a `SelectionRequirement::HasNoCounters`.
+  - ✅ **"with no counters on it" target filter** — added
+    `SelectionRequirement::HasNoCounters`; ships Heartless Act (modal:
+    destroy a no-counter creature / remove-all counters).
   - **Forest/typecycling** (Generous Ent) — typed cycling that fetches a
     land of the named type; today only plain Cycling ships.
 

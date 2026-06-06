@@ -25162,3 +25162,26 @@ pub fn claustrophobia() -> CardDefinition {
 pub fn dehydration() -> CardDefinition {
     tap_down_aura("Dehydration")
 }
+
+/// Heartless Act — {1}{B} Instant. Choose one — Destroy target creature with
+/// no counters on it; or Remove up to three counters from target creature.
+/// (The "up to three" clause is modeled as remove-all — creatures rarely
+/// carry more than three counters.)
+pub fn heartless_act() -> CardDefinition {
+    CardDefinition {
+        name: "Heartless Act",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::HasNoCounters),
+                ),
+            },
+            Effect::RemoveAllCounters {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        ]),
+        ..Default::default()
+    }
+}

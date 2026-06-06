@@ -33327,3 +33327,54 @@ fn claustrophobia_taps_and_locks_down_the_creature() {
     g.do_untap();
     assert!(g.battlefield_find(bear).unwrap().tapped, "stays tapped (doesn't untap)");
 }
+
+/// Heartless Act mode 0 destroys a creature with no counters; a creature with
+/// a counter is not a legal target for that mode (CR 115 + HasNoCounters).
+#[test]
+fn heartless_act_destroy_requires_no_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let clean = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let counted = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(counted).unwrap()
+        .counters.insert(CounterType::PlusOnePlusOne, 1);
+    // Mode 0 on the clean creature destroys it.
+    let id = g.add_card_to_hand(0, catalog::heartless_act());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(clean)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("clean creature is a legal mode-0 target");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(clean).is_none(), "no-counter creature destroyed");
+    // Mode 0 cannot target the counter-bearing creature.
+    let id2 = g.add_card_to_hand(0, catalog::heartless_act());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: id2, target: Some(Target::Permanent(counted)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    });
+    assert!(res.is_err(), "counter-bearing creature is an illegal mode-0 target");
+}
+
+/// Heartless Act mode 1 strips the counters off a creature.
+#[test]
+fn heartless_act_mode_one_removes_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap()
+        .counters.insert(CounterType::PlusOnePlusOne, 2);
+    let id = g.add_card_to_hand(0, catalog::heartless_act());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("mode-1 castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "counters removed");
+}

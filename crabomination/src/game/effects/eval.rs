@@ -866,6 +866,10 @@ impl GameState {
                             })
                     }
                     R::WithCounter(k) => card.counter_count(*k) > 0,
+                    R::HasNoCounters => {
+                        card.counters.values().all(|&n| n == 0)
+                            && card.keyword_counters.values().all(|&n| n == 0)
+                    }
                     R::HasSupertype(st) => card.definition.supertypes.contains(st),
                     R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
                     R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
@@ -1110,6 +1114,10 @@ impl GameState {
             // Back-face check is a static property of the card
             // definition — same answer in any zone.
             R::HasBackFace => card.definition.back_face.is_some(),
+            R::HasNoCounters => {
+                card.counters.values().all(|&n| n == 0)
+                    && card.keyword_counters.values().all(|&n| n == 0)
+            }
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone

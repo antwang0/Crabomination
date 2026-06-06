@@ -1134,6 +1134,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // stat/keyword Auras (modern_decks)
         untamed_hunger,
         mark_of_the_vampire,
+        // modal removal gated on "no counters" (modern_decks)
+        heartless_act,
         champion_of_the_perished,
         falkenrath_noble,
         carrier_thrall,
