@@ -15765,12 +15765,8 @@ pub fn enduring_innocence() -> CardDefinition {
 }
 
 /// Amped Raptor — {1}{R} Creature — Dinosaur. 2/1.
-/// "When Amped Raptor enters, you get {E}{E}, then exile the top card; you
-/// may pay {E}{E} to cast it for free."
-///
-/// 🟡 ETB now grants real energy ({E}{E}) via `Effect::AddEnergy`. The
-/// exile-then-pay-energy-to-cast-free clause is still omitted (no
-/// energy-gated free-cast-from-exile path).
+/// ETB: you get {E}{E}, then exile the top card of your library; you may pay
+/// {E}{E}{E}{E} to cast it without paying its mana cost.
 pub fn amped_raptor() -> CardDefinition {
     CardDefinition {
         name: "Amped Raptor",
@@ -15782,7 +15778,11 @@ pub fn amped_raptor() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AddEnergy(Value::Const(2)),
+            // CR 107.16 — exile top card; may pay {E}{E}{E}{E} to free-cast it.
+            Effect::ExileTopMayPayEnergyToCast { energy: 4 },
+        ]))],
         ..Default::default()
     }
 }

@@ -21002,9 +21002,32 @@ fn amped_raptor_etb_gets_two_energy() {
     })
     .expect("Amped Raptor castable for {1}{R}");
     drain_stack(&mut g);
+    // Only 2 energy after ETB — can't afford the {E}{E}{E}{E} free-cast, so
+    // the top card stays exiled and energy is untouched.
     assert_eq!(g.players[0].energy, 2, "ETB grants {{E}}{{E}}");
     let c = g.battlefield_find(id).unwrap();
     assert_eq!((c.definition.power, c.definition.toughness), (2, 1));
+}
+
+#[test]
+fn amped_raptor_pays_energy_to_free_cast_exiled_card() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    // Pre-float 2 energy → 4 after the ETB {E}{E}, enough to pay {E}×4.
+    g.players[0].energy = 2;
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_hand(0, catalog::amped_raptor());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Amped Raptor castable for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 0, "paid all 4 energy to free-cast");
+    assert!(g.battlefield.iter().any(|c| c.id == bears),
+        "the exiled top card was cast for free onto the battlefield");
 }
 
 #[test]

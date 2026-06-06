@@ -1363,6 +1363,50 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopMayPayEnergyToCast { energy } => {
+                use crate::card::Zone;
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let Some(top_id) = self.players[p].library.first().map(|c| c.id) else {
+                    return Ok(());
+                };
+                self.move_card_to(top_id, &ZoneDest::Exile, ctx, events);
+                // CR 107.16 — only offer the pay-and-cast if the controller
+                // can actually afford the energy.
+                if self.players[p].energy < *energy {
+                    return Ok(());
+                }
+                let src = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source: src,
+                    description: format!(
+                        "Pay {{E}}×{energy} to cast the exiled card without paying its mana cost?"
+                    ),
+                });
+                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    return Ok(());
+                }
+                self.players[p].energy -= *energy;
+                let card_def = self.find_card_anywhere(top_id).map(|c| c.definition.clone());
+                if let Some(card_def) = card_def {
+                    let auto_target =
+                        self.auto_target_for_effect_avoiding(&card_def.effect, p, Some(top_id));
+                    let cast_events = self.cast_card_for_free(
+                        p,
+                        top_id,
+                        Zone::Exile,
+                        auto_target,
+                        vec![],
+                        None,
+                        None,
+                        false,
+                    )?;
+                    events.extend(cast_events);
+                }
+                Ok(())
+            }
+
             Effect::Draw { who, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {

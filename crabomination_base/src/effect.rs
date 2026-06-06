@@ -1377,6 +1377,11 @@ pub enum Effect {
     /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when
     /// able. Lathnu Hellion, Greenbelt Rampager.
     PayEnergyOrElse { amount: u32, otherwise: Box<Effect> },
+    /// CR 107.16 — exile the top card of the controller's library, then they
+    /// may pay `energy` {E}; if they do, they may cast that card without
+    /// paying its mana cost (the spell stays exiled if not cast). Amped
+    /// Raptor's "exile the top card, you may pay {E}{E}{E}{E} to cast it".
+    ExileTopMayPayEnergyToCast { energy: u32 },
 
     // ── Cards / draw / discard / mill ────────────────────────────────────────
     Draw    { who: Selector, amount: Value },

@@ -44,7 +44,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Amped Raptor | 🟡 | 2/1 Dinosaur; ETB now grants real energy ({E}{E}) via `Effect::AddEnergy` (energy system shipped in `sets::kld`). The exile-then-pay-energy-to-cast-free clause is still omitted (no energy-gated free-cast-from-exile path). |
 
 ### Green
 
@@ -98,7 +97,7 @@ are listed in `DECK_FEATURES.md`.
 | Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Board-scaled equip bonus ships via `EquipBonus.scale` — Nettlecyst ✅. Equipment-granted triggered abilities ship via `EquipBonus.triggered_abilities` (CR 702.6e; `DealsCombatDamageToPlayer` SelfSource fires off the equipped creature, damaged player bound to `Target(0)`) — Sword of Body and Mind ✅. Lion Sash ✅ (counter-on-self scaled bonus + Reconfigure CR 702.151 — `Keyword::Reconfigure` reuses the equip path and strips Creature-ness while attached). Living weapon ✅ (Nettlecyst, Batterskull — ETB mint-a-Germ-and-attach). Reconfigure *unattach* ✅ (`Reconfigure { target: None }` clears `attached_to`, restoring creature-ness; test `reconfigure_unattach_restores_creatureness`). |
 | Adventure (cost-mode duality) | ✅ | CR 715 — `CardDefinition.adventure` + `GameAction::CastAdventure`/`CastAdventureCreature`. Virtue of Loyalty (enchantment // instant) ships on it alongside the creature adventures. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
-| Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (Amped Raptor) is still ⏳. |
+| Storm count + cast-from-top | 🟡 | Storm count is wired (`Value::StormCount`, `Keyword::Storm` auto-copies on cast, per-turn `spells_cast_this_turn`) and `Effect::CopySpell` exists. Exile-top-and-grant-free-play (`Effect::ExileTopAndGrantMayPlay`) ships Robber of the Rich and Mind's Desire (Storm × exile-top + may-play-free). Energy-gated free cast-from-exile (`Effect::ExileTopMayPayEnergyToCast`) ships Amped Raptor ✅. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
 | Soulbond | ✅ | `Keyword::Soulbond` + `CardInstance.soulbond_partner` + `CardDefinition.soulbond_bonus` (`SoulbondBonus`: P/T, keywords, granted activated **and** triggered abilities). Pairs auto-resolve on ETB (`apply_soulbond_pairing`); the bonus rides both members as continuous effects and breaks on leave. Wolfir Silverheart, Wingcrafter, Nightshade Peddler, Trusted Forcemage, Hanweir Lancer, Silverblade Paladin, Nearheath Pilgrim, Deadeye Navigator (self-flicker), Tandem Lookout (combat-damage draw). |
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
