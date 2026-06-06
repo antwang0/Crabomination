@@ -1149,6 +1149,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mind_twist,
         dismember,
         cling_to_dust,
+        kroxa,
+        uro,
         // tezzeret_cruel_captain — 🟡 static (+1/+1 to artifact creatures) and ult omitted
         // ── modern_decks-14 ──
         cremate,
@@ -1762,6 +1764,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks (cascade RG): Violent Outburst ──
         violent_outburst,
         birds_of_paradise,
+        noble_hierarch,
         sylvan_caryatid,
         summoners_pact,
         natures_claim,

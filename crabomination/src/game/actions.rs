@@ -2677,7 +2677,10 @@ impl GameState {
             .iter()
             .position(|c| c.id == card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let card = self.players[p].graveyard.remove(pos);
+        let mut card = self.players[p].graveyard.remove(pos);
+        // Stamp the escape-cast flag so the "sacrifice unless it escaped"
+        // ETB rider on Kroxa/Uro sees this entered via Escape.
+        card.cast_from_escape = true;
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
         events.push(GameEvent::CardLeftGraveyard { player: p, card_id });

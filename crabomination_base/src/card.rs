@@ -1548,6 +1548,10 @@ pub struct CardInstance {
     /// True if this card was free-cast off the last Suspend time counter
     /// (CR 702.62f) — on ETB a creature so cast gains haste.
     pub cast_from_suspend: bool,
+    /// True if this card was cast via Escape (CR 702.139) from the
+    /// graveyard. Read by the "sacrifice it unless it escaped" ETB rider
+    /// on the Theros-Beyond-Death titans (Kroxa, Uro).
+    pub cast_from_escape: bool,
     /// True if this card was cast via a Blitz alternative cost (CR 702.152)
     /// — on ETB it gains haste and a death-draw rider, and is sacrificed at
     /// the next end step.
@@ -1726,6 +1730,7 @@ impl CardInstance {
             evoked: false,
             dashed: false,
             cast_from_suspend: false,
+            cast_from_escape: false,
             blitzed: false,
             cast_from_hand: false,
             cast_via_flashback: false,
@@ -1906,6 +1911,8 @@ struct CardInstanceWire {
     #[serde(default)]
     cast_from_suspend: bool,
     #[serde(default)]
+    cast_from_escape: bool,
+    #[serde(default)]
     blitzed: bool,
     cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field deserialize
@@ -1996,6 +2003,7 @@ impl serde::Serialize for CardInstance {
             evoked: self.evoked,
             dashed: self.dashed,
             cast_from_suspend: self.cast_from_suspend,
+            cast_from_escape: self.cast_from_escape,
             blitzed: self.blitzed,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
@@ -2048,6 +2056,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.evoked = wire.evoked;
         c.dashed = wire.dashed;
         c.cast_from_suspend = wire.cast_from_suspend;
+        c.cast_from_escape = wire.cast_from_escape;
         c.blitzed = wire.blitzed;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;

@@ -390,6 +390,11 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.saddled)
                 .unwrap_or(false),
+            Predicate::SourceCastFromEscape => ctx
+                .source
+                .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
+                .map(|c| c.cast_from_escape)
+                .unwrap_or(false),
             Predicate::PlayerAttackedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
@@ -398,6 +403,16 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].cast_blue_or_black_this_turn),
+            Predicate::DiscardedNonlandThisEffect { who } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| {
+                    self.nonland_cards_discarded_per_player_this_resolution
+                        .get(&p)
+                        .copied()
+                        .unwrap_or(0)
+                        > 0
+                }),
             Predicate::CardsLeftGraveyardThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)
