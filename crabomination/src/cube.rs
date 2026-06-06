@@ -436,6 +436,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Pinger + linked-exile hatebear.
         icatian_javelineers,
         leonin_relic_warder,
+        // White beaters + token makers.
+        leonin_skyhunter,
+        blade_of_the_sixth_pride,
+        serra_avenger,
+        blinking_spirit,
 
         // ── modern_decks: white value/aggro creatures ──
         solemn_recruit,

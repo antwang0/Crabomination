@@ -20524,6 +20524,72 @@ pub fn chance_encounter() -> CardDefinition {
     }
 }
 
+/// Leonin Skyhunter — {W}{W} 2/2 Cat Knight, Flying.
+pub fn leonin_skyhunter() -> CardDefinition {
+    CardDefinition {
+        name: "Leonin Skyhunter",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Blade of the Sixth Pride — {1}{W} 3/1 Cat Rebel (vanilla).
+pub fn blade_of_the_sixth_pride() -> CardDefinition {
+    CardDefinition {
+        name: "Blade of the Sixth Pride",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Serra Avenger — {W}{W} 3/3 Angel, Flying + Vigilance. (The "can't cast on
+/// your first three turns" restriction is dropped.)
+pub fn serra_avenger() -> CardDefinition {
+    CardDefinition {
+        name: "Serra Avenger",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Blinking Spirit — {3}{W} 2/2 Spirit. "{0}: Return this to its owner's hand."
+pub fn blinking_spirit() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Blinking Spirit",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Grave Pact — {1}{B}{B}{B} Enchantment. "Whenever a creature you control
 /// dies, each other player sacrifices a creature of their choice."
 pub fn grave_pact() -> CardDefinition {

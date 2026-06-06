@@ -31178,6 +31178,30 @@ fn solemnity_blocks_enters_with_counters() {
     assert_eq!(n, 0, "Murktide entered with no counters under Solemnity");
 }
 
+// ── White beaters + Blinking Spirit ────────────────────────────────────────
+
+#[test]
+fn blinking_spirit_returns_itself_to_hand_for_zero() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::blinking_spirit());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("{0}: return to hand");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "left the battlefield");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "back in its owner's hand");
+}
+
+#[test]
+fn white_fliers_have_their_keywords() {
+    use crate::card::Keyword;
+    let sky = catalog::leonin_skyhunter();
+    assert!(sky.keywords.contains(&Keyword::Flying) && sky.power == 2 && sky.toughness == 2);
+    let serra = catalog::serra_avenger();
+    assert!(serra.keywords.contains(&Keyword::Flying) && serra.keywords.contains(&Keyword::Vigilance));
+}
+
 // ── Edict-on-death (Grave Pact / Butcher of Malakir) ───────────────────────
 
 fn kill_with_bolt(g: &mut crate::game::GameState, victim: CardId) {
