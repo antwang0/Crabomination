@@ -26,6 +26,17 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     for &f in crate::demo::goryos_vengeance_deck() {
         all.push(f);
     }
+    // Commander demo deck (`build_commander_state` / `--play commander`).
+    // Its unique non-cube cards — Crop Rotation, Sylvan Scrying, Kodama's
+    // Reach, Worldly Tutor, the Moxen, Biorhythm, Greater Good, … — aren't
+    // in the cube/SoS/STX pools, so without this they'd render with the
+    // missing-art placeholder (the client image prefetch walks this list)
+    // and a mid-game Commander snapshot couldn't round-trip through the
+    // name→factory lookup. Include the commander itself for the same reasons.
+    for &f in crate::demo::rofellos_commander_main() {
+        all.push(f);
+    }
+    all.push(sets::decks::rofellos_llanowar_emissary as CardFactory);
     // STX (Strixhaven 2021) factory list — large but bounded; the
     // dedup pass below removes any factory the cube/sos pools already
     // exposed. Without this, mid-game snapshots involving STX
@@ -227,6 +238,25 @@ mod tests {
         let def = lookup_by_name("Spirited Companion")
             .expect("Spirited Companion should resolve via the STX catalog");
         assert_eq!(def.name, "Spirited Companion");
+    }
+
+    #[test]
+    fn lookup_resolves_commander_demo_deck_cards() {
+        // The Rofellos Commander demo deck (`build_commander_state` /
+        // `--play commander`) uses cards outside the cube/SoS/STX pools.
+        // They must be in the registry so their art is prefetched (no
+        // missing-image placeholder) and Commander snapshots round-trip.
+        for name in [
+            "Crop Rotation",
+            "Sylvan Scrying",
+            "Worldly Tutor",
+            "Greater Good",
+            "Biorhythm",
+            "Rofellos, Llanowar Emissary",
+        ] {
+            let def = lookup_by_name(name).unwrap_or_else(|| panic!("{name} should resolve"));
+            assert_eq!(def.name, name);
+        }
     }
 
     #[test]
