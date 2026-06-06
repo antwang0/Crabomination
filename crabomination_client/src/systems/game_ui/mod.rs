@@ -161,6 +161,12 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
 
         E::GameOver { .. } => theme::ACCENT_GOLD,
 
+        // Randomization + resource gains read as gold "value" events.
+        E::CoinFlipWon { .. }
+        | E::CoinFlipLost { .. }
+        | E::DiceRolled { .. }
+        | E::EnergyGained { .. } => theme::ACCENT_GOLD,
+
         _ => theme::TEXT_BODY,
     }
 }
@@ -176,6 +182,9 @@ fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static str {
         E::DamageDealt { .. } | E::LifeLost { .. } | E::PoisonAdded { .. } => "▼ ",
         E::CreatureDied { .. } | E::PlaneswalkerDied { .. } => "✖ ",
         E::LifeGained { .. } | E::DamagePrevented { .. } => "▲ ",
+        // Coin flips and die rolls — a die glyph flags randomization outcomes.
+        E::CoinFlipWon { .. } | E::CoinFlipLost { .. } | E::DiceRolled { .. } => "⚄ ",
+        E::EnergyGained { .. } => "⚡ ",
         _ => "",
     }
 }

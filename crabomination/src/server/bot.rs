@@ -552,7 +552,16 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
             || matches!(sel, Selector::Player(PlayerRef::You))
     };
     match eff {
-        Effect::LoseLife { who, .. } | Effect::Discard { who, .. } => hits_self(who),
+        Effect::LoseLife { who, .. }
+        | Effect::Discard { who, .. }
+        | Effect::Mill { who, .. }
+        | Effect::LoseHalfLife { who, .. }
+        | Effect::MillHalf { who, .. }
+        | Effect::DiscardHalf { who, .. } => hits_self(who),
+        // Self-directed damage (a "you may have ~ deal N damage to you" rider).
+        Effect::DealDamage { to, .. } => hits_self(to),
+        // Drain *out of* the bot is a cost; drain *into* the bot is upside.
+        Effect::Drain { from, .. } => hits_self(from),
         Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => hits_self(who),
         Effect::SacrificeAndRemember { .. } => true,
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
@@ -2026,6 +2035,26 @@ mod tests {
         );
         assert!(!optional_trigger_beneficial(&g, id, "you may"),
             "a 'you may lose 3 life' optional trigger is declined");
+    }
+
+    /// Self-directed damage / mill bodies are costs too — the bot declines a
+    /// "you may have this deal 4 damage to you" optional trigger.
+    #[test]
+    fn bot_declines_self_damage_optional_trigger() {
+        use crate::effect::{Selector, Value};
+        let mut g = two_player_game();
+        let dmg = g.add_card_to_battlefield(
+            0,
+            body_card("SelfBurn", Effect::DealDamage { to: Selector::You, amount: Value::Const(4) }),
+        );
+        assert!(!optional_trigger_beneficial(&g, dmg, "you may"),
+            "a 'you may deal 4 to you' optional trigger is declined");
+        let mill = g.add_card_to_battlefield(
+            0,
+            body_card("SelfMill", Effect::Mill { who: Selector::You, amount: Value::Const(3) }),
+        );
+        assert!(!optional_trigger_beneficial(&g, mill, "you may"),
+            "a 'you may mill yourself 3' optional trigger is declined");
     }
 
     /// `MayPay` shares the `OptionalTrigger` decision shape with `MayDo`, so
