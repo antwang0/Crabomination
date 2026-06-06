@@ -7258,6 +7258,36 @@ pub fn cling_to_dust() -> CardDefinition {
     }
 }
 
+/// Beacon of Immortality — {5}{W} Instant. Double target player's life total
+/// (CR 701.10d). Then shuffle it into its owner's library.
+pub fn beacon_of_immortality() -> CardDefinition {
+    CardDefinition {
+        name: "Beacon of Immortality",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DoubleLife { who: target_filtered(SelectionRequirement::Player) },
+            Effect::ShuffleSelfIntoLibrary,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Beacon of Destruction — {3}{R}{R} Instant. Deal 5 damage to any target.
+/// Then shuffle it into its owner's library.
+pub fn beacon_of_destruction() -> CardDefinition {
+    CardDefinition {
+        name: "Beacon of Destruction",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(5) },
+            Effect::ShuffleSelfIntoLibrary,
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Kroxa, Titan of Death's Hunger — {B}{R} Legendary Creature — Elder Giant
 /// 6/6. When it enters, sacrifice it unless it escaped. On enter-or-attack
 /// each opponent discards a card, then each opponent who didn't discard a

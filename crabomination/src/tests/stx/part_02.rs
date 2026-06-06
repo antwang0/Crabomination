@@ -3355,13 +3355,33 @@ fn discover_the_formula_draws_three() {
 // ── Mortician Beetle (modern_decks push) ───────────────────────────────
 
 #[test]
-fn mortician_beetle_grows_on_creature_death() {
+fn mortician_beetle_grows_on_creature_sacrifice() {
     let mut g = two_player_game();
     let beetle = g.add_card_to_battlefield(0, catalog::mortician_beetle());
     g.clear_sickness(beetle);
-    // Give opp a creature to kill.
+    // Opp has a creature; Tribute to Hunger forces them to sacrifice it.
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Cast lightning bolt on opp's bear
+    let tribute = g.add_card_to_hand(0, catalog::tribute_to_hunger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tribute,
+        target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tribute castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear), "opp sacrificed the bear");
+    let b = g.computed_permanent(beetle).expect("beetle");
+    assert!(b.power >= 2, "Mortician Beetle pumped to 2+: {}/{}", b.power, b.toughness);
+}
+
+#[test]
+fn mortician_beetle_ignores_combat_death() {
+    let mut g = two_player_game();
+    let beetle = g.add_card_to_battlefield(0, catalog::mortician_beetle());
+    g.clear_sickness(beetle);
+    // A lethal-damage death is NOT a sacrifice → no counter.
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -3370,10 +3390,8 @@ fn mortician_beetle_grows_on_creature_death() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bolt castable");
     drain_stack(&mut g);
-
-    // Bear dies → Mortician Beetle gets +1/+1 counter
     let b = g.computed_permanent(beetle).expect("beetle");
-    assert!(b.power >= 2, "Mortician Beetle pumped to 2+: {}/{}", b.power, b.toughness);
+    assert_eq!(b.power, 1, "no counter from a non-sacrifice death");
 }
 
 // ── Vespine Strix (modern_decks push) ──────────────────────────────────

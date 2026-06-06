@@ -1083,6 +1083,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoubleLife { who } => {
+                // CR 701.10d — gain life equal to current total (20 → 40).
+                let seats: Vec<usize> = self
+                    .resolve_selector(who, ctx)
+                    .into_iter()
+                    .filter_map(|e| if let EntityRef::Player(p) = e { Some(p) } else { None })
+                    .collect();
+                for p in seats {
+                    let life = self.players[p].life;
+                    if life <= 0 { continue; }
+                    self.adjust_life(p, life);
+                    // adjust_life may be capped (e.g. "can't gain life"); emit
+                    // the actual gain.
+                    let gained = (self.players[p].life - life).max(0);
+                    if gained > 0 {
+                        events.push(GameEvent::LifeGained { player: p, amount: gained as u32 });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::LoseHalfLife { who, rounded_up } => {
                 // Per-player: each loses half of their *own* total.
                 let seats: Vec<usize> = self
@@ -3911,6 +3932,14 @@ impl GameState {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     self.players[p].library.shuffle(&mut rand::rng());
                 }
+                Ok(())
+            }
+
+            Effect::ShuffleSelfIntoLibrary => {
+                // Flag the post-resolution routing (resolve_spell) to send the
+                // resolving spell to its owner's library + shuffle, rather than
+                // the graveyard. No-op for non-spell sources.
+                self.shuffle_resolving_spell_into_library = true;
                 Ok(())
             }
 

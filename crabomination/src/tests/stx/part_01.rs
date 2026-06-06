@@ -141,32 +141,30 @@ fn witherbloom_command_auto_picks_mill_and_drain() {
 }
 
 #[test]
-fn lorehold_command_auto_picks_damage_and_two_flying_spirits() {
+fn lorehold_command_auto_picks_spirit_token_and_team_pump() {
     let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::lorehold_command());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let p1_life_before = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Lorehold Command castable for {2}{R}{W}");
+    .expect("Lorehold Command castable for {3}{R}{W}");
     drain_stack(&mut g);
 
-    // Auto-pick = [0 (4 damage to opp), 3 (two 2/2 flying Spirits)].
-    assert_eq!(g.players[1].life, p1_life_before - 4,
-        "P1 took 4 damage");
-    let spirits: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Spirit"
-            && c.controller == 0)
-        .collect();
-    assert_eq!(spirits.len(), 2, "Two Spirit tokens minted");
-    for s in &spirits {
-        assert_eq!(s.power(), 2);
-        assert_eq!(s.toughness(), 2);
-        assert!(s.has_keyword(&Keyword::Flying), "Lorehold Spirits have flying");
-    }
+    // Auto-pick = modes [0 (3/2 Spirit token), 1 (team +1/+0 + indestructible + haste)].
+    let spirit = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
+        .expect("a 3/2 Spirit token was minted");
+    assert_eq!((spirit.power(), spirit.toughness()), (4, 2), "3/2 base +1/+0 from the pump mode");
+    let b = g.computed_permanent(bear).expect("bear");
+    assert_eq!(b.power, 3, "bear got +1/+0");
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Indestructible),
+        "bear gained indestructible");
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Haste),
+        "bear gained haste");
 }
 
 #[test]

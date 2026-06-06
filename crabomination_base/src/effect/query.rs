@@ -141,7 +141,9 @@ impl Effect {
             Effect::LoseHalfLife { who, .. }
             | Effect::MillHalf { who, .. }
             | Effect::DiscardHalf { who, .. }
+            | Effect::DoubleLife { who }
             | Effect::SacrificeHalf { who, .. } => sel_has_target(who),
+            Effect::ShuffleSelfIntoLibrary => false,
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
@@ -385,6 +387,7 @@ impl Effect {
             Effect::LoseHalfLife { who, .. }
             | Effect::MillHalf { who, .. }
             | Effect::DiscardHalf { who, .. }
+            | Effect::DoubleLife { who }
             | Effect::SacrificeHalf { who, .. } => sel_filter(who),
             Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }

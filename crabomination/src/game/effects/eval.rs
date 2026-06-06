@@ -395,6 +395,19 @@ impl GameState {
                 .and_then(|cid| self.battlefield.iter().find(|c| c.id == cid))
                 .map(|c| c.cast_from_escape)
                 .unwrap_or(false),
+            Predicate::TriggerObjectNameMatchesNamedCard => {
+                let named = ctx
+                    .source
+                    .and_then(|cid| self.find_card_anywhere(cid))
+                    .and_then(|c| c.named_card.clone());
+                let cast_name = match ctx.trigger_source {
+                    Some(EntityRef::Card(id)) => {
+                        self.find_card_anywhere(id).map(|c| c.definition.name.to_string())
+                    }
+                    _ => None,
+                };
+                matches!((named, cast_name), (Some(n), Some(c)) if n == c)
+            }
             Predicate::PlayerAttackedThisTurn { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

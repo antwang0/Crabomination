@@ -394,6 +394,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks: cube staples ──
         condemn,
+        beacon_of_immortality,
 
         // ── modern_decks: white value/aggro creatures ──
         solemn_recruit,
@@ -1151,6 +1152,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cling_to_dust,
         kroxa,
         uro,
+        beacon_of_destruction,
         // tezzeret_cruel_captain — 🟡 static (+1/+1 to artifact creatures) and ult omitted
         // ── modern_decks-14 ──
         cremate,

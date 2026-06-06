@@ -15157,7 +15157,9 @@ pub fn umbral_juke() -> CardDefinition {
 
 // ── Silverquill Silencer ───────────────────────────────────────────────────
 
-/// Silverquill Silencer — {W}{B}, 3/2 Human Cleric. 🟡 Body only.
+/// Silverquill Silencer — {W}{B}, 3/2 Human Cleric. As it enters, choose a
+/// nonland card name. Whenever an opponent casts a spell with that name, they
+/// lose 3 life and you draw a card.
 pub fn silverquill_silencer() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Silencer",
@@ -15170,8 +15172,20 @@ pub fn silverquill_silencer() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
+        triggered_abilities: vec![
+            etb(Effect::NameCard { what: Selector::This }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                    .with_filter(Predicate::TriggerObjectNameMatchesNamedCard),
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::Triggerer),
+                        amount: Value::Const(3),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            },
+        ],
         ..Default::default()
     }
 }

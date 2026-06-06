@@ -15,6 +15,7 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
+    each_your_creature,
     dies_mint_token, dies_ping_any, enrage, etb, etb_drain, etb_gain_life, etb_mint_token,
     magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_scry,
     magecraft_self_pump, mint_lorehold_spirits, on_attack, on_attack_drain, on_attack_gain_life,
@@ -23410,15 +23411,17 @@ pub fn lorehold_spiritforge_b164() -> CardDefinition {
 
 // ── Lorehold Command ───────────────────────────────────────────────────────
 
-/// Lorehold Command — {3}{R}{W} Sorcery. Choose two:
+/// Lorehold Command — {3}{R}{W} Instant. Choose two —
 /// • Create a 3/2 red and white Spirit creature token.
 /// • Creatures you control get +1/+0 and gain indestructible and haste EOT.
-/// • Exile target nonland permanent with MV ≤ 3.
-/// • Return target creature card with MV ≤ 2 from your graveyard to bf.
+/// • Deal 3 damage to any target; you gain 3 life.
+/// • Sacrifice a permanent, then draw two cards.
 ///
-/// 🟡 Collapsed to single-mode ChooseMode of 4 modes (printed: choose two).
+/// Wired via `Effect::ChooseN` (CR 700.2g). AutoDecider keeps the default
+/// two non-targeting modes (token + team pump). The damage/lifegain mode
+/// folds the "target player gains 3 life" onto the caster.
 pub fn lorehold_command() -> CardDefinition {
-    let _spirit_32 = TokenDefinition {
+    let spirit_32 = TokenDefinition {
         name: "Spirit".into(),
         power: 3,
         toughness: 2,
@@ -23432,54 +23435,54 @@ pub fn lorehold_command() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
         static_abilities: vec![],
     };
-    // Real Oracle: "Choose two — / • Lorehold Command deals 4 damage to
-    // target player or planeswalker. / • Target player creates two 2/2
-    // white and red Spirit creature tokens with flying. / …"
-    //
-    // Approximation: AutoDecider picks the printed default ("4 damage +
-    // two flying Spirits"). Modal-choose-two is collapsed to always
-    // applying both modes (Seq), which matches the gameplay outcome
-    // when the controller selects those two modes.
+    let team = each_your_creature();
     CardDefinition {
         name: "Lorehold Command",
-        cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::Const(4),
-            },
-            mint_lorehold_spirits(2),
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
+        cost: cost(&[generic(3), r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: spirit_32,
+                },
+                Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: team.clone(),
+                        power: Value::Const(1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: team.clone(),
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: team,
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+                    Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                ]),
+                Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        filter: SelectionRequirement::Permanent,
+                        count: Value::Const(1),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ]),
+            ],
+        },
+        ..Default::default()
     }
 }
 

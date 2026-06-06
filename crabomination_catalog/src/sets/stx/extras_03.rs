@@ -1485,18 +1485,8 @@ pub fn discover_the_formula() -> CardDefinition {
 
 /// Mortician Beetle — {B} Creature — Insect, 1/1 (Conflux reprint).
 /// "Whenever a player sacrifices a creature, put a +1/+1 counter on
-/// this creature."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Cheap 1-drop that grows
-/// as creatures get sacrificed across the table. Wired via
-/// `EventKind::CreatureDied / AnyPlayer` — engine model collapses
-/// "sacrificed" into the generic "dies" event (CreatureDied fires
-/// on both lethal damage and sacrifice). For most Witherbloom
-/// sac-engine boards this difference is invisible. A future
-/// `EventKind::CreatureSacrificed` primitive would tighten the
-/// trigger to exclude combat deaths (tracked in TODO.md). Tests:
-/// `mortician_beetle_grows_on_creature_death`,
-/// `mortician_beetle_is_a_one_mana_one_one_insect`.
+/// this creature." Wired to `EventKind::CreatureSacrificed / AnyPlayer`
+/// so combat/lethal-damage deaths don't grow it.
 pub fn mortician_beetle() -> CardDefinition {
     CardDefinition {
         name: "Mortician Beetle",
@@ -1513,7 +1503,7 @@ pub fn mortician_beetle() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::AnyPlayer),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

@@ -30063,6 +30063,75 @@ fn uro_escaped_stays_gains_life_and_draws() {
 }
 
 #[test]
+fn silverquill_silencer_punishes_named_spell() {
+    let mut g = two_player_game();
+    let silencer = g.add_card_to_battlefield(0, catalog::silverquill_silencer());
+    g.battlefield_find_mut(silencer).unwrap().named_card = Some("Lightning Bolt".into());
+    g.add_card_to_library(0, catalog::island()); // something to draw
+    let p1 = g.players[1].life;
+    let hand0 = g.players[0].hand.len();
+    // Opponent casts the named spell → they lose 3 life and the Silencer's
+    // controller draws.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P1 casts the named Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 3, "named-spell caster lost 3 life");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "Silencer's controller drew a card");
+}
+
+#[test]
+fn silverquill_silencer_ignores_unnamed_spell() {
+    let mut g = two_player_game();
+    let silencer = g.add_card_to_battlefield(0, catalog::silverquill_silencer());
+    g.battlefield_find_mut(silencer).unwrap().named_card = Some("Counterspell".into());
+    let p1 = g.players[1].life;
+    let hand0 = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P1 casts a non-named Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1, "no life loss for an unnamed spell");
+    assert_eq!(g.players[0].hand.len(), hand0, "no draw");
+}
+
+#[test]
+fn beacon_of_immortality_doubles_life_and_reshuffles() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::beacon_of_immortality());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.players[1].life = 17;
+    let lib0_before = g.players[0].library.len();
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, 34, "CR 701.10d: target player's life doubled");
+    // Beacon shuffled into owner's library — not the graveyard.
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id), "not in graveyard");
+    assert_eq!(g.players[0].library.len(), lib0_before + 1, "back in library");
+}
+
+#[test]
+fn beacon_of_destruction_burns_and_reshuffles() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::beacon_of_destruction());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let p1 = g.players[1].life;
+    cast_at(&mut g, id, Target::Player(1));
+    assert_eq!(g.players[1].life, p1 - 5, "dealt 5 damage");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == id), "shuffled in, not in graveyard");
+    assert!(g.players[0].library.iter().any(|c| c.id == id), "Beacon back in library");
+}
+
+#[test]
 fn noble_hierarch_taps_for_a_color() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::noble_hierarch());

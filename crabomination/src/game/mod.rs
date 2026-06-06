@@ -335,6 +335,12 @@ pub struct GameState {
     #[serde(skip)]
     pub(crate) nonland_cards_discarded_per_player_this_resolution:
         std::collections::HashMap<usize, u32>,
+    /// Transient: set by `Effect::ShuffleSelfIntoLibrary` during spell
+    /// resolution; the post-resolution routing reads it to send the
+    /// resolving spell to its owner's library (shuffled) instead of the
+    /// graveyard. Cleared once consumed. Beacon cycle.
+    #[serde(skip)]
+    pub(crate) shuffle_resolving_spell_into_library: bool,
     /// Transient: the `CardId`s of cards discarded within the current
     /// effect resolution. Populated alongside the count fields above. Used
     /// by Mind Roots's "Put up to one land card discarded this way onto
@@ -591,6 +597,7 @@ impl Clone for GameState {
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             nonland_cards_discarded_per_player_this_resolution: self.nonland_cards_discarded_per_player_this_resolution.clone(),
+            shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             named_card_this_resolution: self.named_card_this_resolution.clone(),
@@ -674,6 +681,7 @@ impl GameState {
             creature_cards_discarded_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
             nonland_cards_discarded_per_player_this_resolution: HashMap::new(),
+            shuffle_resolving_spell_into_library: false,
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             named_card_this_resolution: None,
@@ -4970,6 +4978,17 @@ impl GameState {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
             self.exile.push(card);
+            return Ok(events);
+        }
+        // Beacon cycle: "Shuffle this card into its owner's library."
+        // `Effect::ShuffleSelfIntoLibrary` flagged the resolving spell — route
+        // it to its owner's library and shuffle instead of the graveyard.
+        if self.shuffle_resolving_spell_into_library {
+            self.shuffle_resolving_spell_into_library = false;
+            use rand::seq::SliceRandom;
+            let owner = card.owner;
+            self.players[owner].library.push(card);
+            self.players[owner].library.shuffle(&mut rand::rng());
             return Ok(events);
         }
         // Buyback (CR 702.27e): a spell cast paying its buyback cost returns

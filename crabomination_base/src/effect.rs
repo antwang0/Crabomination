@@ -519,6 +519,11 @@ pub enum Predicate {
     /// 702.139). Backed by `CardInstance.cast_from_escape`; gates the
     /// "sacrifice it unless it escaped" ETB rider on Kroxa / Uro.
     SourceCastFromEscape,
+    /// True if the trigger's object (the just-cast spell, `trigger_source`)
+    /// has the same name the effect's source stamped via `Effect::NameCard`
+    /// (`CardInstance.named_card`). Gates "whenever an opponent casts a spell
+    /// with the chosen name" triggers — Silverquill Silencer.
+    TriggerObjectNameMatchesNamedCard,
     /// True if any player `who` resolves to attacked with a creature this
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.
@@ -1289,6 +1294,11 @@ pub enum Effect {
     Fight { attacker: Selector, defender: Selector },
     GainLife  { who: Selector, amount: Value },
     LoseLife  { who: Selector, amount: Value },
+    /// CR 701.10d — "double a player's life total." Each player the selector
+    /// resolves to gains life equal to their current total (so 20 → 40). A
+    /// player at 0 or negative is unaffected (no negative-doubling). Beacon
+    /// of Immortality.
+    DoubleLife { who: Selector },
     /// Each player the selector resolves to loses life equal to half their
     /// *own* current life total (rounded up when `rounded_up`, else down).
     /// Per-player evaluation — `LoseLife`'s single global amount can't scale
@@ -1482,6 +1492,12 @@ pub enum Effect {
     ShuffleGraveyardIntoLibrary { who: PlayerRef },
     /// Shuffle `who`'s library (CR 103.2c). Mind's Desire's pre-exile shuffle.
     ShuffleLibrary { who: PlayerRef },
+    /// Move the resolving spell (`ctx.source`) from the stack into its
+    /// owner's library, then shuffle. The Beacon cycle's "Shuffle this card
+    /// into its owner's library" recursion rider (Beacon of Immortality,
+    /// Beacon of Destruction). Runs at resolution before the spell would go
+    /// to the graveyard, so the card never lands in the graveyard.
+    ShuffleSelfIntoLibrary,
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },
