@@ -19729,6 +19729,42 @@ pub fn shield_sphere() -> CardDefinition {
     }
 }
 
+/// Congregate — {3}{W} Instant. "Target player gains 2 life for each creature
+/// on the battlefield."
+pub fn congregate() -> CardDefinition {
+    CardDefinition {
+        name: "Congregate",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::GainLife {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature,
+                )))),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Smite the Monstrous — {3}{W} Instant. "Destroy target creature with power
+/// 4 or greater."
+pub fn smite_the_monstrous() -> CardDefinition {
+    CardDefinition {
+        name: "Smite the Monstrous",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Jace's Ingenuity — {4}{U} Instant. "Draw three cards."
 pub fn jaces_ingenuity() -> CardDefinition {
     CardDefinition {

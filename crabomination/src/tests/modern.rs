@@ -30897,3 +30897,36 @@ fn corrupt_damages_and_gains_life_per_swamp() {
     assert_eq!(g.players[1].life, p1 - 3, "3 damage = 3 swamps");
     assert_eq!(g.players[0].life, p0 + 3, "gained 3 life");
 }
+
+// ── Congregate / Smite the Monstrous ───────────────────────────────────────
+
+#[test]
+fn congregate_gains_two_life_per_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::congregate());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Congregate at self");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 6, "2 life × 3 creatures");
+}
+
+#[test]
+fn smite_the_monstrous_only_hits_power_four_or_more() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::smite_the_monstrous());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "can't target a 2/2");
+}

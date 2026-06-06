@@ -418,6 +418,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         portable_hole,
         giver_of_runes,
         avacyns_pilgrim,
+        // Lifegain + targeted removal.
+        congregate,
+        smite_the_monstrous,
 
         // ── modern_decks: white value/aggro creatures ──
         solemn_recruit,
