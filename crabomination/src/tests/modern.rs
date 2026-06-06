@@ -32482,3 +32482,37 @@ fn elves_of_deep_shadow_taps_for_black_and_pings_you() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "added black");
     assert_eq!(g.players[0].life, life - 1, "dealt 1 damage to you");
 }
+
+// ── Generous Ent / Patchwork Automaton (this branch) ────────────────────────
+
+#[test]
+fn generous_ent_etb_makes_food_and_has_reach() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    assert!(catalog::generous_ent().keywords.contains(&Keyword::Reach));
+    let ent = g.add_card_to_battlefield(0, catalog::generous_ent());
+    g.fire_self_etb_triggers(ent, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"),
+        "minted a Food token on ETB");
+}
+
+#[test]
+fn patchwork_automaton_grows_on_artifact_cast() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let auto = g.add_card_to_battlefield(0, catalog::patchwork_automaton());
+    // Cast an artifact spell (Sol Ring).
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ring, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sol Ring castable");
+    drain_stack(&mut g);
+    let a = g.battlefield_find(auto).expect("on battlefield");
+    assert_eq!(a.counter_count(CounterType::PlusOnePlusOne), 1,
+        "gained a +1/+1 counter when an artifact spell was cast");
+}

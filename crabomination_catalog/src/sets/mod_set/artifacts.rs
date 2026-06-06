@@ -1362,3 +1362,35 @@ pub fn chief_of_the_foundry() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Patchwork Automaton — {2} Artifact Creature — Construct 1/1. Ward {2}.
+/// "Whenever you cast an artifact spell, put a +1/+1 counter on this creature."
+pub fn patchwork_automaton() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType, Predicate, WardCost};
+    CardDefinition {
+        name: "Patchwork Automaton",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Ward(WardCost::generic(2))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                },
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
