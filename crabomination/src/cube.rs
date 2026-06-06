@@ -1785,6 +1785,12 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── green burn + combat trick ──
         hornet_sting,
         titanic_growth,
+        // ── green bodies + Eldrazi Spawn ramp ──
+        silverback_ape,
+        greater_basilisk,
+        vastwood_gorger,
+        nest_invader,
+        kozileks_predator,
         // ── modern_decks: cube staples ──
         ancient_stirrings,
         arbor_elf,

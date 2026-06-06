@@ -31234,6 +31234,43 @@ fn butcher_of_malakir_edicts_when_your_creature_dies() {
     assert!(g.battlefield_find(theirs).is_none(), "opponent sacrificed a creature");
 }
 
+// ── Green bodies + Eldrazi Spawn ramp ──────────────────────────────────────
+
+#[test]
+fn nest_invader_makes_an_eldrazi_spawn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::nest_invader());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Nest Invader");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count(), 1,
+        "one Eldrazi Spawn token");
+}
+
+#[test]
+fn kozileks_predator_makes_two_spawns() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::kozileks_predator());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Kozilek's Predator");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count(), 2,
+        "two Eldrazi Spawn tokens");
+}
+
+#[test]
+fn greater_basilisk_has_deathtouch() {
+    use crate::card::Keyword;
+    let b = catalog::greater_basilisk();
+    assert!(b.keywords.contains(&Keyword::Deathtouch) && (b.power, b.toughness) == (3, 5));
+}
+
 // ── Green burn + combat trick ──────────────────────────────────────────────
 
 #[test]

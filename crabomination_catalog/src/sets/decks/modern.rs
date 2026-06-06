@@ -20635,6 +20635,105 @@ pub fn butcher_of_malakir() -> CardDefinition {
     }
 }
 
+/// Silverback Ape — {3}{G}{G} 5/5 Ape (vanilla).
+pub fn silverback_ape() -> CardDefinition {
+    CardDefinition {
+        name: "Silverback Ape",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ape], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        ..Default::default()
+    }
+}
+
+/// Greater Basilisk — {3}{G}{G} 3/5 Basilisk, Deathtouch.
+pub fn greater_basilisk() -> CardDefinition {
+    CardDefinition {
+        name: "Greater Basilisk",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
+
+/// Vastwood Gorger — {5}{G} 5/6 Wurm (vanilla).
+pub fn vastwood_gorger() -> CardDefinition {
+    CardDefinition {
+        name: "Vastwood Gorger",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 5,
+        toughness: 6,
+        ..Default::default()
+    }
+}
+
+/// A 0/1 colorless Eldrazi Spawn with "Sacrifice this token: Add {C}."
+fn eldrazi_spawn_token() -> crate::card::TokenDefinition {
+    use crate::card::{ActivatedAbility, TokenDefinition};
+    TokenDefinition {
+        name: "Eldrazi Spawn".to_string(),
+        power: 0,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nest Invader — {1}{G} 2/2 Eldrazi Drone. ETB: create one Eldrazi Spawn.
+pub fn nest_invader() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Nest Invader",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: eldrazi_spawn_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kozilek's Predator — {3}{G} 3/3 Eldrazi Drone. ETB: create two Eldrazi Spawn.
+pub fn kozileks_predator() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Kozilek's Predator",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi, CreatureType::Drone], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: eldrazi_spawn_token(),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Hornet Sting — {G} Instant. "Deals 1 damage to any target."
 pub fn hornet_sting() -> CardDefinition {
     use crate::effect::shortcut::{deal, target};
