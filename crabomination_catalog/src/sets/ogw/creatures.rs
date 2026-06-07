@@ -2697,3 +2697,75 @@ pub fn wretched_gryff() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Munda's Vanguard — {4}{W} 3/3 Kor Knight Ally. Cohort (CR 207.2c ability
+/// word) — {T}, Tap an untapped Ally you control: put a +1/+1 counter on each
+/// creature you control.
+pub fn mundas_vanguard() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType, SelectionRequirement};
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        name: "Munda's Vanguard",
+        cost: cost(&[generic(4), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Knight, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_other_filter: Some(SelectionRequirement::HasCreatureType(CreatureType::Ally)),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Drana's Chosen — {3}{B} 2/2 Vampire Shaman Ally. Cohort — {T}, Tap an
+/// untapped Ally you control: create a 2/2 black Zombie creature token.
+/// (The printed token enters tapped; we mint it untapped — a slight upside.)
+pub fn dranas_chosen() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement, TokenDefinition};
+    use crate::effect::{PlayerRef, Value};
+    use crabomination_base::mana::Color;
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Drana's Chosen",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_other_filter: Some(SelectionRequirement::HasCreatureType(CreatureType::Ally)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: zombie,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

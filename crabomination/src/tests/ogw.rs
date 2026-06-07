@@ -2509,3 +2509,51 @@ fn emerge_requires_a_creature_to_sacrifice() {
     });
     assert!(r.is_err(), "no creature → emerge rejected");
 }
+
+// ── Cohort (tap an Ally as a cost) ────────────────────────────────────────
+
+/// Munda's Vanguard's Cohort: tapping it + an untapped Ally puts a +1/+1
+/// counter on each creature you control.
+#[test]
+fn mundas_vanguard_cohort_counters_team() {
+    let mut g = two_player_game();
+    let munda = g.add_card_to_battlefield(0, catalog::mundas_vanguard());
+    let ally = g.add_card_to_battlefield(0, catalog::kor_bladewhirl()); // an Ally to tap
+    g.clear_sickness(munda);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: munda, ability_index: 0, target: None, x_value: None,
+    }).expect("cohort activate");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ally).unwrap().tapped, "the tapped Ally paid the cost");
+    let m = g.computed_permanent(munda).unwrap();
+    assert_eq!((m.power, m.toughness), (4, 4), "Munda got a +1/+1 counter");
+    let a = g.computed_permanent(ally).unwrap();
+    assert_eq!((a.power, a.toughness), (3, 3), "the Ally got a +1/+1 counter too");
+}
+
+/// Cohort can't be paid without another untapped Ally.
+#[test]
+fn cohort_requires_an_untapped_ally() {
+    let mut g = two_player_game();
+    let munda = g.add_card_to_battlefield(0, catalog::mundas_vanguard());
+    g.clear_sickness(munda);
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: munda, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(r.is_err(), "no other Ally to tap → cohort illegal");
+}
+
+/// Drana's Chosen's Cohort mints a 2/2 Zombie.
+#[test]
+fn dranas_chosen_cohort_makes_zombie() {
+    let mut g = two_player_game();
+    let drana = g.add_card_to_battlefield(0, catalog::dranas_chosen());
+    let _ally = g.add_card_to_battlefield(0, catalog::tajuru_warcaller());
+    g.clear_sickness(drana);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drana, ability_index: 0, target: None, x_value: None,
+    }).expect("cohort activate");
+    drain_stack(&mut g);
+    let zombies = g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count();
+    assert_eq!(zombies, 1, "minted a 2/2 Zombie");
+}

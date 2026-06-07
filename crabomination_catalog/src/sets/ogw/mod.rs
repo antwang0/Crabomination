@@ -162,5 +162,7 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         inverter_of_truth,
         linvala_the_preserver,
         wretched_gryff,
+        mundas_vanguard,
+        dranas_chosen,
     ]
 }
