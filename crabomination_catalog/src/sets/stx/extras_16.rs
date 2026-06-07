@@ -458,6 +458,95 @@ pub fn semesters_end() -> CardDefinition {
     }
 }
 
+/// Guttural Response — {R/G} Instant. Counter target blue instant spell.
+pub fn guttural_response() -> CardDefinition {
+    CardDefinition {
+        name: "Guttural Response",
+        cost: cost(&[hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Instant))
+                    .and(SelectionRequirement::HasColor(Color::Blue)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Claim the Firstborn — {R} Sorcery. Gain control of target creature with
+/// mana value 3 or less until end of turn. Untap it; it gains haste.
+pub fn claim_the_firstborn() -> CardDefinition {
+    CardDefinition {
+        name: "Claim the Firstborn",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bond of Flourishing — {1}{G} Sorcery. Look at the top three cards of your
+/// library; you may put a permanent card from among them into your hand, the
+/// rest on the bottom. You gain 3 life.
+pub fn bond_of_flourishing() -> CardDefinition {
+    CardDefinition {
+        name: "Bond of Flourishing",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: Some(SelectionRequirement::Permanent),
+                take: None,
+            },
+            gain_life(3),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tamiyo's Safekeeping — {G} Instant. Target permanent you control gains
+/// hexproof and indestructible until end of turn. You gain 2 life.
+pub fn tamiyos_safekeeping() -> CardDefinition {
+    CardDefinition {
+        name: "Tamiyo's Safekeeping",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou)),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            gain_life(2),
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Weather the Storm — {1}{G} Instant (Mystical Archive). You gain 3 life.
 /// Storm — copy this for each spell cast before it this turn.
 pub fn weather_the_storm() -> CardDefinition {

@@ -216,6 +216,89 @@ fn semesters_end_blinks_creature_and_returns_with_counter_at_end_step() {
 }
 
 #[test]
+fn claim_the_firstborn_steals_a_small_creature_with_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::claim_the_firstborn());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.controller, 0, "control stolen");
+    assert!(!b.tapped, "untapped");
+    assert!(b.has_keyword(&Keyword::Haste), "gains haste");
+}
+
+#[test]
+fn guttural_response_counters_a_blue_instant_only() {
+    let mut g = two_player_game();
+    // Opponent casts a blue instant (Disperse, {1}{U}).
+    let blue_instant = g.add_card_to_hand(1, catalog::disperse());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: blue_instant, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts blue instant");
+    // P0 responds with Guttural Response.
+    g.priority.player_with_priority = 0;
+    let resp = g.add_card_to_hand(0, catalog::guttural_response());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: resp, target: Some(Target::Permanent(blue_instant)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter the blue instant");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == blue_instant), "blue instant countered");
+}
+
+#[test]
+fn bond_of_flourishing_digs_for_a_permanent_and_gains_life() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    let perm = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt()); // nonpermanent filler
+    let id = g.add_card_to_hand(0, catalog::bond_of_flourishing());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(perm))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == perm), "took the permanent card");
+    assert_eq!(g.players[0].life, life + 3, "gain 3 life");
+}
+
+#[test]
+fn tamiyos_safekeeping_grants_hexproof_indestructible_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tamiyos_safekeeping());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let computed = g.compute_battlefield();
+    let cb = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(cb.keywords.contains(&Keyword::Hexproof) && cb.keywords.contains(&Keyword::Indestructible),
+        "gains hexproof and indestructible");
+    assert_eq!(g.players[0].life, life + 2, "gain 2 life");
+}
+
+#[test]
 fn weather_the_storm_copies_for_prior_spells() {
     let mut g = two_player_game();
     // Pretend two spells were already cast this turn.

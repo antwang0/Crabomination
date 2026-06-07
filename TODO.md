@@ -826,7 +826,10 @@ picking an item up.
 - ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is now near-complete;
   the modern_decks run also shipped Exponential Growth (`Effect::DoublePower`),
   Sticky Fingers, Make Your Move, Semester's End (`Effect::ExileReturnNextEndStep`),
-  and Culmination of Studies (`Value::CountMatching`). Still unimplemented
+  Culmination of Studies (`Value::CountMatching`), Geometric Nexus, Burn Down
+  the House, and the Mystical-Archive reprints Disperse / Weather the Storm /
+  Bond of Flourishing / Tamiyo's Safekeeping / Claim the Firstborn / Guttural
+  Response. Still unimplemented
   printed STX cards, grouped by the primitive they're blocked on:
   - **Study / hone counters** — needed for the Kianne/Imbraham and
     Uvilda/Nassari Deans (exile-with-counter-then-cast mechanics).
