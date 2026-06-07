@@ -3194,19 +3194,14 @@ fn manifestation_sage_etb_creates_fractal_with_counters_from_hand() {
     // hand before ETB resolves).
     for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::manifestation_sage());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Manifestation Sage castable for {2}{G}{U}");
+    }).expect("Manifestation Sage castable for {G/U}{G/U}{G/U}{G/U}");
     drain_stack(&mut g);
 
-    let sage = g.battlefield.iter()
-        .find(|c| c.definition.name == "Manifestation Sage")
-        .expect("Sage in play");
-    assert!(sage.has_keyword(&Keyword::Flying));
     let fractal = g.battlefield.iter()
         .find(|c| c.is_token && c.definition.name == "Fractal")
         .expect("Fractal token minted");

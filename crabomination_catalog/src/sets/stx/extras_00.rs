@@ -1613,56 +1613,28 @@ pub fn devious_cover_up() -> CardDefinition {
     }
 }
 
-/// Manifestation Sage — {2}{G}{U} Creature — Fractal Wizard, 2/2 (Quandrix).
-/// "Flying / When Manifestation Sage enters, create a 0/0 green and
-/// blue Fractal creature token, then put X +1/+1 counters on it, where
-/// X is the number of cards in your hand."
-///
-/// ✅ Wired faithfully: ETB mints a 0/0 G/U Fractal token (shared
-/// definition pattern with Body of Research), then drops one +1/+1
-/// counter on the just-created token for every card in the
-/// controller's hand via `Value::HandSizeOf(You)`. Counters apply to
-/// `Selector::LastCreatedToken` so the ETB resolves correctly even
-/// when other tokens are minted in the same response window.
+/// Manifestation Sage — {G/U}{G/U}{G/U}{G/U} 2/2 Human Wizard. "When this
+/// creature enters, create a 0/0 green and blue Fractal creature token. Put X
+/// +1/+1 counters on it, where X is the number of cards in your hand."
 pub fn manifestation_sage() -> CardDefinition {
-    let fractal = TokenDefinition {
-        name: "Fractal".to_string(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Green, Color::Blue],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
-    };
+    let gu = || hybrid(Color::Green, Color::Blue);
     CardDefinition {
         name: "Manifestation Sage",
-        cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
+        cost: cost(&[gu(), gu(), gu(), gu()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: fractal,
+                    definition: crate::catalog::sets::sos::fractal_token(),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
@@ -1671,27 +1643,7 @@ pub fn manifestation_sage() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
