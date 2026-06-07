@@ -1665,3 +1665,79 @@ fn tears_of_valakut_burns_flyer() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == flyer), "4/4 flyer takes 5 and dies");
 }
+
+/// Sea Gate Wreckage taps for {C}; its draw ability needs an empty hand.
+#[test]
+fn sea_gate_wreckage_draws_only_with_empty_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sea_gate_wreckage());
+    g.add_card_to_library(0, catalog::forest());
+    let filler = g.add_card_to_hand(0, catalog::forest());
+    g.players[0].mana_pool.add_colorless(3);
+    // With a card in hand, the draw ability is illegal.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).is_err(), "draw needs empty hand");
+    // Empty the hand and retry.
+    g.players[0].hand.retain(|c| c.id != filler);
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("draw with empty hand");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1, "drew a card");
+}
+
+/// Spawning Bed sacrifices for three Eldrazi Scions.
+#[test]
+fn spawning_bed_makes_three_scions() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spawning_bed());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("sac for scions");
+    drain_stack(&mut g);
+    let scions = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Eldrazi Scion").count();
+    assert_eq!(scions, 3, "three Eldrazi Scion tokens");
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "land sacrificed");
+}
+
+/// Loathsome Catoblepas' death gives an opponent's creature -3/-3.
+#[test]
+fn loathsome_catoblepas_death_shrinks_opponent_creature() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_battlefield(0, catalog::loathsome_catoblepas());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    // Kill the Catoblepas via lethal damage; its dies trigger auto-targets the
+    // only opponent creature.
+    g.battlefield_find_mut(cat).unwrap().damage = 3;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(victim).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "4/4 → 1/1 after -3/-3");
+}
+
+/// Gravity Negator's attack ability grants flying when {C} is paid.
+#[test]
+fn gravity_negator_grants_flying_on_attack() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Add the ally first so the auto-target picker reaches it before the
+    // (already-flying) attacker for the "another target creature" slot.
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let neg = g.add_card_to_battlefield(0, catalog::gravity_negator());
+    g.clear_sickness(neg);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    // Float the {C} after advancing (mana pools empty between steps).
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: neg, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Flying),
+        "ally gains flying");
+}

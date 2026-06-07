@@ -1805,6 +1805,129 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Loathsome Catoblepas — {5}{B} 3/3 Beast. {2}{G}: must be blocked this turn
+/// if able. When it dies, target creature an opponent controls gets -3/-3 EOT.
+pub fn loathsome_catoblepas() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Keyword, SelectionRequirement};
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        name: "Loathsome Catoblepas",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::MustBeBlocked,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![on_dies(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gravity Negator — {3}{U} 2/3 Eldrazi Drone. Devoid, Flying. Whenever it
+/// attacks, you may pay {C}; if you do, another target creature gains flying
+/// until end of turn.
+pub fn gravity_negator() -> CardDefinition {
+    use crate::card::{Keyword, SelectionRequirement};
+    use crate::effect::Duration;
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "Pay {C}: another target creature gains flying".into(),
+            mana_cost: cost(&[crate::mana::colorless(1)]),
+            body: Box::new(Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            }),
+        })],
+        ..drone("Gravity Negator", cost(&[generic(3), u()]), 2, 3)
+    }
+}
+
+/// Sea Gate Wreckage — Land. {T}: Add {C}. {2}{C}, {T}: Draw a card — activate
+/// only if you have no cards in hand.
+pub fn sea_gate_wreckage() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Predicate, PlayerRef, Selector, Value};
+    CardDefinition {
+        name: "Sea Gate Wreckage",
+        cost: crate::mana::ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2), crate::mana::colorless(1)]),
+                condition: Some(Predicate::ValueEquals(
+                    Value::HandSizeOf(PlayerRef::You),
+                    Value::Const(0),
+                )),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Spawning Bed — Land. {T}: Add {C}. {6}, {T}, Sacrifice this land: Create
+/// three 1/1 Eldrazi Scion tokens.
+pub fn spawning_bed() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        name: "Spawning Bed",
+        cost: crate::mana::ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: cost(&[generic(6)]),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: eldrazi_scion_token(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Cinder Barrens — Land. Enters tapped; {T}: Add {B} or {R}.
 pub fn cinder_barrens() -> CardDefinition {
     use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, TriggeredAbility};

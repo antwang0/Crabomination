@@ -4289,7 +4289,16 @@ impl GameState {
                 });
                 return;
             }
-            let auto = self.auto_target_for_effect(&pending.effect, pending.controller);
+            // Prefer a non-source target: an "another target creature" trigger
+            // (OtherThanSource) must not auto-pick its own source, and even a
+            // plain "target creature" trigger reads better picking a different
+            // permanent (a self-target trigger uses `Selector::This`, not a
+            // target slot). Falls back to the source if it's the only legal pick.
+            let auto = self.auto_target_for_effect_avoiding(
+                &pending.effect,
+                pending.controller,
+                Some(pending.source),
+            );
             self.push_pending_trigger(pending, auto);
         }
     }
