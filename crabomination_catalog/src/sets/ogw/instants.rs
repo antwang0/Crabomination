@@ -1,5 +1,5 @@
 use crate::card::{CardDefinition, CardType, Keyword, SelectionRequirement};
-use crate::effect::shortcut::{deal, pump_target, return_target_to_hand, target, target_filtered};
+use crate::effect::shortcut::{awaken, deal, pump_target, return_target_to_hand, surge, target, target_filtered};
 use crate::effect::{Effect, PlayerRef, Value};
 use crate::mana::{ManaCost, b, colorless, cost, g, generic, r, u};
 use crabomination_base::tokens::eldrazi_scion_token;
@@ -22,35 +22,39 @@ pub fn murderous_compulsion() -> CardDefinition {
 }
 
 /// Roil Spout — {1}{W}{U} Sorcery. Put target creature on top of its owner's
-/// library. (Awaken 4 dropped — no Awaken primitive yet.)
+/// library. Awaken 4—{4}{W}{U} (land = target slot 1).
 pub fn roil_spout() -> CardDefinition {
     use crate::effect::{LibraryPosition, ZoneDest};
+    let base = Effect::Move {
+        what: target_filtered(SelectionRequirement::Creature),
+        to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+    };
     CardDefinition {
         name: "Roil Spout",
         cost: cost(&[generic(1), crate::mana::w(), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
-            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
-        },
+        effect: base.clone(),
+        alternative_cost: Some(awaken(4, cost(&[generic(4), crate::mana::w(), u()]), 1, base)),
         ..Default::default()
     }
 }
 
-/// Coastal Discovery — {3}{U} Sorcery. Draw two cards. (Awaken 4 dropped.)
+/// Coastal Discovery — {3}{U} Sorcery. Draw two cards. Awaken 4—{5}{U}.
 pub fn coastal_discovery() -> CardDefinition {
     use crate::effect::Selector;
+    let base = Effect::Draw { who: Selector::You, amount: Value::Const(2) };
     CardDefinition {
         name: "Coastal Discovery",
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        effect: base.clone(),
+        alternative_cost: Some(awaken(4, cost(&[generic(5), u()]), 0, base)),
         ..Default::default()
     }
 }
 
-/// Comparative Analysis — {3}{U} Instant. Target player draws two cards. (Surge
-/// is dropped — no Surge primitive yet.)
+/// Comparative Analysis — {3}{U} Instant. Target player draws two cards.
+/// Surge {2}{U}.
 pub fn comparative_analysis() -> CardDefinition {
     use crate::effect::Selector;
     CardDefinition {
@@ -58,6 +62,7 @@ pub fn comparative_analysis() -> CardDefinition {
         cost: cost(&[generic(3), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+        alternative_cost: Some(surge(cost(&[generic(2), u()]), false)),
         ..Default::default()
     }
 }
@@ -77,35 +82,39 @@ pub fn shoulder_to_shoulder() -> CardDefinition {
     }
 }
 
-/// Sheer Drop — {2}{W} Sorcery. Destroy target tapped creature. (Awaken 3 is
-/// dropped — no Awaken primitive yet.)
+/// Sheer Drop — {2}{W} Sorcery. Destroy target tapped creature.
+/// Awaken 3—{5}{W} (land = target slot 1).
 pub fn sheer_drop() -> CardDefinition {
+    let base = Effect::Destroy {
+        what: target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+        ),
+    };
     CardDefinition {
         name: "Sheer Drop",
         cost: cost(&[generic(2), crate::mana::w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
-            ),
-        },
+        effect: base.clone(),
+        alternative_cost: Some(awaken(3, cost(&[generic(5), crate::mana::w()]), 1, base)),
         ..Default::default()
     }
 }
 
-/// Mire's Malice — {3}{B} Sorcery. Target opponent discards two cards. (Awaken 3
-/// is dropped — no Awaken primitive yet.)
+/// Mire's Malice — {3}{B} Sorcery. Target opponent discards two cards.
+/// Awaken 3—{5}{B}.
 pub fn mires_malice() -> CardDefinition {
     use crate::effect::Selector;
+    let base = Effect::Discard {
+        who: Selector::Player(PlayerRef::EachOpponent),
+        amount: Value::Const(2),
+        random: false,
+    };
     CardDefinition {
         name: "Mire's Malice",
         cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(2),
-            random: false,
-        },
+        effect: base.clone(),
+        alternative_cost: Some(awaken(3, cost(&[generic(5), b()]), 0, base)),
         ..Default::default()
     }
 }
@@ -526,6 +535,20 @@ pub fn mighty_leap() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Boulder Salvo — {4}{R} Sorcery. Deals 4 damage to target creature.
+/// Surge {1}{R}.
+pub fn boulder_salvo() -> CardDefinition {
+    use crate::effect::shortcut::target;
+    CardDefinition {
+        name: "Boulder Salvo",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage { to: target(), amount: Value::Const(4) },
+        alternative_cost: Some(surge(cost(&[generic(1), r()]), false)),
         ..Default::default()
     }
 }

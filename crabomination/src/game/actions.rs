@@ -3779,6 +3779,11 @@ impl GameState {
         if alt.blitz {
             card.blitzed = true;
         }
+        if alt.marks_kicked {
+            // CR 702.108 — Surge: stamp the spell kicked so "if its surge
+            // cost was paid" ETB riders fire via `SpellWasKicked`.
+            card.kicked = true;
+        }
 
         // Timing: sorcery-speed unless instant-speed (or the alt cost grants
         // flash — Rout), plus Teferi-style opponent restriction.

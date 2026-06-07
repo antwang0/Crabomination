@@ -1401,6 +1401,13 @@ pub struct AlternativeCost {
     /// enforces on noninstant spells.
     #[serde(default)]
     pub flash: bool,
+    /// True when paying this alternative cost stamps the resolving spell as
+    /// "kicked" (`CardInstance.kicked`), so "if its [surge/...] cost was paid"
+    /// ETB riders fire via `Predicate::SpellWasKicked`. Reuses the kicker
+    /// pipeline for Surge (CR 702.108) — Reckless Bushwhacker, Tyrant of
+    /// Valakut.
+    #[serde(default)]
+    pub marks_kicked: bool,
 }
 
 impl CardDefinition {

@@ -178,6 +178,7 @@ pub fn vandalblast() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
         }),
         ..Default::default()
     }

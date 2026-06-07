@@ -8,25 +8,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Awaken (CR 702.113) + Surge + Rally — recurring OGW/BFZ blockers.**
-  Many OGW cards were carded with their main mode but a dropped rider because
-  the engine lacks: **Awaken N—cost** (alt-cost that also animates a land as a
-  0/0 Elemental manland with N counters — Sheer Drop, Mire's Malice, Coastal
-  Discovery, Roil Spout, Wall of Resurgence, Cyclone Sire); **Surge** (alt-cost
-  if you/teammate cast a spell this turn — Reckless Bushwhacker, Goblin
-  Freerunner, Boulder Salvo, Comparative Analysis, Containment Membrane,
-  Tyrant of Valakut); **Rally** (an ETB-anthem trigger keyed to "this or
-  another Ally you control enters" — needs a subject-type event filter; Kor
-  Bladewhirl, Tajuru Warcaller). Each unblocks ~5+ cards.
+- ✅ **Awaken (CR 702.113) + Surge (702.108) + Rally — OGW/BFZ blockers.**
+  All three ship via existing primitives + a small `AlternativeCost.marks_kicked`
+  flag. Awaken/Surge live in `shortcut::{awaken, surge, animate_land}`; Rally is
+  an `EntersBattlefield`/`YourControl` trigger filtered to `HasCreatureType(Ally)`.
+  Wired Sheer Drop, Mire's Malice, Coastal Discovery, Roil Spout (Awaken);
+  Comparative Analysis, Containment Membrane, Boulder Salvo, Goblin Freerunner,
+  Reckless Bushwhacker, Tyrant of Valakut (Surge); Kor Bladewhirl, Tajuru
+  Warcaller (Rally); Wall of Resurgence, Cyclone Sire (animate-land riders).
 - ⏳ **OGW/BFZ cards skipped this batch (need a primitive).**
   - **Oblivion Sower** — process-onto-battlefield (target opp exiles top 4,
     then put any number of *their* land cards from exile onto the battlefield
     under your control). Needs a "play lands from opponent's exile" move.
   - **Processor Assault** — Process as a cast-time *additional cost* (not a
     trigger); needs the additional-cost-process hook.
-  - **Vile Redeemer / Cyclone Sire / Inverter of Truth / Conduit of Ruin** —
-    per-creature-died token scaling, awaken, whole-library-exile, and
-    tutor+cost-reduction respectively.
+  - **Vile Redeemer / Inverter of Truth / Conduit of Ruin** —
+    per-creature-died token scaling, whole-library-exile, and
+    tutor+cost-reduction respectively. (Cyclone Sire ✅ — animate-land on death.)
   - ✅ **Thought-Knot Seer** — `Effect::ExileChosenFromHand` (non-linked exile)
     + `PermanentLeavesBattlefield` LTB draw. The SBA lethal-damage path now
     also fires `PermanentLeavesBattlefield` self-source triggers.

@@ -111,6 +111,62 @@ pub fn blitz(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, blitz: true, ..Default::default() }
 }
 
+/// Surge (CR 702.108) alternative cost: cast for `mana_cost` if you or a
+/// teammate cast another spell this turn. `with_rider` stamps the spell
+/// "kicked" so "if its surge cost was paid" ETB riders fire.
+pub fn surge(mana_cost: crate::mana::ManaCost, with_rider: bool) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        condition: Some(Predicate::SpellsCastThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(1),
+        }),
+        marks_kicked: with_rider,
+        ..Default::default()
+    }
+}
+
+/// The "animate a land" rider shared by Awaken (CR 702.113) and
+/// Wall of Resurgence / Cyclone Sire: put `counters` +1/+1 counters on the
+/// land in target slot `slot` and it becomes a 0/0 Elemental creature with
+/// haste that's still a land.
+pub fn animate_land(slot: u8, counters: i32) -> Effect {
+    use crate::card::CreatureType;
+    let land = SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou);
+    Effect::Seq(vec![
+        Effect::AddCounter {
+            what: Selector::TargetFiltered { slot, filter: land },
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(counters),
+        },
+        Effect::BecomeCreature {
+            what: Selector::Target(slot),
+            power: Value::Const(0),
+            toughness: Value::Const(0),
+            creature_types: vec![CreatureType::Elemental],
+            keywords: vec![Keyword::Haste],
+            duration: Duration::Permanent,
+        },
+    ])
+}
+
+/// Awaken N—`mana_cost` (CR 702.113) alternative cost: cast for `mana_cost`;
+/// the spell resolves its `base_effect` and additionally animates the land in
+/// target slot `land_slot` with N +1/+1 counters. `base_effect` keeps its own
+/// target slots (0..land_slot); the land occupies `land_slot`.
+pub fn awaken(
+    n: i32,
+    mana_cost: crate::mana::ManaCost,
+    land_slot: u8,
+    base_effect: Effect,
+) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        effect_override: Some(Effect::Seq(vec![base_effect, animate_land(land_slot, n)])),
+        ..Default::default()
+    }
+}
+
 /// Spectacle (CR 702.111) alternative cost: cast for `mana_cost` rather
 /// than the printed cost if an opponent lost life this turn.
 pub fn spectacle(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {

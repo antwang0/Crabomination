@@ -1,7 +1,7 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::effect::shortcut::{
-    dies_mint_token, etb_mint_token, ingest, on_attack, on_cast, on_dies, prowess_trigger,
-    target_filtered,
+    animate_land, dies_mint_token, etb_mint_token, ingest, on_attack, on_cast, on_dies,
+    prowess_trigger, surge, target_filtered,
 };
 use crate::mana::{b, cost, g, generic, r, u};
 use crabomination_base::tokens::{eldrazi_10_10_token, eldrazi_scion_token, eldrazi_spawn_token};
@@ -1878,6 +1878,7 @@ pub fn containment_membrane() -> CardDefinition {
                 applies_to: Selector::AttachedTo(Box::new(Selector::This)),
             },
         }],
+        alternative_cost: Some(surge(cost(&[u()]), false)),
         ..Default::default()
     }
 }
@@ -2347,6 +2348,215 @@ pub fn sludge_crawler() -> CardDefinition {
                 duration: crate::effect::Duration::EndOfTurn,
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reckless Bushwhacker — {2}{R} 2/1 Goblin Warrior Ally. Haste. Surge {1}{R};
+/// if its surge cost was paid, other creatures you control get +1/+0 and gain
+/// haste until end of turn.
+pub fn reckless_bushwhacker() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{Duration, Selector, Value};
+    let others = Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Reckless Bushwhacker",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: others.clone(),
+                        power: Value::Const(1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: others,
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        alternative_cost: Some(surge(cost(&[generic(1), r()]), true)),
+        ..Default::default()
+    }
+}
+
+/// Goblin Freerunner — {3}{R} 3/2 Goblin Warrior Ally. Menace. Surge {1}{R}.
+pub fn goblin_freerunner() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Freerunner",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        alternative_cost: Some(surge(cost(&[generic(1), r()]), false)),
+        ..Default::default()
+    }
+}
+
+/// Tyrant of Valakut — {5}{R}{R} 5/4 Dragon. Flying. Surge {3}{R}{R}; if its
+/// surge cost was paid, it deals 3 damage to any target.
+pub fn tyrant_of_valakut() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
+    use crate::effect::Value;
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Tyrant of Valakut",
+        cost: cost(&[generic(5), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::DealDamage { to: target_any(), amount: Value::Const(3) }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        alternative_cost: Some(surge(cost(&[generic(3), r(), r()]), true)),
+        ..Default::default()
+    }
+}
+
+/// Kor Bladewhirl — {1}{W} 2/2 Kor Soldier Ally. Rally — whenever this or
+/// another Ally you control enters, creatures you control gain first strike
+/// until end of turn.
+pub fn kor_bladewhirl() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{Duration, Selector};
+    CardDefinition {
+        name: "Kor Bladewhirl",
+        cost: cost(&[generic(1), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Soldier, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
+                }),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tajuru Warcaller — {3}{G}{G} 2/1 Elf Warrior Ally. Rally — whenever this or
+/// another Ally you control enters, creatures you control get +2/+2 until end
+/// of turn.
+pub fn tajuru_warcaller() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        name: "Tajuru Warcaller",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Ally),
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wall of Resurgence — {2}{W} 0/6 Wall. Defender. When it enters, you may put
+/// three +1/+1 counters on target land you control and it becomes a 0/0
+/// Elemental creature with haste that's still a land.
+pub fn wall_of_resurgence() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Wall of Resurgence",
+        cost: cost(&[generic(2), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 6,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Animate target land with three +1/+1 counters?".into(),
+                body: Box::new(animate_land(0, 3)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cyclone Sire — {4}{U} 3/4 Elemental. Flying. When it dies, you may put three
+/// +1/+1 counters on target land you control and it becomes a 0/0 Elemental
+/// creature with haste that's still a land.
+pub fn cyclone_sire() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Cyclone Sire",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Animate target land with three +1/+1 counters?".into(),
+                body: Box::new(animate_land(0, 3)),
+            },
         }],
         ..Default::default()
     }

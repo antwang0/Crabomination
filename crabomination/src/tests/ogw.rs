@@ -2113,3 +2113,123 @@ fn flux_channeler_proliferates_on_noncreature_cast() {
     assert_eq!(g.battlefield_find(pet).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "proliferate added a +1/+1 counter");
 }
+
+// ── Awaken (CR 702.113) ───────────────────────────────────────────────────
+
+/// Sheer Drop cast for its Awaken cost destroys the creature AND animates a
+/// land into a 3/3 Elemental with haste.
+#[test]
+fn sheer_drop_awaken_animates_land() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::sheer_drop());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(land)],
+        mode: None,
+        x_value: None,
+    }).expect("awaken cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "tapped creature destroyed");
+    let cl = g.computed_permanent(land).expect("land still in play");
+    assert!(cl.card_types.contains(&crate::card::CardType::Creature), "land is now a creature");
+    assert!(cl.card_types.contains(&crate::card::CardType::Land), "still a land");
+    assert_eq!((cl.power, cl.toughness), (3, 3), "0/0 + three +1/+1 counters");
+    assert!(cl.keywords.contains(&crate::card::Keyword::Haste), "animated land has haste");
+}
+
+/// Coastal Discovery's Awaken draws two AND animates a land (4/4).
+#[test]
+fn coastal_discovery_awaken_draws_and_animates() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::coastal_discovery());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None,
+        target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("awaken cast");
+    drain_stack(&mut g);
+    // -1 for the spell leaving hand, +2 drawn.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew two");
+    let cl = g.computed_permanent(land).unwrap();
+    assert_eq!((cl.power, cl.toughness), (4, 4), "animated to 4/4");
+}
+
+// ── Surge (CR 702.108) ────────────────────────────────────────────────────
+
+/// Reckless Bushwhacker cast for its surge cost fires the "if surge paid"
+/// ETB: other creatures you control get +1/+0 and haste.
+#[test]
+fn reckless_bushwhacker_surge_pumps_team() {
+    let mut g = two_player_game();
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].spells_cast_this_turn = 1; // a prior spell this turn
+    let id = g.add_card_to_hand(0, catalog::reckless_bushwhacker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("surge cast");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(buddy).unwrap();
+    assert_eq!((b.power, b.toughness), (3, 2), "buddy got +1/+0");
+    assert!(b.keywords.contains(&crate::card::Keyword::Haste), "buddy gained haste");
+}
+
+/// Without a prior spell this turn, the surge alternative cost is illegal.
+#[test]
+fn surge_requires_prior_spell() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::goblin_freerunner());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "surge rejected with no prior spell this turn");
+}
+
+// ── Rally ─────────────────────────────────────────────────────────────────
+
+/// Kor Bladewhirl's Rally grants first strike to your creatures whenever an
+/// Ally you control enters (including itself).
+#[test]
+fn kor_bladewhirl_rally_grants_first_strike() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Bladewhirl entering is itself an Ally ETB → trigger fires.
+    let bw = g.add_card_to_battlefield(0, catalog::kor_bladewhirl());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bw }]);
+    drain_stack(&mut g);
+    let o = g.computed_permanent(other).unwrap();
+    assert!(o.keywords.contains(&crate::card::Keyword::FirstStrike),
+        "Rally granted first strike to other creatures");
+}
+
+/// Wall of Resurgence animates a land on its own ETB.
+#[test]
+fn wall_of_resurgence_animates_land_on_etb() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let land = g.add_card_to_battlefield(0, catalog::plains());
+    let w = g.add_card_to_battlefield(0, catalog::wall_of_resurgence());
+    g.fire_self_etb_triggers(w, 0);
+    drain_stack(&mut g);
+    let cl = g.computed_permanent(land).unwrap();
+    assert_eq!((cl.power, cl.toughness), (3, 3), "land animated to 3/3 on ETB");
+    assert!(cl.card_types.contains(&crate::card::CardType::Creature));
+}

@@ -375,6 +375,7 @@ pub fn force_of_negation() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
         }),
         ..Default::default()
     }
@@ -609,6 +610,7 @@ pub fn mystical_dispute() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
         }),
         ..Default::default()
     }

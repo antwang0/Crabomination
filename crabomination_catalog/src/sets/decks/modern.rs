@@ -2346,6 +2346,7 @@ pub fn snuff_out() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
         }),
         ..Default::default()
     }
@@ -3940,6 +3941,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
         }),
         ..Default::default()
     }
@@ -6825,6 +6827,7 @@ pub fn rout() -> CardDefinition {
             mana_cost: cost(&[generic(5), w(), w()]),
             blitz: false,
             flash: true,
+            marks_kicked: false,
             ..Default::default()
         }),
         ..Default::default()

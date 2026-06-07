@@ -150,5 +150,13 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         call_the_scions,
         reality_hemorrhage,
         touch_of_the_void,
+        reckless_bushwhacker,
+        goblin_freerunner,
+        tyrant_of_valakut,
+        kor_bladewhirl,
+        tajuru_warcaller,
+        wall_of_resurgence,
+        cyclone_sire,
+        boulder_salvo,
     ]
 }
