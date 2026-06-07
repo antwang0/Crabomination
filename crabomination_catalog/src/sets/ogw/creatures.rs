@@ -1805,6 +1805,20 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Ruin Processor — {7} 7/8 Eldrazi Processor. When you cast it, you may put a
+/// card an opponent owns from exile into their graveyard; if you do, gain 5 life.
+pub fn ruin_processor() -> CardDefinition {
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        keywords: vec![],
+        triggered_abilities: vec![on_cast(Effect::Process {
+            count: 1,
+            then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+        })],
+        ..processor("Ruin Processor", cost(&[crate::mana::generic(7)]), 7, 8)
+    }
+}
+
 /// Zendikar's Roil — {3}{G}{G} Enchantment. Landfall — when a land you control
 /// enters, create a 2/2 green Elemental token.
 pub fn zendikars_roil() -> CardDefinition {

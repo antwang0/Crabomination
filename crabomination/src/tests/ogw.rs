@@ -1891,3 +1891,59 @@ fn searing_light_hits_small_attacker() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == small), "2-power attacker destroyed");
 }
+
+/// Sheer Drop destroys a tapped creature but not an untapped one.
+#[test]
+fn sheer_drop_destroys_tapped() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let tapped = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(tapped).unwrap().tapped = true;
+    let drop = g.add_card_to_hand(0, catalog::sheer_drop());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: drop, target: Some(Target::Permanent(tapped)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sheer Drop on tapped creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == tapped), "tapped creature destroyed");
+}
+
+/// Mire's Malice makes the opponent discard two cards.
+#[test]
+fn mires_malice_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::forest()); }
+    let spell = g.add_card_to_hand(0, catalog::mires_malice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mire's Malice");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before - 2, "opponent discards two");
+}
+
+/// Ruin Processor's cast trigger processes a card and gains 5 life.
+#[test]
+fn ruin_processor_processes_for_life() {
+    let mut g = two_player_game();
+    // Seed an opponent-owned card in exile to process.
+    let card = g.add_card_to_hand(1, catalog::forest());
+    if let Some(pos) = g.players[1].hand.iter().position(|c| c.id == card) {
+        let c = g.players[1].hand.remove(pos);
+        g.exile.push(c);
+    }
+    let proc = g.add_card_to_hand(0, catalog::ruin_processor());
+    g.players[0].mana_pool.add_colorless(7);
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: proc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ruin Processor");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 5, "gained 5 from processing");
+}

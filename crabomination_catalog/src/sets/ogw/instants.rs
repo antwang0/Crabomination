@@ -21,6 +21,39 @@ pub fn murderous_compulsion() -> CardDefinition {
     }
 }
 
+/// Sheer Drop — {2}{W} Sorcery. Destroy target tapped creature. (Awaken 3 is
+/// dropped — no Awaken primitive yet.)
+pub fn sheer_drop() -> CardDefinition {
+    CardDefinition {
+        name: "Sheer Drop",
+        cost: cost(&[generic(2), crate::mana::w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Mire's Malice — {3}{B} Sorcery. Target opponent discards two cards. (Awaken 3
+/// is dropped — no Awaken primitive yet.)
+pub fn mires_malice() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Mire's Malice",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+            random: false,
+        },
+        ..Default::default()
+    }
+}
+
 /// Allied Reinforcements — {3}{W} Sorcery. Create two 2/2 white Knight Ally tokens.
 pub fn allied_reinforcements() -> CardDefinition {
     use crate::card::{CreatureType, Subtypes, TokenDefinition};
