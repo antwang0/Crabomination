@@ -35386,19 +35386,21 @@ fn fact_or_fiction_draws_two() {
 }
 
 #[test]
-fn austere_command_mode_destroys_big_creatures() {
+fn austere_command_choose_two_destroys_all_creatures_by_default() {
     let mut g = two_player_game();
     let big = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // MV 6
     let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let relic = g.add_card_to_battlefield(1, catalog::mind_stone()); // artifact
     let cmd = g.add_card_to_hand(0, catalog::austere_command());
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastSpell {
-        card_id: cmd, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
-    }).expect("cast Austere Command, mode 2 (creatures MV 4+)");
+        card_id: cmd, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Austere Command (default picks: both creature modes)");
     drain_stack(&mut g);
     assert!(g.battlefield_find(big).is_none(), "MV-6 creature destroyed");
-    assert!(g.battlefield_find(small).is_some(), "MV-2 creature survives");
+    assert!(g.battlefield_find(small).is_none(), "MV-2 creature destroyed");
+    assert!(g.battlefield_find(relic).is_some(), "artifact survives (modes 0/1 not chosen)");
 }
 
 #[test]

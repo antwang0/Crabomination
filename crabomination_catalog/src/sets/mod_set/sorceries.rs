@@ -1311,7 +1311,9 @@ pub fn triumph_of_the_hordes() -> CardDefinition {
 
 /// Austere Command — {4}{W}{W} Sorcery. Choose two — destroy all artifacts;
 /// destroy all enchantments; destroy all creatures with mana value 4+; destroy
-/// all creatures with mana value 3-. Simplified to choose-one (`ChooseMode`).
+/// all creatures with mana value 3 or less. Faithful "choose two" via
+/// `Effect::ChooseN`; `picks: [2, 3]` is the AutoDecider default (destroy all
+/// creatures — both creature halves), overridable by a UI/scripted decider.
 pub fn austere_command() -> CardDefinition {
     let destroy_all = |req: SelectionRequirement| Effect::Destroy {
         what: Selector::EachPermanent(req),
@@ -1320,16 +1322,19 @@ pub fn austere_command() -> CardDefinition {
         name: "Austere Command",
         cost: cost(&[generic(4), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ChooseMode(vec![
-            destroy_all(SelectionRequirement::Artifact),
-            destroy_all(SelectionRequirement::Enchantment),
-            destroy_all(
-                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtLeast(4)),
-            ),
-            destroy_all(
-                SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
-            ),
-        ]),
+        effect: Effect::ChooseN {
+            picks: vec![2, 3],
+            modes: vec![
+                destroy_all(SelectionRequirement::Artifact),
+                destroy_all(SelectionRequirement::Enchantment),
+                destroy_all(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtLeast(4)),
+                ),
+                destroy_all(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+            ],
+        },
         ..Default::default()
     }
 }

@@ -1084,7 +1084,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         prodigal_sorcerer,
         quantum_riddler,
         tishanas_tidebinder,
-        // cryptic_command — 🟡 "choose two" collapsed to bundled pairs
+        // cryptic_command — faithful "choose two" via Effect::ChooseN
+        cryptic_command,
         gush,
         mystical_tutor,
         // dandan         — 🟡 "can attack only if defending player controls an Island" omitted
