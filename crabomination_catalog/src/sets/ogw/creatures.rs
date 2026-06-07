@@ -356,6 +356,74 @@ pub fn reaver_drone() -> CardDefinition {
     }
 }
 
+/// Void Grafter — {1}{G}{U} 2/4 Eldrazi Drone. Devoid, Flash; ETB another
+/// target creature you control gains hexproof until end of turn.
+pub fn void_grafter() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::etb;
+    use crate::effect::Duration;
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            keyword: Keyword::Hexproof,
+            duration: Duration::EndOfTurn,
+        })],
+        ..drone("Void Grafter", cost(&[g(), u()]), 2, 4)
+    }
+}
+
+/// Brood Butcher — {3}{B}{G} 3/3 Eldrazi Drone. Devoid; ETB make a Scion;
+/// {B}{G}, sacrifice a creature: target creature gets -1/-1 until end of turn.
+pub fn brood_butcher() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement};
+    use crate::effect::shortcut::pump_target;
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b(), g()]),
+            sac_other_filter: Some((
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                1,
+            )),
+            effect: pump_target(-1, -1),
+            ..Default::default()
+        }],
+        ..drone("Brood Butcher", cost(&[generic(3), b(), g()]), 3, 3)
+    }
+}
+
+/// Lifespring Druid — {2}{G} 2/1 Elf Druid. {T}: Add one mana of any color.
+pub fn lifespring_druid() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{ManaPayload, PlayerRef, Value};
+    CardDefinition {
+        name: "Lifespring Druid",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Dread Drone — {4}{B} 4/1 Eldrazi Drone. Devoid, ETB make two 0/1
 /// Eldrazi Spawn.
 pub fn dread_drone() -> CardDefinition {

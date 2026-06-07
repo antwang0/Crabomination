@@ -11703,14 +11703,12 @@ fn selfless_spirit_sac_grants_team_indestructible() {
 }
 
 #[test]
-fn reality_smasher_has_ward_two() {
+fn reality_smasher_has_ward_discard() {
     use crate::card::{Keyword, WardCost};
-    let g = two_player_game();
     let def = catalog::reality_smasher();
     assert_eq!((def.power, def.toughness), (5, 5));
-    assert!(def.keywords.contains(&Keyword::Ward(WardCost::generic(2))), "Ward {{2}}");
+    assert!(def.keywords.contains(&Keyword::Ward(WardCost::Discard(1))), "Ward—discard a card");
     assert!(def.keywords.contains(&Keyword::Trample) && def.keywords.contains(&Keyword::Haste));
-    let _ = g;
 }
 
 #[test]

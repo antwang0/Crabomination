@@ -1038,3 +1038,53 @@ fn reaver_drone_upkeep_life_loss_unless_another_colorless() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, before2, "no bleed with another colorless creature");
 }
+
+/// Void Grafter has Flash and grants hexproof to another of your creatures on ETB.
+#[test]
+fn void_grafter_grants_hexproof_on_etb() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(catalog::void_grafter().keywords.contains(&Keyword::Flash));
+    let vg = g.add_card_to_battlefield(0, catalog::void_grafter());
+    g.fire_self_etb_triggers(vg, 0);
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+        "the other creature gains hexproof");
+}
+
+/// Brood Butcher mints a Scion on ETB and can sacrifice a creature to give a
+/// target -1/-1.
+#[test]
+fn brood_butcher_sacrifices_to_shrink_target() {
+    let mut g = two_player_game();
+    let bb = g.add_card_to_hand(0, catalog::brood_butcher());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    crate::game::cast(&mut g, bb); // ETB makes a Scion
+    let scion = g.battlefield.iter().find(|c| c.definition.name == "Eldrazi Scion").unwrap().id;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bb, ability_index: 0,
+        target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("sac scion to shrink target");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == scion), "Scion sacrificed as cost");
+    let cp = g.computed_permanent(victim).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "2/2 with -1/-1");
+}
+
+/// Lifespring Druid taps for one mana of any color.
+#[test]
+fn lifespring_druid_taps_for_any_color() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lifespring_druid());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+}

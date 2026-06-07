@@ -9547,10 +9547,11 @@ pub fn reality_smasher() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
+        // Printed Ward is "counter unless its controller discards a card."
         keywords: vec![
             Keyword::Trample,
             Keyword::Haste,
-            Keyword::Ward(WardCost::generic(2)),
+            Keyword::Ward(WardCost::Discard(1)),
         ],
         ..Default::default()
     }
