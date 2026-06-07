@@ -535,6 +535,56 @@ pub fn bane_of_bala_ged() -> CardDefinition {
     }
 }
 
+/// Vestige of Emrakul — {3}{R} 3/4 Eldrazi Drone. Devoid, Trample.
+pub fn vestige_of_emrakul() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Trample],
+        ..drone("Vestige of Emrakul", cost(&[generic(3), r()]), 3, 4)
+    }
+}
+
+/// Stalking Drone — {1}{G} 2/2 Eldrazi Drone. Devoid; {C}: +1/+2 until end of
+/// turn, once each turn.
+pub fn stalking_drone() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::colorless(1)]),
+            once_per_turn: true,
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..drone("Stalking Drone", cost(&[generic(1), g()]), 2, 2)
+    }
+}
+
+/// Nettle Drone — {2}{R} 3/1 Eldrazi Drone. Devoid; {T}: deal 1 damage to each
+/// opponent. Whenever you cast a colorless spell, untap it.
+pub fn nettle_drone() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::{cast_colorless, each_opponent};
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![cast_colorless(Effect::Untap {
+            what: Selector::This,
+            up_to: None,
+        })],
+        ..drone("Nettle Drone", cost(&[generic(2), r()]), 3, 1)
+    }
+}
+
 /// Ruination Guide — {2}{U} 3/2 Eldrazi Drone. Devoid, Ingest; other colorless
 /// creatures you control get +1/+0. (The Devoid-aware Colorless filter means
 /// the anthem reaches Devoid creatures with colored pips.)

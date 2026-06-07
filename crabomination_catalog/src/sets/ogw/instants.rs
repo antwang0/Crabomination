@@ -102,6 +102,17 @@ pub fn witness_the_end() -> CardDefinition {
     }
 }
 
+/// Scour from Existence — {7} Devoid Instant. Exile target permanent.
+pub fn scour_from_existence() -> CardDefinition {
+    CardDefinition {
+        name: "Scour from Existence",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Permanent) },
+        ..Default::default()
+    }
+}
+
 /// Oblivion Strike — {3}{B} Devoid Sorcery. Exile target creature.
 pub fn oblivion_strike() -> CardDefinition {
     CardDefinition {

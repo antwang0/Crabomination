@@ -625,6 +625,64 @@ fn bane_of_bala_ged_attack_exiles_two_permanents() {
     assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
 }
 
+/// Vestige of Emrakul is a Devoid 3/4 trampler.
+#[test]
+fn vestige_of_emrakul_is_devoid_trampler() {
+    use crate::card::Keyword;
+    let def = catalog::vestige_of_emrakul();
+    assert_eq!((def.power, def.toughness), (3, 4));
+    assert!(def.keywords.contains(&Keyword::Devoid));
+    assert!(def.keywords.contains(&Keyword::Trample));
+}
+
+/// Stalking Drone pumps +1/+2 once each turn.
+#[test]
+fn stalking_drone_pumps_once_per_turn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::stalking_drone());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 4));
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "only once each turn");
+}
+
+/// Nettle Drone pings each opponent for {T}, and a colorless cast untaps it.
+#[test]
+fn nettle_drone_pings_and_untaps_on_colorless_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::nettle_drone());
+    g.clear_sickness(id);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "pings the opponent for 1");
+    assert!(g.battlefield_find(id).unwrap().tapped, "tapped after activating");
+    // Cast a colorless spell → untap.
+    let spell = g.add_card_to_hand(0, catalog::eldrazi_devastator());
+    g.players[0].mana_pool.add_colorless(8);
+    crate::game::cast(&mut g, spell);
+    assert!(!g.battlefield_find(id).unwrap().tapped, "colorless cast untaps Nettle Drone");
+}
+
+/// Scour from Existence exiles any permanent.
+#[test]
+fn scour_from_existence_exiles_permanent() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::scour_from_existence());
+    g.players[0].mana_pool.add_colorless(7);
+    crate::game::cast_at(&mut g, id, Target::Permanent(land));
+    assert!(g.exile.iter().any(|c| c.id == land), "the land is exiled");
+}
+
 /// Ruination Guide's anthem reaches a Devoid creature (colored pips, colorless
 /// object) — the Devoid-aware Colorless filter at work.
 #[test]
