@@ -29,11 +29,11 @@ use crate::effect::shortcut::{
     on_attack_drain, on_attack_gain_life, on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{cost, generic, g, u, w, b, x, ManaCost};
+use crate::mana::{Color, b, cost, g, generic, hybrid, u, w, ManaCost};
 
 // ── Spirited Companion ──────────────────────────────────────────────────────
 
-/// Spirited Companion — {1}{W}, 1/2 Dog Spirit. ETB: draw a card.
+/// Spirited Companion — {1}{W}, 1/1 Dog Spirit. ETB: draw a card.
 ///
 /// Reprinted across many sets; in Strixhaven it's an uncommon. Functionally
 /// identical to Elvish Visionary in white. The ETB draw goes through the
@@ -48,7 +48,7 @@ pub fn spirited_companion() -> CardDefinition {
             ..Default::default()
         },
         power: 1,
-        toughness: 2,
+        toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
@@ -95,7 +95,7 @@ pub fn eyetwitch() -> CardDefinition {
 
 // ── Closing Statement ───────────────────────────────────────────────────────
 
-/// Closing Statement — {X}{W}{W} Sorcery. "Exile target nonland permanent.
+/// Closing Statement — {3}{W}{B} Sorcery. "Exile target nonland permanent.
 /// You gain X life."
 ///
 /// X is read off the spell's cast-time `x_value`, threaded into the
@@ -105,7 +105,7 @@ pub fn eyetwitch() -> CardDefinition {
 pub fn closing_statement() -> CardDefinition {
     CardDefinition {
         name: "Closing Statement",
-        cost: cost(&[x(), w(), w()]),
+        cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -159,7 +159,7 @@ pub fn vanishing_verse() -> CardDefinition {
 
 // ── Killian, Ink Duelist ────────────────────────────────────────────────────
 
-/// Killian, Ink Duelist — {W}{B}, 2/3 Legendary Human Warlock with Lifelink.
+/// Killian, Ink Duelist — {W}{B}, 2/2 Legendary Human Warlock with Lifelink.
 ///
 /// ✅ The static "spells you cast that target a creature cost {2} less to
 /// cast" now wires via `StaticEffect::CostReductionTargetingFilter`. The
@@ -180,7 +180,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 3,
+        toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
         triggered_abilities: vec![],
@@ -198,7 +198,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
 
 // ── Devastating Mastery ─────────────────────────────────────────────────────
 
-/// Devastating Mastery — {4}{W}{W} Sorcery. "Destroy all nonland permanents."
+/// Devastating Mastery — {2}{W}{W}{W}{W} Sorcery. "Destroy all nonland permanents."
 ///
 /// ✅ The destroy-each-nonland-permanent body fully matches the printed
 /// Oracle's primary clause; this is "Wrath of God for everything that
@@ -211,7 +211,7 @@ pub fn killian_ink_duelist() -> CardDefinition {
 pub fn devastating_mastery() -> CardDefinition {
     CardDefinition {
         name: "Devastating Mastery",
-        cost: cost(&[generic(4), w(), w()]),
+        cost: cost(&[generic(2), w(), w(), w(), w()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -230,7 +230,7 @@ pub fn devastating_mastery() -> CardDefinition {
 
 // ── Felisa, Fang of Silverquill ─────────────────────────────────────────────
 
-/// Felisa, Fang of Silverquill — {2}{W}{B}, 4/3 Legendary Cat Cleric, Flying
+/// Felisa, Fang of Silverquill — {2}{W}{B}, 3/2 Legendary Cat Cleric, Flying
 /// + Lifelink.
 ///
 /// Now wired (push XVI): the printed "Whenever a creature you control
@@ -258,8 +258,8 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
             creature_types: vec![CreatureType::Cat, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 4,
-        toughness: 3,
+        power: 3,
+        toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
@@ -280,7 +280,7 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 
 // ── Mavinda, Students' Advocate ─────────────────────────────────────────────
 
-/// Mavinda, Students' Advocate — {1}{W}{W}, 1/3 Legendary Human Cleric,
+/// Mavinda, Students' Advocate — {2}{W}, 2/3 Legendary Human Cleric,
 /// Flying + Vigilance.
 ///
 /// Push (modern_decks, batch 73): the `{0}` cast-from-graveyard
@@ -303,14 +303,14 @@ pub fn mavinda_students_advocate() -> CardDefinition {
     );
     CardDefinition {
         name: "Mavinda, Students' Advocate",
-        cost: cost(&[generic(1), w(), w()]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
@@ -350,42 +350,29 @@ pub fn mavinda_students_advocate() -> CardDefinition {
 
 // ── Eager First-Year ────────────────────────────────────────────────────────
 
-/// Eager First-Year — {W}, 2/1 Human Student. "Magecraft — Whenever you
-/// cast or copy an instant or sorcery spell, target creature gets +1/+1
-/// until end of turn."
-///
-/// The magecraft trigger uses the new `EventSpec.filter` evaluation at the
-/// spell-cast site: `Predicate::EntityMatches { what: TriggerSource, filter:
-/// HasCardType(Instant) ∨ HasCardType(Sorcery) }`. The filter is evaluated
-/// against the just-cast spell — `Selector::TriggerSource` is bound to its
-/// `CardId` for the duration of filter evaluation, then the trigger's own
-/// body runs with the auto-targeted creature.
+/// Eager First-Year — {1}{W} 2/2 Human Wizard. "Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, this creature gets +1/+0 until end of
+/// turn."
 pub fn eager_first_year() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
     CardDefinition {
         name: "Eager First-Year",
-        cost: cost(&[w()]),
+        cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
-        toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
-        })],
+        toughness: 2,
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
 }
 
 // ── Hunt for Specimens ──────────────────────────────────────────────────────
 
-/// Hunt for Specimens — {3}{B} Sorcery. "Create a 1/1 black Pest creature
+/// Hunt for Specimens — {1}{B} Sorcery. "Create a 1/1 black Pest creature
 /// token with 'When this creature dies, you gain 1 life.' Then learn."
 ///
 /// Both halves wired faithfully. The spawned Pest token carries the
@@ -396,7 +383,7 @@ pub fn hunt_for_specimens() -> CardDefinition {
     let pest = super::shared::stx_pest_token();
     CardDefinition {
         name: "Hunt for Specimens",
-        cost: cost(&[generic(3), b()]),
+        cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -418,7 +405,7 @@ pub fn hunt_for_specimens() -> CardDefinition {
 
 // ── Silverquill Pledgemage ──────────────────────────────────────────────────
 
-/// Silverquill Pledgemage — {1}{W}{B}, 2/2 Inkling Druid. Flying.
+/// Silverquill Pledgemage — {1}{W/B}{W/B}, 3/1 Inkling Druid. Flying.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// this creature gets +1/+1 until end of turn."
 ///
@@ -430,14 +417,14 @@ pub fn hunt_for_specimens() -> CardDefinition {
 pub fn silverquill_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Pledgemage",
-        cost: cost(&[generic(1), w(), b()]),
+        cost: cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Inkling, CreatureType::Druid],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
+        power: 3,
+        toughness: 1,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
@@ -447,7 +434,7 @@ pub fn silverquill_pledgemage() -> CardDefinition {
 
 // ── Archmage Emeritus ───────────────────────────────────────────────────────
 
-/// Archmage Emeritus — {2}{U}{U}, 3/3 Human Wizard. "Magecraft —
+/// Archmage Emeritus — {2}{U}{U}, 2/2 Human Wizard. "Magecraft —
 /// Whenever you cast or copy an instant or sorcery spell, draw a card."
 ///
 /// Pure magecraft draw payoff. Reuses the `magecraft(...)` helper to
@@ -465,8 +452,8 @@ pub fn archmage_emeritus() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
+        power: 2,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Draw {
@@ -479,39 +466,43 @@ pub fn archmage_emeritus() -> CardDefinition {
 
 // ── Promising Duskmage ──────────────────────────────────────────────────────
 
-/// Promising Duskmage — {2}{W}{B}, 2/2 Inkling Wizard. Flying.
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// target opponent loses 1 life and you gain 1 life."
-///
-/// The Witherbloom-style drain payoff in Silverquill colours — the
-/// `magecraft_drain_each_opp(1)` shortcut emits the canonical
-/// `Effect::Drain { from: EachOpponent, to: You, amount: 1 }` so the
-/// life swap is atomic. The printed Oracle says "target opponent"
-/// (single); the shortcut collapses to each-opponent for the auto-
-/// target friendliness — in a 1v1 game this is identical, and in a
-/// 4-player game it's strictly better (which is fine for an Inkling
-/// 2/2 flyer at four mana).
+/// Promising Duskmage — {2}{B}, 2/2 Inkling Wizard. Flying.
+/// Promising Duskmage — {2}{B} 2/3 Human Warlock. "When this creature dies, if
+/// it had a +1/+1 counter on it, draw a card." (Reads the dying card's
+/// counters via last-known information.)
 pub fn promising_duskmage() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     CardDefinition {
         name: "Promising Duskmage",
-        cost: cost(&[generic(2), w(), b()]),
+        cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(1),
+                ),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
         ..Default::default()
     }
 }
 
 // ── Tenured Inkcaster ───────────────────────────────────────────────────────
 
-/// Tenured Inkcaster — {2}{W}{B}, 3/2 Vampire Warlock. "Other Inkling
+/// Tenured Inkcaster — {4}{B}, 2/2 Vampire Warlock. "Other Inkling
 /// creatures you control get +2/+2."
 ///
 /// Tribal anthem on the Inkling creature type. Push (modern_decks)
@@ -529,13 +520,13 @@ pub fn tenured_inkcaster() -> CardDefinition {
     use crate::effect::{Selector, StaticEffect};
     CardDefinition {
         name: "Tenured Inkcaster",
-        cost: cost(&[generic(2), w(), b()]),
+        cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
             ..Default::default()
         },
-        power: 3,
+        power: 2,
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
@@ -559,7 +550,7 @@ pub fn tenured_inkcaster() -> CardDefinition {
 
 // ── Selfless Glyphweaver ────────────────────────────────────────────────────
 
-/// Selfless Glyphweaver — {1}{W}{W}, 2/3 Human Cleric Wizard.
+/// Selfless Glyphweaver — {2}{W}, 2/3 Human Cleric Wizard.
 ///
 /// "Sacrifice this creature: Creatures you control gain indestructible
 /// until end of turn."
@@ -581,7 +572,7 @@ pub fn tenured_inkcaster() -> CardDefinition {
 pub fn selfless_glyphweaver() -> CardDefinition {
     CardDefinition {
         name: "Selfless Glyphweaver",
-        cost: cost(&[generic(1), w(), w()]),
+        cost: cost(&[generic(2), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric, CreatureType::Wizard],
@@ -15224,31 +15215,22 @@ pub fn fracture() -> CardDefinition {
 
 // ── Humiliate ──────────────────────────────────────────────────────────────
 
-/// Humiliate — {1}{W}{B} Sorcery. Opponent discards a nonland; you
-/// drain 1 (gain 1 life, opp loses 1 life). Approximation of "Reveal
-/// hand, you choose, opp discards" — collapsed to auto-pick a nonland.
+/// Humiliate — {W}{B} Sorcery. "Target opponent reveals their hand. You choose
+/// a nonland card from it. That player discards it. You gain 2 life." (The
+/// caster auto-picks the discarded card.)
 pub fn humiliate() -> CardDefinition {
     CardDefinition {
         name: "Humiliate",
-        cost: cost(&[generic(1), w(), b()]),
+        cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(1),
-            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -15277,7 +15259,7 @@ pub fn clever_lumimancer() -> CardDefinition {
 
 // ── Silverquill Apprentice ────────────────────────────────────────────────
 
-/// Silverquill Apprentice — {W}{B}, 2/1 Human Wizard.
+/// Silverquill Apprentice — {W}{B}, 2/2 Human Wizard.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// put a +1/+1 counter on target creature you control."
 pub fn silverquill_apprentice() -> CardDefinition {
@@ -15291,7 +15273,7 @@ pub fn silverquill_apprentice() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 1,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
@@ -15307,13 +15289,13 @@ pub fn silverquill_apprentice() -> CardDefinition {
 
 // ── Shadewing Laureate ────────────────────────────────────────────────────
 
-/// Shadewing Laureate — {1}{W}{B}, 2/2 Bird Warlock. Flying.
+/// Shadewing Laureate — {W}{W/B}{B}, 2/2 Bird Warlock. Flying.
 /// "Whenever another creature you control with flying dies, put a +1/+1
 /// counter on Shadewing Laureate."
 pub fn shadewing_laureate() -> CardDefinition {
     CardDefinition {
         name: "Shadewing Laureate",
-        cost: cost(&[generic(1), w(), b()]),
+        cost: cost(&[w(), hybrid(Color::White, Color::Black), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bird, CreatureType::Warlock],

@@ -2653,7 +2653,7 @@ pub fn prismari_painter() -> CardDefinition {
 
 // ── Lorehold Archivist ─────────────────────────────────────────────────────
 
-/// Lorehold Archivist — {3}{R}{W}, 2/4 Spirit Cleric with Vigilance.
+/// Lorehold Archivist — {1}{R}{W}{2}{R}{W}, 3/2 Spirit Cleric with Vigilance.
 /// "Whenever this creature attacks, return target instant or sorcery
 /// card from your graveyard to your hand."
 ///
@@ -2663,15 +2663,15 @@ pub fn prismari_painter() -> CardDefinition {
 pub fn lorehold_archivist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Archivist",
-        cost: cost(&[generic(3), r(), w()]),
+        cost: cost(&[generic(1), r(), w(), generic(2), r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 2,
-        toughness: 4,
+        power: 3,
+        toughness: 2,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3270,7 +3270,7 @@ pub fn prismari_glitterbomb() -> CardDefinition {
 
 // ── Pestilent Haze (real STX 2021) ──────────────────────────────────────────
 
-/// Pestilent Haze — {2}{B} Sorcery.
+/// Pestilent Haze — {1}{B}{B} Sorcery.
 ///
 /// Printed Oracle: "Choose one. If you've cast another spell this
 /// turn, you may choose both. / • All creatures get -1/-1 until end of
@@ -3286,7 +3286,7 @@ pub fn pestilent_haze() -> CardDefinition {
     let creature_each = Selector::EachPermanent(SelectionRequirement::Creature);
     CardDefinition {
         name: "Pestilent Haze",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(1), b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -3342,7 +3342,7 @@ pub fn pestilent_haze() -> CardDefinition {
 
 // ── Vanquish the Horde (real STX 2021) ──────────────────────────────────────
 
-/// Vanquish the Horde — {6}{W} Sorcery.
+/// Vanquish the Horde — {6}{W}{W} Sorcery.
 ///
 /// Printed Oracle: "This spell costs {1} less to cast for each creature
 /// on the battlefield. / Destroy all creatures."
@@ -3358,7 +3358,7 @@ pub fn pestilent_haze() -> CardDefinition {
 pub fn vanquish_the_horde() -> CardDefinition {
     CardDefinition {
         name: "Vanquish the Horde",
-        cost: cost(&[generic(6), w()]),
+        cost: cost(&[generic(6), w(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),

@@ -56,22 +56,15 @@ pub fn strict_proctor() -> CardDefinition {
 
 // ── Sedgemoor Witch ─────────────────────────────────────────────────────────
 
-/// Sedgemoor Witch — {2}{B}{B}, 3/2 Human Warlock. Menace, Ward 1.
-/// Real Oracle Magecraft: "Whenever you cast or copy an instant or
-/// sorcery spell, create a 1/1 black Pest creature token with 'When
-/// this creature dies, you gain 1 life.'"
-///
-/// Wired via the existing magecraft helper + the Pest token shared
-/// helper in `super::shared::stx_pest_token`. The "creates may"
-/// upgrade clause (real Oracle is non-may; we keep it non-may here).
-/// Ward 1 ships as `Keyword::Ward(WardCost::generic(1))` on the body
-/// — the engine's `push_ward_triggers_for_cast` enforces the
-/// counter-unless-paid effect via `Effect::CounterUnless` (see CR
-/// 702.21). The magecraft trigger fires on every IS spell cast.
+/// Sedgemoor Witch — {2}{B} 3/2 Human Warlock with menace and Ward—Pay 3 life.
+/// Magecraft — "Whenever you cast or copy an instant or sorcery spell, create a
+/// 1/1 black and green Pest token with 'When this token dies, you gain 1
+/// life.'" Wired via the magecraft + Pest-token shared helpers; Ward enforced
+/// by `push_ward_triggers_for_cast` (CR 702.21).
 pub fn sedgemoor_witch() -> CardDefinition {
     CardDefinition {
         name: "Sedgemoor Witch",
-        cost: cost(&[generic(2), b(), b()]),
+        cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warlock],
@@ -79,7 +72,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::generic(1))],
+        keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::Life(3))],
         effect: Effect::Noop,
         triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_pest()],
         ..Default::default()
@@ -88,7 +81,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
 
 // ── Spectacle Mage ──────────────────────────────────────────────────────────
 
-/// Spectacle Mage — {U/R}{U/R}, 1/2 Human Wizard. Prowess. Real Oracle:
+/// Spectacle Mage — {1}{U}{R}, 2/2 Human Wizard. Prowess. Real Oracle:
 /// "Prowess (Whenever you cast a noncreature spell, this creature gets
 /// +1/+1 until end of turn.)"
 ///
@@ -99,16 +92,15 @@ pub fn sedgemoor_witch() -> CardDefinition {
 /// +1/+1 EOT.
 pub fn spectacle_mage() -> CardDefinition {
     use crate::effect::shortcut::prowess;
-    use crate::mana::{hybrid, Color};
     CardDefinition {
         name: "Spectacle Mage",
-        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
@@ -200,7 +192,7 @@ pub fn heroic_defiance() -> CardDefinition {
 
 // ── Tome Shredder (batch 20+) ──────────────────────────────────────────────
 
-/// Tome Shredder — {2}{B}, 2/2 Human Warlock.
+/// Tome Shredder — {2}{R}, 2/2 Human Warlock.
 ///
 /// Printed Oracle (synthesised): "When this creature enters, target
 /// opponent reveals their hand. Choose a nonland card. That player
@@ -214,7 +206,7 @@ pub fn tome_shredder() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Tome Shredder",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warlock],

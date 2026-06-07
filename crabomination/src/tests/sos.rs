@@ -5566,14 +5566,12 @@ fn wilt_in_the_heat_leaves_high_toughness_creature_in_play() {
     // exile. Use a 6/6 token construct or just verify the predicate
     // works at boundary with a 6-toughness creature.
     //
-    // For this case use Beledros Witherbloom (6/6) which definitely
-    // doesn't die to 5 damage.
+    // Use Bookwurm (7/7) which definitely doesn't die to 5 damage.
     let mut g = two_player_game();
-    let beledros = g.add_card_to_battlefield(1, catalog::beledros_witherbloom());
+    let beledros = g.add_card_to_battlefield(1, catalog::bookwurm());
     let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -5599,11 +5597,10 @@ fn wilt_in_the_heat_exiles_creature_that_dies_later_this_turn() {
     // damage: a 6/6 that survives the 5 but dies to a later source is
     // still exiled rather than going to the graveyard.
     let mut g = two_player_game();
-    let beledros = g.add_card_to_battlefield(1, catalog::beledros_witherbloom());
+    let beledros = g.add_card_to_battlefield(1, catalog::bookwurm());
     let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(beledros)),
         additional_targets: vec![], mode: None, x_value: None })
@@ -14303,7 +14300,8 @@ fn spectacle_mage_castable_with_two_red() {
     // {U/R}{U/R}: both hybrid pips payable with red → cast for {R}{R}.
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::spectacle_mage());
-    g.players[0].mana_pool.add(Color::Red, 2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,

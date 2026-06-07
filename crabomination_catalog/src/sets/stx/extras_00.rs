@@ -15,11 +15,11 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, ManaCost};
+use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
-/// Bookwurm — {5}{G}{G}, 5/5 Wurm. "Trample / When this creature enters,
+/// Bookwurm — {7}{G}, 7/7 Wurm. "Trample / When this creature enters,
 /// you gain 4 life and draw a card."
 ///
 /// ✅ ETB body is a simple `Seq(GainLife(4), Draw(1))`. The 5/5 trample
@@ -27,15 +27,15 @@ use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, ManaCost};
 pub fn bookwurm() -> CardDefinition {
     CardDefinition {
         name: "Bookwurm",
-        cost: cost(&[generic(5), g(), g()]),
+        cost: cost(&[generic(7), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Wurm],
             ..Default::default()
         },
-        power: 5,
-        toughness: 5,
+        power: 7,
+        toughness: 7,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -352,7 +352,7 @@ pub fn igneous_inspiration() -> CardDefinition {
 
 // ── Combat Professor ────────────────────────────────────────────────────────
 
-/// Combat Professor — {3}{W} Creature — Cat Cleric, 2/4, Flying,
+/// Combat Professor — {3}{W} Creature — Cat Cleric, 2/3, Flying,
 /// Vigilance. "Mentor (Whenever this creature attacks, put a +1/+1
 /// counter on target attacking creature with lesser power.)"
 ///
@@ -371,7 +371,7 @@ pub fn combat_professor() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 4,
+        toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -459,7 +459,7 @@ pub fn beaming_defiance() -> CardDefinition {
 
 // ── Spell Satchel ───────────────────────────────────────────────────────────
 
-/// Spell Satchel — {3} Artifact. "{T}: Add {C}. / {3}, {T}, Sacrifice
+/// Spell Satchel — {2} Artifact. "{T}: Add {C}. / {3}, {T}, Sacrifice
 /// this artifact: Choose any number of target instant and/or sorcery
 /// cards in your graveyard with total mana value 4 or less. Return them
 /// to your hand."
@@ -477,7 +477,7 @@ pub fn spell_satchel() -> CardDefinition {
     use crate::card::Zone;
     CardDefinition {
         name: "Spell Satchel",
-        cost: cost(&[generic(3)]),
+        cost: cost(&[generic(2)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
@@ -569,7 +569,7 @@ pub fn spell_satchel() -> CardDefinition {
 
 // ── Excavated Wall ──────────────────────────────────────────────────────────
 
-/// Excavated Wall — {2} Artifact Creature — Wall, 0/4, Defender. "When
+/// Excavated Wall — {1} Artifact Creature — Wall, 0/4, Defender. "When
 /// this creature enters, you gain 2 life."
 ///
 /// ✅ Simple ETB lifegain on a defender wall body. Same shape as
@@ -577,7 +577,7 @@ pub fn spell_satchel() -> CardDefinition {
 pub fn excavated_wall() -> CardDefinition {
     CardDefinition {
         name: "Excavated Wall",
-        cost: cost(&[generic(2)]),
+        cost: cost(&[generic(1)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
@@ -616,7 +616,7 @@ pub fn excavated_wall() -> CardDefinition {
 
 // ── Snow Day ────────────────────────────────────────────────────────────────
 
-/// Snow Day — {U}{R} Instant. "Tap up to two target creatures. Put a
+/// Snow Day — {4}{U}{U} Instant. "Tap up to two target creatures. Put a
 /// stun counter on each of them."
 ///
 /// ✅ Push (modern_decks): wired faithfully as a two-slot spell. Slot 0
@@ -631,7 +631,7 @@ pub fn excavated_wall() -> CardDefinition {
 pub fn snow_day() -> CardDefinition {
     CardDefinition {
         name: "Snow Day",
-        cost: cost(&[u(), r()]),
+        cost: cost(&[generic(4), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             // Slot 0: tap + stun the first creature.
@@ -848,7 +848,7 @@ pub fn resculpt() -> CardDefinition {
 
 // ── Mortality Spear ────────────────────────────────────────────────────────
 
-/// Mortality Spear — {3}{B}{G} Instant. "Destroy target creature,
+/// Mortality Spear — {2}{B}{G} Instant. "Destroy target creature,
 /// planeswalker, or battle."
 ///
 /// ✅ Catch-all removal: `Destroy` against a Creature ∨ Planeswalker
@@ -858,7 +858,7 @@ pub fn resculpt() -> CardDefinition {
 pub fn mortality_spear() -> CardDefinition {
     CardDefinition {
         name: "Mortality Spear",
-        cost: cost(&[generic(3), b(), g()]),
+        cost: cost(&[generic(2), b(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -898,7 +898,7 @@ pub fn mortality_spear() -> CardDefinition {
 
 // ── Daemogoth Titan ────────────────────────────────────────────────────────
 
-/// Daemogoth Titan — {B}{B}, 11/11 Demon Horror. "When this attacks or
+/// Daemogoth Titan — {B/G}{B/G}{B/G}{B/G}, 11/10 Demon Horror. "When this attacks or
 /// blocks, sacrifice another creature."
 ///
 /// ✅ Both halves now wired. The attack half uses
@@ -916,7 +916,7 @@ pub fn daemogoth_titan() -> CardDefinition {
     };
     CardDefinition {
         name: "Daemogoth Titan",
-        cost: cost(&[b(), b()]),
+        cost: cost(&[hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green), hybrid(Color::Black, Color::Green)]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -924,7 +924,7 @@ pub fn daemogoth_titan() -> CardDefinition {
             ..Default::default()
         },
         power: 11,
-        toughness: 11,
+        toughness: 10,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -964,7 +964,7 @@ pub fn daemogoth_titan() -> CardDefinition {
 
 // ── Daemogoth Woe-Eater ────────────────────────────────────────────────────
 
-/// Daemogoth Woe-Eater — {2}{B}{G}, 4/4 Demon Horror. "When this enters,
+/// Daemogoth Woe-Eater — {1}{B}{B/G}{G}, 7/6 Demon Horror. "When this enters,
 /// sacrifice another creature. Whenever this attacks, you may sacrifice
 /// another creature. If you do, put a +1/+1 counter on this creature."
 ///
@@ -975,15 +975,15 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Daemogoth Woe-Eater",
-        cost: cost(&[generic(2), b(), g()]),
+        cost: cost(&[generic(1), b(), hybrid(Color::Black, Color::Green), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Demon, CreatureType::Horror],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 7,
+        toughness: 6,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1190,7 +1190,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
 
 // ── Tempted by the Oriq ────────────────────────────────────────────────────
 
-/// Tempted by the Oriq — {2}{B} Sorcery. "Gain control of target
+/// Tempted by the Oriq — {1}{U}{U}{U} Sorcery. "Gain control of target
 /// creature until end of turn. Untap that creature. It gains haste
 /// until end of turn." (Threaten / Act of Treason template, printed
 /// as a one-shot sorcery — there is no Magecraft rider on the
@@ -1204,7 +1204,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
         name: "Tempted by the Oriq",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(1), u(), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1254,7 +1254,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
 }
 
 
-/// Confront the Past — {3}{R} Sorcery.
+/// Confront the Past — {X}{B} Sorcery.
 /// "Choose one — / • Put target planeswalker card from your graveyard
 /// onto the battlefield. / • Return target planeswalker to its
 /// owner's hand. / • Confront the Past deals damage to target
@@ -1274,7 +1274,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
 pub fn confront_the_past() -> CardDefinition {
     CardDefinition {
         name: "Confront the Past",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[x(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1486,7 +1486,7 @@ pub fn hall_of_oracles() -> CardDefinition {
     }
 }
 
-/// Star Pupil — {B} Creature — Cat Spirit, 0/1 (Silverquill).
+/// Star Pupil — {W} Creature — Cat Spirit, 0/1 (Silverquill).
 /// "Star Pupil enters the battlefield with a +1/+1 counter on it. /
 /// When Star Pupil dies, put a +1/+1 counter on target creature."
 ///
@@ -1613,56 +1613,28 @@ pub fn devious_cover_up() -> CardDefinition {
     }
 }
 
-/// Manifestation Sage — {2}{G}{U} Creature — Fractal Wizard, 2/2 (Quandrix).
-/// "Flying / When Manifestation Sage enters, create a 0/0 green and
-/// blue Fractal creature token, then put X +1/+1 counters on it, where
-/// X is the number of cards in your hand."
-///
-/// ✅ Wired faithfully: ETB mints a 0/0 G/U Fractal token (shared
-/// definition pattern with Body of Research), then drops one +1/+1
-/// counter on the just-created token for every card in the
-/// controller's hand via `Value::HandSizeOf(You)`. Counters apply to
-/// `Selector::LastCreatedToken` so the ETB resolves correctly even
-/// when other tokens are minted in the same response window.
+/// Manifestation Sage — {G/U}{G/U}{G/U}{G/U} 2/2 Human Wizard. "When this
+/// creature enters, create a 0/0 green and blue Fractal creature token. Put X
+/// +1/+1 counters on it, where X is the number of cards in your hand."
 pub fn manifestation_sage() -> CardDefinition {
-    let fractal = TokenDefinition {
-        name: "Fractal".to_string(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Green, Color::Blue],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
-    };
+    let gu = || hybrid(Color::Green, Color::Blue);
     CardDefinition {
         name: "Manifestation Sage",
-        cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
+        cost: cost(&[gu(), gu(), gu(), gu()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    definition: fractal,
+                    definition: crate::catalog::sets::sos::fractal_token(),
                 },
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
@@ -1671,27 +1643,7 @@ pub fn manifestation_sage() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
@@ -1753,7 +1705,7 @@ pub fn crackle_with_power() -> CardDefinition {
     }
 }
 
-/// Mentor's Guidance — {1}{G}{U} Instant (Quandrix).
+/// Mentor's Guidance — {2}{U} Instant (Quandrix).
 /// "Choose one — / • Mentor's Guidance deals damage equal to the
 /// number of creatures you control to target creature an opponent
 /// controls. / • Draw a card for each creature with a +1/+1 counter
@@ -1765,7 +1717,7 @@ pub fn crackle_with_power() -> CardDefinition {
 pub fn mentors_guidance() -> CardDefinition {
     CardDefinition {
         name: "Mentor's Guidance",
-        cost: cost(&[generic(1), g(), u()]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -1995,7 +1947,7 @@ pub fn expressive_iteration() -> CardDefinition {
 
 // ── Magma Opus ──────────────────────────────────────────────────────────────
 
-/// Magma Opus — {7}{U}{R} Sorcery. "Magma Opus deals 4 damage divided
+/// Magma Opus — {6}{U}{R} Sorcery. "Magma Opus deals 4 damage divided
 /// as you choose among any number of targets. Tap up to two creatures.
 /// Create a 4/4 blue and red Elemental creature token. Draw two cards.
 /// / {U/R}{U/R}, Discard Magma Opus: Create a Treasure token."
@@ -2011,7 +1963,7 @@ pub fn magma_opus() -> CardDefinition {
     let elemental = crate::catalog::sets::sos::elemental_token();
     CardDefinition {
         name: "Magma Opus",
-        cost: cost(&[generic(7), u(), r()]),
+        cost: cost(&[generic(6), u(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2098,7 +2050,7 @@ pub fn reckless_amplimancer() -> CardDefinition {
 
 // ── Crashing Drawbridge ─────────────────────────────────────────────────────
 
-/// Crashing Drawbridge — {3} Artifact Creature — Construct, 0/4.
+/// Crashing Drawbridge — {2} Artifact Creature — Construct, 0/4.
 /// "Other creatures you control have haste."
 ///
 /// Wired with a `StaticEffect::GrantKeyword` applying Haste to
@@ -2110,7 +2062,7 @@ pub fn crashing_drawbridge() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Crashing Drawbridge",
-        cost: cost(&[generic(3)]),
+        cost: cost(&[generic(2)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
@@ -2222,7 +2174,7 @@ pub fn eyetwitch_brood() -> CardDefinition {
 
 // ── First Day of Class ──────────────────────────────────────────────────────
 
-/// First Day of Class — {W} Sorcery. "Until end of turn, creatures you
+/// First Day of Class — {1}{R} Sorcery. "Until end of turn, creatures you
 /// control get +1/+1. Whenever a creature you control deals combat
 /// damage to a player this turn, create a 1/1 white Pest creature
 /// token with 'When this creature dies, you gain 1 life.'"
@@ -2239,7 +2191,7 @@ pub fn eyetwitch_brood() -> CardDefinition {
 pub fn first_day_of_class() -> CardDefinition {
     CardDefinition {
         name: "First Day of Class",
-        cost: cost(&[w()]),
+        cost: cost(&[generic(1), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2285,7 +2237,7 @@ pub fn first_day_of_class() -> CardDefinition {
 
 // ── Verdant Mastery ─────────────────────────────────────────────────────────
 
-/// Verdant Mastery — {3}{G}{G} Sorcery. "Search your library for a
+/// Verdant Mastery — {5}{G} Sorcery. "Search your library for a
 /// basic land card, put it onto the battlefield, then shuffle. Each
 /// other player may search their library for a basic land card, put
 /// it onto the battlefield tapped, then shuffle."
@@ -2303,7 +2255,7 @@ pub fn first_day_of_class() -> CardDefinition {
 pub fn verdant_mastery() -> CardDefinition {
     CardDefinition {
         name: "Verdant Mastery",
-        cost: cost(&[generic(3), g(), g()]),
+        cost: cost(&[generic(5), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2443,7 +2395,7 @@ pub fn codespell_cleric() -> CardDefinition {
 
 // ── Sparkmage Apprentice ────────────────────────────────────────────────────
 
-/// Sparkmage Apprentice — {1}{R} Creature — Human Wizard, 1/2.
+/// Sparkmage Apprentice — {1}{R} Creature — Human Wizard, 1/1.
 /// "When this creature enters, it deals 2 damage to any target."
 ///
 /// Pinpoint Prismari ETB removal. Wired with a standard
@@ -2460,7 +2412,7 @@ pub fn sparkmage_apprentice() -> CardDefinition {
             ..Default::default()
         },
         power: 1,
-        toughness: 2,
+        toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -2600,7 +2552,7 @@ pub fn hall_monitor() -> CardDefinition {
 
 // ── Stonebinder's Familiar ──────────────────────────────────────────────────
 
-/// Stonebinder's Familiar — {1} Artifact Creature — Spirit, 0/1.
+/// Stonebinder's Familiar — {W} Artifact Creature — Spirit, 1/1.
 /// "Whenever one or more cards leave your graveyard, put a +1/+1
 /// counter on Stonebinder's Familiar."
 ///
@@ -2611,14 +2563,14 @@ pub fn hall_monitor() -> CardDefinition {
 pub fn stonebinders_familiar() -> CardDefinition {
     CardDefinition {
         name: "Stonebinder's Familiar",
-        cost: cost(&[generic(1)]),
+        cost: cost(&[w()]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        power: 0,
+        power: 1,
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
@@ -2845,7 +2797,7 @@ pub fn mage_hunters_mark() -> CardDefinition {
 
 // ── Mage Duel ───────────────────────────────────────────────────────────────
 
-/// Mage Duel — {1}{R} Sorcery.
+/// Mage Duel — {2}{G} Sorcery.
 /// "Target creature you control deals damage equal to its power to
 /// target creature you don't control."
 ///
@@ -2858,7 +2810,7 @@ pub fn mage_hunters_mark() -> CardDefinition {
 pub fn mage_duel() -> CardDefinition {
     CardDefinition {
         name: "Mage Duel",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::DealDamage {
             to: target_filtered(
@@ -2876,7 +2828,7 @@ pub fn mage_duel() -> CardDefinition {
 
 // ── Eccentric Apprentice ────────────────────────────────────────────────────
 
-/// Eccentric Apprentice — {1}{R} Creature — Human Wizard, 1/3.
+/// Eccentric Apprentice — {2}{U} Creature — Human Wizard, 2/2.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// this creature gets +1/+0 until end of turn."
 ///
@@ -2888,15 +2840,15 @@ pub fn mage_duel() -> CardDefinition {
 pub fn eccentric_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Eccentric Apprentice",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 1,
-        toughness: 3,
+        power: 2,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -2997,7 +2949,7 @@ pub fn tezzerets_gambit() -> CardDefinition {
 
 // ── Wandering Archaic ───────────────────────────────────────────────────────
 
-/// Wandering Archaic — {2}{W}{W} Creature — Spirit, 4/4.
+/// Wandering Archaic — {5} Creature — Spirit, 4/4.
 /// (Front face only; the printed card is reversible with a back face
 /// "Explore the Vastlands" that's omitted here — reversible-card
 /// pipeline is engine-wide ⏳ similar to the back-face MDFC handling.)
@@ -3022,7 +2974,7 @@ pub fn wandering_archaic() -> CardDefinition {
     use crate::card::{Predicate, Subtypes};
     CardDefinition {
         name: "Wandering Archaic",
-        cost: cost(&[generic(2), w(), w()]),
+        cost: cost(&[generic(5)]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

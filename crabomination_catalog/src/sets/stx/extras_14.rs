@@ -66,7 +66,7 @@ pub fn witherbloom_campus() -> CardDefinition {
     campus_land("Witherbloom Campus", LandType::Swamp, LandType::Forest, Color::Black, Color::Green)
 }
 
-/// Access Tunnel — `{T}: Add {C}`; `{3}, {T}: Target creature with power
+/// Access Tunnel — `{T}: Add {3}`; `{3}, {T}: Target creature with power
 /// 3 or less can't be blocked this turn.`
 pub fn access_tunnel() -> CardDefinition {
     use super::super::tap_add_colorless;

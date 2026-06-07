@@ -22,7 +22,7 @@ use crate::effect::shortcut::{
     on_attack_ping_any, on_other_dies_mint_token, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{cost, generic, r, w, Color, ManaCost};
+use crate::mana::{Color, cost, generic, hybrid, r, w, ManaCost};
 
 // ── Lorehold spirit token ───────────────────────────────────────────────────
 
@@ -34,7 +34,7 @@ pub use crabomination_base::tokens::lorehold_spirit_token;
 
 // ── Lorehold Apprentice ─────────────────────────────────────────────────────
 
-/// Lorehold Apprentice — {R}{W}, 1/1 Human Cleric.
+/// Lorehold Apprentice — {R}{W}, 2/2 Human Cleric.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// you gain 1 life and Lorehold Apprentice deals 1 damage to each
 /// opponent."
@@ -57,8 +57,8 @@ pub fn lorehold_apprentice() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 1,
-        toughness: 1,
+        power: 2,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -102,7 +102,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
 
 // ── Lorehold Pledgemage ─────────────────────────────────────────────────────
 
-/// Lorehold Pledgemage — {1}{R}{W}, 2/2 Spirit Cleric. "Reach. {2}{R}{W},
+/// Lorehold Pledgemage — {1}{R/W}{R/W}, 2/2 Spirit Cleric. "Reach. {2}{R}{W},
 /// Exile a card from your graveyard: This creature gets +1/+1 until end
 /// of turn."
 ///
@@ -115,7 +115,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
         name: "Lorehold Pledgemage",
-        cost: cost(&[generic(1), r(), w()]),
+        cost: cost(&[generic(1), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -177,7 +177,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
 
 // ── Pillardrop Rescuer ──────────────────────────────────────────────────────
 
-/// Pillardrop Rescuer — {3}{R}{W}, 3/3 Spirit Cleric. "Flying. When
+/// Pillardrop Rescuer — {4}{W}, 2/2 Spirit Cleric. "Flying. When
 /// Pillardrop Rescuer enters the battlefield, return target instant or
 /// sorcery card from your graveyard to your hand."
 ///
@@ -188,15 +188,15 @@ pub fn lorehold_pledgemage() -> CardDefinition {
 pub fn pillardrop_rescuer() -> CardDefinition {
     CardDefinition {
         name: "Pillardrop Rescuer",
-        cost: cost(&[generic(3), r(), w()]),
+        cost: cost(&[generic(4), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
+        power: 2,
+        toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -257,7 +257,7 @@ pub fn heated_debate() -> CardDefinition {
 
 // ── Sparring Regimen ────────────────────────────────────────────────────────
 
-/// Sparring Regimen — {2}{R}{W} Enchantment. "When this enchantment
+/// Sparring Regimen — {2}{W} Enchantment. "When this enchantment
 /// enters, create a 2/2 red and white Spirit creature token. / Whenever
 /// you attack, put a +1/+1 counter on each attacking creature you
 /// control."
@@ -278,7 +278,7 @@ pub fn sparring_regimen() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Sparring Regimen",
-        cost: cost(&[generic(2), r(), w()]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
@@ -331,7 +331,7 @@ pub fn sparring_regimen() -> CardDefinition {
 
 // ── Storm-Kiln Artist ───────────────────────────────────────────────────────
 
-/// Storm-Kiln Artist — {2}{R}{W}, 3/3 Human Wizard. "Magecraft — Whenever
+/// Storm-Kiln Artist — {3}{R}, 2/2 Human Wizard. "Magecraft — Whenever
 /// you cast or copy an instant or sorcery spell, Storm-Kiln Artist deals
 /// 1 damage to any target. Then create a Treasure token."
 ///
@@ -347,15 +347,15 @@ pub fn storm_kiln_artist() -> CardDefinition {
     use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Storm-Kiln Artist",
-        cost: cost(&[generic(2), r(), w()]),
+        cost: cost(&[generic(3), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
+        power: 2,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -400,7 +400,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
 
 // ── Reconstruct History ─────────────────────────────────────────────────────
 
-/// Reconstruct History — {1}{R}{W} Sorcery (Lorehold).
+/// Reconstruct History — {2}{R}{W} Sorcery (Lorehold).
 /// "Choose two or more —
 ///   • Return target artifact card from your graveyard to your hand.
 ///   • Return target instant card from your graveyard to your hand.
@@ -415,7 +415,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
 pub fn reconstruct_history() -> CardDefinition {
     CardDefinition {
         name: "Reconstruct History",
-        cost: cost(&[generic(1), r(), w()]),
+        cost: cost(&[generic(2), r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -27229,13 +27229,13 @@ pub fn lorehold_vanguard_b174() -> CardDefinition {
     }
 }
 
-/// Returned Pastcaller — {4}{W}, 4/4 Spirit Cleric. Flying.
+/// Returned Pastcaller — {3}{R}{R/W}{W}, 4/2 Spirit Cleric. Flying.
 /// ETB: "Return target instant or sorcery card from your graveyard to
 /// your hand." Same shape as Pillardrop Rescuer.
 pub fn returned_pastcaller() -> CardDefinition {
     CardDefinition {
         name: "Returned Pastcaller",
-        cost: cost(&[generic(4), w()]),
+        cost: cost(&[generic(3), r(), hybrid(Color::Red, Color::White), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -27243,7 +27243,7 @@ pub fn returned_pastcaller() -> CardDefinition {
             ..Default::default()
         },
         power: 4,
-        toughness: 4,
+        toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),

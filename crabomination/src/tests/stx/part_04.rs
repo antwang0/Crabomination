@@ -1068,8 +1068,8 @@ fn pestilent_haze_kills_two_toughness_creatures() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let big = g.add_card_to_battlefield(1, catalog::sproutback_trudge());
     let id = g.add_card_to_hand(0, catalog::pestilent_haze());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Pestilent Haze castable");
@@ -1091,8 +1091,8 @@ fn vanquish_the_horde_destroys_each_creature() {
     let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::vanquish_the_horde());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(6);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Vanquish the Horde castable for {6}{W}");

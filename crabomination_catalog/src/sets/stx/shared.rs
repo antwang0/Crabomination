@@ -78,7 +78,7 @@ pub fn inkling_summoning() -> CardDefinition {
 
 // ── Tend the Pests ──────────────────────────────────────────────────────────
 
-/// Tend the Pests — {1}{B}{G} Sorcery. "As an additional cost to cast this
+/// Tend the Pests — {B}{G} Sorcery. "As an additional cost to cast this
 /// spell, sacrifice a creature. Create X 1/1 black and green Pest creature
 /// tokens with 'When this creature dies, you gain 1 life,' where X is the
 /// sacrificed creature's power."
@@ -94,7 +94,7 @@ pub fn tend_the_pests() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
         name: "Tend the Pests",
-        cost: cost(&[generic(1), b(), g()]),
+        cost: cost(&[b(), g()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,

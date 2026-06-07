@@ -13,40 +13,20 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, u, w};
 
 // ── Pop Quiz ────────────────────────────────────────────────────────────────
 
-/// Pop Quiz — {1}{W} Sorcery — Lesson. "Draw two cards, then put a card
-/// from your hand on top of your library."
-///
-/// Two-step: `Draw 2` then `PutOnLibraryFromHand 1`. The Lesson sub-type is
-/// recorded so future Lesson-aware effects (Mascot Exhibition's "search
-/// your sideboard") can filter on it; today Lesson cards resolve from hand
-/// like any other sorcery.
+/// Pop Quiz — {2}{U} Instant. "Draw a card. Learn."
 pub fn pop_quiz() -> CardDefinition {
     CardDefinition {
         name: "Pop Quiz",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            Effect::PutOnLibraryFromHand {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Learn { who: PlayerRef::You },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -143,7 +123,7 @@ pub fn mascot_exhibition() -> CardDefinition {
 
 // ── Plumb the Forbidden ─────────────────────────────────────────────────────
 
-/// Plumb the Forbidden — {X}{B}{B} Instant. "Sacrifice X creatures. Each
+/// Plumb the Forbidden — {1}{B} Instant. "Sacrifice X creatures. Each
 /// player who controlled a sacrificed creature draws X cards and loses X
 /// life."
 ///
@@ -155,7 +135,7 @@ pub fn mascot_exhibition() -> CardDefinition {
 pub fn plumb_the_forbidden() -> CardDefinition {
     CardDefinition {
         name: "Plumb the Forbidden",
-        cost: cost(&[x(), b(), b()]),
+        cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -184,64 +164,43 @@ pub fn plumb_the_forbidden() -> CardDefinition {
 
 // ── Owlin Shieldmage ────────────────────────────────────────────────────────
 
-/// Owlin Shieldmage — {3}{W} Creature — Bird Wizard. Flash, flying, 2/3.
-/// "When this enters, prevent all combat damage that would be dealt this
-/// turn."
-///
-/// ✅ ETB trigger now wired via the new `Effect::PreventAllCombat
-/// DamageThisTurn` primitive (CR 615.1 replacement effect). The combat
-/// damage resolver consults the `prevent_combat_damage_this_turn` flag
-/// and zeroes both attacker→blocker/player and blocker→attacker damage
-/// (plus the corresponding lifelink). The flag clears in `do_cleanup`
-/// alongside the other until-end-of-turn state. The "this turn"
-/// scoping handles flashing in at end of opponent's combat to prevent
-/// the damage about to be dealt in the **same** combat step (the
-/// `compute_battlefield` + combat-damage resolver reads the live game
-/// state, so the ETB triggered ability resolving before damage zeroes
-/// the assignment).
+/// Owlin Shieldmage — {3}{W}{B} 3/3 Bird Warlock with flying and Ward—Pay 3
+/// life.
 pub fn owlin_shieldmage() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::card::WardCost;
     CardDefinition {
         name: "Owlin Shieldmage",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Bird, CreatureType::Warlock],
             ..Default::default()
         },
-        power: 2,
+        power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Flash, Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::PreventAllCombatDamageThisTurn,
-        }],
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Life(3))],
         ..Default::default()
     }
 }
 
 // ── Frost Trickster ─────────────────────────────────────────────────────────
 
-/// Frost Trickster — {1}{U} Creature — Spirit Wizard. Flash, flying, 2/2.
-/// "When this creature enters, tap target creature an opponent controls.
-/// That creature doesn't untap during its controller's next untap step."
-///
-/// Modeled as "When this enters, tap target creature an opponent controls
-/// and put a stun counter on it" — close enough for the demo (a stun
-/// counter prevents the next untap, matching the printed line).
+/// Frost Trickster — {2}{U} 2/2 Bird Wizard with flying. "When this creature
+/// enters, tap target creature an opponent controls. That creature doesn't
+/// untap during its controller's next untap step." (Modeled as tap + a stun
+/// counter, which prevents the next untap.)
 pub fn frost_trickster() -> CardDefinition {
     CardDefinition {
         name: "Frost Trickster",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flash, Keyword::Flying],
+        keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -347,13 +306,13 @@ pub fn show_of_confidence() -> CardDefinition {
 
 // ── Bury in Books ───────────────────────────────────────────────────────────
 
-/// Bury in Books — {3}{U} Sorcery. "Put target creature on top of its
+/// Bury in Books — {4}{U} Sorcery. "Put target creature on top of its
 /// owner's library." A clean library-position bounce — same shape as
 /// Hinder/Spell Crumple but for permanents.
 pub fn bury_in_books() -> CardDefinition {
     CardDefinition {
         name: "Bury in Books",
-        cost: cost(&[generic(3), u()]),
+        cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -373,7 +332,7 @@ pub fn bury_in_books() -> CardDefinition {
 
 // ── Test of Talents ─────────────────────────────────────────────────────────
 
-/// Test of Talents — {1}{U}{U} Instant. "Counter target instant or sorcery
+/// Test of Talents — {1}{U} Instant. "Counter target instant or sorcery
 /// spell. Search its controller's graveyard, hand, and library for any
 /// number of cards with the same name as that spell, exile them, then
 /// that player shuffles."
@@ -389,7 +348,7 @@ pub fn bury_in_books() -> CardDefinition {
 pub fn test_of_talents() -> CardDefinition {
     CardDefinition {
         name: "Test of Talents",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -491,7 +450,7 @@ pub fn multiple_choice() -> CardDefinition {
 
 // ── Quick Study ─────────────────────────────────────────────────────────────
 
-/// Quick Study — {1}{U} Instant. "Target player draws two cards."
+/// Quick Study — {2}{U} Instant. "Target player draws two cards."
 ///
 /// ✅ Simple targeted card-draw instant. The auto-decider aims at the
 /// caster by default (Draw effects bind to the caster when no target
@@ -500,7 +459,7 @@ pub fn multiple_choice() -> CardDefinition {
 pub fn quick_study() -> CardDefinition {
     CardDefinition {
         name: "Quick Study",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -554,7 +513,7 @@ pub fn lash_of_malice() -> CardDefinition {
 
 // ── Big Play ────────────────────────────────────────────────────────────────
 
-/// Big Play — {3}{R}{W} Instant.
+/// Big Play — {1}{G} Instant.
 /// "Choose one — / • Target creature you don't control attacks during
 /// its controller's next turn if able. / • Tap target creature, then
 /// put a stun counter on it. / • Creatures you control gain trample
@@ -578,54 +537,33 @@ pub fn lash_of_malice() -> CardDefinition {
 /// Scripted deciders can probe other modes via `DecisionAnswer::Mode`.
 /// ✅ for the printed body; the trample-anthem mode is the only true
 /// approximation.
+/// Big Play — {1}{G} Instant. "Target creature gets +2/+2 and gains reach until
+/// end of turn. Put a +1/+1 counter on it."
 pub fn big_play() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::effect::Duration;
-    use crate::mana::r;
     CardDefinition {
         name: "Big Play",
-        cost: cost(&[generic(3), r(), w()]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: "Must attack" — collapsed to Tap + Stun on opp creature.
-            Effect::Seq(vec![
-                Effect::Tap {
-                    what: target_filtered(SelectionRequirement::Creature),
-                },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
-            ]),
-            // Mode 1: Tap + Stun target creature (Frost Trickster shape).
-            Effect::Seq(vec![
-                Effect::Tap {
-                    what: target_filtered(SelectionRequirement::Creature),
-                },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
-            ]),
-            // Mode 2: Grant Trample EOT to each friendly creature.
-            Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                body: Box::new(Effect::GrantKeyword {
-                    what: Selector::TriggerSource,
-                    keyword: Keyword::Trample,
-                    duration: Duration::EndOfTurn,
-                }),
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Reach,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -819,13 +757,13 @@ pub fn tangletrap() -> CardDefinition {
 
 // ── Introduction to Prophecy ───────────────────────────────────────────────
 
-/// Introduction to Prophecy — {2}{U} Sorcery. "Scry 2, then draw a card."
+/// Introduction to Prophecy — {3} Sorcery. "Scry 2, then draw a card."
 ///
 /// Straightforward scry-then-draw spell. No Lesson subtype on this one.
 pub fn introduction_to_prophecy() -> CardDefinition {
     CardDefinition {
         name: "Introduction to Prophecy",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(3)]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],

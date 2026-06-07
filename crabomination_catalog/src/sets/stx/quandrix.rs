@@ -18,11 +18,11 @@ use crate::effect::shortcut::{
     target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, g, u, x, Color, ManaCost};
+use crate::mana::{Color, cost, g, generic, hybrid, u, x, ManaCost};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
 
-/// Quandrix Apprentice — {G}{U}, 1/1 Elf Druid.
+/// Quandrix Apprentice — {G}{U}, 2/2 Elf Druid.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// target creature you control gets +1/+1 until end of turn."
 ///
@@ -39,8 +39,8 @@ pub fn quandrix_apprentice() -> CardDefinition {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
             ..Default::default()
         },
-        power: 1,
-        toughness: 1,
+        power: 2,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::PumpPT {
@@ -57,7 +57,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
 
 // ── Quandrix Pledgemage ─────────────────────────────────────────────────────
 
-/// Quandrix Pledgemage — {1}{G}{U}, 2/2 Fractal Wizard. "{1}{G}{U}: Put
+/// Quandrix Pledgemage — {1}{G/U}{G/U}, 2/2 Fractal Wizard. "{1}{G}{U}: Put
 /// a +1/+1 counter on Quandrix Pledgemage."
 ///
 /// Pure activated +1/+1 counter pump. The Fractal subtype is already in
@@ -66,7 +66,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
 pub fn quandrix_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pledgemage",
-        cost: cost(&[generic(1), g(), u()]),
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue), hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],

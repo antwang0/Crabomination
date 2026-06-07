@@ -27,7 +27,7 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 
 // ── Sigardian Savior (synthesised STX 2021 white finisher) ────────────────
 
-/// Sigardian Savior — {3}{W}{W}, 4/4 Angel (synthesised STX
+/// Sigardian Savior — {3}{W}{W}, 3/3 Angel (synthesised STX
 /// white-tribal flavor). "Flying. When this creature enters, return
 /// up to two target creature cards with mana value 3 or less from
 /// your graveyard to the battlefield."
@@ -49,8 +49,8 @@ pub fn sigardian_savior() -> CardDefinition {
             creature_types: vec![CreatureType::Angel],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 3,
+        toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -95,7 +95,7 @@ pub fn sigardian_savior() -> CardDefinition {
 
 // ── Sneaky Snacker (synthesised STX Witherbloom common) ───────────────────
 
-/// Sneaky Snacker — {B}, 1/1 Rat Rogue (synthesised STX Witherbloom
+/// Sneaky Snacker — {U}{B}, 2/1 Rat Rogue (synthesised STX Witherbloom
 /// flavor). "Menace. {2}{B}: Return Sneaky Snacker from your
 /// graveyard to your hand. Activate only as a sorcery."
 ///
@@ -108,14 +108,14 @@ pub fn sigardian_savior() -> CardDefinition {
 pub fn sneaky_snacker() -> CardDefinition {
     CardDefinition {
         name: "Sneaky Snacker",
-        cost: cost(&[b()]),
+        cost: cost(&[u(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Rat, CreatureType::Rogue],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 1,
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
@@ -167,7 +167,7 @@ pub fn sneaky_snacker() -> CardDefinition {
 
 // ── Soulknife Spy (synthesised STX Quandrix/blue Rogue) ───────────────────
 
-/// Soulknife Spy — {1}{U}, 1/3 Human Rogue (synthesised STX flavor).
+/// Soulknife Spy — {2}{U}, 3/2 Human Rogue (synthesised STX flavor).
 /// "Whenever Soulknife Spy deals combat damage to a player, you may
 /// pay {U}. If you do, draw a card."
 ///
@@ -181,15 +181,15 @@ pub fn sneaky_snacker() -> CardDefinition {
 pub fn soulknife_spy() -> CardDefinition {
     CardDefinition {
         name: "Soulknife Spy",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Rogue],
             ..Default::default()
         },
-        power: 1,
-        toughness: 3,
+        power: 3,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -322,7 +322,7 @@ pub fn daring_diversion() -> CardDefinition {
 
 // ── Possibility Storm (synthesised STX Prismari reprint flavor) ───────────
 
-/// Possibility Storm — {2}{R} Enchantment (synthesised STX Prismari
+/// Possibility Storm — {3}{R}{R} Enchantment (synthesised STX Prismari
 /// reprint flavor of Lorwyn). "Whenever a player casts a spell from
 /// their hand, that player exiles it, then exiles cards from the top
 /// of their library until they exile a card that shares a card type
@@ -340,7 +340,7 @@ pub fn daring_diversion() -> CardDefinition {
 pub fn possibility_storm() -> CardDefinition {
     CardDefinition {
         name: "Possibility Storm",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(3), r(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
@@ -376,7 +376,7 @@ pub fn possibility_storm() -> CardDefinition {
 
 // ── Pilgrim of the Ages (synthesised STX-flavor archetype anchor) ─────────
 
-/// Pilgrim of the Ages — {3}, 1/1 Spirit (synthesised STX colorless
+/// Pilgrim of the Ages — {2}{W}, 2/1 Spirit (synthesised STX colorless
 /// utility creature). "{2}, Sacrifice this creature: Search your
 /// library for a basic land card, reveal it, put it into your hand,
 /// then shuffle."
@@ -390,14 +390,14 @@ pub fn possibility_storm() -> CardDefinition {
 pub fn pilgrim_of_the_ages() -> CardDefinition {
     CardDefinition {
         name: "Pilgrim of the Ages",
-        cost: cost(&[generic(3)]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
@@ -1318,12 +1318,12 @@ pub fn pop_quiz_recital() -> CardDefinition {
 
 // ── Diviner's Wand (synthesised STX-flavor Equipment) ─────────────────────
 
-/// Diviner's Wand — {4} Artifact — Equipment (synthesised STX-flavor).
+/// Diviner's Wand — {3} Artifact — Equipment (synthesised STX-flavor).
 /// Equipped creature gets +2/+1 and has flying. Equip {3}.
 pub fn diviners_wand() -> CardDefinition {
     CardDefinition {
         name: "Diviner's Wand",
-        cost: cost(&[generic(4)]),
+        cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes {
             artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
@@ -2479,7 +2479,7 @@ pub fn wisdom_of_the_ancients() -> CardDefinition {
 
 // ── Mob Mentality ──────────────────────────────────────────────────────────
 
-/// Mob Mentality — {1}{R}{W} Instant (synthesised STX Lorehold flavor).
+/// Mob Mentality — {R} Instant (synthesised STX Lorehold flavor).
 /// "Creatures you control get +1/+1 until end of turn. If you've cast
 /// another spell this turn, they also gain first strike until end of
 /// turn."
@@ -2493,7 +2493,7 @@ pub fn wisdom_of_the_ancients() -> CardDefinition {
 pub fn mob_mentality() -> CardDefinition {
     CardDefinition {
         name: "Mob Mentality",
-        cost: cost(&[generic(1), r(), w()]),
+        cost: cost(&[r()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -2663,7 +2663,7 @@ pub fn mystical_inquiry() -> CardDefinition {
 
 // ── Conjurer's Bauble (STA reprint, originally Modern Horizons) ────────────
 
-/// Conjurer's Bauble — {0} Artifact (STA reprint, originally Modern
+/// Conjurer's Bauble — {1} Artifact (STA reprint, originally Modern
 /// Horizons). "{1}, Sacrifice this artifact: Put a card from your
 /// graveyard on the bottom of your library. Draw a card."
 ///
@@ -2840,7 +2840,7 @@ pub fn pop_quiz_lecturer() -> CardDefinition {
 
 // ── Brilliant Restoration ──────────────────────────────────────────────────
 
-/// Brilliant Restoration — {3}{W}{W} Sorcery (synthesised STX
+/// Brilliant Restoration — {3}{W}{W}{W}{W} Sorcery (synthesised STX
 /// Silverquill flavor). "Return target creature card from your
 /// graveyard to the battlefield. You gain 2 life."
 ///
@@ -2852,7 +2852,7 @@ pub fn pop_quiz_lecturer() -> CardDefinition {
 pub fn brilliant_restoration() -> CardDefinition {
     CardDefinition {
         name: "Brilliant Restoration",
-        cost: cost(&[generic(3), w(), w()]),
+        cost: cost(&[generic(3), w(), w(), w(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),

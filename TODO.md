@@ -825,6 +825,34 @@ picking an item up.
 
 ## Suggested next-up tasks
 
+- ⚠️ **Fabricated real-name STX cards (correctness sweep).** Many STX factories
+  reuse *real* STX card names but carry invented cost/types/oracle text (the
+  synthesizer collided with real names). **Cost + P/T are now fully swept**:
+  `scripts/audit_stx_drift.py` reports 0 cost/PT drift across the whole `stx/`
+  tree (148 mana-cost literals + 61 power/toughness literals corrected to the
+  Scryfall cache this run, doc-comment titles synced via
+  `scripts/fix_doc_costs.py`, coupled test fixtures rewritten via
+  `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
+  keep it at zero after adding cards.
+  **Still wrong on the *effect body*** (cost/PT right, oracle text invented or
+  blocked on a primitive): Tempted by the Oriq (per-opponent permanent
+  steal, MV≤3), Mentor's Guidance (conditional copy-on-cast + scry/draw),
+  Illuminate History (discard-any-number→draw-that-many + gy≥7 Spirit), First
+  Day of Class ("creatures entering this turn" delayed trigger), Stonebinder's
+  Familiar (needs a generic `CardExiled` event), Hofri Ghostforge, Confront the
+  Past, Verdant/Fervent Mastery, Mage Duel, Strixhaven Stadium, Rise of Extus,
+  plus the type/keyword drift the cost sweep surfaced (e.g. Frost Trickster is a
+  Bird Wizard not Spirit Wizard; Daemogoth Titan is now {B/G}×4 — confirm
+  subtypes). This is the remaining multi-run work: per card replace the body
+  with the Scryfall text and rewrite its test(s). Watch for fixture coupling.
+  **Effects drift too, not only stats**: spot-checks show many school-file cards
+  carry entirely invented oracle text under a real name (Eager First-Year wired
+  as "magecraft pumps a target" vs. the real self-pump; Owlin Shieldmage as an
+  ETB combat-damage-preventer vs. the real Flying + Ward; Bayou Groff as a
+  "dies, may pay to return" body vs. the real {1}{G} 5/4 with a sac-or-pay-{3}
+  additional cost; Promising Duskmage as a drain vs. the real death-draw). Treat
+  this as a full set re-import — per card replace the body with the Scryfall text
+  and rewrite its test(s) + fixture uses. Budget several runs.
 - ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is now near-complete;
   the modern_decks run also shipped Exponential Growth (`Effect::DoublePower`),
   Sticky Fingers, Make Your Move, Semester's End (`Effect::ExileReturnNextEndStep`),

@@ -26,7 +26,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
 
 // ── Environmental Sciences ──────────────────────────────────────────────────
 
@@ -38,7 +38,7 @@ use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 // ── Square Up ───────────────────────────────────────────────────────────────
 
-/// Square Up — {U}{R} Instant (Prismari).
+/// Square Up — {1}{G/U} Instant (Prismari).
 ///
 /// "Until end of turn, target creature has base power and toughness 0/4.
 /// Draw a card."
@@ -51,7 +51,7 @@ use crate::mana::{b, cost, g, generic, r, u, w, Color};
 pub fn square_up() -> CardDefinition {
     CardDefinition {
         name: "Square Up",
-        cost: cost(&[u(), r()]),
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::Blue)]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -98,7 +98,7 @@ pub fn square_up() -> CardDefinition {
 
 // ── Brilliant Plan ──────────────────────────────────────────────────────────
 
-/// Brilliant Plan — {3}{U}{U} Sorcery — Lesson.
+/// Brilliant Plan — {4}{U} Sorcery — Lesson.
 ///
 /// "Scry 3, then draw three cards."
 ///
@@ -109,7 +109,7 @@ pub fn square_up() -> CardDefinition {
 pub fn brilliant_plan() -> CardDefinition {
     CardDefinition {
         name: "Brilliant Plan",
-        cost: cost(&[generic(3), u(), u()]),
+        cost: cost(&[generic(4), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
@@ -157,7 +157,7 @@ pub fn brilliant_plan() -> CardDefinition {
 
 // ── Fortifying Draught ──────────────────────────────────────────────────────
 
-/// Fortifying Draught — {2}{W} Sorcery — Lesson.
+/// Fortifying Draught — {G} Sorcery — Lesson.
 ///
 /// "Target creature gets +1/+4 until end of turn."
 ///
@@ -169,7 +169,7 @@ pub fn brilliant_plan() -> CardDefinition {
 pub fn fortifying_draught() -> CardDefinition {
     CardDefinition {
         name: "Fortifying Draught",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[g()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
@@ -272,7 +272,7 @@ pub fn guiding_voice() -> CardDefinition {
 
 // ── Expanded Anatomy ────────────────────────────────────────────────────────
 
-/// Expanded Anatomy — {3}{G} Sorcery — Lesson.
+/// Expanded Anatomy — {3} Sorcery — Lesson.
 ///
 /// "Put two +1/+1 counters on target creature."
 ///
@@ -285,7 +285,7 @@ pub fn guiding_voice() -> CardDefinition {
 pub fn expanded_anatomy() -> CardDefinition {
     CardDefinition {
         name: "Expanded Anatomy",
-        cost: cost(&[generic(3), g()]),
+        cost: cost(&[generic(3)]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
@@ -328,7 +328,7 @@ pub fn expanded_anatomy() -> CardDefinition {
 
 // ── Mercurial Transformation ────────────────────────────────────────────────
 
-/// Mercurial Transformation — {2}{U} Sorcery.
+/// Mercurial Transformation — {1}{U} Sorcery.
 ///
 /// "Target creature or artifact becomes a blue Frog creature with base
 /// power and toughness 3/3 and loses all abilities until end of turn."
@@ -347,7 +347,7 @@ pub fn expanded_anatomy() -> CardDefinition {
 pub fn mercurial_transformation() -> CardDefinition {
     CardDefinition {
         name: "Mercurial Transformation",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(1), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -518,7 +518,7 @@ pub fn mascot_interpretation() -> CardDefinition {
 
 // ── Reduce // Rubble ────────────────────────────────────────────────────────
 
-/// Reduce // Rubble — {2}{R} Sorcery — Lesson (synthesised STX
+/// Reduce // Rubble — {2}{U}{2}{R} Sorcery — Lesson (synthesised STX
 /// Lorehold flavor). "Reduce // Rubble deals 3 damage to target
 /// creature or planeswalker. Learn."
 ///
@@ -529,7 +529,7 @@ pub fn mascot_interpretation() -> CardDefinition {
 pub fn reduce_rubble() -> CardDefinition {
     CardDefinition {
         name: "Reduce // Rubble",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(2), u(), generic(2), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
@@ -1308,7 +1308,7 @@ pub fn test_of_patience() -> CardDefinition {
     }
 }
 
-/// Reduce to Ashes — {3}{R} Sorcery — Lesson.
+/// Reduce to Ashes — {4}{R} Sorcery — Lesson.
 /// Synthesised Oracle: "Deals 4 damage to target creature or planeswalker.
 /// If that creature or planeswalker would die this turn, exile it instead."
 /// The exile-on-death rider rides the Lava-Coil pattern: a creature with
@@ -1318,7 +1318,7 @@ pub fn reduce_to_ashes() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
         name: "Reduce to Ashes",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],

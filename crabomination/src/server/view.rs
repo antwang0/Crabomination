@@ -2034,6 +2034,19 @@ mod tests {
         assert_eq!(perm.loyalty_abilities[2].effect_label, "Create token");
     }
 
+    /// A variable `-X` loyalty ability surfaces with `x_cost: true` so the
+    /// client renders it as "-X" rather than the (zero) `loyalty_cost`.
+    #[test]
+    fn variable_x_loyalty_ability_flagged_in_view() {
+        let mut state = two_player_game();
+        let kasmina = state.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == kasmina).unwrap();
+        // +2 Scry, -X Fractal, -8 tutor.
+        assert!(!perm.loyalty_abilities[0].x_cost, "+2 is a fixed-cost ability");
+        assert!(perm.loyalty_abilities[1].x_cost, "the Fractal ability is -X");
+    }
+
     /// The command zone is a public zone — every viewer sees every
     /// seat's commanders as `Known`, including opponents'. Surfaces
     /// the Phase J seating + Phase L cast-tax UI requirements.

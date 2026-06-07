@@ -118,7 +118,7 @@ pub fn pest_summoning() -> CardDefinition {
 
 // ── Bayou Groff ─────────────────────────────────────────────────────────────
 
-/// Bayou Groff — {2}{B}{G}, 5/4 Beast. "When this creature dies, you
+/// Bayou Groff — {1}{G}, 5/4 Beast. "When this creature dies, you
 /// may pay {1}. If you do, return it to its owner's hand."
 ///
 /// Now wired (push XVI) via the new `Effect::MayPay` primitive: dies
@@ -132,7 +132,7 @@ pub fn pest_summoning() -> CardDefinition {
 pub fn bayou_groff() -> CardDefinition {
     CardDefinition {
         name: "Bayou Groff",
-        cost: cost(&[generic(2), b(), g()]),
+        cost: cost(&[generic(1), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -457,14 +457,14 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
 
 // ── Witherbloom Command ─────────────────────────────────────────────────
 
-/// Witherbloom Command — {2}{B}{G} Sorcery. Choose two among 4 modes.
+/// Witherbloom Command — {B}{G} Sorcery. Choose two among 4 modes.
 ///
 /// Approximation: AutoDecider picks mill 4 + drain 2. Choose-two
 /// collapsed to Seq of the two auto-default modes.
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
-        cost: cost(&[generic(2), b(), g()]),
+        cost: cost(&[b(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -600,64 +600,27 @@ pub fn callous_bloodmage() -> CardDefinition {
     }
 }
 
+/// Witherbloom Pledgemage — {3}{B/G}{B/G} 5/5 Treefolk Warlock. "Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, you gain 1 life."
 pub fn witherbloom_pledgemage() -> CardDefinition {
-    let _ = Color::Black;
+    use crate::effect::shortcut::{gain_life, magecraft};
+    use crate::mana::hybrid;
     CardDefinition {
         name: "Witherbloom Pledgemage",
-        cost: cost(&[crate::mana::generic(1), b(), g()]),
-        supertypes: vec![],
+        cost: cost(&[
+            crate::mana::generic(3),
+            hybrid(Color::Black, Color::Green),
+            hybrid(Color::Black, Color::Green),
+        ]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Treefolk, CreatureType::Warlock],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: cost(&[]),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 1,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![magecraft(gain_life(1))],
+        ..Default::default()
     }
 }
 
@@ -11164,7 +11127,7 @@ pub fn pest_bonewright() -> CardDefinition {
     }
 }
 
-/// Witherbloom Decoder — {1}{U}, 1/3 Human Wizard. Magecraft mill 1
+/// Witherbloom Decoder — {1}{B}, 1/3 Human Wizard. Magecraft mill 1
 /// from each opponent. Cheap recurring graveyard fuel.
 pub fn witherbloom_decoder() -> CardDefinition {
     CardDefinition {

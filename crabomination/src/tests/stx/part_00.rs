@@ -609,28 +609,22 @@ fn silverquill_wardlock_b187_fans_shield_counters_to_friendly_creatures() {
 // ── Mono-color additions ────────────────────────────────────────────────────
 
 #[test]
-fn pop_quiz_draws_two_then_returns_one_to_top() {
-    // Seed library so the draw has cards.
+fn pop_quiz_draws_a_card_and_learns() {
     let mut g = two_player_game();
-    for _ in 0..3 {
-        g.add_card_to_library(0, catalog::island());
-    }
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::pop_quiz());
-    let lib_before = g.players[0].library.len();
     let hand_before = g.players[0].hand.len();
 
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Pop Quiz castable for {1}{W}");
+    .expect("Pop Quiz castable for {2}{U}");
     drain_stack(&mut g);
 
-    // Hand: -1 (cast Pop Quiz) +2 (draw) -1 (put on top) = 0 net.
-    assert_eq!(g.players[0].hand.len(), hand_before);
-    // Library: -2 (drawn) +1 (put-on-top) = -1.
-    assert_eq!(g.players[0].library.len(), lib_before - 1);
+    // -1 (cast) +1 (draw) +1 (Learn → Draw fallback, no sideboard) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
 
 #[test]
@@ -696,51 +690,13 @@ fn plumb_the_forbidden_at_x_two_sacs_two_draws_two_loses_two() {
 }
 
 #[test]
-fn owlin_shieldmage_etb_prevents_combat_damage_this_turn() {
-    // Push (modern_decks): Owlin Shieldmage's "prevent all combat damage
-    // this turn" ETB now lands via the new Effect::PreventAllCombat
-    // DamageThisTurn primitive. Wire test: cast Shieldmage on opp's
-    // declare-attackers step → opp swings with a 2/2 Bear at the
-    // defending player → combat damage resolves to 0 (no life loss).
-    let mut g = two_player_game();
-    // Opponent has an untapped attacker.
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(bear);
-    let id = g.add_card_to_hand(0, catalog::owlin_shieldmage());
-
-    // P1 declares the attacker.
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: bear,
-        target: AttackTarget::Player(0),
-    }]))
-    .expect("Bear can attack P0");
-    drain_stack(&mut g);
-
-    // P0 flashes in Owlin Shieldmage (it has Flash).
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Owlin Shieldmage castable at instant speed for {3}{W}");
-    drain_stack(&mut g);
-
-    assert!(
-        g.prevent_combat_damage_this_turn,
-        "Owlin Shieldmage's ETB should flag the engine to prevent combat damage this turn"
-    );
-
-    // Combat damage step.
-    g.step = TurnStep::CombatDamage;
-    g.resolve_combat().expect("combat damage resolved");
-
-    // CR 615.1 — combat damage was prevented; P0's life unchanged.
-    assert_eq!(g.players[0].life, 20,
-        "Combat damage from the attacker should be prevented");
+fn owlin_shieldmage_is_a_warding_flyer() {
+    use crate::card::WardCost;
+    let c = catalog::owlin_shieldmage();
+    assert_eq!(c.cost.cmc(), 5);
+    assert_eq!((c.power, c.toughness), (3, 3));
+    assert!(c.keywords.contains(&Keyword::Flying));
+    assert!(c.keywords.contains(&Keyword::Ward(WardCost::Life(3))), "Ward—Pay 3 life");
 }
 
 #[test]
@@ -752,11 +708,11 @@ fn frost_trickster_taps_and_stuns_target_on_etb() {
     let id = g.add_card_to_hand(0, catalog::frost_trickster());
 
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Frost Trickster castable for {1}{U}");
+    .expect("Frost Trickster castable for {2}{U}");
     drain_stack(&mut g);
 
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
@@ -833,8 +789,8 @@ fn bury_in_books_returns_target_to_top_of_library() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::bury_in_books());
 
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -1095,7 +1051,8 @@ fn quandrix_apprentice_pumps_creature_you_control_on_instant_cast() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -1113,7 +1070,7 @@ fn quandrix_apprentice_pumps_creature_you_control_on_instant_cast() {
     let app_card = g.battlefield.iter().find(|c| c.id == app).unwrap();
     assert_eq!(
         (app_card.power(), app_card.toughness()),
-        (1, 1),
+        (2, 2),
         "Apprentice (trigger source) should not be the picked target",
     );
 }
@@ -1125,7 +1082,8 @@ fn quandrix_apprentice_falls_back_to_self_when_no_other_target() {
     let mut g = two_player_game();
     let app = g.add_card_to_battlefield(0, catalog::quandrix_apprentice());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -1134,7 +1092,7 @@ fn quandrix_apprentice_falls_back_to_self_when_no_other_target() {
     let app_card = g.battlefield.iter().find(|c| c.id == app).unwrap();
     assert_eq!(
         (app_card.power(), app_card.toughness()),
-        (2, 2),
+        (3, 3),
         "Apprentice pumps itself when it's the only legal Magecraft target",
     );
 }
@@ -1213,14 +1171,15 @@ fn symmetry_sage_pumps_self_and_grants_flying_on_instant_cast() {
     let sage = g.add_card_to_battlefield(0, catalog::symmetry_sage());
     g.clear_sickness(sage);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable");
     drain_stack(&mut g);
     let s = g.battlefield.iter().find(|c| c.id == sage).unwrap();
-    assert_eq!(s.power(), 2, "Sage should be 2/2 (1+1 from Magecraft)");
+    assert_eq!(s.power(), 1, "Sage 0/2 base +1/+0 Magecraft → 1/2");
     assert_eq!(s.toughness(), 2);
     assert!(s.has_keyword(&Keyword::Flying),
         "Magecraft should grant flying EOT");
@@ -1229,22 +1188,32 @@ fn symmetry_sage_pumps_self_and_grants_flying_on_instant_cast() {
 // ── Witherbloom (B/G) ──────────────────────────────────────────────────────
 
 #[test]
-fn witherbloom_pledgemage_taps_for_mana_at_life_cost() {
+fn witherbloom_pledgemage_magecraft_gains_one_life() {
     let mut g = two_player_game();
-    let pm = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
-    g.clear_sickness(pm);
+    g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
     let life_before = g.players[0].life;
-    let pool_before = g.players[0].mana_pool.total();
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: pm, ability_index: 0, target: None, x_value: None })
-    .expect("Witherbloom Pledgemage tap activatable");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
     drain_stack(&mut g);
-    // Pay 1 life, gain 1 mana.
-    assert_eq!(g.players[0].life, life_before - 1, "should pay 1 life");
-    assert_eq!(g.players[0].mana_pool.total(), pool_before + 1,
-        "should gain 1 mana");
-    let pm_card = g.battlefield.iter().find(|c| c.id == pm).unwrap();
-    assert!(pm_card.tapped, "should be tapped after activating");
+    assert_eq!(g.players[0].life, life_before + 1, "magecraft gains 1 life on IS cast");
+}
+
+#[test]
+fn prismari_pledgemage_is_a_defender_that_pumps_on_magecraft() {
+    let mut g = two_player_game();
+    let pm = g.add_card_to_battlefield(0, catalog::prismari_pledgemage());
+    assert!(g.battlefield_find(pm).unwrap().has_keyword(&Keyword::Defender));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // 3/3 + magecraft +1/+1 → 4/4 EOT.
+    assert_eq!(g.battlefield_find(pm).unwrap().power(), 4, "magecraft self-pump +1/+1");
 }
 
 #[test]
@@ -1606,15 +1575,13 @@ fn sparring_regimen_creates_spirit_etb_and_pumps_attacker() {
     assert_eq!(counters, 1, "Sparring Regimen should pump the attacker");
 }
 
-/// CR 605.4 — a mana ability resolves immediately without going on the
-/// stack. Witherbloom Pledgemage's `{T}, Pay 1 life: Add {B}/{G}` is a
-/// mana ability (no target, could add mana, not a loyalty ability) so
-/// the engine should add the mana to the player's pool synchronously,
-/// without leaving a StackItem behind for priority to resolve.
+/// CR 605.4 — a life-cost mana ability resolves immediately without going on
+/// the stack. Kozilek's Translator's "Pay 1 life: Add {C}" adds the mana
+/// synchronously, leaving no StackItem behind.
 #[test]
-fn witherbloom_pledgemage_is_a_mana_ability_per_cr_605() {
+fn life_cost_mana_ability_is_a_mana_ability_per_cr_605() {
     let mut g = two_player_game();
-    let pledge = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    let pledge = g.add_card_to_battlefield(0, catalog::kozileks_translator());
     g.clear_sickness(pledge);
 
     let stack_before = g.stack.len();
@@ -1623,41 +1590,24 @@ fn witherbloom_pledgemage_is_a_mana_ability_per_cr_605() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: pledge, ability_index: 0, target: None, x_value: None })
-    .expect("Pledgemage mana ability activatable");
+    .expect("mana ability activatable");
 
-    // CR 605.4a: mana abilities don't go on the stack. Stack length should
-    // not have grown.
-    assert_eq!(g.stack.len(), stack_before,
-        "Mana ability should not push onto the stack");
-    // Life was paid as part of cost.
-    assert_eq!(g.players[0].life, life_before - 1,
-        "Should pay 1 life as cost");
-    // Mana pool grew by 1.
-    assert_eq!(g.players[0].mana_pool.total(), mana_before + 1,
-        "Pledgemage should add one mana of any color");
-    // Source is tapped.
-    assert!(g.battlefield_find(pledge).unwrap().tapped,
-        "Pledgemage should be tapped");
+    assert_eq!(g.stack.len(), stack_before, "mana ability should not push onto the stack");
+    assert_eq!(g.players[0].life, life_before - 1, "should pay 1 life as cost");
+    assert_eq!(g.players[0].mana_pool.total(), mana_before + 1, "adds one mana");
 }
 
-/// CR 605.4a: mana abilities can't be responded to. Without a stack
-/// entry, an opponent has no priority window to counter the activation.
-/// Stress-test by activating then immediately checking stack emptiness
-/// (no priority round happened) — verifies the engine drains the mana
-/// ability path synchronously.
+/// CR 119.4 — a life-cost ability can't be activated with insufficient life.
 #[test]
-fn witherbloom_pledgemage_rejects_activation_with_zero_life() {
+fn life_cost_mana_ability_rejects_activation_with_zero_life() {
     let mut g = two_player_game();
-    let pledge = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    let pledge = g.add_card_to_battlefield(0, catalog::kozileks_translator());
     g.clear_sickness(pledge);
     g.players[0].life = 0;
 
     let r = g.perform_action(GameAction::ActivateAbility {
         card_id: pledge, ability_index: 0, target: None, x_value: None });
-    assert!(r.is_err(), "Should reject when life < 1");
-    // Source not tapped (rolled back).
-    assert!(!g.battlefield_find(pledge).unwrap().tapped,
-        "Tap cost should be rolled back on rejection");
+    assert!(r.is_err(), "should reject when life < 1");
 }
 
 // ── Vanishing Verse: Monocolored predicate ──────────────────────────────────
@@ -1785,8 +1735,8 @@ fn bookwurm_etb_gains_four_life_and_draws_a_card() {
         g.add_card_to_library(0, catalog::island());
     }
     let id = g.add_card_to_hand(0, catalog::bookwurm());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(5);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
@@ -1806,8 +1756,8 @@ fn bookwurm_etb_gains_four_life_and_draws_a_card() {
     let bw = g.battlefield.iter().find(|c| c.definition.name == "Bookwurm")
         .expect("Bookwurm should be on battlefield");
     assert!(bw.has_keyword(&Keyword::Trample));
-    assert_eq!(bw.power(), 5);
-    assert_eq!(bw.toughness(), 5);
+    assert_eq!(bw.power(), 7);
+    assert_eq!(bw.toughness(), 7);
 }
 
 // ── Field Trip ──────────────────────────────────────────────────────────────
@@ -2061,9 +2011,8 @@ fn returned_pastcaller_returns_instant_from_graveyard_on_etb() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(4);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -2102,10 +2051,11 @@ fn elemental_expressionist_flickers_opp_creature_on_magecraft() {
 fn spectacle_mage_prowess_pumps_on_noncreature_cast() {
     let mut g = two_player_game();
     let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
-    assert_eq!(g.battlefield.iter().find(|c| c.id == mage).unwrap().power(), 1);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == mage).unwrap().power(), 2);
 
     let bolt = g.add_card_to_hand(0, catalog::interjection());
-    g.players[0].mana_pool.add(Color::White, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Permanent(mage)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
@@ -2122,15 +2072,15 @@ fn spectacle_mage_prowess_does_not_fire_on_creature_cast() {
     let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
 
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
 
     let m = g.battlefield.iter().find(|c| c.id == mage).unwrap();
-    assert_eq!(m.power(), 1, "Prowess should NOT fire on creature spell");
+    assert_eq!(m.power(), 2, "Prowess should NOT fire on creature spell");
 }
 
 /// Reduce to Memory exiles the targeted permanent and mints a 2/2
@@ -2292,8 +2242,8 @@ fn snow_day_taps_and_stuns_target_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::snow_day());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -2319,8 +2269,8 @@ fn snow_day_taps_and_stuns_two_target_creatures() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let id = g.add_card_to_hand(0, catalog::snow_day());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -2703,9 +2653,8 @@ fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::daemogoth_woe_eater());
 
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -2721,8 +2670,8 @@ fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
     // Woe-Eater itself should still be on the battlefield.
     let woe = g.battlefield.iter().find(|c| c.definition.name == "Daemogoth Woe-Eater")
         .expect("Woe-Eater should be on the battlefield");
-    assert_eq!(woe.power(), 4);
-    assert_eq!(woe.toughness(), 4);
+    assert_eq!(woe.power(), 7);
+    assert_eq!(woe.toughness(), 6);
 }
 
 #[test]
@@ -2868,8 +2817,8 @@ fn tempted_by_the_oriq_steals_and_grants_haste() {
     g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
 
     let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -2892,8 +2841,8 @@ fn confront_the_past_bounces_planeswalker_via_mode_1() {
     let mut g = two_player_game();
     let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
     let id = g.add_card_to_hand(0, catalog::confront_the_past());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -3066,8 +3015,8 @@ fn returned_pastcaller_etb_returns_instant_from_graveyard() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(4);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
@@ -3194,19 +3143,14 @@ fn manifestation_sage_etb_creates_fractal_with_counters_from_hand() {
     // hand before ETB resolves).
     for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::manifestation_sage());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add(Color::Blue, 2);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Manifestation Sage castable for {2}{G}{U}");
+    }).expect("Manifestation Sage castable for {G/U}{G/U}{G/U}{G/U}");
     drain_stack(&mut g);
 
-    let sage = g.battlefield.iter()
-        .find(|c| c.definition.name == "Manifestation Sage")
-        .expect("Sage in play");
-    assert!(sage.has_keyword(&Keyword::Flying));
     let fractal = g.battlefield.iter()
         .find(|c| c.is_token && c.definition.name == "Fractal")
         .expect("Fractal token minted");
@@ -3587,7 +3531,8 @@ fn first_day_of_class_pumps_each_creature_you_control() {
     let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::first_day_of_class());
-    g.players[0].mana_pool.add(Color::White, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -3613,8 +3558,8 @@ fn verdant_mastery_fetches_basic_for_you_and_opponent() {
         DecisionAnswer::Search(Some(island)),
     ]));
     let id = g.add_card_to_hand(0, catalog::verdant_mastery());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,

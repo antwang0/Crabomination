@@ -1958,7 +1958,7 @@ pub fn arclight_phoenix() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
         name: "Arclight Phoenix",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(3), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phoenix],

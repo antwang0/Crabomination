@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -621,14 +621,14 @@ pub fn silverquill_sting() -> CardDefinition {
 
 // ── Blade Historian ────────────────────────────────────────────────────────
 
-/// Blade Historian — {2}{R}{W}, 2/3 Human Cleric (STX Lorehold rare).
+/// Blade Historian — {R/W}{R/W}{R/W}{R/W}, 2/3 Human Cleric (STX Lorehold rare).
 /// "Attacking creatures you control have double strike." Wired via the
 /// `GrantKeywordToAttackers` static (resolved against the live attacking
 /// set at `compute_battlefield` time).
 pub fn blade_historian() -> CardDefinition {
     CardDefinition {
         name: "Blade Historian",
-        cost: cost(&[generic(2), r(), w()]),
+        cost: cost(&[hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White), hybrid(Color::Red, Color::White)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
