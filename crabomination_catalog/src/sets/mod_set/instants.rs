@@ -1732,9 +1732,10 @@ pub fn catalog_draw() -> CardDefinition {
 
 /// Teferi's Protection — {2}{W} Instant. "Until your next turn: your life total
 /// can't change; you have protection from everything; phase out all permanents
-/// you control." Phasing and the life-lock aren't modeled; approximated as a
-/// damage-immune turn (prevent all damage to you) plus your permanents gaining
-/// indestructible until end of turn.
+/// you control." The phase-out is now faithful (`Effect::PhaseOut` — your
+/// permanents leave until your next untap step); "you have protection /
+/// life can't change" is approximated as preventing all damage to you this turn
+/// (the non-damage life-lock is the only remaining simplification).
 pub fn teferis_protection() -> CardDefinition {
     CardDefinition {
         name: "Teferi's Protection",
@@ -1743,10 +1744,8 @@ pub fn teferis_protection() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::PreventAllCombatDamageThisTurn,
             Effect::PreventAllDamageThisTurn { target: Selector::You },
-            Effect::GrantKeyword {
+            Effect::PhaseOut {
                 what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
             },
         ]),
         ..Default::default()

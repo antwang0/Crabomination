@@ -35402,8 +35402,7 @@ fn austere_command_mode_destroys_big_creatures() {
 }
 
 #[test]
-fn teferis_protection_prevents_damage_and_grants_indestructible() {
-    use crate::card::Keyword;
+fn teferis_protection_phases_out_your_permanents_and_prevents_damage() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let tp = g.add_card_to_hand(0, catalog::teferis_protection());
@@ -35413,11 +35412,15 @@ fn teferis_protection_prevents_damage_and_grants_indestructible() {
         card_id: tp, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("cast Teferi's Protection");
     drain_stack(&mut g);
-    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible),
-        "your permanents gain indestructible");
+    assert!(g.battlefield_find(bear).is_none(), "your permanents phase out (gone from battlefield)");
+    assert!(g.phased_out.iter().any(|c| c.id == bear), "tracked in phased_out");
     let life = g.players[0].life;
     opponent_casts_bolt(&mut g);
     assert_eq!(g.players[0].life, life, "damage to you is prevented");
+    // Phases back in at your next untap step.
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(bear).is_some(), "phases back in on your untap");
 }
 
 #[test]
