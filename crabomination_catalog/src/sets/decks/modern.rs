@@ -10099,6 +10099,7 @@ pub fn searing_blood() -> CardDefinition {
                     to: Selector::Target(0),
                     amount: Value::Const(3),
                 }),
+                slot: 0,
             },
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),

@@ -234,24 +234,35 @@ pub fn reject() -> CardDefinition {
 
 /// Devouring Tendrils — {1}{G} Sorcery. Target creature you control deals
 /// damage equal to its power to target creature or planeswalker you don't
-/// control. (The "gain 2 when it dies this turn" rider is dropped.)
+/// control. When that permanent dies this turn, you gain 2 life.
 pub fn devouring_tendrils() -> CardDefinition {
     CardDefinition {
         name: "Devouring Tendrils",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: Selector::TargetFiltered {
+        effect: Effect::Seq(vec![
+            // Register the death watch before dealing damage so the kill's
+            // death event is caught (mirrors Searing Blood's ordering).
+            Effect::WhenTargetDiesThisTurn {
+                body: Box::new(Effect::GainLife {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(2),
+                }),
                 slot: 1,
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker)
-                    .and(SelectionRequirement::ControlledByOpponent),
             },
-            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            })),
-        },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                })),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -445,9 +456,8 @@ pub fn accomplished_alchemist() -> CardDefinition {
 }
 
 /// Oriq Loremage — {2}{B}{B} 3/3 Human Warlock. `{T}: Search your library
-/// for a card, put it into your graveyard, then shuffle.` (The "if it's an
-/// instant or sorcery, put a +1/+1 counter on this" rider is dropped — the
-/// search result type isn't surfaced back to the activation.)
+/// for a card, put it into your graveyard, then shuffle. If it's an instant
+/// or sorcery card, put a +1/+1 counter on this creature.`
 pub fn oriq_loremage() -> CardDefinition {
     CardDefinition {
         name: "Oriq Loremage",
@@ -461,11 +471,29 @@ pub fn oriq_loremage() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Any,
-                to: ZoneDest::Graveyard,
-            },
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Graveyard,
+                },
+                Effect::If {
+                    cond: Predicate::All(vec![
+                        Predicate::SelectorExists(Selector::LastMoved),
+                        Predicate::EntityMatches {
+                            what: Selector::LastMoved,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        },
+                    ]),
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()

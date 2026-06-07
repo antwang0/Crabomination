@@ -18,10 +18,6 @@ For full per-card history see
 A handful of 🟡 partials remain (riders dropped, core wired):
 - 🟡 **Reject** — counters unless pay {3}; the exile-instead-of-graveyard
   rider on a successful counter is dropped (no `CounterUnlessPaid` exile flag).
-- 🟡 **Oriq Loremage** — `{T}: search → graveyard`; the "if IS, +1/+1 counter"
-  rider is dropped (search result type isn't surfaced back).
-- 🟡 **Devouring Tendrils** — one-sided power-damage; the delayed "gain 2 when
-  it dies this turn" rider is dropped (`WhenTargetDiesThisTurn` watches slot 0).
 - 🟡 **Retriever Phoenix** — ETB Learn; the graveyard "learn → return this
   instead" recursion replacement is dropped.
 - 🟡 **Elemental Masterpiece** — two 4/4s; the discard-from-hand-for-Treasure

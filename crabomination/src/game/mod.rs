@@ -5047,6 +5047,9 @@ impl GameState {
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == *card_id) {
                     let card = self.players[player].library.remove(pos);
                     self.place_card_in_dest(card, player, &to, &mut events);
+                    // Surface the found card so a downstream `Selector::LastMoved`
+                    // can inspect its type (Oriq Loremage's "if instant/sorcery").
+                    self.last_moved_cards.push(*card_id);
                 }
                 Ok(events)
             }

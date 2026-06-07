@@ -2287,12 +2287,18 @@ pub enum Effect {
     },
 
     /// "When [target creature] dies this turn, [body]." Registers an
-    /// event-keyed delayed trigger watching `ctx.targets[0]`'s death. The
+    /// event-keyed delayed trigger watching `ctx.targets[slot]`'s death. The
     /// targeted creature's controller is captured as `Target::Player` so the
     /// body can reference it via `Selector::Target(0)` even after the
     /// creature has left the battlefield. Expires at cleanup. Used by
-    /// Searing Blood ("deals 3 damage to its controller").
-    WhenTargetDiesThisTurn { body: Box<Effect> },
+    /// Searing Blood ("deals 3 damage to its controller", slot 0) and
+    /// Devouring Tendrils ("gain 2 life", the damaged permanent in slot 1).
+    WhenTargetDiesThisTurn {
+        body: Box<Effect>,
+        /// Which target slot to watch (default 0 via `#[serde(default)]`).
+        #[serde(default)]
+        slot: usize,
+    },
 
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller

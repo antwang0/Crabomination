@@ -195,8 +195,11 @@ fn devouring_tendrils_deals_power_to_an_opponents_creature() {
         card_id: id, target: Some(Target::Permanent(mine)),
         additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
     }).expect("castable");
+    let life_before = g.players[0].life;
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none(), "5 power kills the 2/2");
+    // The damaged permanent died this turn → you gain 2 life.
+    assert_eq!(g.players[0].life, life_before + 2, "gain 2 when the permanent dies");
 }
 
 #[test]
@@ -481,6 +484,27 @@ fn oriq_loremage_mills_a_searched_card_to_graveyard() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == target_card),
         "searched card placed in graveyard");
+    // The searched card was an instant → +1/+1 counter on Oriq Loremage.
+    let oriq = g.battlefield_find(id).unwrap();
+    assert_eq!((oriq.power(), oriq.toughness()), (4, 4), "instant search adds a +1/+1 counter");
+}
+
+#[test]
+fn oriq_loremage_no_counter_when_searching_a_noninstant() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::oriq_loremage());
+    g.clear_sickness(id);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let target_card = g.players[0].library[0].id;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Search(Some(target_card)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("{T}: search to graveyard");
+    drain_stack(&mut g);
+    let oriq = g.battlefield_find(id).unwrap();
+    assert_eq!((oriq.power(), oriq.toughness()), (3, 3), "creature search adds no counter");
 }
 
 #[test]

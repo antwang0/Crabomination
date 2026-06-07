@@ -4848,12 +4848,12 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WhenTargetDiesThisTurn { body } => {
+            Effect::WhenTargetDiesThisTurn { body, slot } => {
                 // Watch the targeted creature's death; capture its controller
                 // as the body's Target(0) so it survives the creature leaving
                 // play. No-op if there's no permanent target (the creature
                 // already left, or none was chosen).
-                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.first().cloned()
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned()
                     && let Some(controller) = self.battlefield_find(cid).map(|c| c.controller)
                 {
                     let source = ctx.source.unwrap_or(crate::card::CardId(0));
