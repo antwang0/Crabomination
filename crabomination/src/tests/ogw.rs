@@ -2557,3 +2557,33 @@ fn dranas_chosen_cohort_makes_zombie() {
     let zombies = g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count();
     assert_eq!(zombies, 1, "minted a 2/2 Zombie");
 }
+
+/// Devour in Flames bounces a land as an additional cost and deals 5.
+#[test]
+fn devour_in_flames_returns_land_and_deals_five() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::devour_in_flames());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast_at(&mut g, id, Target::Permanent(target));
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "land bounced to hand");
+    assert!(!g.battlefield.iter().any(|c| c.id == target), "5 damage kills the 4/4");
+}
+
+/// Devour in Flames is uncastable with no land to return.
+#[test]
+fn devour_in_flames_requires_a_land() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::devour_in_flames());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "no land to return → cast rejected");
+}

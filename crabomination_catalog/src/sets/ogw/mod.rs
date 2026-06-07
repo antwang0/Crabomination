@@ -164,5 +164,6 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         wretched_gryff,
         mundas_vanguard,
         dranas_chosen,
+        devour_in_flames,
     ]
 }

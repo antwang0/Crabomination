@@ -279,7 +279,7 @@ mod tests {
             "Reckless Bushwhacker", "Tyrant of Valakut", "Wall of Resurgence",
             "Cyclone Sire", "Boulder Salvo", "Kor Bladewhirl", "Tajuru Warcaller",
             "Wretched Gryff", "Linvala, the Preserver", "Inverter of Truth",
-            "Munda's Vanguard", "Drana's Chosen",
+            "Munda's Vanguard", "Drana's Chosen", "Devour in Flames",
         ] {
             let def = lookup_by_name(name).unwrap_or_else(|| panic!("{name} should resolve"));
             assert_eq!(def.name, name);

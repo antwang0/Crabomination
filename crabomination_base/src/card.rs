@@ -1208,6 +1208,15 @@ pub enum AdditionalCastCost {
     },
     /// "As an additional cost, discard N card(s)."
     Discard { count: u32 },
+    /// "As an additional cost to cast this spell, return N permanent(s) you
+    /// control matching `filter` to their owner's hand." Devour in Flames
+    /// ("return a land you control"). Auto-picker bounces the lowest-impact
+    /// matches (tapped first, then lowest mana value).
+    ReturnToHand {
+        filter: SelectionRequirement,
+        #[serde(default = "one_u32")]
+        count: u32,
+    },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.

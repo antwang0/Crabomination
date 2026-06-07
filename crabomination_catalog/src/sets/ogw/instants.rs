@@ -552,3 +552,27 @@ pub fn boulder_salvo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Devour in Flames — {2}{R} Sorcery. Additional cost: return a land you
+/// control to its owner's hand. Deals 5 damage to target creature or
+/// planeswalker.
+pub fn devour_in_flames() -> CardDefinition {
+    use crate::card::AdditionalCastCost;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Devour in Flames",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::ReturnToHand {
+            filter: SelectionRequirement::Land,
+            count: 1,
+        }],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(5),
+        },
+        ..Default::default()
+    }
+}

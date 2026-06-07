@@ -8,6 +8,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ✅ **`AdditionalCastCost::ReturnToHand { filter, count }`** — mandatory
+  "return N permanents you control to hand" additional cast cost (auto-picks
+  the lowest-impact matches). Devour in Flames ("return a land you control").
 - ✅ **Emerge (CR 702.119).** `AlternativeCost.emerge` + `shortcut::emerge` —
   sacrifice a creature, reduce the emerge cost generically by its MV. Wretched
   Gryff ✅. Remaining emerge cards (Elder Deep-Fiend's "tap up to four",
