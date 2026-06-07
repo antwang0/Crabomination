@@ -2703,6 +2703,24 @@ impl GameState {
         }
     }
 
+    /// CR 508.1 attack tax — the generic mana an attacker's controller must
+    /// pay *per creature* attacking `defender` (Propaganda / Ghostly Prison).
+    /// Sums `StaticEffect::AttackTaxToController { amount }` across every
+    /// untapped permanent `defender` controls, so stacked taxes are additive.
+    /// Returns 0 when `defender` controls no such permanent.
+    pub fn attack_tax_for_defender(&self, defender: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == defender && !c.tapped)
+            .flat_map(|c| c.definition.static_abilities.iter())
+            .filter_map(|sa| match &sa.effect {
+                StaticEffect::AttackTaxToController { amount } => Some(*amount),
+                _ => None,
+            })
+            .sum()
+    }
+
     /// True if `blocker_id` can legally block at least one current attacker.
     pub fn can_block_any_attacker(&self, blocker_id: CardId) -> bool {
         let Some(blocker) = self.battlefield.iter().find(|c| c.id == blocker_id) else {
@@ -6046,7 +6064,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // ExileCardsBoundForGraveyard (Rest in Peace / Leyline of the
             // Void) — consulted at graveyard-placement time via
             // `graveyard_exiled_for`; no layer effect.
-            | StaticEffect::ExileCardsBoundForGraveyard { .. } => vec![],
+            | StaticEffect::ExileCardsBoundForGraveyard { .. }
+            // AttackTaxToController (Propaganda / Ghostly Prison) — consulted
+            // by `declare_attackers` via `attack_tax_for_defender`; no layer
+            // effect.
+            | StaticEffect::AttackTaxToController { .. } => vec![],
         })
         .collect()
 }

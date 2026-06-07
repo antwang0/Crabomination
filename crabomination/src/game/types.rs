@@ -1076,6 +1076,8 @@ pub enum GameError {
     CannotBlock(CardId),
     #[error("Creature {0:?} cannot attack (Defender / can't-attack restriction)")]
     CannotAttack(CardId),
+    #[error("Can't pay the {amount} attack tax (Propaganda / Ghostly Prison)")]
+    CannotPayAttackTax { amount: u32 },
     #[error("Attacker {0:?} has Menace and must be blocked by two or more creatures")]
     MenaceRequiresTwoBlockers(CardId),
     #[error("Attacker {0:?} can't be blocked by more than one creature")]

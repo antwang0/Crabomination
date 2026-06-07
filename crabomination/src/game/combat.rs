@@ -116,6 +116,24 @@ impl GameState {
             }
         }
 
+        // CR 508.1 attack tax (Propaganda / Ghostly Prison) — sum the
+        // per-creature tax for each attacker's defending player and pay it up
+        // front from the active player's mana (auto-tapping lands). Computed
+        // and paid *before* any attacker is tapped so a failed payment leaves
+        // the declaration untouched (try_pay_with_auto_tap snapshots/rolls
+        // back). Rejecting here makes `would_accept` report the over-budget
+        // declaration as illegal for free.
+        let total_tax: u32 = attacks
+            .iter()
+            .filter_map(|atk| self.defender_for(atk.target))
+            .map(|d| self.attack_tax_for_defender(d))
+            .sum();
+        if total_tax > 0 {
+            let cost = crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(total_tax)]);
+            self.try_pay_with_auto_tap(p, &cost)
+                .map_err(|_| GameError::CannotPayAttackTax { amount: total_tax })?;
+        }
+
         for atk in attacks {
             let id = atk.attacker;
             // "Can't attack unless defending player controls a [filter]"

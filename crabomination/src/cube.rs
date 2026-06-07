@@ -341,6 +341,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         rishadan_port,
         monument_to_endurance,
         exotic_orchard,
+        // ── Commander mana lands (universal fixing) ──
+        command_tower,
+        reflecting_pool,
+        gaeas_cradle,
         golos_tireless_pilgrim,
         ramos_dragon_engine,
         maelstrom_archangel,
@@ -425,6 +429,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // pillowfort tax enchantment (attack tax)
+        ghostly_prison,
         // landcycling (modern_decks)
         daru_lancer,
         // classic batch (modern_decks)
@@ -844,6 +850,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // pillowfort tax enchantment (attack tax)
+        propaganda,
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
         snapping_drake,

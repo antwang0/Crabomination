@@ -16,6 +16,14 @@ use crate::decision::Decision;
 use crate::game::{GameAction, GameEvent, Target, TurnStep};
 use crate::mana::{Color, ManaCost, ManaPool};
 
+/// Sentinel `your_seat` value the server assigns to a read-only spectator
+/// (one who is watching a match without occupying a seat). Real seats are
+/// `0..players.len()`, so this never collides with a player; the client
+/// keys "am I spectating?" off `OurSeat == SPECTATOR_SEAT`, and the
+/// spectator projection ([`crate::server::view::project_spectator`]) hides
+/// every player's hand since no owner seat can equal it.
+pub const SPECTATOR_SEAT: usize = usize::MAX;
+
 // ── Client → server ──────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,6 +52,13 @@ pub enum ClientMsg {
     StartLobby,
     /// Lobby: leave the lobby you're currently in and return to browsing.
     LeaveLobby,
+    /// Spectate: request the list of in-progress matches that can be watched.
+    /// The server replies with [`ServerMsg::SpectatableList`].
+    ListSpectatable,
+    /// Spectate: attach to the running match with this id as a read-only
+    /// spectator. The server routes this connection into the match (replaying
+    /// a spectator-safe view) if the id is valid and the match still alive.
+    SpectateMatch { match_id: u64 },
     /// Reconnect: a fresh connection re-claims a seat in a match it dropped
     /// out of, using the resume token the server issued at match start. The
     /// server routes this connection back into that match (replaying the
@@ -110,6 +125,22 @@ pub struct LobbyInfo {
     pub capacity: usize,
 }
 
+/// A running match as advertised to spectators: enough to render a "watch a
+/// match" row. The authoritative match (its game state + the channel that
+/// injects spectators) lives server-side in the lobby driver's registry.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpectatableInfo {
+    /// Stable id the client passes back in [`ClientMsg::SpectateMatch`].
+    pub match_id: u64,
+    pub format: LobbyFormat,
+    /// One label per seat, in seat order: a human's display name or "Bot".
+    #[serde(default)]
+    pub seat_labels: Vec<String>,
+    /// Current turn number, for a "turn N" hint in the listing.
+    #[serde(default)]
+    pub turn: u32,
+}
+
 /// Direct-mutation cheats issued by the debug console. Each variant
 /// targets the sending seat. Unlike `GameAction`, these do not flow
 /// through `perform_action` — the server applies them as raw edits and
@@ -170,6 +201,10 @@ pub enum ServerMsg {
     LobbyUpdated { lobby: LobbyInfo },
     /// Lobby: an operation failed (lobby full, gone, or an illegal request).
     LobbyError { message: String },
+    /// Spectate: the current set of in-progress matches available to watch,
+    /// in response to `ListSpectatable` (or pushed when the set changes while
+    /// browsing).
+    SpectatableList { matches: Vec<SpectatableInfo> },
     /// Reconnect: issued to each human seat as a lobby match starts. The
     /// client stores it and, if its connection drops mid-match, opens a fresh
     /// connection and sends `ClientMsg::Resume { token }` to re-claim the seat.

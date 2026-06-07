@@ -293,6 +293,66 @@ pub fn exotic_orchard() -> CardDefinition {
     }
 }
 
+// ── Commander mana lands ─────────────────────────────────────────────────────
+
+/// Command Tower — Land. "{T}: Add one mana of any color in your commander's
+/// color identity." Approximated as unrestricted any-one-color (no commander
+/// identity gate), matching the Exotic Orchard / Arcane Signet convention.
+pub fn command_tower() -> CardDefinition {
+    use super::super::tap_add_any_color;
+    CardDefinition {
+        name: "Command Tower",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add_any_color()],
+        ..Default::default()
+    }
+}
+
+/// Reflecting Pool — Land. "{T}: Add one mana of any color a land you control
+/// could produce." Wired faithfully via `ManaPayload::AnyColorYouCouldProduce`
+/// (the controller-side mirror used by Star Compass): the legal-color set is
+/// the union of basic-land types you control, falling back to colorless if you
+/// control no basic-typed land.
+pub fn reflecting_pool() -> CardDefinition {
+    CardDefinition {
+        name: "Reflecting Pool",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyColorYouCouldProduce,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gaea's Cradle — Land. "{T}: Add {G} for each creature you control."
+/// The variable amount uses `Value::CreatureCountControlledBy(You)`.
+pub fn gaeas_cradle() -> CardDefinition {
+    CardDefinition {
+        name: "Gaea's Cradle",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(
+                    Color::Green,
+                    Value::CreatureCountControlledBy(PlayerRef::You),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Karn's Bastion — Land. "{T}: Add {C}. {4}, {T}: Proliferate."
 pub fn karns_bastion() -> CardDefinition {
     use super::super::tap_add_colorless;

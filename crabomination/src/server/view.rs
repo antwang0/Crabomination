@@ -18,11 +18,34 @@ use crate::player::Player;
 
 /// Project the authoritative `state` into the view visible to `seat`.
 pub fn project(state: &GameState, seat: usize) -> ClientView {
+    project_for(state, Some(seat))
+}
+
+/// Project the authoritative `state` for a read-only spectator: a viewer who
+/// occupies no seat. Every player's hand and library is hidden, no
+/// pending-decision contents are revealed, and no cast/attack/block
+/// affordances are computed (a spectator can't act). `your_seat` is set to
+/// [`crate::net::SPECTATOR_SEAT`] so the client renders read-only.
+pub fn project_spectator(state: &GameState) -> ClientView {
+    project_for(state, None)
+}
+
+/// Shared projection core. `viewer` is `Some(seat)` for a seated player or
+/// `None` for a spectator (no seat, sees only public information).
+fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
     let computed = state.compute_battlefield();
-    let affordances = state.compute_hand_affordances(seat);
+    // A spectator can't act, so skip the affordance dry-runs entirely (they
+    // index `state.players[seat]` and would panic on the sentinel anyway).
+    let affordances = match viewer {
+        Some(seat) => state.compute_hand_affordances(seat),
+        None => crate::game::HandAffordances::default(),
+    };
+    // Sentinel viewer seat for hand-visibility checks: no owner seat equals
+    // it, so `project_hand_card` hides every hand for a spectator.
+    let viewer_seat = viewer.unwrap_or(crate::net::SPECTATOR_SEAT);
 
     ClientView {
-        your_seat: seat,
+        your_seat: viewer_seat,
         active_player: state.active_player_idx,
         priority: state.player_with_priority(),
         step: state.step,
@@ -35,7 +58,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(p, i, seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0)
+                project_player(p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0)
             })
             .collect(),
         battlefield: {
@@ -59,7 +82,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         stack: state
             .stack
             .iter()
-            .map(|item| project_stack(item, state, seat))
+            .map(|item| project_stack(item, state, viewer_seat))
             .collect(),
         pending_decision: state.pending_decision.as_ref().map(|pd| {
             let acting = pd.acting_player();
@@ -67,7 +90,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
                 acting_player: acting,
                 // Only the acting player sees decision specifics; spectators
                 // see that someone is deciding but not the private contents.
-                decision: (acting == seat).then(|| (&pd.decision).into()),
+                decision: (viewer == Some(acting)).then(|| (&pd.decision).into()),
             }
         }),
         exile: state.exile.iter().map(exile_entry).collect(),
@@ -93,8 +116,8 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         adventurable_hand: affordances.adventurable,
         splittable_right_hand: affordances.splittable_right,
         activatable_permanents: affordances.activatable_permanents,
-        legal_attackers: state.legal_attackers(seat),
-        legal_blockers: state.legal_blockers(seat),
+        legal_attackers: viewer.map(|s| state.legal_attackers(s)).unwrap_or_default(),
+        legal_blockers: viewer.map(|s| state.legal_blockers(s)).unwrap_or_default(),
         permanents_to_graveyard_this_turn: state.permanents_to_graveyard_this_turn,
     }
 }
@@ -1156,6 +1179,57 @@ mod tests {
         g.remove_from_battlefield_to_graveyard(b);
         let view = project(&g, 0);
         assert_eq!(view.permanents_to_graveyard_this_turn, 2);
+    }
+
+    #[test]
+    fn spectator_view_hides_every_hand_and_marks_sentinel_seat() {
+        let mut g = two_player_game();
+        g.add_card_to_hand(0, catalog::plains());
+        g.add_card_to_hand(1, catalog::plains());
+
+        // A seated player sees their own hand as Known.
+        let seat0 = project(&g, 0);
+        assert!(matches!(seat0.players[0].hand[0], HandCardView::Known(_)));
+        assert!(matches!(seat0.players[1].hand[0], HandCardView::Hidden { .. }));
+
+        // A spectator sees no seat and every hand hidden.
+        let spec = project_spectator(&g);
+        assert_eq!(spec.your_seat, crate::net::SPECTATOR_SEAT);
+        assert!(
+            spec.players.iter().all(|p| p
+                .hand
+                .iter()
+                .all(|c| matches!(c, HandCardView::Hidden { .. }))),
+            "spectator must not see any player's hand contents",
+        );
+        // Public board state is still visible (life totals project through).
+        assert_eq!(spec.players.len(), 2);
+        // No cast/attack/block affordances for a non-seated viewer.
+        assert!(spec.castable_hand.is_empty());
+        assert!(spec.legal_attackers.is_empty());
+        assert!(spec.legal_blockers.is_empty());
+    }
+
+    #[test]
+    fn spectator_sees_a_decision_is_pending_but_not_its_contents() {
+        use crate::decision::Decision;
+        let mut g = two_player_game();
+        g.add_card_to_hand(0, catalog::plains());
+        // Install a discard decision for seat 0.
+        let hand: Vec<(crate::card::CardId, String)> = g.players[0]
+            .hand
+            .iter()
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect();
+        g.pending_decision = Some(crate::game::types::PendingDecision {
+            decision: Decision::Discard { player: 0, count: 1, hand },
+            resume: crate::game::types::ResumeContext::CleanupDiscard { player: 0 },
+        });
+
+        let spec = project_spectator(&g);
+        let pd = spec.pending_decision.expect("spectator sees a decision is pending");
+        assert_eq!(pd.acting_player, 0);
+        assert!(pd.decision.is_none(), "spectator must not see decision contents");
     }
 
     #[test]

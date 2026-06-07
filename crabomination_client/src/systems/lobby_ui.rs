@@ -29,6 +29,7 @@ impl Plugin for LobbyUiPlugin {
                 Update,
                 (
                     rebuild_lobby_list,
+                    rebuild_spectate_list,
                     update_lobby_status,
                     update_format_label,
                     update_bot_controls_visibility,
@@ -54,6 +55,16 @@ struct LobbyListRow;
 /// Join button carrying the lobby id it joins.
 #[derive(Component)]
 struct LobbyRowJoinButton(u64);
+/// Container whose children are the per-running-match rows, rebuilt when the
+/// spectatable set changes.
+#[derive(Component)]
+struct SpectateListPanel;
+/// One rebuilt spectate-list row (tagged so the set can be cleared on refresh).
+#[derive(Component)]
+struct SpectateListRow;
+/// Spectate button carrying the match id it watches.
+#[derive(Component)]
+struct SpectateRowButton(u64);
 #[derive(Component)]
 struct LobbyCreateButton;
 #[derive(Component)]
@@ -98,6 +109,7 @@ pub fn connect_to_lobby_server(world: &mut World) {
         Ok((outbox, inbox, conn)) => {
             outbox.submit_msg(ClientMsg::JoinMatch { name: req.name.clone() });
             outbox.submit_msg(ClientMsg::ListLobbies);
+            outbox.submit_msg(ClientMsg::ListSpectatable);
             world.insert_resource(outbox);
             world.insert_resource(inbox);
             world.insert_resource(conn);
@@ -188,6 +200,25 @@ fn spawn_lobby_browser(
                     },
                     BackgroundColor(theme::HUD_BG),
                     LobbyListPanel,
+                ));
+
+                // Spectate section: in-progress matches you can watch.
+                p.spawn((
+                    Text::new("Watch a match"),
+                    tf(15.0),
+                    TextColor(theme::ACCENT_GOLD),
+                ));
+                p.spawn((
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        row_gap: Val::Px(6.0),
+                        min_height: Val::Px(40.0),
+                        padding: UiRect::all(Val::Px(6.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::HUD_BG),
+                    SpectateListPanel,
                 ));
 
                 // Create row: [Format: X] [Create Lobby].
@@ -377,6 +408,77 @@ fn rebuild_lobby_list(
     });
 }
 
+/// Rebuild the spectate-list rows whenever the advertised running matches
+/// change. Each row shows the match's format + seat labels and a Spectate
+/// button. Hidden while the user is waiting inside a lobby of their own.
+fn rebuild_spectate_list(
+    mut commands: Commands,
+    ui_fonts: Res<UiFonts>,
+    lobby: Res<LobbyState>,
+    panel_q: Query<Entity, With<SpectateListPanel>>,
+    rows_q: Query<Entity, With<SpectateListRow>>,
+) {
+    if !lobby.is_changed() {
+        return;
+    }
+    let Ok(panel) = panel_q.single() else { return };
+    for row in &rows_q {
+        commands.entity(row).despawn();
+    }
+    let tf = |size: f32| ui_fonts.tf(size);
+
+    commands.entity(panel).with_children(|panel| {
+        if lobby.spectatable.is_empty() {
+            panel.spawn((
+                Text::new("No matches in progress."),
+                tf(13.0),
+                TextColor(theme::TEXT_SECONDARY),
+                SpectateListRow,
+            ));
+            return;
+        }
+        for info in &lobby.spectatable {
+            panel
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        justify_content: JustifyContent::SpaceBetween,
+                        align_items: AlignItems::Center,
+                        column_gap: Val::Px(10.0),
+                        ..default()
+                    },
+                    SpectateListRow,
+                ))
+                .with_children(|row| {
+                    let players = if info.seat_labels.is_empty() {
+                        String::new()
+                    } else {
+                        format!("  {}", info.seat_labels.join(" vs "))
+                    };
+                    row.spawn((
+                        Text::new(format!("[{}]{}", info.format.label(), players)),
+                        tf(13.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                    ));
+                    row.spawn((
+                        Node {
+                            padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+                            border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_INFO_BG),
+                        HoverTint::new(theme::BUTTON_INFO_BG),
+                        Button,
+                        SpectateRowButton(info.match_id),
+                    ))
+                    .with_children(|b| {
+                        b.spawn((Text::new("Spectate"), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
+                    });
+                });
+        }
+    });
+}
+
 fn update_lobby_status(lobby: Res<LobbyState>, mut q: Query<&mut Text, With<LobbyStatusText>>) {
     if !lobby.is_changed() {
         return;
@@ -455,6 +557,7 @@ fn handle_lobby_buttons(
     remove_bot_q: Query<&Interaction, (Changed<Interaction>, With<LobbyRemoveBotButton>)>,
     start_q: Query<&Interaction, (Changed<Interaction>, With<LobbyStartButton>)>,
     join_q: Query<(&Interaction, &LobbyRowJoinButton), Changed<Interaction>>,
+    spectate_q: Query<(&Interaction, &SpectateRowButton), Changed<Interaction>>,
 ) {
     if fmt_q.iter().any(|i| *i == Interaction::Pressed) {
         create_format.0 = create_format.0.next();
@@ -486,12 +589,20 @@ fn handle_lobby_buttons(
         && let Some(o) = &outbox
     {
         o.submit_msg(ClientMsg::ListLobbies);
+        o.submit_msg(ClientMsg::ListSpectatable);
     }
     for (interaction, btn) in &join_q {
         if *interaction == Interaction::Pressed
             && let Some(o) = &outbox
         {
             o.submit_msg(ClientMsg::JoinLobby { lobby_id: btn.0 });
+        }
+    }
+    for (interaction, btn) in &spectate_q {
+        if *interaction == Interaction::Pressed
+            && let Some(o) = &outbox
+        {
+            o.submit_msg(ClientMsg::SpectateMatch { match_id: btn.0 });
         }
     }
     if back_q.iter().any(|i| *i == Interaction::Pressed) {

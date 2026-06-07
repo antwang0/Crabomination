@@ -1705,6 +1705,13 @@ pub fn sync_game_visuals(
     let Some(cv) = &view.0 else { return };
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
+    // A spectator's `viewer` is the sentinel `SPECTATOR_SEAT`, which indexes no
+    // real player — they have no hand or library of their own. Resolve the
+    // viewer's hand/library through these panic-safe accessors so the board
+    // still renders for spectators (empty viewer hand, zero-height deck).
+    let empty_hand: Vec<crabomination::net::HandCardView> = Vec::new();
+    let viewer_hand = cv.players.get(viewer).map(|p| &p.hand).unwrap_or(&empty_hand);
+    let viewer_lib_size = cv.players.get(viewer).map(|p| p.library.size).unwrap_or(0);
     let gy_sizes: Vec<usize> = cv.players.iter().map(|p| p.graveyard.len()).collect();
     let gy_size = |owner: usize| gy_sizes.get(owner).copied().unwrap_or(0);
     let deck_size = |owner: usize| {
@@ -1851,7 +1858,7 @@ pub fn sync_game_visuals(
             (k.kind == crabomination::net::StackItemKind::Spell).then_some(k.source)
         } else { None }
     }).collect();
-    let hand_ids: HashSet<CardId> = cv.players[viewer].hand.iter().map(|c| c.id()).collect();
+    let hand_ids: HashSet<CardId> = viewer_hand.iter().map(|c| c.id()).collect();
     let bf_ids_by_owner: std::collections::HashMap<usize, HashSet<CardId>> = (0..n_seats)
         .map(|seat| {
             (
@@ -1885,7 +1892,7 @@ pub fn sync_game_visuals(
     // Top-of-deck position for the viewer (used as the destination of a
     // mulligan put-back animation and the start of fetch/tutor animations).
     let viewer_deck_base = deck_position(viewer, viewer, n_seats);
-    let viewer_deck_top_y = (cv.players[viewer].library.size as f32) * DECK_CARD_Y_STEP + 0.5;
+    let viewer_deck_top_y = (viewer_lib_size as f32) * DECK_CARD_Y_STEP + 0.5;
     let viewer_deck_top = Vec3::new(viewer_deck_base.x, viewer_deck_top_y, viewer_deck_base.z);
     let viewer_deck_back_rot = back_face_rotation(viewer, viewer, n_seats);
 
@@ -1893,7 +1900,7 @@ pub fn sync_game_visuals(
     let hand_zoom = inflight.hand_zoom.0;
     for (entity, game_id, _deck_card, transform) in &deck_cards {
         if hand_ids.contains(&game_id.0) {
-            let slot = cv.players[viewer].hand.iter().position(|c| c.id() == game_id.0)
+            let slot = viewer_hand.iter().position(|c| c.id() == game_id.0)
                 .unwrap_or(hand_total.saturating_sub(1));
             let target = hand_card_transform(viewer, viewer, n_seats, slot, hand_total, hand_zoom);
             commands
@@ -1924,9 +1931,9 @@ pub fn sync_game_visuals(
             }))
             .collect();
         let deck_base = deck_position(viewer, viewer, n_seats);
-        let deck_y = cv.players[viewer].library.size as f32 * DECK_CARD_Y_STEP + 0.5;
+        let deck_y = viewer_lib_size as f32 * DECK_CARD_Y_STEP + 0.5;
         let deck_pos = Vec3::new(deck_base.x, deck_y, deck_base.z);
-        for (slot, card_view) in cv.players[viewer].hand.iter().enumerate() {
+        for (slot, card_view) in viewer_hand.iter().enumerate() {
             use crabomination::net::HandCardView;
             let HandCardView::Known(known) = card_view else { continue };
             let card_id = known.id;
@@ -2098,8 +2105,7 @@ pub fn sync_game_visuals(
     //   • been a token whose state-based action removed it — despawn outright
     //     (no graveyard pile entry; CR 704.5d);
     //   • died / been destroyed / sacrificed — fly to the graveyard pile.
-    let viewer_hand_ids: HashSet<CardId> = cv.players[viewer]
-        .hand
+    let viewer_hand_ids: HashSet<CardId> = viewer_hand
         .iter()
         .map(|c| c.id())
         .collect();
@@ -2118,8 +2124,7 @@ pub fn sync_game_visuals(
         }
         // Bounced to viewer's hand — animate to a hand slot and convert.
         if viewer_hand_ids.contains(&game_id.0) {
-            let slot = cv.players[viewer]
-                .hand
+            let slot = viewer_hand
                 .iter()
                 .position(|c| c.id() == game_id.0)
                 .unwrap_or(hand_total.saturating_sub(1));
@@ -2584,7 +2589,7 @@ pub fn sync_game_visuals(
     for (entity, game_id, _transform, stack_card, lift, _flipped_marker) in &hand_cards {
         if stack_card.is_some() { continue; }
         if !hand_ids.contains(&game_id.0) { continue; }
-        let Some(new_slot) = cv.players[viewer].hand.iter().position(|c| c.id() == game_id.0) else { continue };
+        let Some(new_slot) = viewer_hand.iter().position(|c| c.id() == game_id.0) else { continue };
         let target = hand_card_transform(viewer, viewer, n_seats, new_slot, hand_total, hand_zoom);
         let dist = (lift.base_translation - target.translation).length();
         if dist > 0.1 {
@@ -2901,6 +2906,11 @@ pub fn handle_game_input(
     let Some(cv) = &view.0 else { return };
     let Some(outbox) = outbox else { return };
     let your_seat = cv.your_seat;
+    // Spectators occupy no seat (`your_seat == SPECTATOR_SEAT`) — they have no
+    // gameplay shortcuts and indexing `players[your_seat]` below would panic.
+    if your_seat >= cv.players.len() {
+        return;
+    }
 
     // While the export-state prompt is open the dedicated prompt system
     // owns the keyboard — bail out so typing the bug-description doesn't

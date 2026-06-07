@@ -506,6 +506,12 @@ fn main() {
             crate::systems::counter_coins::sync_counter_coins
                 .run_if(in_state(AppState::InGame)),
         )
+        // Screen-space "<type> ×N" labels naming each counter and its count.
+        .add_systems(
+            Update,
+            crate::systems::counter_coins::sync_counter_labels
+                .run_if(in_state(AppState::InGame)),
+        )
         // Alt-key tooltip with counter detail + modified P/T.
         .add_systems(
             Update,

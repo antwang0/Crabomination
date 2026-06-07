@@ -10,7 +10,7 @@
 //! pass: cheap (≤ ~10 active permanents on a typical board) and avoids
 //! the complexity of in-place reconciliation.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use crabomination::card::{CardId, CounterType};
@@ -285,5 +285,190 @@ pub fn sync_counter_coins(
                 commands.entity(e).despawn();
             }
         }
+    }
+}
+
+// ── Counter type+count labels ─────────────────────────────────────────────────
+//
+// The coins convey a counter's *kind* by colour, but a bare disc doesn't say
+// what it is or how many there are (the stack is capped at 8 and never showed a
+// number). A small screen-space label per counter type — "+1/+1 ×3", coloured
+// to match the coin — makes each coin self-explanatory and the count exact.
+// Mirrors `pt_label::sync_pt_labels`' reproject-and-reconcile pattern.
+
+/// Below default-z UI so peek popups / tooltips / modals draw over it.
+const COUNTER_LABEL_Z: i32 = -1;
+
+/// Short, human-readable token naming a counter kind for the count label.
+fn counter_token(kind: CounterType) -> &'static str {
+    match kind {
+        CounterType::PlusOnePlusOne => "+1/+1",
+        CounterType::MinusOneMinusOne => "-1/-1",
+        CounterType::MinusZeroMinusOne => "-0/-1",
+        CounterType::MinusOneMinusZero => "-1/-0",
+        CounterType::Loyalty => "Loyalty",
+        CounterType::Charge => "Charge",
+        CounterType::Stun => "Stun",
+        CounterType::Time => "Time",
+        CounterType::Poison => "Poison",
+        CounterType::Energy => "Energy",
+        CounterType::Lore => "Lore",
+        CounterType::Fade => "Fade",
+        CounterType::Level => "Level",
+        CounterType::Experience => "XP",
+        CounterType::Shield => "Shield",
+        _ => "Counter",
+    }
+}
+
+/// Bright, legible text colour matching each counter's coin fill (the coin
+/// fills are deliberately dark for solidity; these are their readable twins).
+fn counter_label_color(kind: CounterType) -> Color {
+    match kind {
+        CounterType::PlusOnePlusOne => Color::srgb(0.45, 0.95, 0.50),
+        CounterType::MinusOneMinusOne
+        | CounterType::MinusZeroMinusOne
+        | CounterType::MinusOneMinusZero => Color::srgb(0.98, 0.48, 0.48),
+        CounterType::Loyalty => Color::srgb(0.96, 0.82, 0.32),
+        CounterType::Charge => Color::srgb(0.42, 0.85, 0.96),
+        CounterType::Stun => Color::srgb(0.82, 0.56, 0.96),
+        CounterType::Time => Color::srgb(0.96, 0.74, 0.42),
+        CounterType::Poison => Color::srgb(0.56, 0.86, 0.42),
+        CounterType::Energy => Color::srgb(0.46, 0.66, 0.98),
+        _ => Color::srgb(0.86, 0.86, 0.92),
+    }
+}
+
+/// Label text for a counter kind + count: "+1/+1 ×3", or just the token when
+/// there's a single counter (the "×1" is noise).
+fn counter_label_text(kind: CounterType, count: u32) -> String {
+    let token = counter_token(kind);
+    if count > 1 {
+        format!("{token} ×{count}")
+    } else {
+        token.to_string()
+    }
+}
+
+/// Project a card's coin-area world anchor to a viewport pixel, stacking each
+/// counter type's label on its own line (`row`).
+fn label_anchor(
+    camera: &Camera,
+    cam_xform: &GlobalTransform,
+    world: Vec3,
+    row: usize,
+) -> Option<(f32, f32)> {
+    camera
+        .world_to_viewport(cam_xform, world)
+        .ok()
+        .map(|v| (v.x - 26.0, v.y - 12.0 + row as f32 * 20.0))
+}
+
+/// Screen-space "<type> ×N" label tied to a battlefield card's counter of a
+/// given kind. One per (card, kind) so each type gets its own coloured line.
+#[derive(Component)]
+pub struct CounterLabel {
+    pub card_id: CardId,
+    pub kind: CounterType,
+}
+
+/// Reconcile counter labels with the engine view (see module note above).
+#[allow(clippy::type_complexity)]
+pub fn sync_counter_labels(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<crate::theme::UiFonts>,
+    cards: Query<(&GameCardId, &GlobalTransform), With<BattlefieldCard>>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<crate::MainCamera>>,
+    mut labels: Query<(Entity, &CounterLabel, &mut Node, &mut Text, &mut TextColor)>,
+) {
+    let Some(cv) = &view.0 else {
+        for (e, _, _, _, _) in &mut labels {
+            commands.entity(e).despawn();
+        }
+        return;
+    };
+    let Ok((camera, cam_xform)) = camera_q.single() else { return };
+
+    // card_id → world anchor floating just above the card centre (by the coins).
+    let anchor_local = Vec3::new(0.0, 0.0, COIN_BASE_Z + 0.1);
+    let mut card_anchor: HashMap<CardId, Vec3> = HashMap::new();
+    for (gid, gtf) in &cards {
+        card_anchor.insert(gid.0, gtf.transform_point(anchor_local));
+    }
+
+    // desired (card, kind) → (count, row). Row orders multiple counter types
+    // vertically in the same order as their coin columns (`sort_key`).
+    let mut desired: HashMap<(CardId, CounterType), (u32, usize)> = HashMap::new();
+    for p in &cv.battlefield {
+        if !card_anchor.contains_key(&p.id) {
+            continue;
+        }
+        let mut kinds: Vec<(CounterType, u32)> = p
+            .counters
+            .iter()
+            .filter(|(_, n)| *n > 0)
+            .map(|(k, n)| (*k, *n))
+            .collect();
+        kinds.sort_by_key(|(k, _)| sort_key(*k));
+        for (row, (k, n)) in kinds.into_iter().enumerate() {
+            desired.insert((p.id, k), (n, row));
+        }
+    }
+
+    // Update existing labels; despawn any no longer present.
+    let mut seen: HashSet<(CardId, CounterType)> = HashSet::new();
+    for (e, label, mut node, mut text, mut color) in &mut labels {
+        match desired.get(&(label.card_id, label.kind)) {
+            Some(&(count, row)) => {
+                seen.insert((label.card_id, label.kind));
+                if let Some(world) = card_anchor.get(&label.card_id).copied()
+                    && let Some((x, y)) = label_anchor(camera, cam_xform, world, row)
+                {
+                    node.display = Display::Flex;
+                    node.left = Val::Px(x);
+                    node.top = Val::Px(y);
+                } else {
+                    node.display = Display::None;
+                }
+                *text = Text::new(counter_label_text(label.kind, count));
+                *color = TextColor(counter_label_color(label.kind));
+            }
+            None => {
+                commands.entity(e).despawn();
+            }
+        }
+    }
+
+    // Spawn labels for newly-present (card, kind) pairs.
+    for ((id, kind), (count, row)) in desired {
+        if seen.contains(&(id, kind)) {
+            continue;
+        }
+        let (left, top) = card_anchor
+            .get(&id)
+            .copied()
+            .and_then(|world| label_anchor(camera, cam_xform, world, row))
+            .unwrap_or((-1000.0, -1000.0));
+        commands.spawn((
+            CounterLabel { card_id: id, kind },
+            Text::new(counter_label_text(kind, count)),
+            ui_fonts.tf(14.0),
+            TextColor(counter_label_color(kind)),
+            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.72)),
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(left),
+                top: Val::Px(top),
+                padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            Pickable::IGNORE,
+            GlobalZIndex(COUNTER_LABEL_Z),
+            crate::systems::game_ui::InGameRoot,
+        ));
     }
 }

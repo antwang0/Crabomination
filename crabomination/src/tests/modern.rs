@@ -33774,3 +33774,50 @@ fn aluren_rejects_expensive_creature() {
         card_id: big, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "MV 6 creature is outside Aluren's MV-3 cap");
 }
+
+// ── Commander mana lands ──────────────────────────────────────────────────────
+
+/// Command Tower taps for one mana of any color.
+#[test]
+fn command_tower_taps_for_any_color() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::command_tower());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+}
+
+/// Reflecting Pool taps for a color a land you control could produce — with a
+/// Forest in play, the only legal color is green.
+#[test]
+fn reflecting_pool_mirrors_your_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_battlefield(0, catalog::reflecting_pool());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1,
+        "Forest is the only basic-typed land, so the pool produces green");
+}
+
+/// Gaea's Cradle taps for {G} equal to the number of creatures you control.
+#[test]
+fn gaeas_cradle_scales_with_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::gaeas_cradle());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None })
+    .expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2,
+        "two creatures → two green mana");
+}

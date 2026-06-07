@@ -387,6 +387,16 @@ pub enum StaticEffect {
     /// otherwise it applies to every player's graveyard (Rest in Peace).
     /// Consulted at every graveyard-placement site via `graveyard_exiled_for`.
     ExileCardsBoundForGraveyard { opponents_only: bool },
+    /// CR 508.1 attack tax — "Creatures can't attack the controller of this
+    /// permanent unless their controller pays {amount} for each of those
+    /// creatures." Propaganda ({amount} = 2), Ghostly Prison, Windborn Muse,
+    /// Norn's Annex (life variant aside). Consulted in `declare_attackers`:
+    /// each attacker whose defending player controls one or more permanents
+    /// with this static incurs the summed `amount` per such permanent, paid
+    /// up front from the attacking player's mana (auto-tapping lands). If the
+    /// total can't be paid the whole declaration is rejected. Not a
+    /// characteristic, so no continuous-layer effect.
+    AttackTaxToController { amount: u32 },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

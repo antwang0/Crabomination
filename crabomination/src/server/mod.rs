@@ -74,7 +74,7 @@ pub mod view;
 pub use bot::{Bot, RandomBot};
 pub use lobby::{serve_lobbies, ConnId, LobbyManager};
 pub use tcp::{tcp_client, tcp_seat};
-pub use view::project;
+pub use view::{project, project_spectator};
 
 /// A safety limit on how many actions a bot (or chain of bots) can take
 /// between human inputs. The loop polls bots to a fixed point; if that fixed
@@ -115,6 +115,11 @@ enum Inbox {
     /// A (re)connecting client has taken over `seat` with a fresh channel.
     /// Only produced for reconnectable matches.
     Attach(usize, SeatChannel),
+    /// A new read-only spectator has attached to a live match with a fresh
+    /// channel. Only produced for spectatable matches (those given a
+    /// `spectate_rx`). The actor registers it like a start-time spectator:
+    /// opening handshake + spectator view, and its inbound traffic is dropped.
+    AddSpectator(SeatChannel),
 }
 
 /// Spawn the per-seat forwarder: pump the seat's inbound `ClientMsg`s onto the
@@ -276,10 +281,12 @@ pub fn run_match(state: GameState, occupants: Vec<SeatOccupant>) -> MatchOutcome
 }
 
 /// Variant of [`run_match`] that also broadcasts every event/view to a list
-/// of read-only spectator channels. Spectators see the seat-0 view (same as
-/// any other observer) and may submit `ClientMsg::SubmitAction`s, but the
-/// server silently drops those — they are not seated. Used by the
-/// "Spectate Bot Match" mode in the menu.
+/// of read-only spectator channels. Spectators see a spectator-safe view
+/// ([`view::project_spectator`], which hides every player's hand and library)
+/// and may submit `ClientMsg::SubmitAction`s, but the server silently drops
+/// those — they are not seated. Used by the "Spectate Bot Match" mode in the
+/// menu. For attaching spectators *after* a match has started, see
+/// [`run_match_reconnectable_spectatable`].
 pub fn run_match_spectated(
     state: GameState,
     occupants: Vec<SeatOccupant>,
@@ -320,7 +327,32 @@ pub fn run_match_reconnectable(
     snapshot_sink: Option<SnapshotSink>,
     reattach_rx: Option<mpsc::Receiver<(usize, SeatChannel)>>,
 ) -> MatchOutcome {
-    run_match_inner(state, occupants, spectators, snapshot_sink, reattach_rx, RECONNECT_GRACE)
+    run_match_inner(state, occupants, spectators, snapshot_sink, reattach_rx, None, RECONNECT_GRACE)
+}
+
+/// Variant of [`run_match_reconnectable`] that also accepts spectators *after*
+/// the match has started: each `SeatChannel` arriving on `spectate_rx` is
+/// registered as a read-only spectator (opening handshake + a spectator-safe
+/// view, then every subsequent broadcast). Used by the lobby driver so a
+/// connection can watch a running match. Passing `spectate_rx == None` is
+/// identical to [`run_match_reconnectable`].
+pub fn run_match_reconnectable_spectatable(
+    state: GameState,
+    occupants: Vec<SeatOccupant>,
+    spectators: Vec<SeatChannel>,
+    snapshot_sink: Option<SnapshotSink>,
+    reattach_rx: Option<mpsc::Receiver<(usize, SeatChannel)>>,
+    spectate_rx: Option<mpsc::Receiver<SeatChannel>>,
+) -> MatchOutcome {
+    run_match_inner(
+        state,
+        occupants,
+        spectators,
+        snapshot_sink,
+        reattach_rx,
+        spectate_rx,
+        RECONNECT_GRACE,
+    )
 }
 
 /// Core match actor. Separated from [`run_match_reconnectable`] only so the
@@ -332,6 +364,7 @@ fn run_match_inner(
     spectators: Vec<SeatChannel>,
     snapshot_sink: Option<SnapshotSink>,
     reattach_rx: Option<mpsc::Receiver<(usize, SeatChannel)>>,
+    spectate_rx: Option<mpsc::Receiver<SeatChannel>>,
     reconnect_grace: Duration,
 ) -> MatchOutcome {
     let n = occupants.len();
@@ -346,6 +379,7 @@ fn run_match_inner(
     }
 
     let reconnect_enabled = reattach_rx.is_some();
+    let spectate_enabled = spectate_rx.is_some();
     let (merged_tx, merged_rx) = mpsc::channel::<Inbox>();
     let mut seat_tx: Vec<Option<mpsc::Sender<ServerMsg>>> = Vec::with_capacity(n);
     let mut bots: Vec<Option<Box<dyn Bot>>> = Vec::with_capacity(n);
@@ -357,15 +391,18 @@ fn run_match_inner(
     let mut human_seats = 0usize;
 
     // Spectator channels: passive observers that get the same broadcast
-    // stream as a Human seat (seat 0's view) but whose incoming messages
-    // are discarded by the actor. They keep the match alive so a pure
-    // bot-vs-bot run streamed to a UI spectator doesn't return early.
+    // stream as a Human seat (a spectator-safe view that hides every hand)
+    // but whose incoming messages are discarded by the actor. For an all-bot
+    // match they keep it alive so a pure bot-vs-bot run streamed to a UI
+    // spectator doesn't return early; for a match with humans, the spectator
+    // count never keeps the match alive past its humans (see the disconnect
+    // handler).
     let mut spectator_tx: Vec<mpsc::Sender<ServerMsg>> = Vec::with_capacity(spectators.len());
-    let spectator_count = spectators.len();
+    let mut live_spectators = spectators.len();
     for spec in spectators {
-        let _ = spec.tx.send(ServerMsg::YourSeat(0));
+        let _ = spec.tx.send(ServerMsg::YourSeat(crate::net::SPECTATOR_SEAT));
         let _ = spec.tx.send(ServerMsg::MatchStarted);
-        let _ = spec.tx.send(ServerMsg::View(Box::new(view::project(&state, 0))));
+        let _ = spec.tx.send(ServerMsg::View(Box::new(view::project_spectator(&state))));
         // Drain the spectator's incoming stream into a sentinel forwarder
         // that uses seat = usize::MAX; the actor checks for this and
         // ignores any actions tagged with it. Without the drain, a UI
@@ -417,12 +454,29 @@ fn run_match_inner(
             }
         });
     }
+    // Spectate drain: forwards mid-match spectator `SeatChannel`s into the
+    // actor as `Inbox::AddSpectator`. Like the reattach drain, holding a
+    // `merged_tx` clone keeps the merged channel alive so a spectatable match
+    // (which always sets `spectate_rx`) doesn't return early when between
+    // actions. Only spawned for spectatable matches.
+    if let Some(spectate_rx) = spectate_rx {
+        let forward_tx = merged_tx.clone();
+        thread::spawn(move || {
+            while let Ok(ch) = spectate_rx.recv() {
+                if forward_tx.send(Inbox::AddSpectator(ch)).is_err() {
+                    break;
+                }
+            }
+        });
+    }
     // A spare sender used to spawn forwarders for reattaching seats. Kept
     // only when reconnection is enabled; doubles as a keep-alive for the
     // merged channel. Non-reconnectable matches drop every `merged_tx` here
     // so the channel disconnects (and the actor returns) once all forwarders
     // exit, exactly as before.
     let attach_forward_tx = reconnect_enabled.then(|| merged_tx.clone());
+    // Likewise for spawning inbound-drain forwarders for mid-match spectators.
+    let spectate_forward_tx = spectate_enabled.then(|| merged_tx.clone());
     drop(merged_tx);
 
     // Initial snapshot so clients can read the authoritative state
@@ -454,7 +508,7 @@ fn run_match_inner(
             return capture_outcome(&state);
         }
 
-        if human_seats == 0 && spectator_count == 0 {
+        if human_seats == 0 && live_spectators == 0 {
             return capture_outcome(&state);
         }
 
@@ -501,7 +555,14 @@ fn run_match_inner(
                 if seat < n && connected[seat] && epoch == seat_epoch[seat] {
                     connected[seat] = false;
                     connected_humans = connected_humans.saturating_sub(1);
-                    if connected_humans == 0 && spectator_count == 0 {
+                    // Humans-gone shutdown keys on *humans only* — a lurking
+                    // spectator must never keep an abandoned match alive. A
+                    // reconnectable match opens its grace window (a player may
+                    // reattach); a non-reconnectable one ends immediately. In
+                    // neither case does an attached spectator hold it open: a
+                    // human match with no humans left has nobody to drive its
+                    // turns, so there is nothing left for a spectator to watch.
+                    if connected_humans == 0 {
                         if reconnect_enabled {
                             disconnect_deadline = Some(Instant::now() + reconnect_grace);
                         } else {
@@ -528,6 +589,30 @@ fn run_match_inner(
                     // Someone's back — cancel any pending grace expiry.
                     disconnect_deadline = None;
                 }
+                continue;
+            }
+            Inbox::AddSpectator(ch) => {
+                // Register a mid-match spectator exactly like a start-time one:
+                // sentinel seat, opening handshake, and a hand-hiding view.
+                let _ = ch.tx.send(ServerMsg::YourSeat(crate::net::SPECTATOR_SEAT));
+                let _ = ch.tx.send(ServerMsg::MatchStarted);
+                let _ = ch.tx.send(ServerMsg::View(Box::new(view::project_spectator(&state))));
+                // Drain its inbound stream into the seat=usize::MAX sentinel so
+                // a spectator that submits doesn't block its own send queue;
+                // the actor ignores anything tagged that way.
+                if let Some(fwd) = spectate_forward_tx.as_ref() {
+                    let forward_tx = fwd.clone();
+                    let rx = ch.rx;
+                    thread::spawn(move || {
+                        while let Ok(msg) = rx.recv() {
+                            if forward_tx.send(Inbox::FromSeat(usize::MAX, msg)).is_err() {
+                                break;
+                            }
+                        }
+                    });
+                }
+                spectator_tx.push(ch.tx);
+                live_spectators += 1;
                 continue;
             }
         };
@@ -564,7 +649,9 @@ fn run_match_inner(
             | ClientMsg::RemoveBotFromLobby
             | ClientMsg::StartLobby
             | ClientMsg::Resume { .. }
-            | ClientMsg::LeaveLobby => {}
+            | ClientMsg::LeaveLobby
+            | ClientMsg::ListSpectatable
+            | ClientMsg::SpectateMatch { .. } => {}
         }
     }
 }
@@ -746,7 +833,7 @@ fn broadcast_update(
     for tx in spectator_tx {
         let _ = tx.send(ServerMsg::Update {
             events: wire_events.to_vec(),
-            view: Box::new(view::project(state, 0)),
+            view: Box::new(view::project_spectator(state)),
         });
     }
 }
@@ -796,7 +883,7 @@ fn handle_action(
                     }
                 }
                 for tx in spectator_tx {
-                    let _ = tx.send(ServerMsg::View(Box::new(view::project(state, 0))));
+                    let _ = tx.send(ServerMsg::View(Box::new(view::project_spectator(state))));
                 }
             }
             report_error(seat, &e.to_string(), seat_tx);
@@ -888,7 +975,7 @@ fn apply_debug(
         }
     }
     for tx in spectator_tx {
-        let _ = tx.send(ServerMsg::View(Box::new(view::project(state, 0))));
+        let _ = tx.send(ServerMsg::View(Box::new(view::project_spectator(state))));
     }
     true
 }
@@ -1355,6 +1442,7 @@ mod tests {
                 vec![],
                 None,
                 Some(reattach_rx),
+                None,
                 // Short grace: seat 0 stays connected through the body, so the
                 // window only matters at teardown (keeps the test fast).
                 Duration::from_millis(200),
@@ -1415,6 +1503,7 @@ mod tests {
                 vec![],
                 None,
                 Some(reattach_rx),
+                None,
                 Duration::from_millis(200),
             );
             let _ = done_tx.send(());
@@ -1450,6 +1539,7 @@ mod tests {
                 vec![],
                 None,
                 Some(reattach_rx),
+                None,
                 Duration::from_millis(400),
             );
             let _ = done_tx.send(());
@@ -1483,6 +1573,191 @@ mod tests {
         done_rx
             .recv_timeout(Duration::from_secs(2))
             .expect("match ends after the final grace window");
+        let _ = handle.join();
+    }
+
+    // ── Mid-match spectators (run_match_reconnectable_spectatable) ───────────
+
+    /// A spectator attaching to a live match via `spectate_rx` gets the
+    /// opening handshake (with the spectator sentinel seat), a hand-hiding
+    /// view, and every subsequent action's `Update` — also hand-hiding.
+    #[test]
+    fn mid_match_spectator_attaches_and_sees_hidden_hands() {
+        let mut state = two_player_game();
+        let card0 = state.add_card_to_hand(0, catalog::plains());
+        state.add_card_to_hand(1, catalog::plains());
+
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (spectate_tx, spectate_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            run_match_reconnectable_spectatable(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                None,
+                Some(spectate_rx),
+            )
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        // A fresh connection attaches as a spectator mid-match.
+        let (s_spec, c_spec) = seat_pair();
+        spectate_tx.send(s_spec).unwrap();
+
+        // Handshake: sentinel seat, MatchStarted, then a spectator view.
+        match c_spec.rx.recv().unwrap() {
+            ServerMsg::YourSeat(s) => assert_eq!(s, crate::net::SPECTATOR_SEAT),
+            other => panic!("expected YourSeat(SPECTATOR_SEAT), got {other:?}"),
+        }
+        assert!(matches!(c_spec.rx.recv().unwrap(), ServerMsg::MatchStarted));
+        match c_spec.rx.recv().unwrap() {
+            ServerMsg::View(v) => {
+                assert_eq!(v.your_seat, crate::net::SPECTATOR_SEAT);
+                assert!(
+                    v.players.iter().all(|p| p
+                        .hand
+                        .iter()
+                        .all(|c| matches!(c, crate::net::HandCardView::Hidden { .. }))),
+                    "spectator's initial view must hide every hand",
+                );
+            }
+            other => panic!("expected spectator View, got {other:?}"),
+        }
+
+        // Seat 0 plays a land — the spectator receives the Update, hands hidden.
+        c0.tx
+            .send(ClientMsg::SubmitAction(GameAction::PlayLand(card0)))
+            .unwrap();
+        let msgs = drain_within(&c_spec.rx, 4, Duration::from_secs(2));
+        let update = msgs
+            .iter()
+            .find_map(|m| match m {
+                ServerMsg::Update { events, view } => Some((events, view)),
+                _ => None,
+            })
+            .expect("spectator should receive the action's Update");
+        let (events, view) = update;
+        assert!(
+            events.iter().any(|e| matches!(e, GameEventWire::LandPlayed { .. })),
+            "spectator Update must carry the land-played event",
+        );
+        assert!(
+            view.players.iter().all(|p| p
+                .hand
+                .iter()
+                .all(|c| matches!(c, crate::net::HandCardView::Hidden { .. }))),
+            "spectator Update view must keep hands hidden",
+        );
+
+        drop(c0);
+        drop(c1);
+        drop(c_spec);
+        handle.join().unwrap();
+    }
+
+    /// A spectator's submitted action is silently dropped (seat == usize::MAX)
+    /// — it must not mutate state or crash the actor, and the seated players
+    /// keep playing.
+    #[test]
+    fn mid_match_spectator_actions_are_ignored() {
+        let mut state = two_player_game();
+        let card0 = state.add_card_to_hand(0, catalog::plains());
+
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (spectate_tx, spectate_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            run_match_reconnectable_spectatable(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                None,
+                Some(spectate_rx),
+            )
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        let (s_spec, c_spec) = seat_pair();
+        spectate_tx.send(s_spec).unwrap();
+        // Drain the spectator handshake.
+        let _ = drain_within(&c_spec.rx, 3, Duration::from_secs(1));
+
+        // The spectator tries to play seat 0's land — must be dropped (no
+        // ActionError, no state change).
+        c_spec
+            .tx
+            .send(ClientMsg::SubmitAction(GameAction::PlayLand(card0)))
+            .unwrap();
+        thread::sleep(Duration::from_millis(30));
+
+        // Seat 0 can still legally play that very land — proving the
+        // spectator's attempt did nothing.
+        c0.tx
+            .send(ClientMsg::SubmitAction(GameAction::PlayLand(card0)))
+            .unwrap();
+        let m0 = drain_within(&c0.rx, 2, Duration::from_secs(2));
+        assert!(
+            m0.iter().any(|m| matches!(m, ServerMsg::Update { .. })),
+            "seat 0's land play must still succeed after the spectator's no-op: {m0:?}",
+        );
+
+        drop(c0);
+        drop(c1);
+        drop(c_spec);
+        handle.join().unwrap();
+    }
+
+    /// A lurking spectator must NOT keep an abandoned reconnectable match
+    /// alive: once every human drops, the grace window still expires and the
+    /// match ends even though a spectator is still attached.
+    #[test]
+    fn lurking_spectator_does_not_keep_abandoned_match_alive() {
+        let state = two_player_game();
+        let (s0, c0) = seat_pair();
+        let (s1, c1) = seat_pair();
+        let (reattach_tx, reattach_rx) = mpsc::channel();
+        let (spectate_tx, spectate_rx) = mpsc::channel();
+        let (done_tx, done_rx) = mpsc::channel();
+        let handle = thread::spawn(move || {
+            let outcome = run_match_inner(
+                state,
+                vec![SeatOccupant::Human(s0), SeatOccupant::Human(s1)],
+                vec![],
+                None,
+                Some(reattach_rx),
+                Some(spectate_rx),
+                Duration::from_millis(200),
+            );
+            let _ = done_tx.send(());
+            outcome
+        });
+
+        drain_initial(&c0);
+        drain_initial(&c1);
+
+        // A spectator is watching.
+        let (s_spec, c_spec) = seat_pair();
+        spectate_tx.send(s_spec).unwrap();
+        let _ = drain_within(&c_spec.rx, 3, Duration::from_secs(1));
+
+        // Both humans leave; nobody reattaches. The match must still end after
+        // the grace window despite the spectator hanging around.
+        drop(c0);
+        drop(c1);
+        done_rx
+            .recv_timeout(Duration::from_secs(3))
+            .expect("a lurking spectator must not keep an abandoned match alive");
+
+        drop(reattach_tx);
+        drop(spectate_tx);
+        drop(c_spec);
         let _ = handle.join();
     }
 
@@ -1598,8 +1873,11 @@ mod tests {
             );
         });
 
-        // Initial handshake.
-        assert!(matches!(spec_client.rx.recv().unwrap(), ServerMsg::YourSeat(0)));
+        // Initial handshake — a spectator gets the sentinel seat (not seat 0).
+        match spec_client.rx.recv().unwrap() {
+            ServerMsg::YourSeat(s) => assert_eq!(s, crate::net::SPECTATOR_SEAT),
+            other => panic!("expected YourSeat(SPECTATOR_SEAT), got {other:?}"),
+        }
         assert!(matches!(spec_client.rx.recv().unwrap(), ServerMsg::MatchStarted));
         assert!(matches!(spec_client.rx.recv().unwrap(), ServerMsg::View(_)));
 

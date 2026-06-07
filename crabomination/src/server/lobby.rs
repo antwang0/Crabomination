@@ -24,10 +24,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::game::GameState;
-use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg};
+use crate::net::{ClientMsg, LobbyFormat, LobbyInfo, ServerMsg, SpectatableInfo};
 
 use super::{
-    run_match_reconnectable, MatchOutcome, RandomBot, SeatChannel, SeatOccupant,
+    run_match_reconnectable_spectatable, MatchOutcome, RandomBot, SeatChannel, SeatOccupant,
 };
 
 /// Callback invoked when a lobby-started match finishes, with its gamemode,
@@ -42,6 +42,26 @@ pub type MatchEndHook = Arc<dyn Fn(LobbyFormat, Duration, MatchOutcome) + Send +
 struct ResumeTarget {
     reattach_tx: mpsc::Sender<(usize, SeatChannel)>,
     seat: usize,
+}
+
+/// A live match registered for spectating. `spectate_tx` injects a fresh
+/// `SeatChannel` into the running match as a read-only spectator;
+/// `spectator_guards` holds each spectator's connection-slot guard for the
+/// match's lifetime (so the connection cap stays held while watching), dropped
+/// when the match ends and its registry entry is removed. `info` is the
+/// listing advertised to browsers.
+struct RunningMatch<G> {
+    spectate_tx: mpsc::Sender<SeatChannel>,
+    spectator_guards: Vec<G>,
+    info: crate::net::SpectatableInfo,
+}
+
+/// Sent by a finished match thread back to the driver so it can prune the
+/// match's resume tokens *and* drop its spectator registry entry (releasing any
+/// held spectator guards).
+struct MatchDone {
+    match_id: u64,
+    tokens: Vec<String>,
 }
 
 /// Generate an unguessable resume token. Two freshly-seeded `RandomState`s
@@ -151,6 +171,9 @@ pub struct StartMatch {
     pub format: LobbyFormat,
     pub state: GameState,
     pub seats: Vec<SeatSpec>,
+    /// One label per seat, in seat order: a human's display name or "Bot".
+    /// Surfaced to spectators in [`crate::net::SpectatableInfo`].
+    pub seat_labels: Vec<String>,
 }
 
 /// Result of applying one command: messages to deliver, plus an optional match
@@ -228,12 +251,15 @@ impl LobbyManager {
             ClientMsg::RemoveBotFromLobby => self.remove_bot(conn),
             ClientMsg::StartLobby => self.start_lobby(conn),
             ClientMsg::LeaveLobby => self.leave(conn),
-            // `Resume` is handled by the driver (it needs the channel +
-            // registry, not lobby state); it never reaches the manager. Game
-            // traffic from a browsing connection is ignored.
-            ClientMsg::Resume { .. } | ClientMsg::SubmitAction(_) | ClientMsg::Debug(_) => {
-                LobbyOutcome::default()
-            }
+            // `Resume` / spectate commands are handled by the driver (they need
+            // the channel + running-match registry, not lobby state); they
+            // never reach the manager. Game traffic from a browsing connection
+            // is ignored.
+            ClientMsg::Resume { .. }
+            | ClientMsg::ListSpectatable
+            | ClientMsg::SpectateMatch { .. }
+            | ClientMsg::SubmitAction(_)
+            | ClientMsg::Debug(_) => LobbyOutcome::default(),
         }
     }
 
@@ -412,7 +438,16 @@ impl LobbyManager {
                 Slot::Bot => SeatSpec::Bot,
             })
             .collect();
-        out.start = Some(StartMatch { format: lobby.format, state: lobby.state, seats });
+        let seat_labels = lobby
+            .seats
+            .iter()
+            .map(|s| match s {
+                Slot::Human { name, .. } => name.clone(),
+                Slot::Bot => "Bot".to_string(),
+            })
+            .collect();
+        out.start =
+            Some(StartMatch { format: lobby.format, state: lobby.state, seats, seat_labels });
     }
 
     /// Remove `conn` from whatever lobby it's in. Notifies the remaining human
@@ -469,6 +504,12 @@ impl LobbyManager {
 /// between passes; it returns when `new_conns` closes and no connections remain.
 /// `on_match_end` is invoked when a lobby-started match finishes (for stats /
 /// logging) — pass `Arc::new(|_, _, _| {})` to ignore it.
+///
+/// Once a lobby fills, the driver also registers the match for spectating: a
+/// browsing connection can `ListSpectatable` to see the running matches and
+/// `SpectateMatch { match_id }` to attach to one as a read-only spectator (it
+/// is moved into the match's spectator slot, holding its connection guard for
+/// the watch). The registry entry is dropped when the match ends.
 pub fn serve_lobbies<G: Send + 'static>(
     new_conns: mpsc::Receiver<(ConnId, SeatChannel, G)>,
     on_match_end: MatchEndHook,
@@ -477,17 +518,22 @@ pub fn serve_lobbies<G: Send + 'static>(
     let mut channels: HashMap<ConnId, (SeatChannel, G)> = HashMap::new();
     // Live resume tokens → the running match's reattach channel + seat.
     let mut registry: HashMap<String, ResumeTarget> = HashMap::new();
-    // A finished match sends its issued tokens here so the driver can prune
-    // them (otherwise a stale token would only be cleared on a failed resume).
-    let (done_tx, done_rx) = mpsc::channel::<Vec<String>>();
+    // Live matches available to spectate, keyed by match id.
+    let mut running: HashMap<u64, RunningMatch<G>> = HashMap::new();
+    let mut next_match_id: u64 = 0;
+    // A finished match sends a `MatchDone` here so the driver can prune its
+    // resume tokens (otherwise a stale token would only be cleared on a failed
+    // resume) and drop its spectator registry entry.
+    let (done_tx, done_rx) = mpsc::channel::<MatchDone>();
     let mut accepting = true;
 
     loop {
-        // Prune tokens of matches that have ended.
-        while let Ok(tokens) = done_rx.try_recv() {
-            for t in tokens {
+        // Prune tokens + spectator registry of matches that have ended.
+        while let Ok(done) = done_rx.try_recv() {
+            for t in done.tokens {
                 registry.remove(&t);
             }
+            running.remove(&done.match_id);
         }
 
         // Intake newly-accepted connections.
@@ -497,7 +543,15 @@ pub fn serve_lobbies<G: Send + 'static>(
                     eprintln!("lobby: conn {} connected ({} online)", id.0, channels.len() + 1);
                     let outcome = mgr.register(id);
                     channels.insert(id, (ch, guard));
-                    apply(&mut channels, outcome, &on_match_end, &mut registry, &done_tx);
+                    apply(
+                        &mut channels,
+                        outcome,
+                        &on_match_end,
+                        &mut registry,
+                        &mut running,
+                        &mut next_match_id,
+                        &done_tx,
+                    );
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
@@ -520,9 +574,32 @@ pub fn serve_lobbies<G: Send + 'static>(
                             break; // moved into the match
                         }
                     }
+                    Some(Ok(ClientMsg::ListSpectatable)) => {
+                        // Driver-level: reply from the running-match registry.
+                        if let Some((ch, _)) = channels.get(&id) {
+                            let matches = running.values().map(|r| r.info.clone()).collect();
+                            let _ = ch.tx.send(ServerMsg::SpectatableList { matches });
+                        }
+                    }
+                    Some(Ok(ClientMsg::SpectateMatch { match_id })) => {
+                        // Driver-level: move this connection into the match as a
+                        // read-only spectator.
+                        spectate_into_match(&mut channels, &mut running, id, match_id);
+                        if !channels.contains_key(&id) {
+                            break; // moved into the match
+                        }
+                    }
                     Some(Ok(msg)) => {
                         let outcome = mgr.handle(id, msg);
-                        apply(&mut channels, outcome, &on_match_end, &mut registry, &done_tx);
+                        apply(
+                            &mut channels,
+                            outcome,
+                            &on_match_end,
+                            &mut registry,
+                            &mut running,
+                            &mut next_match_id,
+                            &done_tx,
+                        );
                         // `apply` may have moved this connection into a match.
                         if !channels.contains_key(&id) {
                             break;
@@ -533,7 +610,15 @@ pub fn serve_lobbies<G: Send + 'static>(
                         channels.remove(&id); // drops the guard → frees the slot
                         eprintln!("lobby: conn {} disconnected ({} online)", id.0, channels.len());
                         let outcome = mgr.disconnect(id);
-                        apply(&mut channels, outcome, &on_match_end, &mut registry, &done_tx);
+                        apply(
+                            &mut channels,
+                            outcome,
+                            &on_match_end,
+                            &mut registry,
+                            &mut running,
+                            &mut next_match_id,
+                            &done_tx,
+                        );
                         break;
                     }
                 }
@@ -582,15 +667,57 @@ fn resume_into_match<G>(
     }
 }
 
+/// Route a connection into a running match as a read-only spectator. On
+/// success the connection's channel is handed to the match's `spectate_tx`
+/// (and removed from the browsing pool) and its slot guard is parked in the
+/// match's registry entry, so the connection cap stays held for the watch
+/// session and is released when the match ends.
+fn spectate_into_match<G>(
+    channels: &mut HashMap<ConnId, (SeatChannel, G)>,
+    running: &mut HashMap<u64, RunningMatch<G>>,
+    id: ConnId,
+    match_id: u64,
+) {
+    let Some(entry) = running.get(&match_id) else {
+        if let Some((ch, _)) = channels.get(&id) {
+            let _ = ch.tx.send(ServerMsg::LobbyError {
+                message: "match no longer exists".into(),
+            });
+        }
+        return;
+    };
+    let spectate_tx = entry.spectate_tx.clone();
+    let Some((ch, guard)) = channels.remove(&id) else { return };
+    match spectate_tx.send(ch) {
+        Ok(()) => {
+            eprintln!("lobby: conn {} spectating match {match_id}", id.0);
+            // Hold the spectator's slot guard for the match's lifetime.
+            if let Some(entry) = running.get_mut(&match_id) {
+                entry.spectator_guards.push(guard);
+            }
+        }
+        Err(mpsc::SendError(ch)) => {
+            // The match ended between listing and this spectate request.
+            running.remove(&match_id);
+            let _ = ch.tx.send(ServerMsg::LobbyError {
+                message: "match already ended".into(),
+            });
+        }
+    }
+}
+
 /// Deliver an outcome's messages and, if a lobby filled, move its members'
 /// channels (and their guards) out of the pool and spawn a *reconnectable*
 /// match — issuing each human seat a resume token first.
+#[allow(clippy::too_many_arguments)]
 fn apply<G: Send + 'static>(
     channels: &mut HashMap<ConnId, (SeatChannel, G)>,
     outcome: LobbyOutcome,
     on_match_end: &MatchEndHook,
     registry: &mut HashMap<String, ResumeTarget>,
-    done_tx: &mpsc::Sender<Vec<String>>,
+    running: &mut HashMap<u64, RunningMatch<G>>,
+    next_match_id: &mut u64,
+    done_tx: &mpsc::Sender<MatchDone>,
 ) {
     for (id, msg) in outcome.sends {
         if let Some((ch, _)) = channels.get(&id) {
@@ -638,6 +765,24 @@ fn apply<G: Send + 'static>(
         }
 
         let format = start.format;
+        // Register the match for spectating: a `spectate_tx` to inject
+        // read-only spectators mid-match, plus a listing for browsers. The id
+        // is handed back to the driver on completion (via `MatchDone`) so the
+        // entry — and any spectator guards it holds — is dropped.
+        let match_id = *next_match_id;
+        *next_match_id += 1;
+        let (spectate_tx, spectate_rx) = mpsc::channel::<SeatChannel>();
+        running.insert(match_id, RunningMatch {
+            spectate_tx,
+            spectator_guards: Vec::new(),
+            info: SpectatableInfo {
+                match_id,
+                format,
+                seat_labels: start.seat_labels.clone(),
+                turn: start.state.turn_number,
+            },
+        });
+
         let hook = Arc::clone(on_match_end);
         let done = done_tx.clone();
         eprintln!("lobby: starting {} match ({humans} human, {bots} bot)", format.label());
@@ -646,10 +791,16 @@ fn apply<G: Send + 'static>(
             // connection cap acquired at accept time isn't released early.
             let _guards = guards;
             let started = Instant::now();
-            let outcome =
-                run_match_reconnectable(start.state, occupants, vec![], None, Some(reattach_rx));
-            // Match over — let the driver prune our resume tokens.
-            let _ = done.send(tokens);
+            let outcome = run_match_reconnectable_spectatable(
+                start.state,
+                occupants,
+                vec![],
+                None,
+                Some(reattach_rx),
+                Some(spectate_rx),
+            );
+            // Match over — let the driver prune our resume tokens + registry.
+            let _ = done.send(MatchDone { match_id, tokens });
             hook(format, started.elapsed(), outcome);
         });
     }
@@ -1112,6 +1263,101 @@ mod tests {
             thread::sleep(Duration::from_millis(10));
         }
         assert!(errored, "an unknown resume token is rejected");
+
+        drop(c1);
+        drop(new_tx);
+        let _ = driver.join();
+    }
+
+    // ── Spectating (ListSpectatable / SpectateMatch) ─────────────────────────
+
+    /// Poll `ListSpectatable` until at least one running match is advertised,
+    /// returning the first match's id (and asserting the listing metadata).
+    fn await_spectatable(c: &ClientChannel) -> u64 {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        while Instant::now() < deadline {
+            c.tx.send(ClientMsg::ListSpectatable).unwrap();
+            thread::sleep(Duration::from_millis(20));
+            for m in drain(&c.rx) {
+                if let ServerMsg::SpectatableList { matches } = m
+                    && let Some(first) = matches.first()
+                {
+                    assert!(
+                        !first.seat_labels.is_empty(),
+                        "a listed match advertises its seat labels",
+                    );
+                    return first.match_id;
+                }
+            }
+        }
+        panic!("never observed a spectatable match");
+    }
+
+    /// End-to-end: a host starts a Modern match vs a bot; a second connection
+    /// lists the running matches and attaches as a read-only spectator,
+    /// receiving the spectator handshake (sentinel seat + a spectator view).
+    #[test]
+    fn spectate_a_running_lobby_match() {
+        let (new_tx, new_rx) = mpsc::channel();
+        let driver = thread::spawn(move || serve_lobbies(new_rx, Arc::new(|_, _, _| {})));
+
+        // conn 1 hosts a (human + bot) Modern match.
+        let (s1, c1) = seat_pair();
+        new_tx.send((ConnId(1), s1, ())).unwrap();
+        let _ = await_lobby_then_create(&c1);
+        c1.tx.send(ClientMsg::AddBotToLobby).unwrap();
+        c1.tx.send(ClientMsg::StartLobby).unwrap();
+        assert!(recv_match_started(&c1), "host enters the match");
+
+        // conn 2 connects, discovers the running match, and spectates it.
+        let (s2, c2) = seat_pair();
+        new_tx.send((ConnId(2), s2, ())).unwrap();
+        let match_id = await_spectatable(&c2);
+        c2.tx.send(ClientMsg::SpectateMatch { match_id }).unwrap();
+
+        // The spectator gets the sentinel seat and a spectator-safe view.
+        let deadline = Instant::now() + Duration::from_secs(3);
+        let mut saw_view = false;
+        while Instant::now() < deadline && !saw_view {
+            for m in drain(&c2.rx) {
+                if let ServerMsg::View(v) = m
+                    && v.your_seat == crate::net::SPECTATOR_SEAT
+                {
+                    saw_view = true;
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(saw_view, "spectator receives a spectator-seat view");
+
+        drop(c1);
+        drop(c2);
+        drop(new_tx);
+        let _ = driver.join();
+    }
+
+    /// Spectating an unknown match id is rejected with a LobbyError, and the
+    /// connection stays browsing.
+    #[test]
+    fn spectate_unknown_match_errors() {
+        let (new_tx, new_rx) = mpsc::channel();
+        let driver = thread::spawn(move || serve_lobbies(new_rx, Arc::new(|_, _, _| {})));
+
+        let (s1, c1) = seat_pair();
+        new_tx.send((ConnId(1), s1, ())).unwrap();
+        c1.tx.send(ClientMsg::SpectateMatch { match_id: 999 }).unwrap();
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let mut errored = false;
+        while Instant::now() < deadline && !errored {
+            for m in drain(&c1.rx) {
+                if matches!(m, ServerMsg::LobbyError { .. }) {
+                    errored = true;
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+        assert!(errored, "spectating an unknown match id is rejected");
 
         drop(c1);
         drop(new_tx);

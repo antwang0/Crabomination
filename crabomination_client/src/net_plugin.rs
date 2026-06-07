@@ -138,6 +138,9 @@ pub struct CurrentView(pub Option<ClientView>);
 pub struct LobbyState {
     /// Latest advertised open lobbies (from `ServerMsg::LobbyList`).
     pub lobbies: Vec<crabomination::net::LobbyInfo>,
+    /// Latest advertised in-progress matches available to spectate (from
+    /// `ServerMsg::SpectatableList`).
+    pub spectatable: Vec<crabomination::net::SpectatableInfo>,
     /// The lobby we've created/joined and are waiting in, with our slot.
     pub joined: Option<(crabomination::net::LobbyInfo, usize)>,
     /// Most recent lobby error, for display in the browser.
@@ -199,7 +202,10 @@ impl Plugin for SinglePlayerPlugin {
             .init_resource::<LobbyState>()
             .init_resource::<ResumeInfo>()
             .add_systems(PreUpdate, poll_net)
-            .add_systems(Update, (drive_pending_mana_cast, update_pending_cast_banner))
+            .add_systems(
+                Update,
+                (drive_pending_mana_cast, update_pending_cast_banner, update_spectator_banner),
+            )
             // Reconnect runs only when a reconnectable match's link has dropped.
             .add_systems(Update, maybe_reconnect.run_if(|r: Res<ResumeInfo>| r.lost));
         // Network installation happens via `crate::menu::start_net_session_from_menu`
@@ -296,6 +302,9 @@ pub fn poll_net(
             ServerMsg::LobbyError { message } => {
                 eprintln!("lobby: {message}");
                 lobby.last_error = Some(message);
+            }
+            ServerMsg::SpectatableList { matches } => {
+                lobby.spectatable = matches;
             }
         }
     }
@@ -510,6 +519,63 @@ fn update_pending_cast_banner(
                 });
         }
         (None, Some(e)) => {
+            commands.entity(e).despawn();
+        }
+        _ => {}
+    }
+}
+
+/// Marker for the persistent "👁 Spectating" banner shown to read-only
+/// spectators.
+#[derive(Component)]
+struct SpectatorBanner;
+
+/// Show a banner while this client is spectating a match (its seat is the
+/// [`crabomination::net::SPECTATOR_SEAT`] sentinel) and a live view is
+/// present. Mirrors `update_pending_cast_banner`: spawn when the condition
+/// holds, despawn when it clears (match left / ended → `CurrentView` cleared).
+fn update_spectator_banner(
+    mut commands: Commands,
+    seat: Res<OurSeat>,
+    view: Res<CurrentView>,
+    fonts: Option<Res<crate::theme::UiFonts>>,
+    existing: Query<Entity, With<SpectatorBanner>>,
+) {
+    let spectating = seat.0 == crabomination::net::SPECTATOR_SEAT && view.0.is_some();
+    match (spectating, existing.iter().next()) {
+        (true, None) => {
+            let Some(fonts) = fonts else { return };
+            commands
+                .spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        top: Val::Px(8.0),
+                        left: Val::Px(0.0),
+                        width: Val::Percent(100.0),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    SpectatorBanner,
+                    crate::systems::game_ui::InGameRoot,
+                    Pickable::IGNORE,
+                    GlobalZIndex(40),
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new("👁 Spectating — read only"),
+                        fonts.tf(16.0),
+                        TextColor(crate::theme::ACCENT_GOLD),
+                        BackgroundColor(Color::srgba(0.04, 0.06, 0.12, 0.92)),
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                            ..default()
+                        },
+                        Pickable::IGNORE,
+                    ));
+                });
+        }
+        (false, Some(e)) => {
             commands.entity(e).despawn();
         }
         _ => {}

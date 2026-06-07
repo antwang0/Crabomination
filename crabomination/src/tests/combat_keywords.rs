@@ -906,3 +906,99 @@ fn wall_of_frost_stuns_the_creature_it_blocks() {
     let a = g.battlefield_find(atk).expect("attacker survives the 0/7 wall");
     assert_eq!(a.counter_count(CounterType::Stun), 1, "blocked creature got a Stun counter");
 }
+
+// ── CR 508.1 attack tax (Propaganda / Ghostly Prison) ───────────────────────
+// `StaticEffect::AttackTaxToController` — the defending player's pillowfort
+// charges the attacker's controller a generic mana tax per attacking creature,
+// paid (auto-tapping) at declare-attackers. Mana empties on step changes, so
+// each test funds the pool *after* advancing to DeclareAttackers.
+
+#[test]
+fn propaganda_tax_paid_lets_attacker_through() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::propaganda()); // defender's pillowfort
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack after paying the {2} tax");
+    assert_eq!(g.attacking().len(), 1, "attacker declared");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the {{2}} tax was paid");
+    assert!(g.battlefield_find(atk).unwrap().tapped, "attacker tapped");
+}
+
+#[test]
+fn propaganda_tax_unpaid_rejects_attack() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::propaganda());
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.players[0].mana_pool.add_colorless(1); // one short of the {2} tax
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }]));
+    assert!(err.is_err(), "can't attack without paying the full tax");
+    assert!(g.attacking().is_empty(), "no attacker declared");
+    assert!(!g.battlefield_find(atk).unwrap().tapped, "attacker not tapped (rolled back)");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "mana not spent (payment rolled back)");
+}
+
+#[test]
+fn ghostly_prison_taxes_like_propaganda() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack after paying Ghostly Prison's {2}");
+    assert_eq!(g.attacking().len(), 1);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+#[test]
+fn stacked_tax_enchantments_are_additive() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::propaganda());
+    g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.players[0].mana_pool.add_colorless(4); // {2} + {2}
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("pay {4} for two stacked tax enchantments");
+    assert_eq!(g.attacking().len(), 1);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "both taxes paid");
+}
+
+/// The tax is per attacking creature: two attackers into one Propaganda cost
+/// {4}, and {2} is short.
+#[test]
+fn propaganda_tax_scales_per_attacker() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::propaganda());
+    let a1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a1);
+    g.clear_sickness(a2);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.players[0].mana_pool.add_colorless(2); // only enough for one attacker
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a1, target: AttackTarget::Player(1) },
+        Attack { attacker: a2, target: AttackTarget::Player(1) },
+    ]));
+    assert!(err.is_err(), "{{2}} can't cover the {{4}} tax for two attackers");
+    g.players[0].mana_pool.add_colorless(2); // top up to {4}
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a1, target: AttackTarget::Player(1) },
+        Attack { attacker: a2, target: AttackTarget::Player(1) },
+    ])).expect("two attackers, {4} tax paid");
+    assert_eq!(g.attacking().len(), 2);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
