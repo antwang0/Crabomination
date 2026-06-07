@@ -19,9 +19,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Search-by-name / search-an-Aura filters** — Squadron Hawk (up to 3 by
     name), Heliod's Pilgrim (an Aura card). `Effect::Search` has no name-match
     or Aura-subtype filter yet.
-  - **"Other [type] creatures get +X/+Y" anthem** — `StaticEffect::PumpPT`
-    lacks an exclude-self option, so Veteran Swordsmith-style "other Soldiers"
-    lords self-buff. Needs an `exclude_source` flag or `Not(This)` selector.
 
 - ⏳ **Discovered this run (sagas / attack-tax / pillowfort batch):**
   - **Attack-tax interactive pay** — `AttackTaxToController` auto-pays from the

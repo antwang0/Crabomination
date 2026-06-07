@@ -34763,3 +34763,15 @@ fn akromas_devoted_grants_cleric_vigilance() {
     assert!(g.computed_permanent(pilgrim).unwrap().keywords.contains(&Keyword::Vigilance),
         "other Cleric gains vigilance");
 }
+
+/// Veteran Swordsmith buffs other Soldiers but not itself.
+#[test]
+fn veteran_swordsmith_buffs_other_soldiers() {
+    let mut g = two_player_game();
+    let smith = g.add_card_to_battlefield(0, catalog::veteran_swordsmith()); // 3/2
+    let ally = g.add_card_to_battlefield(0, catalog::blade_instructor()); // 3/1 Soldier
+    let sc = g.computed_permanent(smith).unwrap();
+    assert_eq!((sc.power, sc.toughness), (3, 2), "does not buff itself");
+    let ac = g.computed_permanent(ally).unwrap();
+    assert_eq!((ac.power, ac.toughness), (4, 1), "other Soldier gets +1/+0");
+}

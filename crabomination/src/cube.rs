@@ -436,6 +436,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         blade_instructor,
         akromas_devoted,
         ronom_unicorn,
+        veteran_swordsmith,
         // landcycling (modern_decks)
         daru_lancer,
         // classic batch (modern_decks)

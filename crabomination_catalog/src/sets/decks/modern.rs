@@ -26413,3 +26413,33 @@ pub fn akromas_devoted() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Veteran Swordsmith — {2}{W} 3/2 Human Soldier. "Other Soldier creatures
+/// you control get +1/+0." (Exclude-self via `OtherThanSource`.)
+pub fn veteran_swordsmith() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Veteran Swordsmith",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Soldier creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Soldier)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        ..Default::default()
+    }
+}
