@@ -8,9 +8,9 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, Selector,
     SelectionRequirement, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{each_opponent, etb, target, target_filtered};
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect};
-use crate::mana::{b, cost, generic, r, w};
+use crate::mana::{b, cost, generic, r, u, w};
 
 // ── Equipment ───────────────────────────────────────────────────────────────
 
@@ -199,3 +199,96 @@ pub fn blood_age_general() -> CardDefinition {
     }
 }
 
+
+// ── Spells & more creatures ─────────────────────────────────────────────────
+
+/// Go Blank — {2}{B} Sorcery. Target player discards two cards, then exile
+/// that player's graveyard.
+pub fn go_blank() -> CardDefinition {
+    CardDefinition {
+        name: "Go Blank",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::Target(0)),
+                amount: Value::Const(2),
+                random: false,
+            },
+            Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Secret Rendezvous — {1}{W}{W} Sorcery. You and target opponent each draw
+/// three cards.
+pub fn secret_rendezvous() -> CardDefinition {
+    CardDefinition {
+        name: "Secret Rendezvous",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Draw { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fuming Effigy — {3}{R} 4/3 Spirit. Whenever one or more cards leave your
+/// graveyard, it deals 1 damage to each opponent.
+pub fn fuming_effigy() -> CardDefinition {
+    CardDefinition {
+        name: "Fuming Effigy",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            effect: Effect::DealDamage { to: each_opponent(), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kelpie Guide — {2}{U} 2/2 Beast. `{T}: Untap another target permanent you
+/// control.` `{T}: Tap target permanent. Activate only if you control eight
+/// or more lands.`
+pub fn kelpie_guide() -> CardDefinition {
+    CardDefinition {
+        name: "Kelpie Guide",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::Untap {
+                    what: target_filtered(
+                        SelectionRequirement::ControlledByYou
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    up_to: None,
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                condition: Some(Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(8),
+                }),
+                effect: Effect::Tap { what: target() },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

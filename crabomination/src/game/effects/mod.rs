@@ -2454,6 +2454,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExilePlayerGraveyard { who } => {
+                // Go Blank — move one player's graveyard to exile.
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let cards: Vec<CardInstance> = std::mem::take(&mut self.players[p].graveyard);
+                    for card in cards {
+                        let cid = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ExileSameNameAsTarget { what } => {
                 // Crumble to Dust: exile the anchor permanent, then exile every
                 // same-named card from its owner's graveyard, hand, and library,

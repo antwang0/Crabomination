@@ -333,6 +333,7 @@ impl Effect {
             Effect::PayLifeLookTake { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::ExileAllGraveyards => false,
+            Effect::ExilePlayerGraveyard { who } => player_has_target(who),
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }

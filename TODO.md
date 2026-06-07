@@ -817,12 +817,13 @@ picking an item up.
 
 ## Suggested next-up tasks
 
-- ⏳ **Remaining real STX (Strixhaven 2021) cards (~55 left).** The
+- ⏳ **Remaining real STX (Strixhaven 2021) cards (~50 left).** The
   modern_decks run added extras_14 + extras_15 (Campus lands, Access
   Tunnel, Archway Commons, keyword creatures, a spread of spells,
-  Equipment — Poet's Quill / Team Pennant / Zephyr Boots, and payoff
+  Equipment — Poet's Quill / Team Pennant / Zephyr Boots, payoff
   creatures — Leech Fanatic / Stonerise Spirit / Novice Dissector /
-  Blood Age General). Still
+  Blood Age General, plus Go Blank / Secret Rendezvous / Fuming Effigy /
+  Kelpie Guide). Still
   unimplemented printed STX cards include the Dean MDFCs (Plargg/Augusta,
   Shaile/Embrose, Valentin/Lisette, Kianne/Imbraham, Uvilda/Nassari), the
   Codie/Extus/Blex/Jadzi legends, several Lesson sorceries (Basic

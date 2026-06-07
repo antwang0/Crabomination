@@ -573,3 +573,76 @@ fn blood_age_general_pumps_attacking_spirits() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(spirit).unwrap().power(), pwr + 1, "attacking Spirit pumped");
 }
+
+// ── extras_15 batch 3 — graveyard hate, draw, evasion-payoff ─────────────────
+
+#[test]
+fn go_blank_discards_two_and_exiles_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::go_blank());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Go Blank targets player 1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 0, "discarded both cards");
+    assert!(g.players[1].graveyard.is_empty(), "graveyard exiled");
+}
+
+#[test]
+fn secret_rendezvous_draws_for_both() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..4 { g.add_card_to_library(1, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::secret_rendezvous());
+    let (h0, h1) = (g.players[0].hand.len(), g.players[1].hand.len());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 3, "you draw 3");
+    assert_eq!(g.players[1].hand.len(), h1 + 3, "target opponent draws 3");
+}
+
+#[test]
+fn fuming_effigy_pings_when_card_leaves_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fuming_effigy());
+    let opp = g.players[1].life;
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::CardLeftGraveyard {
+        player: 0, card_id: crate::card::CardId(999),
+    }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "1 damage to each opponent");
+}
+
+#[test]
+fn kelpie_guide_untaps_and_taps() {
+    let mut g = two_player_game();
+    let kelpie = g.add_card_to_battlefield(0, catalog::kelpie_guide());
+    g.clear_sickness(kelpie);
+    // Untap another permanent you control.
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kelpie, ability_index: 0,
+        target: Some(Target::Permanent(mine)), x_value: None,
+    }).expect("{T}: untap another permanent");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "untapped");
+    // The tap ability requires eight lands — rejected without them.
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: kelpie, ability_index: 1,
+        target: Some(Target::Permanent(foe)), x_value: None,
+    });
+    assert!(res.is_err(), "tap ability gated on eight or more lands");
+}

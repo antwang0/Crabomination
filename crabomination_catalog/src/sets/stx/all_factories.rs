@@ -4220,5 +4220,9 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::stonerise_spirit,
         super::novice_dissector,
         super::blood_age_general,
+        super::go_blank,
+        super::secret_rendezvous,
+        super::fuming_effigy,
+        super::kelpie_guide,
     ]
 }
