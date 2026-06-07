@@ -35089,3 +35089,37 @@ fn chromatic_lantern_lets_lands_tap_for_any_color() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "Forest produced one mana");
 }
+
+/// Dramatic Reversal untaps all nonland permanents you control (but not lands).
+#[test]
+fn dramatic_reversal_untaps_nonlands_only() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(rock).unwrap().tapped = true;
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    let rev = g.add_card_to_hand(0, catalog::dramatic_reversal());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Dramatic Reversal");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(rock).unwrap().tapped, "Sol Ring untapped");
+    assert!(g.battlefield_find(land).unwrap().tapped, "land NOT untapped");
+}
+
+/// Birgi adds {R} whenever you cast a spell.
+#[test]
+fn birgi_adds_red_on_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::birgi_god_of_storytelling());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "Birgi refunded {{R}} on cast");
+}

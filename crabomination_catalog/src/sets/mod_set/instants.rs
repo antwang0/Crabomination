@@ -1729,3 +1729,20 @@ pub fn catalog_draw() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dramatic Reversal — {1}{U} Instant. "Untap all nonland permanents you
+/// control." (Famous with Isochron Scepter.)
+pub fn dramatic_reversal() -> CardDefinition {
+    CardDefinition {
+        name: "Dramatic Reversal",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Untap {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByYou),
+            ),
+            up_to: None,
+        },
+        ..Default::default()
+    }
+}

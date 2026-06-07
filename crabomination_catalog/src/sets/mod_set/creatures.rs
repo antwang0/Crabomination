@@ -8637,3 +8637,27 @@ pub fn impassioned_orator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Birgi, God of Storytelling — {2}{R} Legendary Creature — God 3/3. "Whenever
+/// you cast a spell, add {R}." (Front face only; the Harnfel // back face is
+/// omitted.)
+pub fn birgi_god_of_storytelling() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Birgi, God of Storytelling",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::God], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Red]),
+            },
+        }],
+        ..Default::default()
+    }
+}
