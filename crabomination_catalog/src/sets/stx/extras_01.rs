@@ -1194,6 +1194,7 @@ pub fn whirlwind_denial() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(4)]),
+            exile: false,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -3005,6 +3006,7 @@ pub fn quench() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
+            exile: false,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

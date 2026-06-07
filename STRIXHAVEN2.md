@@ -16,8 +16,6 @@ For full per-card history see
 - ⏳ todo — not yet implemented
 
 A handful of 🟡 partials remain (riders dropped, core wired):
-- 🟡 **Reject** — counters unless pay {3}; the exile-instead-of-graveyard
-  rider on a successful counter is dropped (no `CounterUnlessPaid` exile flag).
 - 🟡 **Retriever Phoenix** — ETB Learn; the graveyard "learn → return this
   instead" recursion replacement is dropped.
 - 🟡 **Kasmina, Enigma Sage** — +2 Scry, -8 tutor-to-hand wired; the -X Fractal

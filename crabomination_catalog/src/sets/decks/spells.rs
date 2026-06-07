@@ -595,6 +595,7 @@ pub fn mystical_dispute() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(3)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         alternative_cost: Some(AlternativeCost {

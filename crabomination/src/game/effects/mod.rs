@@ -3675,11 +3675,12 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CounterUnlessPaid { what, mana_cost } => {
+            Effect::CounterUnlessPaid { what, mana_cost, exile } => {
                 // Counter target spell unless its controller pays `mana_cost`.
                 // Auto-pays on behalf of the spell's controller via the
                 // existing `auto_tap_for_cost` + `mana_pool.pay` path: if
-                // affordable, the spell stays; otherwise it's countered.
+                // affordable, the spell stays; otherwise it's countered (and
+                // exiled instead of binned when `exile` is set — Reject).
                 let targets = self.resolve_selector(what, ctx);
                 let target_id = targets.into_iter().find_map(|t| match t {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => Some(cid),
@@ -3707,7 +3708,11 @@ impl GameState {
                 if !paid
                     && let StackItem::Spell { card, .. } = self.stack.remove(pos)
                 {
-                    self.route_to_graveyard(*card, events);
+                    if *exile {
+                        self.exile.push(*card);
+                    } else {
+                        self.route_to_graveyard(*card, events);
+                    }
                 }
                 Ok(())
             }

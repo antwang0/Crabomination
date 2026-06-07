@@ -141,6 +141,7 @@ pub fn decisive_denial() -> CardDefinition {
                         .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
                 ),
                 mana_cost: two,
+                exile: false,
             },
             // Mode 1: fight — target creature you don't control takes
             // damage from your biggest creature (auto-picked from the
@@ -6398,6 +6399,7 @@ pub fn quandrix_counterweave() -> CardDefinition {
                     filter: SelectionRequirement::IsSpellOnStack,
                 },
                 mana_cost: cost(&[generic(2)]),
+                exile: false,
             },
             Effect::AddCounter {
                 what: Selector::TargetFiltered {
@@ -8831,6 +8833,7 @@ pub fn quandrix_counterspell_b146() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: Selector::Target(0),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -9408,6 +9411,7 @@ pub fn quandrix_mind_curl_b150() -> CardDefinition {
                     .and(SelectionRequirement::HasCardType(CardType::Creature)),
             ),
             mana_cost: mc(&[gc(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -10403,6 +10407,7 @@ pub fn quandrix_counterpoint_b158() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -11560,6 +11565,7 @@ pub fn quandrix_echobinder_b167() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: Selector::Target(0),
             mana_cost: crate::mana::cost(&[generic(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -11828,6 +11834,7 @@ pub fn quandrix_sumcheck_b172() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -12641,6 +12648,7 @@ pub fn quandrix_quickdraw_b187() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -12838,6 +12846,7 @@ pub fn quandrix_wavelock_b174() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()

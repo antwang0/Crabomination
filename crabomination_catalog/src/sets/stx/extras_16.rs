@@ -213,9 +213,8 @@ pub fn double_major() -> CardDefinition {
 }
 
 /// Reject — {1}{U} Instant. Counter target creature or planeswalker spell
-/// unless its controller pays {3}. (The exile-instead-of-graveyard rider on
-/// a successful counter is dropped — the countered spell goes to its owner's
-/// graveyard.)
+/// unless its controller pays {3}. If countered this way, exile it instead of
+/// putting it into its owner's graveyard.
 pub fn reject() -> CardDefinition {
     CardDefinition {
         name: "Reject",
@@ -227,6 +226,7 @@ pub fn reject() -> CardDefinition {
                     .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
             )),
             mana_cost: cost(&[generic(3)]),
+            exile: true,
         },
         ..Default::default()
     }

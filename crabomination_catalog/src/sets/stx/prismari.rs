@@ -3467,6 +3467,7 @@ pub fn prismari_tideburst() -> CardDefinition {
             Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: cost(&[generic(2)]),
+                exile: false,
             },
             Effect::Scry {
                 who: PlayerRef::You,
@@ -11909,6 +11910,7 @@ pub fn prismari_inkwave_b129() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -14812,6 +14814,7 @@ pub fn prismari_counterscribe_b147() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: Selector::Target(0),
             mana_cost: cost(&[generic(1)]),
+            exile: false,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -15749,6 +15752,7 @@ pub fn prismari_spellburst_b153() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: mc(&[gc(3)]),
+            exile: false,
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -19259,6 +19263,7 @@ pub fn prismari_spellbreaker_b167() -> CardDefinition {
             effect: Effect::CounterUnlessPaid {
                 what: Selector::Target(0),
                 mana_cost: crate::mana::cost(&[generic(2)]),
+                exile: false,
             },
         }],
         static_abilities: vec![],

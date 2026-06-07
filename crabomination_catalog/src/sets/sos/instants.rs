@@ -1214,6 +1214,7 @@ pub fn quandrix_charm() -> CardDefinition {
             Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: counter_cost,
+                exile: false,
             },
             // Mode 1: destroy target enchantment.
             Effect::Destroy {

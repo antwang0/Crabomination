@@ -1989,6 +1989,11 @@ pub enum Effect {
     CounterUnlessPaid {
         what: Selector,
         mana_cost: crate::mana::ManaCost,
+        /// CR — "If that spell is countered this way, exile it instead of
+        /// putting it into its owner's graveyard." When true, a successful
+        /// counter routes the spell to exile. Reject. Defaults to false.
+        #[serde(default)]
+        exile: bool,
     },
     /// CR 702.21 — Ward's "counter that spell or ability unless its
     /// controller pays [cost]" trigger body. Walks the stack for the

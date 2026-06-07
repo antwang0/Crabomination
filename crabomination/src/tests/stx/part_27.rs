@@ -179,8 +179,11 @@ fn reject_counters_when_controller_cant_pay() {
     drain_stack(&mut g);
     // No floating mana and no lands → the controller can't pay {3}.
     assert!(g.battlefield_find(bear).is_none(), "spell countered, not on battlefield");
-    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
-        "countered spell to graveyard");
+    // Reject exiles the countered spell instead of putting it in the graveyard.
+    assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "countered spell exiled");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "not in graveyard");
 }
 
 #[test]
