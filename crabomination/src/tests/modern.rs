@@ -35359,15 +35359,40 @@ fn mox_diamond_discards_on_etb_and_taps_for_any() {
 }
 
 #[test]
-fn chrome_mox_taps_for_any_color() {
+fn chrome_mox_imprints_and_taps_for_imprinted_color() {
     let mut g = two_player_game();
-    let mox = g.add_card_to_battlefield(0, catalog::chrome_mox());
+    g.players[0].hand.clear();
+    let mox = g.add_card_to_hand(0, catalog::chrome_mox());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // a red card to imprint
+    g.perform_action(GameAction::CastSpell {
+        card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chrome Mox for {0}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "imprinted card exiled");
     g.clear_sickness(mox);
     g.perform_action(GameAction::ActivateAbility {
         card_id: mox, ability_index: 0, target: None, x_value: None,
-    }).expect("tap Chrome Mox");
+    }).expect("tap for the imprinted card's color");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].mana_pool.total(), 1);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "produced red (the imprinted Bolt's color)");
+}
+
+/// Chrome Mox with nothing imprinted (empty hand) produces no mana.
+#[test]
+fn chrome_mox_with_no_imprint_makes_no_mana() {
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    let mox = g.add_card_to_hand(0, catalog::chrome_mox());
+    g.perform_action(GameAction::CastSpell {
+        card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Chrome Mox with empty hand");
+    drain_stack(&mut g);
+    g.clear_sickness(mox);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, x_value: None,
+    }).expect("tap (nothing imprinted)");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "no imprint → no mana");
 }
 
 #[test]
@@ -35440,24 +35465,27 @@ fn comeuppance_prevents_damage_to_you() {
     assert_eq!(g.players[0].life, life, "damage to you is prevented");
 }
 
-/// Isochron Scepter (approximated) copies an instant spell on the stack.
+/// Isochron Scepter imprints an instant on ETB, then free-casts it from exile.
 #[test]
-fn isochron_scepter_copies_an_instant_on_the_stack() {
+fn isochron_scepter_imprints_then_free_casts_the_instant() {
     let mut g = two_player_game();
-    let scepter = g.add_card_to_battlefield(0, catalog::isochron_scepter());
-    g.clear_sickness(scepter);
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("cast Bolt (stays on the stack)");
+    g.players[0].hand.clear();
+    let scepter = g.add_card_to_hand(0, catalog::isochron_scepter());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // MV-1 instant
     g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: scepter, ability_index: 0, target: Some(Target::Permanent(bolt)), x_value: None,
-    }).expect("Isochron copies the Bolt");
+    g.perform_action(GameAction::CastSpell {
+        card_id: scepter, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Isochron Scepter for {2}");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 20 - 6, "Bolt + its copy deal 6");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "Bolt imprinted (exiled)");
+    g.clear_sickness(scepter);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // yes, cast it
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scepter, ability_index: 0, target: None, x_value: None,
+    }).expect("free-cast the imprinted Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 3, "the imprinted Bolt dealt 3 to the opponent");
 }
 
 // ── Phasing (CR 702.26) ───────────────────────────────────────────────────

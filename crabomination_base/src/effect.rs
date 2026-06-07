@@ -860,6 +860,11 @@ pub enum CounteredSpellZone {
 /// What mana to add to a pool.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManaPayload {
+    /// Add one mana of any of the colors of the card imprinted on the source
+    /// (a card in exile with `exiled_with == ctx.source`). The player chooses
+    /// among those colors; produces nothing if there is no imprinted card or it
+    /// is colorless. Chrome Mox.
+    ImprintedCardColor,
     /// Add each listed color once.
     Colors(Vec<Color>),
     /// Add `amount` colorless mana.

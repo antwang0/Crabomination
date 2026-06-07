@@ -2116,6 +2116,29 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
+                    ManaPayload::ImprintedCardColor => {
+                        // Chrome Mox — add one mana of a color of the card
+                        // imprinted on the source (exile, exiled_with == source).
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let legal: Vec<Color> = self
+                            .exile
+                            .iter()
+                            .find(|c| c.exiled_with == Some(source))
+                            .map(|c| c.definition.cost.colors())
+                            .unwrap_or_default();
+                        if legal.is_empty() {
+                            return Ok(()); // no imprint / colorless → no mana
+                        }
+                        let answer = self.decider.decide(
+                            &crate::decision::Decision::ChooseColor { source, legal: legal.clone() },
+                        );
+                        let color = match answer {
+                            crate::decision::DecisionAnswer::Color(c) if legal.contains(&c) => c,
+                            _ => legal[0],
+                        };
+                        add_one(self, p, color);
+                        events.push(GameEvent::ManaAdded { player: p, color });
+                    }
                     ManaPayload::DevotionOfChosenColor => {
                         // Nykthos — choose a color, then add mana of that
                         // color equal to your devotion to it (CR 700.5).

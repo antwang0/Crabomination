@@ -391,6 +391,7 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
         ManaPayload::AnyOneColor(_)
         | ManaPayload::AnyColors(_)
         | ManaPayload::DevotionOfChosenColor
+        | ManaPayload::ImprintedCardColor
         | ManaPayload::AnyColorOpponentCouldProduce
         | ManaPayload::AnyColorYouCouldProduce => true,
         ManaPayload::Colors(cs) => cs.len() > 1,
@@ -768,6 +769,9 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             // definition level), so it's not part of the static auto-tap
             // signature; the controller taps it deliberately.
             ManaPayload::ChosenColorOfSource => false,
+            // Imprinted-card colors aren't known statically (depend on the
+            // exiled card), so not auto-tapped; tapped deliberately.
+            ManaPayload::ImprintedCardColor => false,
         },
         Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),
         _ => false,

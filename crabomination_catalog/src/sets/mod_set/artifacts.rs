@@ -1718,23 +1718,43 @@ pub fn mox_diamond() -> CardDefinition {
 /// Isochron Scepter — {2} Artifact. "Imprint — When this enters, you may exile
 /// an instant card with mana value 2 or less from your hand. {2}, {T}: You may
 /// copy the imprinted card, and you may cast the copy without paying its mana
-/// cost." The imprint-then-recast engine isn't modeled (no imprinted-card
-/// storage); approximated as "{2}, {T}: Copy target instant spell on the stack
-/// (you may choose new targets)", which captures the instant-copy payoff.
+/// cost." The ETB now genuinely imprints (exiles, tagged) an instant ≤2 MV from
+/// hand, and the activated ability free-casts the imprinted instant from exile
+/// via `CastWithoutPayingImmediate`. Simplification: it casts the imprinted card
+/// itself (one free cast per imprint) rather than a repeatable token copy.
 pub fn isochron_scepter() -> CardDefinition {
     CardDefinition {
         name: "Isochron Scepter",
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileTaggedWithSource {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .and(SelectionRequirement::ManaValueAtMost(2)),
+                    },
+                    Value::Const(1),
+                ),
+            },
+        }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(2)]),
-            effect: Effect::CopySpellMayChooseTargets {
-                what: target_filtered(
-                    SelectionRequirement::IsSpellOnStack
-                        .and(SelectionRequirement::HasCardType(CardType::Instant)),
-                ),
-                count: Value::Const(1),
+            // Free-cast the imprinted instant from exile. `CardsInZone(Exile,
+            // Instant)` resolves the exiled instant directly (the imprinted card
+            // is the relevant one in practice); no explicit target needed.
+            effect: Effect::CastWithoutPayingImmediate {
+                what: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Exile,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant),
+                },
+                source_zone: Zone::Exile,
+                exile_after: false,
             },
             ..Default::default()
         }],
@@ -1744,8 +1764,9 @@ pub fn isochron_scepter() -> CardDefinition {
 
 /// Chrome Mox — {0} Artifact. "Imprint — When Chrome Mox enters, you may exile a
 /// nonland, nonartifact card from your hand. {T}: Add one mana of any of the
-/// exiled card's colors." Modeled as an ETB "discard a card" cost + "{T}: add
-/// any color" (imprint storage / color restriction simplified).
+/// exiled card's colors." Faithful: the ETB imprints (exiles, tagged via
+/// `ExileTaggedWithSource`) a nonland/nonartifact hand card, and the mana
+/// ability (`ManaPayload::ImprintedCardColor`) produces a color of that card.
 pub fn chrome_mox() -> CardDefinition {
     CardDefinition {
         name: "Chrome Mox",
@@ -1753,13 +1774,24 @@ pub fn chrome_mox() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            effect: Effect::ExileTaggedWithSource {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: SelectionRequirement::Land
+                            .negate()
+                            .and(SelectionRequirement::Artifact.negate()),
+                    },
+                    Value::Const(1),
+                ),
+            },
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                pool: ManaPayload::ImprintedCardColor,
             },
             ..Default::default()
         }],

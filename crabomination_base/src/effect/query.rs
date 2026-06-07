@@ -223,6 +223,7 @@ impl Effect {
                     ManaPayload::Colors(_)
                     | ManaPayload::DevotionOfChosenColor
                     | ManaPayload::ChosenColorOfSource
+                    | ManaPayload::ImprintedCardColor
                     | ManaPayload::AnyColorOpponentCouldProduce
                     | ManaPayload::AnyColorYouCouldProduce => false,
                 }
