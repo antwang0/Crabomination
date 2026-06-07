@@ -222,3 +222,28 @@ pub fn propaganda() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aura Shards — {G}{W} Enchantment. "Whenever a creature you control enters,
+/// you may destroy target artifact or enchantment." The optional clause is
+/// collapsed to a mandatory destroy-if-a-legal-target-exists (matching
+/// Reclamation Sage's ETB), and auto-targeting prefers an opponent's permanent.
+pub fn aura_shards() -> CardDefinition {
+    CardDefinition {
+        name: "Aura Shards",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}

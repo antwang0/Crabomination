@@ -836,6 +836,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Cube expansion: GW cards ──
         v.push(growing_ranks);
         v.push(citadel_castellan);
+        v.push(aura_shards);
     }
     if pair_contains(pair, Color::Red) {
         v.push(lightning_helix);

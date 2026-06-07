@@ -34867,3 +34867,21 @@ fn triumph_of_the_hordes_grants_infect_and_trample() {
     assert!(cp.keywords.contains(&Keyword::Trample), "gains trample");
     assert!(cp.keywords.contains(&Keyword::Infect), "gains infect");
 }
+
+/// Aura Shards destroys an artifact/enchantment whenever a creature you control
+/// enters.
+#[test]
+fn aura_shards_destroys_artifact_on_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aura_shards());
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone()); // opponent's artifact
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature under Aura Shards");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == stone),
+        "creature ETB triggers Aura Shards to destroy the opponent's artifact");
+}
