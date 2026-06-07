@@ -14955,6 +14955,23 @@ pub fn breezekeeper() -> CardDefinition {
     }
 }
 
+/// Sandbar Crocodile — {4}{U} 5/6 Crocodile. Phasing (CR 702.26).
+pub fn sandbar_crocodile() -> CardDefinition {
+    CardDefinition {
+        name: "Sandbar Crocodile",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crocodile],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 6,
+        keywords: vec![Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
 /// Teferi's Drake — {2}{U} 3/2 Drake. Flying, Phasing (CR 702.26).
 pub fn teferis_drake() -> CardDefinition {
     CardDefinition {

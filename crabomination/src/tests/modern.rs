@@ -35228,3 +35228,13 @@ fn piercing_rays_forecast_taps_from_hand() {
     assert!(g.battlefield_find(bear).unwrap().tapped, "Forecast tapped the bear");
     assert!(g.players[0].hand.iter().any(|c| c.id == rays), "card stays in hand");
 }
+
+/// Sandbar Crocodile is a 5/6 with Phasing.
+#[test]
+fn sandbar_crocodile_phases_out() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sandbar_crocodile());
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "Sandbar Crocodile phased out");
+}

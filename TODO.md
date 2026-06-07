@@ -8,6 +8,18 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Phasing (CR 702.26) follow-ups** (engine shipped this run): a permanent
+  that **enters phased out** (Reality Ripple-adjacent / Teferi's Veil grant);
+  phasing **grant** to other permanents (Teferi's Veil "attacking creatures
+  gain phasing"); a creature phasing out mid-combat (remove from the combat
+  arrays cleanly — today `do_phasing` only runs in the untap step so this can't
+  arise yet, but `Effect::PhaseOut` could be cast in combat); "when this phases
+  in" triggers (rare). The side-zone model (`GameState.phased_out`) is the hook.
+- ℹ️ **Client can't be built in the web sandbox** — `wayland-sys`'s build
+  script needs the system `wayland-client` lib, which isn't installed here, so
+  `cargo build/clippy -p crabomination_client` fails before compiling our code.
+  Client-only changes can't be compile-verified in this environment; keep them
+  to small, pattern-matching-consistent edits and rely on review.
 - ⏳ **Discovered this run (allied-color card batch):**
   - **Evoke keyword** — `AlternativeCost.evoke_sacrifice` exists but no
     `shortcut::evoke`; blocks Inner-Flame Acolyte and the Lorwyn evoke cycle.
