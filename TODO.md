@@ -753,6 +753,9 @@ picking an item up.
 - ✅ **CR 701.x — Process** (BFZ/OGW) — `Effect::Process { count, then }`: move N exile cards an opponent owns to their graveyards, run `then` only if any were processed ("if you do" rider, reading the trigger's target). Wasteland Strangler, Mind Raker, Blight Herder. Still ⏳: process-onto-battlefield (Oblivion Sower) and process-as-additional-cost (Processor Assault).
 - ✅ **CR 208.2 / 613.7b — Set base P/T** — `Effect::SetBasePT` (layer-7b) now reads `Value::PowerOf/ToughnessOf(TriggerSource)` for "becomes that creature's P/T until end of turn." Eldrazi Mimic.
 - ✅ **CR 702.21 — Ward (discard)** — the `WardCost::Discard(n)` payment menu is exercised by Reality Smasher (corrected from a placeholder Ward {2}).
+- ✅ **CR 602.5b — Return-to-hand activation cost** — `ActivatedAbility.return_self_cost` bounces the source to its owner's hand after tap/mana/life payments (mirrors `sac_cost`). Grinning Ignus (mana), Rootha (spell-copy).
+- ✅ **CR 602.5c — "Abilities can't be activated"** — `Keyword::CantActivateAbilities` read from the *computed* keyword set in `activate_ability` rejects non-mana abilities (mana abilities unaffected). Detention Vortex (Aura grant).
+- ✅ **CR 119.3 — Life gained this turn** — `Value::LifeGainedThisTurn(who)` (reads `Player.life_gained_this_turn`). Accomplished Alchemist's second mana ability.
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
@@ -817,21 +820,45 @@ picking an item up.
 
 ## Suggested next-up tasks
 
-- ⏳ **Remaining real STX (Strixhaven 2021) cards (~50 left).** The
-  modern_decks run added extras_14 + extras_15 (Campus lands, Access
-  Tunnel, Archway Commons, keyword creatures, a spread of spells,
-  Equipment — Poet's Quill / Team Pennant / Zephyr Boots, payoff
-  creatures — Leech Fanatic / Stonerise Spirit / Novice Dissector /
-  Blood Age General, plus Go Blank / Secret Rendezvous / Fuming Effigy /
-  Kelpie Guide). Still
-  unimplemented printed STX cards include the Dean MDFCs (Plargg/Augusta,
-  Shaile/Embrose, Valentin/Lisette, Kianne/Imbraham, Uvilda/Nassari), the
-  Codie/Extus/Blex/Jadzi legends, several Lesson sorceries (Basic
-  Conjuration, Start from Scratch, Teachings of the Archaics), and X-spells
-  (Blot Out the Sky, Culmination of Studies, Exponential Growth,
-  Ecological Appreciation). Diff `set:stx` Scryfall names against the
-  catalog string literals (note: helper-built names like the Snarl cycle
-  are passed as `name` params, so grep the whole file, not just `name: "…"`).
+- ⏳ **Remaining real STX (Strixhaven 2021) cards (~45 left).** extras_16
+  shipped the Lessons (Basic Conjuration, Start from Scratch, Teachings of
+  the Archaics), X-spells (Blot Out the Sky, Serpentine Curve), the
+  spell-copy/counter package (Double Major, Reject, Rootha), Golden Ratio,
+  Devouring Tendrils, Study Break, Elemental Masterpiece, Flunk, Detention
+  Vortex, and payoff creatures (Gnarled Professor, Dream Strix, Retriever
+  Phoenix, Accomplished Alchemist, Oriq Loremage, Illustrious Historian,
+  Grinning Ignus). Still unimplemented printed STX cards, grouped by the
+  primitive they're blocked on:
+  - **Study / hone counters** — needed for the Kianne/Imbraham and
+    Uvilda/Nassari Deans (exile-with-counter-then-cast mechanics) and
+    Culmination of Studies-adjacent exile payoffs.
+  - **Variable-X loyalty** (see below) — Kasmina, Enigma Sage's -X.
+  - **Entered-this-turn filter** (`SelectionRequirement::EnteredThisTurn`) —
+    Shaile, Dean of Radiance's `{T}: +1/+1 on each creature that entered
+    this turn.`
+  - **Blink-and-return-at-end-step** — Semester's End (exile your
+    permanents, return EOT with counters).
+  - The Codie/Extus/Blex/Jadzi legends, the X-spells Culmination of Studies /
+    Exponential Growth / Ecological Appreciation, and the rest of the Deans.
+  Diff `set:stx` Scryfall names against the catalog string literals (note:
+  helper-built names like the Snarl cycle are passed as `name` params, so
+  grep the whole file, not just `name: "…"`).
+- ⏳ **Discovered this run (extras_16 follow-ups):**
+  - **`CounterUnlessPaid` exile-on-counter flag** — Reject exiles the
+    countered spell instead of bin. Add an `exile: bool` (new variant or
+    field across the ~41 call sites) to promote Reject 🟡 → ✅.
+  - **Variable-X loyalty abilities** — `activate_loyalty_ability` hardcodes
+    `x_value: 0` and `LoyaltyAbility.loyalty_cost` is a fixed `i32`. A "-X /
+    {X}" loyalty path (thread `x_value` through the action + a sentinel cost)
+    would let Kasmina, Sorin, Saheeli ultimates read X faithfully.
+  - **Search-result type introspection** — Oriq Loremage's "if it's an
+    instant or sorcery, +1/+1 counter" needs the searched card's type fed
+    back to a reflexive rider (today `Effect::Search` is fire-and-forget).
+  - **`WhenTargetDiesThisTurn` for non-zero slots** — it watches `targets[0]`
+    only; Devouring Tendrils' lifegain rider needs the slot-1 target.
+  - **From-hand discard-cost mana ability** — Elemental Masterpiece's
+    `{U/R}{U/R}, Discard this: Create a Treasure` (a cycling-adjacent
+    from-hand activated ability that mints a token).
 - ✅ **`Effect::PayManaOrElse { mana_cost, otherwise }`** (this run) —
   the mana sibling of `PayEnergyOrElse`; pays from the floating pool when
   able, else runs the fallback (Archway Commons' "sacrifice unless pay
