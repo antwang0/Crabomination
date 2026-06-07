@@ -2640,6 +2640,14 @@ impl GameState {
         id
     }
 
+    /// Put a card into the exile zone owned by `player_idx` (convenience for
+    /// tests — e.g. seeding an opponent-owned card to be processed).
+    pub fn add_card_to_exile(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
+        let id = self.next_id();
+        self.exile.push(CardInstance::new(id, def, player_idx));
+        id
+    }
+
     /// Clear summoning sickness from a permanent (convenience for tests).
     pub fn clear_sickness(&mut self, id: CardId) {
         if let Some(c) = self.battlefield_find_mut(id) {

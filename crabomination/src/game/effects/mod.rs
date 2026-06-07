@@ -1003,6 +1003,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Process { count, then } => {
+                // Process N exile cards an opponent owns → their graveyards;
+                // run `then` only if at least one was processed.
+                use crate::decision::{Decision, DecisionAnswer};
+                let opponents = self.opponents_of(ctx.controller);
+                let eligible: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| opponents.contains(&c.owner))
+                    .map(|c| c.id)
+                    .take(*count as usize)
+                    .collect();
+                if eligible.is_empty() {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source,
+                    description: format!("Process up to {count} card(s) from exile?"),
+                });
+                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    return Ok(());
+                }
+                for id in eligible {
+                    if let Some(pos) = self.exile.iter().position(|c| c.id == id) {
+                        let card = self.exile.remove(pos);
+                        let owner = card.owner;
+                        self.players[owner].send_to_graveyard(card);
+                    }
+                }
+                self.run_effect(then, ctx, events)?;
+                Ok(())
+            }
+
             Effect::IfRevealFromHand { filter, then, else_ } => {
                 // Peek at the controller's hand for a card matching `filter`.
                 // If any match exists, run `then` (the implicit "yes, I

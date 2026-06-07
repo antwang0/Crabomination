@@ -1454,6 +1454,15 @@ pub enum Effect {
     /// their own library (CR 702.115 Ingest, processed-card exile, etc.).
     /// Mirrors `Mill` but routes to the exile zone instead of the graveyard.
     ExileTopOfLibrary { who: Selector, amount: Value },
+    /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
+    /// an opponent owns from exile into that player's graveyard. If you do,
+    /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);
+    /// on yes the oldest `count` eligible exile cards (owned by an opponent of
+    /// the controller) move to their owners' graveyards and `then` runs. With
+    /// no eligible cards, or on decline, `then` is skipped (the "if you do"
+    /// rider). `then` reads the trigger's chosen target(s) via the shared
+    /// context — Wasteland Strangler's -3/-3, Mind Raker's discard, etc.
+    Process { count: u32, then: Box<Effect> },
     /// Each player the selector resolves to mills half the cards in their
     /// *own* library (rounded up when `rounded_up`, else down). Per-player —
     /// `Mill`'s global amount can't scale to each target's own library size.

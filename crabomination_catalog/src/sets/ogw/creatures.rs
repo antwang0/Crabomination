@@ -866,6 +866,72 @@ pub fn matter_reshaper() -> CardDefinition {
     }
 }
 
+/// Eldrazi Processor body shared by the process-matters creatures below.
+fn processor(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Processor],
+            ..Default::default()
+        },
+        power: p,
+        toughness: t,
+        keywords: vec![Keyword::Devoid],
+        ..Default::default()
+    }
+}
+
+/// Wasteland Strangler — {2}{B} 3/2 Eldrazi Processor. Devoid. ETB: process
+/// one → if you do, target creature gets -3/-3 until end of turn.
+pub fn wasteland_strangler() -> CardDefinition {
+    use crate::effect::shortcut::{etb, pump_target};
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Process {
+            count: 1,
+            then: Box::new(pump_target(-3, -3)),
+        })],
+        ..processor("Wasteland Strangler", cost(&[generic(2), b()]), 3, 2)
+    }
+}
+
+/// Mind Raker — {3}{B} 3/3 Eldrazi Processor. Devoid. ETB: process one → if
+/// you do, each opponent discards a card.
+pub fn mind_raker() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    use crate::effect::{PlayerRef, Selector, Value};
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Process {
+            count: 1,
+            then: Box::new(Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            }),
+        })],
+        ..processor("Mind Raker", cost(&[generic(3), b()]), 3, 3)
+    }
+}
+
+/// Blight Herder — {5} 4/5 Eldrazi Processor. Cast trigger: process two → if
+/// you do, create three 1/1 Eldrazi Scion tokens.
+pub fn blight_herder() -> CardDefinition {
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        triggered_abilities: vec![on_cast(Effect::Process {
+            count: 2,
+            then: Box::new(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: eldrazi_scion_token(),
+            }),
+        })],
+        keywords: vec![],
+        ..processor("Blight Herder", cost(&[generic(5)]), 4, 5)
+    }
+}
+
 /// Sludge Crawler — {B} 1/1 Eldrazi Drone. Devoid, Ingest, {2}: +1/+1 EOT.
 pub fn sludge_crawler() -> CardDefinition {
     use crate::card::ActivatedAbility;

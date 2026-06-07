@@ -16,10 +16,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   spell + `drain_stack`, as the Grim Haruspex / Sifter of Skulls tests do).
   Worth auditing whether the direct-SBA path should also gather watcher
   triggers, or whether this is purely a test-only shortcut.
-- ⏳ **Eldrazi-titan pass leftovers (this run).** Skipped, each needs a new
-  primitive: (a) **Process** mechanic (put a card an opponent owns from exile
-  into their graveyard) — blocks Wasteland Strangler, Mind Raker, Blight Herder,
-  Oblivion Sower, Processor Assault; (b) **conditional static keyword grant**
+- ⏳ **Eldrazi-titan pass leftovers (this run).** Remaining primitives:
+  (a) **Process** ✅ — `Effect::Process { count, then }` (put N cards an
+  opponent owns from exile into their graveyards; `then` is the "if you do"
+  rider). Ships Wasteland Strangler, Mind Raker, Blight Herder. Still ⏳:
+  Oblivion Sower (process puts *lands onto battlefield*, not graveyard) and
+  Processor Assault (process as a cast-time *additional cost*, not a trigger).
+  (b) **conditional static keyword grant**
   ("has haste as long as you control another colorless creature") — Eldrazi
   Aggressor; (c) **non-linked exile-from-opponent-hand** ("you choose a nonland
   card and exile it" + a separate LTB draw) — Thought-Knot Seer; (d) Reaver

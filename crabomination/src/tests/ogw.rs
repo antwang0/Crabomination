@@ -932,3 +932,73 @@ fn reality_hemorrhage_deals_two_and_is_colorless() {
     crate::game::cast_at(&mut g, bolt, Target::Player(1));
     assert_eq!(g.players[1].life, before - 2, "Reality Hemorrhage deals 2");
 }
+
+// ── Process (CR — Battle for Zendikar / OGW) ─────────────────────────────────
+
+/// Wasteland Strangler processes an opponent-owned exile card on ETB; if it
+/// does, target creature gets -3/-3 (here lethal to a 3/3).
+#[test]
+fn wasteland_strangler_processes_then_shrinks_target() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let exiled = g.add_card_to_exile(1, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    // Accept the "you may process" decision.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let str_id = g.add_card_to_battlefield(0, catalog::wasteland_strangler());
+    g.fire_self_etb_triggers(str_id, 0);
+    drain_stack(&mut g);
+    assert!(!g.exile.iter().any(|c| c.id == exiled), "exile card was processed away");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == exiled), "into owner's graveyard");
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "3/3 with -3/-3 dies as SBA");
+}
+
+/// With no opponent-owned exile card, Wasteland Strangler can't process, so
+/// the "if you do" -3/-3 rider is skipped.
+#[test]
+fn wasteland_strangler_no_exile_skips_rider() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let str_id = g.add_card_to_battlefield(0, catalog::wasteland_strangler());
+    g.fire_self_etb_triggers(str_id, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == victim), "no process → no -3/-3, victim lives");
+}
+
+/// Mind Raker processes on ETB; if it does, each opponent discards a card.
+#[test]
+fn mind_raker_processes_then_each_opponent_discards() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let exiled = g.add_card_to_exile(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let hand_before = g.players[1].hand.len();
+    let mr = g.add_card_to_battlefield(0, catalog::mind_raker());
+    g.fire_self_etb_triggers(mr, 0);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == exiled), "processed card");
+    assert_eq!(g.players[1].hand.len(), hand_before - 1, "opponent discarded one");
+}
+
+/// Blight Herder's cast trigger processes two exile cards; if it does, makes
+/// three Eldrazi Scions.
+#[test]
+fn blight_herder_processes_two_then_makes_three_scions() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let e1 = g.add_card_to_exile(1, catalog::grizzly_bears());
+    let e2 = g.add_card_to_exile(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let bh = g.add_card_to_hand(0, catalog::blight_herder());
+    g.players[0].mana_pool.add_colorless(5);
+    let scions_before = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Eldrazi Scion").count();
+    crate::game::cast(&mut g, bh); // cast trigger processes on the stack
+    assert!(!g.exile.iter().any(|c| c.id == e1 || c.id == e2), "both processed");
+    let scions_after = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Eldrazi Scion").count();
+    assert_eq!(scions_after - scions_before, 3, "three Scions created");
+}

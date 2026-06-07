@@ -111,6 +111,8 @@ pub enum CreatureType {
     Drone,
     // Battle for Zendikar Eldrazi Scion token subtype.
     Scion,
+    // Battle for Zendikar / OGW Eldrazi Processor (process-matters).
+    Processor,
     // Artifact creature subtype (Bottle Gnomes).
     Gnome,
     // Artifact creature subtype (Court Homunculus, Fblthp).

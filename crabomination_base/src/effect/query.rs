@@ -138,6 +138,7 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
+            Effect::Process { then, .. } => then.requires_target(),
             Effect::CollectEvidence { amount, then } => {
                 value_has_target(amount) || then.requires_target()
             }
@@ -505,6 +506,7 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::MayDo { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } => body.primary_target_filter(),
+            Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::IfRevealFromHand { then, else_, .. } => then
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
@@ -790,6 +792,7 @@ impl Effect {
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.effect_short_text(),
+            Effect::Process { then, .. } => then.effect_short_text(),
             _ => String::new(),
         }
     }
