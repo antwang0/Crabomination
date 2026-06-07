@@ -76,6 +76,8 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         spawning_bed,
         loathsome_catoblepas,
         gravity_negator,
+        akoum_stonewaker,
+        visions_of_brutality,
         corpse_churn,
         tears_of_valakut,
         eldrazi_aggressor,

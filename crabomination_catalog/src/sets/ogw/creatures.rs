@@ -1805,6 +1805,88 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Visions of Brutality — {1}{B} Devoid Aura. Enchanted creature can't block,
+/// and whenever it deals combat damage, its controller loses that much life.
+pub fn visions_of_brutality() -> CardDefinition {
+    use crate::card::{EquipBonus, EnchantmentSubtype, EventKind, EventScope, EventSpec,
+        SelectionRequirement, TriggeredAbility};
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        name: "Visions of Brutality",
+        cost: cost(&[crate::mana::generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Devoid],
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            power: 0,
+            toughness: 0,
+            keywords: vec![Keyword::CantBlock],
+            scale: None,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::LoseLife { who: Selector::You, amount: Value::TriggerEventAmount },
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Akoum Stonewaker — {1}{R} 2/1 Human Shaman. Landfall — when a land you
+/// control enters, you may pay {2}{R} to create a 3/1 red Elemental with
+/// trample and haste, exiled at the next end step.
+pub fn akoum_stonewaker() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TokenDefinition, TriggeredAbility};
+    use crate::effect::{DelayedTriggerKind, Selector, Value};
+    use crabomination_base::mana::Color;
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Akoum Stonewaker",
+        cost: cost(&[crate::mana::generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {2}{R}: create a 3/1 Elemental (exiled at end of turn)".into(),
+                mana_cost: cost(&[crate::mana::generic(2), r()]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: crate::effect::PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: elemental,
+                    },
+                    Effect::DelayUntil {
+                        kind: DelayedTriggerKind::NextEndStep,
+                        body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Loathsome Catoblepas — {5}{B} 3/3 Beast. {2}{G}: must be blocked this turn
 /// if able. When it dies, target creature an opponent controls gets -3/-3 EOT.
 pub fn loathsome_catoblepas() -> CardDefinition {

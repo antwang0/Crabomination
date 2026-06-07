@@ -1537,7 +1537,7 @@ impl GameState {
                             self.set_monarch(ctrl, events);
                         }
                 }
-                self.fire_combat_damage_to_player_triggers(atk.id, p);
+                self.fire_combat_damage_to_player_triggers(atk.id, p, amount);
             }
             AttackTarget::Planeswalker(pw_id) => {
                 if let Some(pw) = self.battlefield_find_mut(pw_id) {
@@ -1575,7 +1575,12 @@ impl GameState {
     /// Confidence and friends. The trigger source is bound to the
     /// graveyard card itself so a `Move(SelfSource → Hand)` body
     /// returns the right card.
-    fn fire_combat_damage_to_player_triggers(&mut self, source: CardId, damaged_player: usize) {
+    fn fire_combat_damage_to_player_triggers(
+        &mut self,
+        source: CardId,
+        damaged_player: usize,
+        damage_amount: u32,
+    ) {
         let attacker_controller = self
             .battlefield
             .iter()
@@ -1702,7 +1707,10 @@ impl GameState {
                 converged_value: 0,
                 trigger_source: None,
                 mana_spent: 0,
-                event_amount: 0,
+                // CR 119.3 — the damage dealt, so `Value::TriggerEventAmount`
+                // riders (Visions of Brutality's "controller loses that much
+                // life") scale by the hit.
+                event_amount: damage_amount,
                 intervening_if: None,
             });
         }

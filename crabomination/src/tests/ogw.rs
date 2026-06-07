@@ -1741,3 +1741,54 @@ fn gravity_negator_grants_flying_on_attack() {
     assert!(g.computed_permanent(ally).unwrap().keywords.contains(&Keyword::Flying),
         "ally gains flying");
 }
+
+/// Akoum Stonewaker's landfall makes a 3/1 haste Elemental when {2}{R} is paid.
+#[test]
+fn akoum_stonewaker_landfall_makes_elemental() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::akoum_stonewaker());
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    let elem = g.battlefield.iter().find(|c| c.definition.name == "Elemental");
+    assert!(elem.is_some(), "Elemental token created");
+    let e = elem.unwrap();
+    assert_eq!((e.definition.power, e.definition.toughness), (3, 1));
+    assert!(e.definition.keywords.contains(&crate::card::Keyword::Haste));
+}
+
+/// Visions of Brutality stops the enchanted creature from blocking and bleeds
+/// its controller when it deals combat damage.
+#[test]
+fn visions_of_brutality_cant_block_and_bleeds() {
+    use crate::card::Keyword;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // Enchant P0's own attacker so it attacks on P0's turn (active player).
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::visions_of_brutality());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant the bear");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::CantBlock),
+        "enchanted creature can't block");
+    g.clear_sickness(bear);
+    let own_life = g.players[0].life;
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::CombatDamage);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, own_life - 2,
+        "controller loses life equal to the 2 combat damage dealt");
+}
