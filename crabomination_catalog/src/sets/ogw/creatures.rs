@@ -535,6 +535,63 @@ pub fn bane_of_bala_ged() -> CardDefinition {
     }
 }
 
+/// Ruination Guide — {2}{U} 3/2 Eldrazi Drone. Devoid, Ingest; other colorless
+/// creatures you control get +1/+0. (The Devoid-aware Colorless filter means
+/// the anthem reaches Devoid creatures with colored pips.)
+pub fn ruination_guide() -> CardDefinition {
+    use crate::card::{SelectionRequirement, StaticAbility};
+    use crate::effect::{Selector, StaticEffect};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![ingest()],
+        static_abilities: vec![StaticAbility {
+            description: "Other colorless creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Colorless)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        ..drone("Ruination Guide", cost(&[generic(2), u()]), 3, 2)
+    }
+}
+
+/// Dominator Drone — {2}{B} 3/2 Eldrazi Drone. Devoid, Ingest; ETB, if you
+/// control another colorless creature, target opponent loses 2 life.
+pub fn dominator_drone() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::etb;
+    use crate::effect::{PlayerRef, Predicate, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![
+            ingest(),
+            etb(Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::Colorless)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+        ],
+        ..drone("Dominator Drone", cost(&[generic(2), b()]), 3, 2)
+    }
+}
+
 /// Blinding Drone — {1}{U} 1/3 Eldrazi Drone. Devoid; {C}, {T}: tap target
 /// creature.
 pub fn blinding_drone() -> CardDefinition {

@@ -157,6 +157,11 @@ pub enum AffectedPermanents {
         /// `#[serde(default)]` keeps old snapshots valid.
         #[serde(default)]
         token: Option<bool>,
+        /// "Colorless only" filter (Ruination Guide's "other colorless
+        /// creatures you control"). Devoid-aware (CR 702.114). `#[serde(default)]`
+        /// keeps old snapshots valid.
+        #[serde(default)]
+        colorless: bool,
     },
     /// All permanents controlled by any player on a team other than the
     /// source's. In 1v1 / free-for-all this is "everyone but the source's
@@ -466,7 +471,7 @@ pub(crate) fn affected_includes(
     match affected {
         AffectedPermanents::Source => source == card.id,
         AffectedPermanents::Specific(ids) => ids.contains(&card.id),
-        AffectedPermanents::All { controller, card_types, exclude_source, color, token } => {
+        AffectedPermanents::All { controller, card_types, exclude_source, color, token, colorless } => {
             if *exclude_source && source == card.id {
                 return false;
             }
@@ -478,8 +483,13 @@ pub(crate) fn affected_includes(
                     matches!(s, crate::mana::ManaSymbol::Colored(c) if *c == want)
                 })
             });
+            // CR 702.114 — Devoid CDA: colorless despite colored pips.
+            let colorless_ok = !*colorless
+                || card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+                || !card.definition.cost.symbols.iter()
+                    .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_)));
             let token_ok = token.is_none_or(|want| card.is_token == want);
-            ctrl_ok && type_ok && color_ok && token_ok
+            ctrl_ok && type_ok && color_ok && colorless_ok && token_ok
         }
         AffectedPermanents::AllOpponents { source_controller, card_types, friendly_seats } => {
             // Empty `friendly_seats` → legacy 1v1 check (snapshots from

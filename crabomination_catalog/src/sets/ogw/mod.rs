@@ -45,6 +45,8 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         desolation_twin,
         hand_of_emrakul,
         bane_of_bala_ged,
+        ruination_guide,
+        dominator_drone,
         blinding_drone,
         kozileks_translator,
         flayer_drone,

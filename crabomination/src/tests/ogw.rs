@@ -625,6 +625,48 @@ fn bane_of_bala_ged_attack_exiles_two_permanents() {
     assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
 }
 
+/// Ruination Guide's anthem reaches a Devoid creature (colored pips, colorless
+/// object) — the Devoid-aware Colorless filter at work.
+#[test]
+fn ruination_guide_anthem_buffs_devoid_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ruination_guide());
+    let mist = g.add_card_to_battlefield(0, catalog::mist_intruder()); // Devoid 1/2
+    let cp = g.computed_permanent(mist).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "Devoid creature gets +1/+0 from the anthem");
+}
+
+/// The anthem excludes Ruination Guide itself ("other").
+#[test]
+fn ruination_guide_does_not_buff_itself() {
+    let mut g = two_player_game();
+    let rg = g.add_card_to_battlefield(0, catalog::ruination_guide());
+    let cp = g.computed_permanent(rg).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "Ruination Guide is unaffected by its own anthem");
+}
+
+/// Dominator Drone drains 2 only when another colorless creature is present.
+#[test]
+fn dominator_drone_drains_with_another_colorless() {
+    // Alone → no drain.
+    let mut g = two_player_game();
+    let d1 = g.add_card_to_hand(0, catalog::dominator_drone());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[1].life;
+    crate::game::cast(&mut g, d1);
+    assert_eq!(g.players[1].life, before, "no other colorless creature → no drain");
+    // With a colorless creature already out → drain 2.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
+    let d2 = g.add_card_to_hand(0, catalog::dominator_drone());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let before = g.players[1].life;
+    crate::game::cast(&mut g, d2);
+    assert_eq!(g.players[1].life, before - 2, "another colorless creature → drain 2");
+}
+
 /// Blinding Drone taps a target creature for {C}{T}.
 #[test]
 fn blinding_drone_taps_target_creature() {

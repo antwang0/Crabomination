@@ -2273,6 +2273,7 @@ impl GameState {
                         exclude_source: false,
                         color: None,
                         token: None,
+                        colorless: false,
                     },
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
@@ -2289,6 +2290,7 @@ impl GameState {
                             exclude_source: false,
                             color: None,
                             token: None,
+                        colorless: false,
                         },
                         layer: Layer::L6Ability,
                         sublayer: None,
@@ -2318,6 +2320,7 @@ impl GameState {
                             exclude_source: false,
                             color: None,
                             token: None,
+                        colorless: false,
                         },
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
@@ -2391,6 +2394,7 @@ impl GameState {
                                 exclude_source: false,
                                 color: None,
                                 token: None,
+                        colorless: false,
                             },
                             layer: Layer::L6Ability,
                             sublayer: None,
@@ -6117,8 +6121,8 @@ fn simple_walker_can_handle(req: &SelectionRequirement) -> bool {
         R::And(a, b) => simple_walker_can_handle(a) && simple_walker_can_handle(b),
         R::ControlledByYou | R::ControlledByOpponent | R::Creature | R::Artifact
         | R::Enchantment | R::Planeswalker | R::Land | R::HasCardType(_)
-        | R::HasCreatureType(_) | R::WithCounter(_) | R::HasColor(_) | R::IsToken
-        | R::NotToken | R::OtherThanSource | R::Any | R::Permanent => true,
+        | R::HasCreatureType(_) | R::WithCounter(_) | R::HasColor(_) | R::Colorless
+        | R::IsToken | R::NotToken | R::OtherThanSource | R::Any | R::Permanent => true,
         _ => false,
     }
 }
@@ -6146,6 +6150,7 @@ fn affected_from_requirement(
     let mut creature_type: Option<crate::card::CreatureType> = None;
     let mut counter_filter: Option<crate::card::CounterType> = None;
     let mut color_filter: Option<crate::mana::Color> = None;
+    let mut colorless_filter = false;
     let mut token_filter: Option<bool> = None;
     // CR-driven "other" exclusion (push XXXV). `SelectionRequirement::
     // OtherThanSource` flips this to true; the resulting AffectedPermanents
@@ -6175,6 +6180,7 @@ fn affected_from_requirement(
             R::HasCreatureType(ct) => creature_type = Some(*ct),
             R::WithCounter(ct) => counter_filter = Some(*ct),
             R::HasColor(c) => color_filter = Some(*c),
+            R::Colorless => colorless_filter = true,
             R::IsToken => token_filter = Some(true),
             R::NotToken => token_filter = Some(false),
             R::OtherThanSource => other_than_source = true,
@@ -6214,6 +6220,7 @@ fn affected_from_requirement(
         exclude_source: other_than_source,
         color: color_filter,
         token: token_filter,
+        colorless: colorless_filter,
     })
 }
 
