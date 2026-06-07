@@ -571,6 +571,10 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
             effect_imposes_self_cost(then) || effect_imposes_self_cost(else_)
         }
         Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => effect_imposes_self_cost(body),
+        // "You may sacrifice/exile this" riders are a clear self-cost.
+        Effect::SacrificeSource => true,
+        Effect::Exile { what } => hits_self(what),
+        Effect::PayOrLoseGame { .. } => true,
         _ => false,
     }
 }
@@ -1993,6 +1997,17 @@ mod tests {
         );
         assert!(optional_trigger_beneficial(&g, id, "you may"),
             "a pure-upside 'you may draw' is taken by the bot");
+    }
+
+    #[test]
+    fn bot_declines_optional_trigger_that_sacrifices_itself() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(
+            0,
+            body_card("Downside", Effect::SacrificeSource),
+        );
+        assert!(!optional_trigger_beneficial(&g, id, "you may"),
+            "a 'you may sacrifice this' rider is a self-cost the bot declines");
     }
 
     /// A planeswalker whose highest-loyalty ability needs a target that

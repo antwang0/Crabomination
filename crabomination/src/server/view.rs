@@ -996,6 +996,12 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Untap { .. } => "Untap",
         Effect::PumpPT { .. } => "Pump",
         Effect::SetBasePT { .. } => "Set base P/T",
+        Effect::Process { then, .. } => {
+            // Surface the rider's label — the "process from exile" step
+            // resolves through the decision panel.
+            let inner = ability_effect_label(then);
+            if inner == "Activate" { "Process" } else { inner }
+        }
         Effect::GrantKeyword { .. } => "Grant keyword",
         Effect::AddPoison { .. } => "Add poison",
         Effect::RevealUntilFind { .. } => "Reveal until find",
