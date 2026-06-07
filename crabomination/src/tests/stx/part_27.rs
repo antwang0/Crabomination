@@ -295,6 +295,18 @@ fn dramatic_finale_anthems_tokens_and_mints_on_nontoken_death() {
     let after = g.battlefield.iter()
         .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling)).count();
     assert_eq!(after, before + 1, "a 2/1 Inkling minted on the nontoken death");
+    // Triggers only once each turn: a second nontoken death this turn mints nothing.
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Permanent(bear2)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the second bear");
+    drain_stack(&mut g);
+    let after2 = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling)).count();
+    assert_eq!(after2, after, "second death in the same turn mints no Inkling");
 }
 
 #[test]
@@ -306,12 +318,36 @@ fn deadly_brew_each_player_sacrifices() {
     let id = g.add_card_to_hand(0, catalog::deadly_brew());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
+    // Accept the optional "return a permanent" rider.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(mine).is_none(), "you sacrifice a creature");
     assert!(g.battlefield_find(theirs).is_none(), "opponent sacrifices a creature");
+    // You sacrificed, so the gated return fires and pulls the permanent back.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Mind Stone"),
+        "returned a permanent from graveyard");
+}
+
+#[test]
+fn deadly_brew_no_return_if_you_didnt_sacrifice() {
+    // You control no creature/PW to sacrifice → the "if you sacrificed" gate
+    // closes and nothing is returned.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::deadly_brew());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Mind Stone"),
+        "no sacrifice → permanent stays in graveyard");
 }
 
 #[test]

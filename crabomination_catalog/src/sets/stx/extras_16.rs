@@ -576,9 +576,8 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
 // ── More spells ──────────────────────────────────────────────────────────────
 
 /// Deadly Brew — {B}{G} Sorcery. Each player sacrifices a creature or
-/// planeswalker of their choice. Then you may return a permanent card from
-/// your graveyard to your hand. (The "if you sacrificed" gate collapses; the
-/// return auto-picks.)
+/// planeswalker of their choice. If you sacrificed a permanent this way, you
+/// may return a permanent card from your graveyard to your hand.
 pub fn deadly_brew() -> CardDefinition {
     CardDefinition {
         name: "Deadly Brew",
@@ -590,19 +589,23 @@ pub fn deadly_brew() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             },
-            Effect::MayDo {
-                description: "Return a permanent card from your graveyard to your hand?".into(),
-                body: Box::new(Effect::Move {
-                    what: Selector::take(
-                        Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: SelectionRequirement::Permanent,
-                        },
-                        Value::Const(1),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+            Effect::If {
+                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                then: Box::new(Effect::MayDo {
+                    description: "Return a permanent card from your graveyard to your hand?".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::take(
+                            Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: Zone::Graveyard,
+                                filter: SelectionRequirement::Permanent,
+                            },
+                            Value::Const(1),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
                 }),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()
@@ -610,9 +613,8 @@ pub fn deadly_brew() -> CardDefinition {
 }
 
 /// Dramatic Finale — {W/B}{W/B}{W/B}{W/B} Enchantment. Creature tokens you
-/// control get +1/+1. Whenever one or more nontoken creatures you control
-/// die, create a 2/1 white-and-black Inkling with flying. (The "only once
-/// each turn" limiter is dropped — each batch of deaths mints one.)
+/// control get +1/+1. Whenever one or more nontoken creatures you control die,
+/// create a 2/1 white-and-black Inkling with flying. Triggers only once each turn.
 pub fn dramatic_finale() -> CardDefinition {
     CardDefinition {
         name: "Dramatic Finale",
@@ -635,7 +637,8 @@ pub fn dramatic_finale() -> CardDefinition {
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::NotToken,
-                }),
+                })
+                .once_per_turn(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

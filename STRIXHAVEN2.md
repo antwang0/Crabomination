@@ -33,10 +33,6 @@ A handful of 🟡 partials remain (riders dropped, core wired):
   and the "other PWs gain Kasmina's abilities" static is dropped.
 - 🟡 **The Biblioplex** — `{T}: Add {C}` + `{2},{T}: dig for an IS card`; the
   "else may bottom" half collapses to an auto-bottom of the non-IS top card.
-- 🟡 **Deadly Brew** — each player sacrifices; the "if you sacrificed" gate on
-  the graveyard-return collapses (auto-picks a permanent).
-- 🟡 **Dramatic Finale** — token anthem + nontoken-death Inkling; the "only
-  once each turn" limiter on the death trigger is dropped.
 
 ⏳ work remaining: ~40 printed STX cards (the Dean MDFCs, Codie/Extus/Blex/
 Jadzi legends, study/hone-counter cards, blink/recursion spells, the

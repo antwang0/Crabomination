@@ -15607,6 +15607,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                     },
                     Value::Const(100),
                 )),
+                once_per_turn: false,
             },
             effect: Effect::WinGame { who: PlayerRef::You },
         }],

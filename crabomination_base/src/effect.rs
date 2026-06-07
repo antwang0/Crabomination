@@ -500,6 +500,10 @@ pub enum Predicate {
     /// riders (Sab-Sunen, Luxa Embodied). `ValueIsOdd(0)` is false (zero is
     /// even, CR-flavor).
     ValueIsOdd(Value),
+    /// True if `who` sacrificed at least one permanent during the current
+    /// resolution. Backed by `GameState::players_sacrificed_this_resolution`.
+    /// Gates "if you sacrificed a permanent this way, …" (Deadly Brew).
+    PlayerSacrificedThisResolution(PlayerRef),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
     /// The game is currently in the given turn step (CR 500). Gates
@@ -1097,14 +1101,25 @@ pub struct EventSpec {
     /// Optional cast-time predicate (e.g. "whenever you cast a noncreature
     /// spell" is SpellCast + filter=NotCreatureSpell).
     pub filter: Option<Predicate>,
+    /// CR 603.3d — "This ability triggers only once each turn." When set, the
+    /// trigger fires at most once per turn (and once per batch of simultaneous
+    /// events), tracked via `GameState::triggered_once_per_turn_used`. Defaults
+    /// to false via `#[serde(default)]` for snapshot back-compat. Dramatic Finale.
+    #[serde(default)]
+    pub once_per_turn: bool,
 }
 
 impl EventSpec {
     pub fn new(kind: EventKind, scope: EventScope) -> Self {
-        Self { kind, scope, filter: None }
+        Self { kind, scope, filter: None, once_per_turn: false }
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
+        self
+    }
+    /// Mark this trigger "only once each turn" (CR 603.3d).
+    pub fn once_per_turn(mut self) -> Self {
+        self.once_per_turn = true;
         self
     }
 }
