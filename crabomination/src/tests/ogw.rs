@@ -1965,3 +1965,54 @@ fn akoum_firebird_returns_on_landfall() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bird), "Firebird returns to battlefield");
 }
+
+/// Expedition Envoy is a 2/1 vanilla Ally.
+#[test]
+fn expedition_envoy_body() {
+    use crate::card::CreatureType;
+    let d = catalog::expedition_envoy();
+    assert_eq!((d.power, d.toughness), (2, 1));
+    assert!(d.subtypes.creature_types.contains(&CreatureType::Ally));
+}
+
+/// Isolation Zone exiles an opponent's creature until it leaves; it returns when removed.
+#[test]
+fn isolation_zone_exiles_until_it_leaves() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let zone = g.add_card_to_hand(0, catalog::isolation_zone());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: zone, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Isolation Zone");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "creature exiled");
+    g.remove_from_battlefield_to_graveyard(zone);
+    assert!(g.battlefield.iter().any(|c| c.id == victim), "creature returns when zone leaves");
+}
+
+/// Shoulder to Shoulder supports two creatures and draws a card.
+#[test]
+fn shoulder_to_shoulder_supports_and_draws() {
+    use crate::card::CounterType;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::shoulder_to_shoulder());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("cast Shoulder to Shoulder");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew 1 after casting (net same: -1 spell +1 draw)");
+}

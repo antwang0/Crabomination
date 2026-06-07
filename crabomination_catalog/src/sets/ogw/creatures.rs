@@ -1805,6 +1805,46 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Expedition Envoy — {W} 2/1 Human Scout Ally (vanilla).
+pub fn expedition_envoy() -> CardDefinition {
+    CardDefinition {
+        name: "Expedition Envoy",
+        cost: cost(&[crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Isolation Zone — {2}{W}{W} Enchantment. ETB: exile target creature or
+/// enchantment an opponent controls until this leaves the battlefield.
+pub fn isolation_zone() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, ExileReturnZone, SelectionRequirement,
+        TriggeredAbility};
+    CardDefinition {
+        name: "Isolation Zone",
+        cost: cost(&[crate::mana::generic(2), crate::mana::w(), crate::mana::w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Enchantment)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Akoum Firebird — {2}{R}{R} 3/3 Phoenix. Flying, haste, attacks each combat
 /// if able. Landfall — from your graveyard, you may pay {4}{R}{R} to return it
 /// to the battlefield.

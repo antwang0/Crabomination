@@ -21,6 +21,21 @@ pub fn murderous_compulsion() -> CardDefinition {
     }
 }
 
+/// Shoulder to Shoulder — {2}{W} Sorcery. Support 2, then draw a card.
+pub fn shoulder_to_shoulder() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Shoulder to Shoulder",
+        cost: cost(&[generic(2), crate::mana::w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::SupportCounters { max_targets: 2, filter: SelectionRequirement::Creature },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Sheer Drop — {2}{W} Sorcery. Destroy target tapped creature. (Awaken 3 is
 /// dropped — no Awaken primitive yet.)
 pub fn sheer_drop() -> CardDefinition {
