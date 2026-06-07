@@ -1821,7 +1821,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // is approximated by `exile_other_filter: Any` (exiles one card).
         // The 2-damage-to-any-target body fires. Activated.
         grim_lavamancer,
-        // pyrokinesis      — 🟡 "divide 4 damage among any number" collapsed to single target
+        // divide-damage via Effect::DealDamageDivided (now faithful)
+        pyrokinesis,
         // simian_spirit_guide — 🟡 "exile from hand: add {R}" alt-mana ability missing
         pyroclasm,
         lightning_strike,
@@ -1849,7 +1850,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         stone_rain,
         earthquake,
         // chaos_warp      — 🟡 "reveal top card; cast if permanent" half omitted
-        // balefire_dragon — 🟡 "that much damage" collapsed to fixed 6
+        // power-scaled sweep on combat damage (now faithful via PowerOf(This))
+        balefire_dragon,
         // ── modern_decks-14 ──
         magma_spray,
         skullcrack,
@@ -2251,7 +2253,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Forest-count multiplier now wired via
         // `ManaPayload::OfColor(Green, Value::Times(2, CountOf(Forest)))`.
         rofellos_llanowar_emissary,
-        // biorhythm                — 🟡 "set life total to" collapsed to fixed drain
+        // each player's life = creatures they control (now faithful)
+        biorhythm,
         lumra_bellow_of_the_woods,
         // ── modern_decks (claude/modern_decks) — new G cards ──
         three_visits,
