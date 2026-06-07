@@ -2003,6 +2003,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         avenger_of_zendikar,
         // quest-counter team anthem
         beastmaster_ascension,
+        // untap on each other player's untap step
+        seedborn_muse,
         // allied-color batch (modern_decks)
         llanowar_tribe,
         sakura_tribe_scout,

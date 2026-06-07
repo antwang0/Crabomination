@@ -6261,7 +6261,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // ExileCardsBoundForGraveyard (Rest in Peace / Leyline of the
             // Void) — consulted at graveyard-placement time via
             // `graveyard_exiled_for`; no layer effect.
-            | StaticEffect::ExileCardsBoundForGraveyard { .. } => vec![],
+            | StaticEffect::ExileCardsBoundForGraveyard { .. }
+            // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
+            // `do_untap`; no layer effect.
+            | StaticEffect::UntapAllYoursEachUntapStep => vec![],
         })
         .collect()
 }

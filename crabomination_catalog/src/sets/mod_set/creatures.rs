@@ -3184,6 +3184,25 @@ pub fn avenger_of_zendikar() -> CardDefinition {
     }
 }
 
+/// Seedborn Muse — {3}{G}{G} 2/4 Spirit. "Untap all permanents you control
+/// during each other player's untap step" (`StaticEffect::UntapAllYoursEach-
+/// UntapStep`, consulted by `do_untap`).
+pub fn seedborn_muse() -> CardDefinition {
+    CardDefinition {
+        name: "Seedborn Muse",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Untap all permanents you control during each other player's untap step.",
+            effect: StaticEffect::UntapAllYoursEachUntapStep,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Centaur Courser — {2}{G} 3/3 Centaur Warrior (vanilla).
 pub fn centaur_courser() -> CardDefinition {
     CardDefinition {

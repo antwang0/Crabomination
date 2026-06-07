@@ -425,6 +425,12 @@ pub enum StaticEffect {
     /// otherwise it applies to every player's graveyard (Rest in Peace).
     /// Consulted at every graveyard-placement site via `graveyard_exiled_for`.
     ExileCardsBoundForGraveyard { opponents_only: bool },
+    /// CR 502.3 — "Untap all permanents you control during each other player's
+    /// untap step." Seedborn Muse / Prophet of Kruphix. Consulted by
+    /// `do_untap`: while the active player is *not* this static's controller,
+    /// the controller's permanents untap alongside the active player's (subject
+    /// to the same Stun / `PreventUntap` / exert gates). No layer effect.
+    UntapAllYoursEachUntapStep,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

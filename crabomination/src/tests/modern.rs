@@ -34959,3 +34959,29 @@ fn beastmaster_ascension_anthem_at_seven_quest_counters() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (7, 7), "+5/+5 once at seven quest counters");
 }
+
+/// Seedborn Muse untaps your permanents during another player's untap step.
+#[test]
+fn seedborn_muse_untaps_on_opponents_turn() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::seedborn_muse());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    // Simulate the opponent's untap step.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(!g.battlefield_find(land).unwrap().tapped,
+        "Seedborn untaps your permanents on each other player's untap step");
+}
+
+/// Without Seedborn Muse, a non-active player's permanents stay tapped.
+#[test]
+fn without_seedborn_permanents_stay_tapped_on_opponents_turn() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped,
+        "normally a non-active player's permanents don't untap");
+}

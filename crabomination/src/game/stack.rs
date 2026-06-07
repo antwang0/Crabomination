@@ -952,6 +952,23 @@ impl GameState {
         use crate::card::CounterType;
         use crate::card::SelectionRequirement;
         use crate::effect::StaticEffect;
+        // CR 502.3 — Seedborn Muse: any player *other* than the active player
+        // who controls an `UntapAllYoursEachUntapStep` permanent also untaps
+        // their permanents during this untap step.
+        let untappers: Vec<usize> = {
+            let mut u = vec![p];
+            for c in &self.battlefield {
+                if c.controller != p
+                    && !u.contains(&c.controller)
+                    && c.definition.static_abilities.iter().any(|sa| {
+                        matches!(sa.effect, StaticEffect::UntapAllYoursEachUntapStep)
+                    })
+                {
+                    u.push(c.controller);
+                }
+            }
+            u
+        };
         let prevented: std::collections::HashSet<crate::card::CardId> = {
             let mut blocked = std::collections::HashSet::new();
             // Walk static abilities in play and OR each PreventUntap
@@ -986,14 +1003,14 @@ impl GameState {
             }
             if !prevent_filters.is_empty() {
                 for c in &self.battlefield {
-                    if c.controller != p {
+                    if !untappers.contains(&c.controller) {
                         continue;
                     }
                     for req in &prevent_filters {
                         if self.evaluate_requirement(
                             req,
                             &crate::game::types::Target::Permanent(c.id),
-                            p,
+                            c.controller,
                         ) {
                             blocked.insert(c.id);
                             break;
@@ -1007,12 +1024,19 @@ impl GameState {
         // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
         let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
         for card in &mut self.battlefield {
-            if card.controller == p {
+            if untappers.contains(&card.controller) {
+                // Summoning sickness clears only for the *active* player at the
+                // turn boundary (CR 302.1 / 506.4). A Seedborn-untapped
+                // permanent (controlled by another player) untaps but does not
+                // shed sickness on someone else's turn.
+                let active = card.controller == p;
                 if prevented.contains(&card.id) {
                     // CR 502.3 — untap is prevented. Summoning sickness still
                     // clears per CR 506.4 (the turn-boundary tag, not the
                     // untap event).
-                    card.summoning_sick = false;
+                    if active {
+                        card.summoning_sick = false;
+                    }
                     continue;
                 }
                 // CR 702.83 — an exerted creature skips this untap. The flag
@@ -1020,7 +1044,9 @@ impl GameState {
                 // turn. No tapped→untapped flip, so no Inspired trigger.
                 if card.skip_next_untap {
                     card.skip_next_untap = false;
-                    card.summoning_sick = false;
+                    if active {
+                        card.summoning_sick = false;
+                    }
                     continue;
                 }
                 if card.counter_count(CounterType::Stun) > 0 {
@@ -1031,7 +1057,9 @@ impl GameState {
                     }
                     card.tapped = false;
                 }
-                card.summoning_sick = false;
+                if active {
+                    card.summoning_sick = false;
+                }
             }
         }
         // CR 701.38 — goad lasts "until your next turn." When the goader's
