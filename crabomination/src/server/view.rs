@@ -948,6 +948,12 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
             parts.push(format!("Remove {n}{sep}{label} counters"));
         }
     }
+    // Return-self-as-cost (Grinning Ignus, Rootha) — "Return this to hand"
+    // so the tooltip shows the bounce rider rather than looking free for
+    // mana alone.
+    if ability.return_self_cost {
+        parts.push("Return this to hand".into());
+    }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }
 
@@ -1837,6 +1843,22 @@ mod tests {
             ..Default::default()
         };
         assert!(ability_cost_label(&sac_two).contains("Sacrifice 2 artifacts"));
+    }
+
+    /// `return_self_cost` activations (Grinning Ignus, Rootha) must show the
+    /// bounce rider so the tooltip doesn't look free for tap+mana alone.
+    #[test]
+    fn ability_cost_label_renders_return_self_rider() {
+        use crate::effect::ActivatedAbility;
+        use crate::mana::{cost, r};
+        let ignus = ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            return_self_cost: true,
+            ..Default::default()
+        };
+        let label = ability_cost_label(&ignus);
+        assert!(label.contains("{R}"), "got: {label}");
+        assert!(label.contains("Return this to hand"), "bounce rider shown: {label}");
     }
 
     /// `AbilityView.once_per_turn_used` must reflect the engine's
