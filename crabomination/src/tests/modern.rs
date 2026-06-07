@@ -34502,3 +34502,111 @@ fn precognitive_perception_draws_three() {
     cast(&mut g, id);
     assert_eq!(g.players[0].hand.len(), before - 1 + 3, "spell left hand, drew 3");
 }
+
+// ── Allied-color batch 3 (modern_decks) ─────────────────────────────────────
+
+/// Tireless Missionaries gains 3 life on ETB.
+#[test]
+fn tireless_missionaries_gains_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::tireless_missionaries());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].life, 23);
+}
+
+/// Marauding Blight-Priest drains each opponent whenever you gain life.
+#[test]
+fn marauding_blight_priest_drains_on_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::marauding_blight_priest());
+    let before = g.players[1].life;
+    g.adjust_life(0, 2);
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::LifeGained { player: 0, amount: 2 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "opponent loses 1 on your lifegain");
+}
+
+/// Vampire Cutthroat has skulk and lifelink.
+#[test]
+fn vampire_cutthroat_keywords() {
+    use crate::card::Keyword;
+    let d = catalog::vampire_cutthroat();
+    assert!(d.keywords.contains(&Keyword::Skulk) && d.keywords.contains(&Keyword::Lifelink));
+}
+
+/// Goblin Fireslinger pings a player for 1.
+#[test]
+fn goblin_fireslinger_pings_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::goblin_fireslinger());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None })
+    .expect("ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19);
+}
+
+/// Hijack steals an artifact until end of turn.
+#[test]
+fn hijack_steals_artifact() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(1, catalog::bontus_monument());
+    let id = g.add_card_to_hand(0, catalog::hijack());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, id, Target::Permanent(relic));
+    assert_eq!(g.battlefield_find(relic).unwrap().controller, 0, "stolen until EOT");
+}
+
+/// Greenweaver Druid taps for two green.
+#[test]
+fn greenweaver_druid_makes_two_green() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::greenweaver_druid());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2);
+}
+
+/// Citanul Woodreaders draws two only when kicked.
+#[test]
+fn citanul_woodreaders_kicked_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::citanul_woodreaders());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4); // {2}{G} + kicker {2}{G}
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "spell left hand, drew 2");
+}
+
+/// Wickerbough Elder removes its -1/-1 counter to destroy an artifact.
+#[test]
+fn wickerbough_elder_removes_counter_to_destroy() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(1, catalog::bontus_monument());
+    let id = g.add_card_to_hand(0, catalog::wickerbough_elder());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    g.clear_sickness(id);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::MinusOneMinusOne), 1,
+        "enters with a -1/-1 counter");
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(relic)), x_value: None })
+    .expect("destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(relic).is_none(), "artifact destroyed");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::MinusOneMinusOne), 0,
+        "counter removed as cost");
+}

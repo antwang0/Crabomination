@@ -26016,3 +26016,185 @@ pub fn precognitive_perception() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tireless Missionaries — {4}{W} 2/3 Human Cleric. ETB: gain 3 life.
+pub fn tireless_missionaries() -> CardDefinition {
+    CardDefinition {
+        name: "Tireless Missionaries",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(3) })],
+        ..Default::default()
+    }
+}
+
+/// Marauding Blight-Priest — {2}{B} 3/2 Vampire Cleric. Whenever you gain
+/// life, each opponent loses 1 life.
+pub fn marauding_blight_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Marauding Blight-Priest",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vampire Cutthroat — {B} 1/1 Vampire Rogue. Skulk, lifelink.
+pub fn vampire_cutthroat() -> CardDefinition {
+    CardDefinition {
+        name: "Vampire Cutthroat",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Skulk, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Goblin Fireslinger — {R} 1/1 Goblin Warrior. "{T}: This deals 1 damage to
+/// target player or planeswalker."
+pub fn goblin_fireslinger() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Fireslinger",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hijack — {1}{R}{R} Sorcery. Gain control of target artifact or creature
+/// until end of turn; untap it; it gains haste.
+pub fn hijack() -> CardDefinition {
+    CardDefinition {
+        name: "Hijack",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Greenweaver Druid — {2}{G} 1/1 Elf Druid. "{T}: Add {G}{G}."
+pub fn greenweaver_druid() -> CardDefinition {
+    CardDefinition {
+        name: "Greenweaver Druid",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Green, Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Citanul Woodreaders — {2}{G} 1/4 Human Druid. Kicker {2}{G}; ETB if kicked,
+/// draw two cards.
+pub fn citanul_woodreaders() -> CardDefinition {
+    CardDefinition {
+        name: "Citanul Woodreaders",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Kicker(cost(&[generic(2), g()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Wickerbough Elder — {3}{G} 4/4 Treefolk Shaman. Enters with a -1/-1
+/// counter. "{G}, Remove a -1/-1 counter from this: destroy target artifact
+/// or enchantment."
+pub fn wickerbough_elder() -> CardDefinition {
+    CardDefinition {
+        name: "Wickerbough Elder",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Treefolk, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        enters_with_counters: Some((CounterType::MinusOneMinusOne, Value::Const(1))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            remove_counter_cost: Some((CounterType::MinusOneMinusOne, 1)),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
