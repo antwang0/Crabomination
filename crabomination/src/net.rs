@@ -663,6 +663,9 @@ pub struct LoyaltyAbilityView {
     pub index: usize,
     /// Raw loyalty cost: positive (+1, +2) or negative (-1, -3, …).
     pub loyalty_cost: i32,
+    /// Variable `-X` ability: the player picks X (0..=current loyalty).
+    #[serde(default)]
+    pub x_cost: bool,
     /// Pre-rendered effect label ("Draw cards", "Destroy permanent", …).
     pub effect_label: String,
     pub needs_target: bool,

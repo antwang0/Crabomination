@@ -2903,10 +2903,10 @@ fn pyrokinetic_insight_mode_0_burns_three() {
 #[test]
 fn lorehold_spirit_tutor_pulls_spirit_from_top() {
     let mut g = two_player_game();
-    // Star Pupil is a Cat Spirit — confirms RevealUntilFind can find a
-    // Spirit creature card on top of library.
+    // Ageless Guardian is a Spirit Soldier — confirms RevealUntilFind can find
+    // a Spirit creature card on top of library.
     g.players[0].library.clear();
-    g.add_card_to_library(0, catalog::star_pupil()); // top of library
+    g.add_card_to_library(0, catalog::ageless_guardian()); // top of library
     let id = g.add_card_to_hand(0, catalog::lorehold_spirit_tutor());
     let hand_after_add = g.players[0].hand.len();
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -2916,10 +2916,10 @@ fn lorehold_spirit_tutor_pulls_spirit_from_top() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Spirit Tutor castable");
     drain_stack(&mut g);
-    // Star Pupil should be in hand after the reveal pulls it.
+    // Ageless Guardian should be in hand after the reveal pulls it.
     assert!(
-        g.players[0].hand.iter().any(|c| c.definition.name == "Star Pupil"),
-        "Star Pupil tutored to hand"
+        g.players[0].hand.iter().any(|c| c.definition.name == "Ageless Guardian"),
+        "Ageless Guardian tutored to hand"
     );
     // Net: -1 cast +1 tutored = 0 vs hand_after_add.
     assert_eq!(g.players[0].hand.len(), hand_after_add);

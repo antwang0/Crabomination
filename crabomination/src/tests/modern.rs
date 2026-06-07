@@ -7351,6 +7351,7 @@ fn teferi_minus_three_rejects_self_targeted_land() {
     g.add_card_to_library(0, catalog::forest());
 
     let err = g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi,
         ability_index: 1, // -3
         target: Some(Target::Permanent(own_forest)),
@@ -13039,6 +13040,7 @@ fn karn_scion_of_urza_minus_two_creates_a_construct_token() {
     let bf_before = g.battlefield.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: karn, ability_index: 2, target: None,
     }).expect("Karn -2 to make a Construct token");
     drain_stack(&mut g);
@@ -13064,6 +13066,7 @@ fn karn_construct_token_scales_with_artifact_count() {
     g.add_card_to_battlefield(0, catalog::ornithopter());
     g.add_card_to_battlefield(0, catalog::mind_stone());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: karn, ability_index: 2, target: None,
     }).expect("Karn -2");
     drain_stack(&mut g);
@@ -13087,6 +13090,7 @@ fn karn_plus_one_takes_low_value_card_exiles_other_with_silver_counter() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: karn, ability_index: 0, target: None,
     }).expect("Karn +1");
     drain_stack(&mut g);
@@ -13107,6 +13111,7 @@ fn karn_minus_one_returns_silver_counter_card_from_exile() {
     g.exile.push(card);
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: karn, ability_index: 1, target: None,
     }).expect("Karn -1");
     drain_stack(&mut g);
@@ -13139,6 +13144,7 @@ fn tezzeret_zero_untaps_artifact_creature_and_adds_counter() {
     g.battlefield_find_mut(thopter).unwrap().tapped = true;
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: tez, ability_index: 0, target: Some(Target::Permanent(thopter)),
     }).expect("Tezzeret 0");
     drain_stack(&mut g);
@@ -13157,6 +13163,7 @@ fn tezzeret_minus_three_tutors_a_cheap_artifact() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(stone))]));
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: tez, ability_index: 1, target: None,
     }).expect("Tezzeret -3");
     drain_stack(&mut g);
@@ -13172,6 +13179,7 @@ fn tezzeret_minus_seven_emblem_buffs_and_animates_artifact() {
     let stone = g.add_card_to_battlefield(0, catalog::mind_stone()); // noncreature artifact
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: tez, ability_index: 2, target: None,
     }).expect("Tezzeret -7");
     drain_stack(&mut g);
@@ -15829,6 +15837,7 @@ fn sorin_grim_nemesis_plus_one_draws_and_loses_three_life() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: sorin, ability_index: 0, target: None,
     }).expect("Sorin +1 castable");
     drain_stack(&mut g);
@@ -15850,6 +15859,7 @@ fn sorin_grim_nemesis_minus_nine_drains_each_opponent() {
     let p1_life = g.players[1].life;
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: sorin, ability_index: 2, target: None,
     }).expect("Sorin -9 ult");
     drain_stack(&mut g);
@@ -15881,6 +15891,7 @@ fn narset_parter_minus_two_digs_for_a_noncreature() {
     g.add_card_to_library(0, catalog::island());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(spell))]));
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: narset, ability_index: 0, target: None,
     }).expect("Narset -2");
     drain_stack(&mut g);
@@ -15897,6 +15908,7 @@ fn liliana_of_the_veil_plus_one_makes_each_player_discard() {
     let h0 = g.players[0].hand.len();
     let h1 = g.players[1].hand.len();
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: lily, ability_index: 0, target: None,
     }).expect("Lily +1");
     drain_stack(&mut g);
@@ -15911,6 +15923,7 @@ fn liliana_of_the_veil_minus_two_forces_a_sacrifice() {
     let lily = g.add_card_to_battlefield(0, catalog::liliana_of_the_veil());
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: lily, ability_index: 1, target: Some(Target::Player(1)),
     }).expect("Lily -2");
     drain_stack(&mut g);
@@ -15924,6 +15937,7 @@ fn liliana_last_hope_plus_one_shrinks_a_creature() {
     let lily = g.add_card_to_battlefield(0, catalog::liliana_the_last_hope());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: lily, ability_index: 0, target: Some(Target::Permanent(bear)),
     }).expect("Lily +1");
     drain_stack(&mut g);
@@ -15941,6 +15955,7 @@ fn liliana_last_hope_minus_two_mills_and_returns_a_creature() {
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: lily, ability_index: 1, target: Some(Target::Permanent(dead)),
     }).expect("Lily -2");
     drain_stack(&mut g);
@@ -15954,6 +15969,7 @@ fn teferi_hero_plus_one_draws() {
     g.add_card_to_library(0, catalog::island());
     let h = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi, ability_index: 0, target: None,
     }).expect("Teferi +1");
     drain_stack(&mut g);
@@ -15968,6 +15984,7 @@ fn teferi_hero_minus_three_tucks_a_permanent() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     for _ in 0..4 { g.add_card_to_library(1, catalog::island()); }
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi, ability_index: 1, target: Some(Target::Permanent(bear)),
     }).expect("Teferi -3");
     drain_stack(&mut g);
@@ -15984,6 +16001,7 @@ fn saheeli_rai_plus_one_pings_each_opponent() {
     let p1_life = g.players[1].life;
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: saheeli, ability_index: 0, target: None,
     }).expect("Saheeli +1");
     drain_stack(&mut g);
@@ -16000,6 +16018,7 @@ fn saheeli_rai_minus_two_creates_haste_copy() {
     let bf_before = g.battlefield.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: saheeli,
         ability_index: 1,
         target: Some(Target::Permanent(bear)),
@@ -16024,6 +16043,7 @@ fn ashiok_nightmare_weaver_plus_two_mills_opponent_three() {
     let yard_before = g.players[1].graveyard.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: ashiok,
         ability_index: 0,
         target: Some(Target::Player(1)),
@@ -16041,6 +16061,7 @@ fn ashiok_nightmare_weaver_minus_one_exiles_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: ashiok,
         ability_index: 1,
         target: Some(Target::Permanent(bear)),
@@ -16059,6 +16080,7 @@ fn tamiyo_collector_minus_two_returns_card_from_graveyard() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: tamiyo, ability_index: 0,
         target: Some(crate::game::types::Target::Permanent(bear)),
     }).expect("Tamiyo -2 reanimate-to-hand");
@@ -16079,6 +16101,7 @@ fn geyadrone_dihada_plus_one_drains_each_opponent_for_one() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: dihada, ability_index: 0, target: None,
     }).expect("Dihada +1");
     drain_stack(&mut g);
@@ -16098,6 +16121,7 @@ fn geyadrone_dihada_plus_one_resets_loyalty_when_behind() {
     g.players[0].life = 5;
     g.players[1].life = 20;
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: dihada, ability_index: 0, target: None,
     }).expect("Dihada +1");
     drain_stack(&mut g);
@@ -16113,6 +16137,7 @@ fn geyadrone_dihada_minus_seven_halves_opponent_life() {
     g.battlefield_find_mut(dihada).unwrap().add_counters(CounterType::Loyalty, 4); // 3 + 4 = 7
     g.players[1].life = 21;
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: dihada, ability_index: 2, target: None,
     }).expect("Dihada -7");
     drain_stack(&mut g);
@@ -16127,6 +16152,7 @@ fn geyadrone_dihada_minus_three_steals_creature() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: dihada,
         ability_index: 1,
         target: Some(Target::Permanent(bear)),
@@ -19959,6 +19985,7 @@ fn oko_plus_two_gains_three_life() {
 
     // Activate +2
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: oko_id, ability_index: 0, target: None,
     }).expect("+2 activation");
     drain_stack(&mut g);
@@ -19975,6 +20002,7 @@ fn oko_plus_one_turns_target_into_a_three_three_elk() {
     let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flier
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: oko, ability_index: 1, target: Some(Target::Permanent(target)),
     }).expect("+1 activation");
     drain_stack(&mut g);
@@ -23404,6 +23432,7 @@ fn dakkon_shadow_slayer_minus_three_exiles_a_creature() {
     let dakkon = g.add_card_to_battlefield(0, catalog::dakkon_shadow_slayer());
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: dakkon, ability_index: 1, target: Some(Target::Permanent(victim)),
     }).expect("Dakkon -3 activates");
     drain_stack(&mut g);
@@ -23419,6 +23448,7 @@ fn dakkon_minus_six_emblem_draws_on_upkeep() {
     g.battlefield_find_mut(pw).unwrap().add_counters(crate::card::CounterType::Loyalty, 6);
     g.add_card_to_library(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: pw, ability_index: 2, target: None,
     }).expect("Dakkon -6 castable at 9 loyalty");
     drain_stack(&mut g);
@@ -23439,6 +23469,7 @@ fn saheeli_rai_minus_seven_emblem_copies_on_end_step() {
     g.battlefield_find_mut(saheeli).unwrap().add_counters(crate::card::CounterType::Loyalty, 7);
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: saheeli, ability_index: 2, target: None,
     }).expect("Saheeli -7 castable at 10 loyalty");
     drain_stack(&mut g);

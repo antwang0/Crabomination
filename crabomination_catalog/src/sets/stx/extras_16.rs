@@ -764,9 +764,11 @@ pub fn dream_strix() -> CardDefinition {
 }
 
 /// Retriever Phoenix — {3}{R} 2/2 Phoenix with flying and haste. ETB, if you
-/// cast it, Learn. (The graveyard "learn → return this instead" recursion
-/// replacement is dropped.)
+/// cast it, Learn. While in your graveyard, you may return it to the
+/// battlefield instead of learning.
 pub fn retriever_phoenix() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Retriever Phoenix",
         cost: cost(&[generic(3), r()]),
@@ -780,6 +782,10 @@ pub fn retriever_phoenix() -> CardDefinition {
             // ETB Learn (the "if you cast it" gate collapses — token/blink
             // recursion isn't a path for this card).
             effect: Effect::Learn { who: PlayerRef::You },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "While in your graveyard, you may return this instead of learning.",
+            effect: StaticEffect::MayReturnFromGraveyardInsteadOfLearn,
         }],
         ..Default::default()
     }
@@ -1059,10 +1065,10 @@ pub fn harness_infinity() -> CardDefinition {
 // ── Planeswalker & Land ──────────────────────────────────────────────────────
 
 /// Kasmina, Enigma Sage — {1}{G}{U} 5-loyalty Planeswalker. +2: Scry 1.
-/// -X: Create a 0/0 G/U Fractal with X +1/+1 counters (approximated as a fixed
-/// -2 → two counters; the engine has no variable-X loyalty path yet). -8:
-/// Search your library for a card, put it into your hand, shuffle. (The "other
-/// planeswalkers you control gain Kasmina's abilities" static is dropped.)
+/// -X: Create a 0/0 G/U Fractal with X +1/+1 counters (variable-X loyalty via
+/// `LoyaltyAbility.x_cost`). -8: Search your library for a card to hand.
+/// (The "other planeswalkers you control gain Kasmina's abilities" static is
+/// dropped.)
 pub fn kasmina_enigma_sage() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
     CardDefinition {
@@ -1079,9 +1085,11 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
             LoyaltyAbility {
                 loyalty_cost: 2,
                 effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+                ..Default::default()
             },
+            // -X: create a 0/0 Fractal with X +1/+1 counters (X = loyalty paid).
             LoyaltyAbility {
-                loyalty_cost: -2,
+                x_cost: true,
                 effect: Effect::Seq(vec![
                     Effect::CreateToken {
                         who: PlayerRef::You,
@@ -1091,9 +1099,10 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
                     Effect::AddCounter {
                         what: Selector::LastCreatedToken,
                         kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(2),
+                        amount: Value::XFromCost,
                     },
                 ]),
+                ..Default::default()
             },
             LoyaltyAbility {
                 loyalty_cost: -8,
@@ -1102,6 +1111,7 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
                     filter: SelectionRequirement::Any,
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
+                ..Default::default()
             },
         ],
         ..Default::default()
@@ -1109,8 +1119,8 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
 }
 
 /// The Biblioplex — Land. `{T}: Add {C}.` `{2}, {T}: Look at the top card of
-/// your library; if it's an instant or sorcery card, you may put it into your
-/// hand. Otherwise it goes to the bottom.`
+/// your library; if it's an instant or sorcery, you may put it into your hand,
+/// otherwise you may bin it. Activate only with exactly 0 or 7 cards in hand.`
 pub fn the_biblioplex() -> CardDefinition {
     CardDefinition {
         name: "The Biblioplex",
@@ -1128,10 +1138,16 @@ pub fn the_biblioplex() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
+                // "Activate only if you have exactly zero or seven cards in hand."
+                condition: Some(Predicate::Any(vec![
+                    Predicate::ValueEquals(Value::HandSizeOf(PlayerRef::You), Value::Const(0)),
+                    Predicate::ValueEquals(Value::HandSizeOf(PlayerRef::You), Value::Const(7)),
+                ])),
                 effect: Effect::LookPickToHand {
                     who: PlayerRef::You,
                     count: Value::Const(1),
-                    rest_to_graveyard: false,
+                    // Unpicked top card is binned (the "you may" collapses to bin).
+                    rest_to_graveyard: true,
                     pick_filter: Some(
                         SelectionRequirement::HasCardType(CardType::Instant)
                             .or(SelectionRequirement::HasCardType(CardType::Sorcery)),

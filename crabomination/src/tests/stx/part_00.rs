@@ -2799,36 +2799,31 @@ fn daemogoth_woe_eater_attack_optional_sac_can_be_accepted() {
 // ── Honor Troll ────────────────────────────────────────────────────────────
 
 #[test]
-fn honor_troll_base_state_no_lifegain_is_one_four() {
+fn honor_troll_lifegain_bonus_adds_one() {
+    // CR 119.10 — Honor Troll: each life gain is +1.
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::honor_troll());
-    // No life gained — should be base 1/4 with only Trample.
-    let computed = g.computed_permanent(id)
-        .expect("Honor Troll on battlefield");
-    assert_eq!(computed.power, 1, "Base power without lifegain");
-    assert_eq!(computed.toughness, 4, "Base toughness without lifegain");
-    assert!(computed.keywords.contains(&Keyword::Trample),
-        "Trample is always on");
-    assert!(!computed.keywords.contains(&Keyword::Lifelink),
-        "Lifelink should NOT be active without lifegain");
+    g.add_card_to_battlefield(0, catalog::honor_troll());
+    let before = g.players[0].life;
+    g.adjust_life(0, 3); // gain 3 → 4 with the bonus
+    assert_eq!(g.players[0].life, before + 4, "gained 3 + 1 bonus");
+    // The bonus only applies to genuine gains, not to losses.
+    g.adjust_life(0, -2);
+    assert_eq!(g.players[0].life, before + 4 - 2, "loss is unaffected by the bonus");
 }
 
 #[test]
-fn honor_troll_with_lifegain_is_three_four_lifelink() {
-    // Gating on `life_gained_this_turn > 0`: +2/+0 + Lifelink.
+fn honor_troll_gets_plus_two_one_at_25_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::honor_troll());
-    // Manually bump the tally — a real lifegain effect would set this.
-    g.players[0].life_gained_this_turn = 1;
-
-    let computed = g.computed_permanent(id)
-        .expect("Honor Troll on battlefield");
-    assert_eq!(computed.power, 3, "Should be 1 + 2 = 3 power with lifegain");
-    assert_eq!(computed.toughness, 4, "Toughness unchanged at 4");
-    assert!(computed.keywords.contains(&Keyword::Trample),
-        "Trample is always on");
-    assert!(computed.keywords.contains(&Keyword::Lifelink),
-        "Lifelink should be active when life_gained_this_turn > 0");
+    // Below 25 life → base 2/3.
+    g.players[0].life = 20;
+    let lo = g.computed_permanent(id).unwrap();
+    assert_eq!((lo.power, lo.toughness), (2, 3), "base while under 25 life");
+    // At 25+ life → +2/+1 → 4/4.
+    g.players[0].life = 25;
+    let hi = g.computed_permanent(id).unwrap();
+    assert_eq!((hi.power, hi.toughness), (4, 4), "+2/+1 at 25+ life");
+    assert!(hi.keywords.contains(&Keyword::Vigilance));
 }
 
 // ── Quandrix Cultivator ────────────────────────────────────────────────────
@@ -2845,19 +2840,19 @@ fn quandrix_cultivator_etb_fetches_basic_forest_or_island() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
 
     let id = g.add_card_to_hand(0, catalog::quandrix_cultivator());
-    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Quandrix Cultivator castable for {3}{G}{U}");
+    .expect("Quandrix Cultivator castable for {1}{G}{G/U}{U}");
     drain_stack(&mut g);
 
-    // Forest should be on the battlefield, tapped.
+    // Forest should be on the battlefield, untapped.
     let f = g.battlefield_find(forest).expect("Forest should be in play");
-    assert!(f.tapped, "Tutored Forest should enter tapped");
+    assert!(!f.tapped, "Tutored Forest enters untapped");
     assert!(f.definition.is_land());
 }
 
@@ -2914,36 +2909,20 @@ fn confront_the_past_bounces_planeswalker_via_mode_1() {
 }
 
 #[test]
-fn specter_of_the_fens_etb_returns_creature_card_to_hand() {
+fn specter_of_the_fens_drains_two() {
     let mut g = two_player_game();
-    // Seed P0's graveyard with a creature card.
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap().clone();
-    g.players[0].graveyard.push(bear_card);
-    g.battlefield.retain(|c| c.id != bear);
-
-    let id = g.add_card_to_hand(0, catalog::specter_of_the_fens());
+    let spec = g.add_card_to_battlefield(0, catalog::specter_of_the_fens());
+    g.clear_sickness(spec);
+    let (opp_before, you_before) = (g.players[1].life, g.players[0].life);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    let hand_before = g.players[0].hand.len();
-    let gy_before = g.players[0].graveyard.len();
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    }).expect("Specter castable for {4}{B}");
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spec, ability_index: 0, target: None, x_value: None,
+    }).expect("{5}{B} drain");
     drain_stack(&mut g);
-
-    // Bear returned to hand.
-    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "Bear in hand");
-    assert_eq!(g.players[0].graveyard.len(), gy_before - 1, "one less in gy");
-    assert_eq!(g.players[0].hand.len(), hand_before, "hand: -1 cast + 1 return");
-    let spec = g.battlefield.iter().find(|c| c.definition.name == "Specter of the Fens")
-        .expect("Specter in play");
-    assert!(spec.has_keyword(&Keyword::Flying));
+    assert_eq!(g.players[1].life, opp_before - 2, "opponent loses 2");
+    assert_eq!(g.players[0].life, you_before + 2, "you gain 2");
+    assert!(g.battlefield_find(spec).unwrap().has_keyword(&Keyword::Flying));
 }
 
 #[test]
@@ -2972,51 +2951,30 @@ fn mascot_interception_gains_control_untaps_grants_haste() {
 }
 
 #[test]
-fn twinscroll_shaman_magecraft_copies_spell() {
-    let mut g = two_player_game();
-    let twin = g.add_card_to_battlefield(0, catalog::twinscroll_shaman());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == twin) {
-        c.summoning_sick = false;
-    }
-    let opp_life_before = g.players[1].life;
-
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Bolt castable");
-    drain_stack(&mut g);
-
-    // Original bolt: 3 dmg. Copy: another 3 dmg. Total: -6.
-    assert_eq!(g.players[1].life, opp_life_before - 6,
-        "Twinscroll Shaman copies the Bolt for another 3 damage");
+fn twinscroll_shaman_is_a_double_striking_one_two() {
+    let g = catalog::twinscroll_shaman();
+    assert_eq!(g.cost.cmc(), 3);
+    assert_eq!((g.power, g.toughness), (1, 2));
+    assert!(g.keywords.contains(&Keyword::DoubleStrike));
 }
 
 #[test]
-fn practical_research_doubles_plus_one_counters() {
+fn practical_research_draws_four_then_discards_two() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
-        c.add_counters(CounterType::PlusOnePlusOne, 3);
-    }
+    g.players[0].hand.clear();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::practical_research());
-    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Practical Research castable");
     drain_stack(&mut g);
 
-    let bear_c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(bear_c.counter_count(CounterType::PlusOnePlusOne), 6,
-        "3 +1/+1 doubled to 6");
+    // Started with 0 (after casting the spell from hand): +4 draw − 2 discard = 2.
+    assert_eq!(g.players[0].hand.len(), 2, "drew 4, discarded 2");
 }
 
 #[test]
@@ -3053,10 +3011,10 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
 fn star_pupil_enters_with_a_plus_one_counter() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::star_pupil());
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Star Pupil castable for {B}");
+    }).expect("Star Pupil castable for {W}");
     drain_stack(&mut g);
 
     let star = g.battlefield.iter()
@@ -3064,16 +3022,19 @@ fn star_pupil_enters_with_a_plus_one_counter() {
         .expect("Star Pupil in play");
     assert_eq!(star.counter_count(CounterType::PlusOnePlusOne), 1,
         "Star Pupil enters with one +1/+1 counter");
-    // 0/1 base + 1 from counter = 1/2 effective stats.
+    // 0/0 base + 1 from counter = 1/1 effective stats.
     assert_eq!(star.power(), 1);
-    assert_eq!(star.toughness(), 2);
+    assert_eq!(star.toughness(), 1);
 }
 
 #[test]
-fn star_pupil_death_puts_counter_on_target_creature() {
+fn star_pupil_death_puts_its_counters_on_target_creature() {
     let mut g = two_player_game();
     let star = g.add_card_to_battlefield(0, catalog::star_pupil());
     let recipient = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Give Star Pupil two +1/+1 counters so we exercise "its counters" (all of them).
+    g.battlefield_find_mut(star).unwrap()
+        .counters.insert(CounterType::PlusOnePlusOne, 2);
     g.clear_sickness(star);
     g.clear_sickness(recipient);
 
@@ -3088,29 +3049,16 @@ fn star_pupil_death_puts_counter_on_target_creature() {
     drain_stack(&mut g);
 
     let bear = g.battlefield.iter().find(|c| c.id == recipient).unwrap();
-    // Printed Oracle: put exactly one +1/+1 counter on target.
-    assert_eq!(bear.counter_count(CounterType::PlusOnePlusOne), 1,
-        "death-trigger puts a single +1/+1 counter on target creature");
+    assert_eq!(bear.counter_count(CounterType::PlusOnePlusOne), 2,
+        "death moves all of Star Pupil's +1/+1 counters to the target");
 }
 
 #[test]
-fn ageless_guardian_pumps_on_instant_cast() {
-    let mut g = two_player_game();
-    let guardian = g.add_card_to_battlefield(0, catalog::ageless_guardian());
-    g.clear_sickness(guardian);
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-
-    let g_card = g.battlefield.iter().find(|c| c.id == guardian).unwrap();
-    // Base 1/4 + magecraft +1/+0 = 2/4 EOT.
-    assert_eq!(g_card.power(), 2,
-        "Ageless Guardian gets +1/+0 from magecraft");
-    assert_eq!(g_card.toughness(), 4);
+fn ageless_guardian_is_a_vanilla_one_four() {
+    let c = catalog::ageless_guardian();
+    assert_eq!(c.cost.cmc(), 2);
+    assert_eq!((c.power, c.toughness), (1, 4));
+    assert!(c.triggered_abilities.is_empty() && c.activated_abilities.is_empty());
 }
 
 #[test]
@@ -3136,34 +3084,18 @@ fn returned_pastcaller_etb_returns_instant_from_graveyard() {
 }
 
 #[test]
-fn letter_of_acceptance_etb_gain_life_then_sac_to_draw() {
+fn letter_of_acceptance_fixes_mana_then_sacs_to_draw() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::letter_of_acceptance());
-    g.players[0].mana_pool.add_colorless(1);
-    let life_before = g.players[0].life;
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Letter castable for {1}");
-    drain_stack(&mut g);
-
-    let letter_id = g.battlefield.iter()
-        .find(|c| c.definition.name == "Letter of Acceptance")
-        .expect("Letter in play")
-        .id;
-    assert_eq!(g.players[0].life, life_before + 1, "ETB +1 life");
-
-    // Tap for {C}.
+    let letter_id = g.add_card_to_battlefield(0, catalog::letter_of_acceptance());
     g.clear_sickness(letter_id);
-    let c_before = g.players[0].mana_pool.colorless_amount();
+
+    // Tap for one mana of any color.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: letter_id, ability_index: 0, target: None, x_value: None }).expect("{T}: Add {C}");
-    assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
+        card_id: letter_id, ability_index: 0, target: None, x_value: None }).expect("{T}: Add any color");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "added one mana");
 
     // Untap, then sac to draw.
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == letter_id) {
-        c.tapped = false;
-    }
+    g.battlefield_find_mut(letter_id).unwrap().tapped = false;
     g.players[0].mana_pool.add_colorless(2);
     g.add_card_to_library(0, catalog::island());
     let hand_before = g.players[0].hand.len();
@@ -3172,18 +3104,17 @@ fn letter_of_acceptance_etb_gain_life_then_sac_to_draw() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
-    assert!(!g.battlefield.iter().any(|c| c.id == letter_id),
-        "Letter sacrificed");
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == letter_id),
-        "Letter in graveyard");
+    assert!(!g.battlefield.iter().any(|c| c.id == letter_id), "Letter sacrificed");
 }
 
 #[test]
-fn charge_through_pumps_and_grants_trample() {
+fn charge_through_grants_trample_and_cantrips() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::charge_through());
     g.players[0].mana_pool.add(Color::Green, 1);
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
@@ -3191,9 +3122,9 @@ fn charge_through_pumps_and_grants_trample() {
     drain_stack(&mut g);
 
     let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(b.power(), 3, "+1/+1");
-    assert_eq!(b.toughness(), 3);
     assert!(b.has_keyword(&Keyword::Trample), "trample granted EOT");
+    // Cast (-1) + draw (+1) nets the same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "cantrip replaces itself");
 }
 
 #[test]
@@ -3411,88 +3342,53 @@ fn dragonsguard_elite_magecraft_adds_counter_and_pumps_x_equal_to_power() {
 }
 
 #[test]
-fn quintorius_field_historian_etb_exiles_card_and_makes_spirit() {
+fn quintorius_makes_a_spirit_when_a_card_leaves_your_graveyard() {
     let mut g = two_player_game();
-    let target = g.add_card_to_graveyard(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::quintorius_field_historian());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Quintorius castable for {2}{R}{W}");
+    g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::CardLeftGraveyard {
+        player: 0, card_id: crate::card::CardId(999),
+    }]);
     drain_stack(&mut g);
-
-    assert!(!g.players[1].graveyard.iter().any(|c| c.id == target),
-        "exiled card no longer in gy");
     let spirit = g.battlefield.iter()
         .find(|c| c.is_token && c.definition.name == "Spirit")
-        .expect("3/2 Spirit minted");
-    assert_eq!(spirit.power(), 3);
-    assert_eq!(spirit.toughness(), 2);
-    let q = g.battlefield.iter()
-        .find(|c| c.definition.name == "Quintorius, Field Historian").unwrap();
-    assert!(q.has_keyword(&Keyword::Vigilance));
+        .expect("3/2 Spirit minted on gy-leave");
+    assert_eq!((spirit.power(), spirit.toughness()), (3, 2));
 }
 
-/// Quintorius, Field Historian's tribal anthem: "Other Spirit creatures
-/// you control get +1/+0." Wired via the compute-time injection in
-/// `GameState::compute_battlefield` using the new
-/// `AffectedPermanents::AllWithCreatureType.exclude_source` flag.
-///
-/// This test mints Quintorius alongside a friendly Spirit and verifies
-/// the Spirit gets +1/+0 (3/2 → 4/2) while Quintorius himself stays at
-/// his printed 3/3 (the "Other" gate excludes him).
 #[test]
-fn quintorius_anthem_pumps_other_spirits_not_self() {
+fn quintorius_anthem_pumps_spirits_not_himself() {
     let mut g = two_player_game();
-    // Put a Quintorius and one friendly Spirit (the minted 3/2 token-equivalent
-    // from his ETB; for the tribal test we just stage the Spirit Mascot from
-    // the SOS catalog which has the Spirit subtype).
     let qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
     let mascot = g.add_card_to_battlefield(0, catalog::spirit_mascot());
 
-    // Spirit Mascot is a 2/2 Spirit; Quintorius's anthem should bump it to 3/2.
+    // Spirit Mascot (2/2 Spirit) gets +1/+0 → 3/2.
     let mascot_card = g.compute_battlefield().into_iter()
-        .find(|c| c.id == mascot)
-        .expect("Spirit Mascot on battlefield");
-    assert_eq!(mascot_card.power, 3, "Other-Spirit gets +1 power");
-    assert_eq!(mascot_card.toughness, 2, "toughness unchanged");
+        .find(|c| c.id == mascot).expect("Spirit Mascot on battlefield");
+    assert_eq!((mascot_card.power, mascot_card.toughness), (3, 2));
 
-    // Quintorius himself is a Spirit too (printed creature types include
-    // Spirit), but the "Other" gate excludes him.
+    // Quintorius is an Elephant Cleric, not a Spirit → unaffected (2/4).
     let q_card = g.compute_battlefield().into_iter()
-        .find(|c| c.id == qid)
-        .expect("Quintorius on battlefield");
-    assert_eq!(q_card.power, 3, "Quintorius doesn't buff himself (Other gate)");
-    assert_eq!(q_card.toughness, 3);
+        .find(|c| c.id == qid).expect("Quintorius on battlefield");
+    assert_eq!((q_card.power, q_card.toughness), (2, 4));
 }
 
-/// When Quintorius leaves the battlefield, his anthem layer effect
-/// should evaporate (matching `EffectDuration::WhileSourceOnBattlefield`).
-/// This test stages two Spirits + Quintorius, kills Quintorius via
-/// lethal damage, and verifies the Spirits return to base P/T.
 #[test]
 fn quintorius_anthem_expires_when_he_leaves_battlefield() {
     let mut g = two_player_game();
     let qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
     let mascot = g.add_card_to_battlefield(0, catalog::spirit_mascot());
 
-    // Confirm anthem is active.
     let before = g.compute_battlefield().into_iter()
         .find(|c| c.id == mascot).unwrap();
     assert_eq!(before.power, 3);
 
-    // Lethal damage to Quintorius (3 toughness → 3 damage kills him).
-    g.battlefield_find_mut(qid).unwrap().damage = 3;
+    // Lethal damage to Quintorius (4 toughness → 4 damage kills him).
+    g.battlefield_find_mut(qid).unwrap().damage = 4;
     let _ = g.check_state_based_actions();
 
-    // Re-check the Spirit Mascot: anthem should be gone, base 2/2.
     let after = g.compute_battlefield().into_iter()
         .find(|c| c.id == mascot).unwrap();
     assert_eq!(after.power, 2, "anthem evaporates without Quintorius");
-    assert_eq!(after.toughness, 2);
 }
 
 #[test]
@@ -3606,20 +3502,21 @@ fn magma_opus_etb_deals_four_taps_creates_elemental_draws_two() {
 }
 
 #[test]
-fn reckless_amplimancer_pumps_by_x_paid() {
+fn reckless_amplimancer_doubles_power_and_toughness() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::reckless_amplimancer());
-    // {X} with X=4 → +4/+4.
+    g.clear_sickness(id);
+    // {4}{G}: double its 2/2 to 4/4.
+    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: Some(4) })
-        .expect("Reckless Amplimancer activates for {X}");
+        card_id: id, ability_index: 0, target: None, x_value: None })
+        .expect("Reckless Amplimancer activates {4}{G}");
     drain_stack(&mut g);
 
     let amp = g.battlefield.iter().find(|c| c.id == id).unwrap();
-    assert_eq!(amp.power(), 6, "2 + X(4) = 6");
-    assert_eq!(amp.toughness(), 6);
+    assert_eq!((amp.power(), amp.toughness()), (4, 4), "2/2 doubled to 4/4");
 }
 
 #[test]

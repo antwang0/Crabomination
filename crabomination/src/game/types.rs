@@ -257,7 +257,7 @@ pub enum GameAction {
     /// planeswalker controlled by a non-active player.
     DeclareAttackers(Vec<Attack>),
     DeclareBlockers(Vec<(CardId, CardId)>),
-    ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
+    ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target>, #[serde(default)] x_value: Option<u32> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// Cast a graveyard card with `Keyword::Retrace` (CR 702.81) for its
     /// mana cost plus discarding a land card from hand. Unlike Flashback,

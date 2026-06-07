@@ -15,14 +15,11 @@ For full per-card history see
 - 🟡 partial — body wired with simplified or stub effect; key behavior missing
 - ⏳ todo — not yet implemented
 
-A handful of 🟡 partials remain (riders dropped, core wired):
-- 🟡 **Retriever Phoenix** — ETB Learn; the graveyard "learn → return this
-  instead" recursion replacement is dropped.
-- 🟡 **Kasmina, Enigma Sage** — +2 Scry, -8 tutor-to-hand wired; the -X Fractal
-  is approximated as a fixed -2 (two counters; no variable-X loyalty path yet)
-  and the "other PWs gain Kasmina's abilities" static is dropped.
-- 🟡 **The Biblioplex** — `{T}: Add {C}` + `{2},{T}: dig for an IS card`; the
-  "else may bottom" half collapses to an auto-bottom of the non-IS top card.
+A couple of 🟡 partials remain (riders dropped, core wired):
+- 🟡 **Kasmina, Enigma Sage** — +2 Scry; -X Fractal now ✅ via variable-X
+  loyalty (`LoyaltyAbility.x_cost` + `Value::XFromCost`); -8 stays tutor-to-hand
+  (the IS-sharing-color / cast-free chain is dropped) and the "other PWs gain
+  Kasmina's abilities" static is dropped.
 
 ⏳ work remaining: ~40 printed STX cards (the Dean MDFCs, Codie/Extus/Blex/
 Jadzi legends, study/hone-counter cards, blink/recursion spells, the

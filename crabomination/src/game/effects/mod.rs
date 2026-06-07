@@ -1609,6 +1609,38 @@ impl GameState {
                 use crate::card::SpellSubtype;
                 use crate::decision::{Decision, DecisionAnswer, LearnChoice};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Retriever Phoenix (CR replacement): a card in p's graveyard
+                // with `MayReturnFromGraveyardInsteadOfLearn` lets p return it
+                // to the battlefield instead of learning.
+                let returnable: Option<crate::card::CardId> = self.players[p]
+                    .graveyard
+                    .iter()
+                    .find(|c| c.definition.static_abilities.iter().any(|sa| matches!(
+                        sa.effect,
+                        crate::effect::StaticEffect::MayReturnFromGraveyardInsteadOfLearn
+                    )))
+                    .map(|c| c.id);
+                if let Some(card_id) = returnable {
+                    let name = self.players[p]
+                        .graveyard
+                        .iter()
+                        .find(|c| c.id == card_id)
+                        .map(|c| c.definition.name.to_string())
+                        .unwrap_or_default();
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source: card_id,
+                        description: format!("Return {name} to the battlefield instead of learning?"),
+                    });
+                    if matches!(answer, DecisionAnswer::Bool(true)) {
+                        self.move_card_to(
+                            card_id,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                            ctx,
+                            events,
+                        );
+                        return Ok(());
+                    }
+                }
                 let lessons: Vec<(crate::card::CardId, String)> = self.players[p]
                     .sideboard
                     .iter()

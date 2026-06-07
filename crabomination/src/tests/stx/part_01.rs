@@ -245,45 +245,37 @@ fn prismari_command_auto_picks_loot_and_treasure() {
 }
 
 #[test]
-fn defend_the_campus_creates_three_inkling_tokens() {
+fn defend_the_campus_mode_0_pumps_team() {
     let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::defend_the_campus());
-    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(3);
+    // AutoDecider keeps mode 0: creatures you control get +1/+1.
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Defend the Campus castable for {3}{W}{W}");
+    .expect("Defend the Campus castable for {3}{W}");
     drain_stack(&mut g);
-    let inklings: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Inkling"
-            && c.controller == 0)
-        .collect();
-    assert_eq!(inklings.len(), 3, "Should mint exactly three Inkling tokens");
-    for ink in &inklings {
-        assert_eq!(ink.power(), 1);
-        assert_eq!(ink.toughness(), 1);
-        assert!(ink.has_keyword(&Keyword::Flying), "Inklings have flying");
-    }
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (3, 3), "your creatures get +1/+1");
 }
 
+
 #[test]
-fn hall_monitor_untaps_self_on_instant_cast() {
+fn hall_monitor_makes_a_creature_unable_to_block() {
     let mut g = two_player_game();
     let hm = g.add_card_to_battlefield(0, catalog::hall_monitor());
     g.clear_sickness(hm);
-    // Tap Hall Monitor manually.
-    g.battlefield.iter_mut().find(|c| c.id == hm).unwrap().tapped = true;
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Bolt castable for {R}");
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hm, ability_index: 0, target: Some(Target::Permanent(blocker)), x_value: None,
+    }).expect("{1}{R},{T}: can't block");
     drain_stack(&mut g);
-    // Magecraft fires off the Bolt cast → untap Hall Monitor.
-    let hm_card = g.battlefield.iter().find(|c| c.id == hm).unwrap();
-    assert!(!hm_card.tapped, "Magecraft should untap Hall Monitor");
+    let b = g.compute_battlefield().into_iter().find(|c| c.id == blocker).unwrap();
+    assert!(b.keywords.contains(&Keyword::CantBlock), "target can't block this turn");
 }
 
 #[test]
@@ -321,11 +313,11 @@ fn necrotic_fumes_sacrifices_and_exiles() {
     let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::necrotic_fumes());
     g.players[0].mana_pool.add(Color::Black, 2);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Necrotic Fumes castable for {2}{B}{B}");
+    .expect("Necrotic Fumes castable for {1}{B}{B}");
     drain_stack(&mut g);
     // P0's bear should be sacrificed (in P0's graveyard).
     assert!(!g.battlefield.iter().any(|c| c.id == fodder),
@@ -342,48 +334,46 @@ fn necrotic_fumes_sacrifices_and_exiles() {
 }
 
 #[test]
-fn make_your_mark_pumps_creature_and_draws_card() {
+fn make_your_mark_pumps_and_mints_spirit_when_creature_dies() {
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let id = g.add_card_to_hand(0, catalog::make_your_mark());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let hand_before = g.players[0].hand.len();
-    let lib_before = g.players[0].library.len();
-    let bear_power_before = g.battlefield.iter().find(|c| c.id == bear).unwrap().power();
+    g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Make Your Mark castable for {1}{W}");
+    .expect("Make Your Mark castable for {R/W}");
     drain_stack(&mut g);
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(bear_card.power(), bear_power_before + 1,
-        "Bear should be +1/+1 (now {})", bear_power_before + 1);
-    // Hand: -1 (cast) +1 (draw) = 0 net.
-    assert_eq!(g.players[0].hand.len(), hand_before);
-    assert_eq!(g.players[0].library.len(), lib_before - 1);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap().power(), 3, "+1/+0");
+
+    // Kill the bear this turn → a 3/2 Spirit is created.
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    let ev = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    let spirit = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Spirit")
+        .expect("3/2 Spirit minted on death");
+    assert_eq!((spirit.power(), spirit.toughness()), (3, 2));
 }
 
 #[test]
-fn containment_breach_destroys_enchantment() {
+fn containment_breach_destroys_cheap_enchantment_and_makes_pest() {
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    // Use SOS Comforting Counsel as a target enchantment.
+    // Comforting Counsel is a {1}{G} (MV 2) enchantment → triggers the Pest.
     let ench = g.add_card_to_battlefield(1, catalog::comforting_counsel());
     let id = g.add_card_to_hand(0, catalog::containment_breach());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(ench)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Containment Breach castable for {1}{W}");
+    .expect("Containment Breach castable for {2}{G}");
     drain_stack(&mut g);
-    assert!(!g.battlefield.iter().any(|c| c.id == ench),
-        "Enchantment should be destroyed");
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == ench),
-        "Enchantment should be in P1's graveyard");
+    assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment destroyed");
+    assert!(g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Pest"),
+        "MV-2 target → a Pest token is made");
 }
 
 // ── Silverquill Pledgemage, Archmage Emeritus, Promising Duskmage,
@@ -1727,7 +1717,7 @@ fn big_play_mode_2_grants_trample_to_friendlies() {
 /// becomes effectively a -1/2 in damage math — non-lethal but the
 /// pump-down still drains attacker pressure.
 #[test]
-fn burrog_befuddler_etb_minus_three_zero() {
+fn burrog_befuddler_etb_minus_one_zero_on_opponent() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(bear);
@@ -1744,10 +1734,7 @@ fn burrog_befuddler_etb_minus_three_zero() {
     drain_stack(&mut g);
 
     let computed = g.computed_permanent(bear).unwrap();
-    assert_eq!(computed.power, -1,
-        "bear should be effectively -1 power after -3/-0; got {}", computed.power);
-    assert_eq!(computed.toughness, 2,
-        "bear toughness unchanged by -3/-0; got {}", computed.toughness);
+    assert_eq!((computed.power, computed.toughness), (1, 2), "opponent's bear is -1/-0");
 }
 
 /// Mage Hunters' Mark grants +3/+0 + Menace EOT to any creature target.

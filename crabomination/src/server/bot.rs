@@ -1380,10 +1380,13 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
             } else {
                 None
             };
+            // Variable-X (`-X`) ability: commit all current loyalty.
+            let x_value = ability.x_cost.then_some(current_loyalty.max(0) as u32);
             let action = GameAction::ActivateLoyaltyAbility {
                 card_id: card.id,
                 ability_index: idx,
                 target,
+                x_value,
             };
             if state.would_accept(action.clone()) {
                 return Some(action);
@@ -2054,6 +2057,7 @@ mod tests {
             loyalty_abilities: vec![
                 // Highest loyalty, but needs a creature target (none exist).
                 LoyaltyAbility {
+                    x_cost: false,
                     loyalty_cost: 2,
                     effect: Effect::DealDamage {
                         to: target_filtered(SelectionRequirement::Creature),
@@ -2062,6 +2066,7 @@ mod tests {
                 },
                 // Lower loyalty, no target — the bot should fall through here.
                 LoyaltyAbility {
+                    x_cost: false,
                     loyalty_cost: 1,
                     effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 },

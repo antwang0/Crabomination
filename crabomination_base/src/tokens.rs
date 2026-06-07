@@ -413,6 +413,23 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
     }
 }
 
+/// 3/2 red-and-white Spirit creature token (no flying). Minted by Lorehold
+/// payoffs — Make Your Mark, Quintorius, Illuminate History.
+pub fn lorehold_spirit_3_2_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spirit".into(),
+        power: 3,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
 /// A Map token (CR 111.10s): "{1}, {T}, Sacrifice this artifact: Target
 /// creature you control explores. Activate only as a sorcery."
 pub fn map_token() -> TokenDefinition {

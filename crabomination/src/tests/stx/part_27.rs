@@ -672,19 +672,43 @@ fn deadly_brew_no_return_if_you_didnt_sacrifice() {
 }
 
 #[test]
-fn kasmina_minus_makes_a_counter_fractal() {
+fn kasmina_minus_x_makes_a_scaled_fractal() {
     let mut g = two_player_game();
     let k = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
     g.battlefield_find_mut(k).unwrap()
         .counters.insert(crate::card::CounterType::Loyalty, 5);
+    // -X with X=3: pay 3 loyalty (5→2), Fractal enters as a 3/3.
     g.perform_action(GameAction::ActivateLoyaltyAbility {
-        card_id: k, ability_index: 1, target: None,
-    }).expect("-2 activatable");
+        card_id: k, ability_index: 1, target: None, x_value: Some(3),
+    }).expect("-X activatable");
     drain_stack(&mut g);
     let fractal = g.battlefield.iter()
         .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
         .expect("a Fractal token");
-    assert_eq!(fractal.power(), 2, "0/0 + two +1/+1 counters");
+    assert_eq!(fractal.power(), 3, "0/0 + X=3 +1/+1 counters");
+    assert_eq!(
+        g.battlefield_find(k).unwrap().counter_count(crate::card::CounterType::Loyalty),
+        2, "5 loyalty − X(3) = 2",
+    );
+}
+
+#[test]
+fn kasmina_minus_x_capped_at_current_loyalty() {
+    let mut g = two_player_game();
+    let k = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    g.battlefield_find_mut(k).unwrap()
+        .counters.insert(crate::card::CounterType::Loyalty, 2);
+    // Requesting X=9 with only 2 loyalty clamps to X=2 (loyalty → 0).
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: k, ability_index: 1, target: None, x_value: Some(9),
+    }).expect("-X clamps to available loyalty");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
+        .expect("a Fractal token");
+    assert_eq!(fractal.power(), 2, "X clamped to 2");
+    // Loyalty hit 0 → the planeswalker is put into the graveyard (CR 704.5i).
+    assert!(g.battlefield_find(k).is_none(), "0-loyalty walker dies");
 }
 
 #[test]
@@ -696,8 +720,9 @@ fn biblioplex_taps_for_colorless_and_digs_for_spells() {
         card_id: id, ability_index: 0, target: None, x_value: None,
     }).expect("{T}: Add {C}");
     assert_eq!(g.players[0].mana_pool.total(), 1, "added one colorless");
-    // Dig: top card is an instant → goes to hand.
+    // Dig: top card is an instant → goes to hand. Gate needs an empty hand.
     g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.players[0].hand.clear();
     g.add_card_to_library(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
@@ -706,6 +731,21 @@ fn biblioplex_taps_for_colorless_and_digs_for_spells() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
         "instant from top went to hand");
+}
+
+#[test]
+fn biblioplex_dig_gated_to_empty_or_full_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::the_biblioplex());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(2);
+    // Three cards in hand → not 0 and not 7 → illegal.
+    g.players[0].hand.clear();
+    for _ in 0..3 { g.add_card_to_hand(0, catalog::island()); }
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    });
+    assert!(err.is_err(), "dig is illegal with 3 cards in hand");
 }
 
 #[test]
@@ -780,6 +820,43 @@ fn gnarled_professor_learns_on_etb() {
     }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn retriever_phoenix_returns_from_graveyard_instead_of_learning() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let phoenix = g.add_card_to_graveyard(0, catalog::retriever_phoenix());
+    // Opt in to the replacement, then trigger a Learn (Gnarled Professor ETB).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.add_card_to_library(0, catalog::island());
+    let prof = g.add_card_to_hand(0, catalog::gnarled_professor());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: prof, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(phoenix).is_some(), "Phoenix returned to battlefield");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == phoenix), "left the graveyard");
+}
+
+#[test]
+fn retriever_phoenix_stays_in_graveyard_when_declined() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let phoenix = g.add_card_to_graveyard(0, catalog::retriever_phoenix());
+    // Decline the return → normal learn (Draw 1 fallback) proceeds.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.add_card_to_library(0, catalog::island());
+    let prof = g.add_card_to_hand(0, catalog::gnarled_professor());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: prof, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == phoenix), "Phoenix stays in graveyard");
 }
 
 #[test]

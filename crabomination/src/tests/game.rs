@@ -2931,6 +2931,7 @@ fn teferi_minus_three_returns_target_and_draws() {
     let opp_hand_before = g.players[1].hand.len();
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi,
         // Index 1 is the -3 (the new +1 sorcery-as-flash ability sits at 0).
         ability_index: 1,
@@ -4265,6 +4266,7 @@ fn teferi_plus_one_grants_sorceries_as_flash_until_next_turn() {
     g.clear_sickness(teferi);
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi, ability_index: 0, target: None,  // +1
     }).expect("Teferi's +1 should be sorcery-speed-castable");
     drain_stack(&mut g);
@@ -4679,6 +4681,7 @@ fn loyalty_ability_already_used_returns_typed_error() {
     g.add_card_to_library(0, catalog::forest());
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi,
         ability_index: 1, // -3 (index 0 is +1 sorceries-as-flash)
         target: Some(Target::Permanent(bear)),
@@ -4693,6 +4696,7 @@ fn loyalty_ability_already_used_returns_typed_error() {
     g.clear_sickness(bear2);
 
     let err = g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi,
         ability_index: 1,
         target: Some(Target::Permanent(bear2)),
@@ -4719,6 +4723,7 @@ fn loyalty_negative_cost_returns_not_enough_loyalty() {
             .insert(crate::card::CounterType::Loyalty, 2);
     }
     let err = g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: teferi,
         ability_index: 1, // -3 (insufficient against 2 loyalty)
         target: Some(Target::Permanent(bear)),

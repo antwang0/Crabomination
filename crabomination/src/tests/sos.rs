@@ -7480,6 +7480,7 @@ fn professor_dellian_fel_plus_two_gains_three_life() {
         .counter_count(CounterType::Loyalty);
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: pw, ability_index: 0,
         target: None,
     })
@@ -7499,6 +7500,7 @@ fn professor_dellian_fel_minus_three_destroys_creature() {
     drain_stack(&mut g);
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: pw, ability_index: 2,
         target: Some(Target::Permanent(bear)),
     })
@@ -7524,6 +7526,7 @@ fn professor_dellian_fel_minus_six_activates_lifegain_drain_emblem() {
     }
     assert!(g.players[0].emblems.is_empty());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: pw, ability_index: 3, target: None,
     }).expect("Dellian -6 castable at 6 loyalty");
     drain_stack(&mut g);
@@ -7811,6 +7814,7 @@ fn ral_zarek_minus_two_returns_low_mv_creature_from_graveyard() {
     drain_stack(&mut g);
 
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: pw, ability_index: 2,
         target: Some(Target::Permanent(bear_in_grave)),
     })
@@ -7840,6 +7844,7 @@ fn ral_zarek_minus_seven_skips_target_opp_turns_via_coin_flip() {
         DecisionAnswer::Bool(true),
     ]));
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: pw, ability_index: 3, target: None,
     }).expect("Ral Zarek -7 should activate at 7 loyalty");
     drain_stack(&mut g);
