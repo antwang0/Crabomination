@@ -21,6 +21,55 @@ pub fn murderous_compulsion() -> CardDefinition {
     }
 }
 
+/// Allied Reinforcements — {3}{W} Sorcery. Create two 2/2 white Knight Ally tokens.
+pub fn allied_reinforcements() -> CardDefinition {
+    use crate::card::{CreatureType, Subtypes, TokenDefinition};
+    use crabomination_base::mana::Color;
+    let knight = TokenDefinition {
+        name: "Knight".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Knight, CreatureType::Ally],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Allied Reinforcements",
+        cost: cost(&[generic(3), crate::mana::w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: knight,
+        },
+        ..Default::default()
+    }
+}
+
+/// Searing Light — {W} Instant. Destroy target attacking or blocking creature
+/// with power 2 or less.
+pub fn searing_light() -> CardDefinition {
+    CardDefinition {
+        name: "Searing Light",
+        cost: cost(&[crate::mana::w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::PowerAtMost(2))
+                    .and(
+                        SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                    ),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Mutant's Prey — {G} Instant. Target creature you control with a +1/+1
 /// counter on it fights target creature an opponent controls.
 pub fn mutants_prey() -> CardDefinition {

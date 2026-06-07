@@ -1805,6 +1805,37 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Zendikar's Roil — {3}{G}{G} Enchantment. Landfall — when a land you control
+/// enters, create a 2/2 green Elemental token.
+pub fn zendikars_roil() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TokenDefinition, TriggeredAbility};
+    use crate::effect::{PlayerRef, Value};
+    use crabomination_base::mana::Color;
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Zendikar's Roil",
+        cost: cost(&[crate::mana::generic(3), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: elemental,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Kor Castigator — {1}{W} 3/1 Kor Wizard Ally. Can't be blocked by Eldrazi Scions.
 pub fn kor_castigator() -> CardDefinition {
     use crate::card::SelectionRequirement;

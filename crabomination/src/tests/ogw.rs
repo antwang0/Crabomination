@@ -1840,3 +1840,54 @@ fn bearer_of_silence_sacrifices_on_cast() {
     assert!(!g.battlefield.iter().any(|c| c.id == chump),
         "opponent sacrifices their only creature");
 }
+
+/// Zendikar's Roil mints a 2/2 Elemental on landfall.
+#[test]
+fn zendikars_roil_makes_elemental_on_landfall() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zendikars_roil());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    let e = g.battlefield.iter().find(|c| c.definition.name == "Elemental").expect("token");
+    assert_eq!((e.definition.power, e.definition.toughness), (2, 2));
+}
+
+/// Allied Reinforcements makes two 2/2 Knight Allies.
+#[test]
+fn allied_reinforcements_makes_two_knights() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::allied_reinforcements());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let knights = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Knight").count();
+    assert_eq!(knights, 2);
+}
+
+/// Searing Light destroys an attacking creature with power ≤ 2 but spares a 3-power one.
+#[test]
+fn searing_light_hits_small_attacker() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(small);
+    // P0 holds Searing Light and the {W} so it can target its own attacker
+    // while it still has priority in the declare-attackers step.
+    let light = g.add_card_to_hand(0, catalog::searing_light());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: small, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: light, target: Some(Target::Permanent(small)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Searing Light at the attacker");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == small), "2-power attacker destroyed");
+}
