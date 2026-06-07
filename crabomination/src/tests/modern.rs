@@ -34610,3 +34610,80 @@ fn wickerbough_elder_removes_counter_to_destroy() {
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::MinusOneMinusOne), 0,
         "counter removed as cost");
 }
+
+// ── Allied-color batch 4 (modern_decks) ─────────────────────────────────────
+
+/// Sandsteppe Outcast's ETB makes a Spirit (mode 1).
+#[test]
+fn sandsteppe_outcast_makes_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::sandsteppe_outcast());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    cast(&mut g, id);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Spirit"),
+        "mode 1 → Spirit token");
+}
+
+/// Cloudreader Sphinx is a 3/4 flyer that scries on ETB.
+#[test]
+fn cloudreader_sphinx_etb_scries() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::cloudreader_sphinx());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    cast(&mut g, id);
+    let r = g.battlefield_find(id).unwrap();
+    assert!(r.definition.keywords.contains(&Keyword::Flying));
+}
+
+/// Crippling Blight shrinks and locks down its host.
+#[test]
+fn crippling_blight_weakens_creature() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::crippling_blight());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast_at(&mut g, aura, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1), "-1/-1");
+    assert!(cp.keywords.contains(&Keyword::CantBlock));
+}
+
+/// Nimble Mongoose grows with threshold (7+ cards in graveyard).
+#[test]
+fn nimble_mongoose_threshold() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::nimble_mongoose());
+    assert_eq!(g.computed_permanent(id).unwrap().power, 1, "no threshold yet");
+    for _ in 0..7 { g.add_card_to_graveyard(0, catalog::lightning_bolt()); }
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "threshold active → +2/+2");
+}
+
+/// Aerial Predation destroys a flyer and gains 2 life.
+#[test]
+fn aerial_predation_kills_flyer_and_gains() {
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(1, catalog::snapping_drake()); // 3/2 flyer
+    let id = g.add_card_to_hand(0, catalog::aerial_predation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_at(&mut g, id, Target::Permanent(drake));
+    assert!(g.battlefield_find(drake).is_none(), "flyer destroyed");
+    assert_eq!(g.players[0].life, 22, "gained 2");
+}
+
+/// Centaur Courser and Goblin Roughrider are vanilla beaters with the
+/// printed stats.
+#[test]
+fn vanilla_beaters_have_stats() {
+    let cc = catalog::centaur_courser();
+    assert_eq!((cc.power, cc.toughness), (3, 3));
+    let gr = catalog::goblin_roughrider();
+    assert_eq!((gr.power, gr.toughness), (3, 2));
+}

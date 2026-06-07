@@ -432,6 +432,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         dragons_eye_sentry,
         kor_sanctifiers,
         tireless_missionaries,
+        sandsteppe_outcast,
         // landcycling (modern_decks)
         daru_lancer,
         // classic batch (modern_decks)
@@ -904,6 +905,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         vodalian_arcanist,
         sphinxs_insight,
         precognitive_perception,
+        cloudreader_sphinx,
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
         snapping_drake,
@@ -1207,6 +1209,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mausoleum_turnkey,
         marauding_blight_priest,
         vampire_cutthroat,
+        crippling_blight,
         // ── modern_decks: aggro / aristocrat supplement ──
         walking_corpse,
         highborn_ghoul,
@@ -1580,6 +1583,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         onakke_ogre,
         goblin_fireslinger,
         hijack,
+        goblin_roughrider,
         // ── modern_decks: aggro / firebreathing supplement ──
         kird_ape,
         sedge_troll,
@@ -1983,6 +1987,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         greenweaver_druid,
         citanul_woodreaders,
         wickerbough_elder,
+        nimble_mongoose,
+        aerial_predation,
         // landcycling (modern_decks)
         wirewood_guardian,
         // classic batch (modern_decks)

@@ -26198,3 +26198,118 @@ pub fn wickerbough_elder() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sandsteppe Outcast — {2}{W} 2/1 Human Warrior. ETB choose: a +1/+1 counter
+/// on this, or a 1/1 white flying Spirit token.
+pub fn sandsteppe_outcast() -> CardDefinition {
+    CardDefinition {
+        name: "Sandsteppe Outcast",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::Const(1) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Spirit".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    keywords: vec![Keyword::Flying],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+                    ..Default::default()
+                },
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Cloudreader Sphinx — {4}{U} 3/4 Sphinx. Flying. ETB: scry 2.
+pub fn cloudreader_sphinx() -> CardDefinition {
+    CardDefinition {
+        name: "Cloudreader Sphinx",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Crippling Blight — {B} Aura. Enchanted creature gets -1/-1 and can't block.
+pub fn crippling_blight() -> CardDefinition {
+    simple_aura("Crippling Blight", cost(&[b()]), -1, -1, vec![Keyword::CantBlock])
+}
+
+/// Nimble Mongoose — {G} 1/1 Mongoose. Shroud; Threshold — gets +2/+2 while
+/// seven or more cards are in your graveyard.
+pub fn nimble_mongoose() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Nimble Mongoose",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mongoose], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Shroud],
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — gets +2/+2 if seven or more cards are in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                    Value::Const(7),
+                ),
+                power: 2,
+                toughness: 2,
+                keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aerial Predation — {2}{G} Instant. Destroy target creature with flying;
+/// gain 2 life.
+pub fn aerial_predation() -> CardDefinition {
+    CardDefinition {
+        name: "Aerial Predation",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying))),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goblin Roughrider — {2}{R} 3/2 Goblin Knight (vanilla).
+pub fn goblin_roughrider() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Roughrider",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        ..Default::default()
+    }
+}
