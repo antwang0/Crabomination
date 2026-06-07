@@ -21,6 +21,47 @@ pub fn murderous_compulsion() -> CardDefinition {
     }
 }
 
+/// Corpse Churn — {1}{B} Instant. Mill three, then you may return a creature
+/// card from your graveyard to your hand.
+pub fn corpse_churn() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Corpse Churn",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::MayDo {
+                description: "Return a creature card from your graveyard to your hand".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        zone: crate::card::Zone::Graveyard,
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tears of Valakut — {1}{R} Instant. Can't be countered. Deals 5 damage to
+/// target creature with flying.
+pub fn tears_of_valakut() -> CardDefinition {
+    CardDefinition {
+        name: "Tears of Valakut",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: deal(5, target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+        )),
+        ..Default::default()
+    }
+}
+
 /// Sweep Away — {2}{U} Instant. Return target creature to its owner's hand.
 /// (The attacking-only "put it on top of its library instead" rider is
 /// dropped — modal post-bounce choice not modeled.)

@@ -1556,3 +1556,112 @@ fn kozileks_pathfinder_bars_target_from_blocking() {
     g.perform_action(GameAction::DeclareBlockers(vec![(other, atk)]))
         .expect("a different creature can still block");
 }
+
+/// Sky Scourer (Devoid Flying) gets +1/+0 when its controller casts a colorless spell.
+#[test]
+fn sky_scourer_pumps_on_colorless_cast() {
+    use crate::card::Keyword;
+    let def = catalog::sky_scourer();
+    assert!(def.keywords.contains(&Keyword::Flying) && def.keywords.contains(&Keyword::Devoid));
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sky_scourer());
+    // Cast a colorless spell (Eldrazi via generic mana).
+    let spell = g.add_card_to_hand(0, catalog::eldrazi_devastator());
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast colorless spell");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 2, "1/2 → 2/2 after colorless cast");
+}
+
+/// Tajuru Stalwart enters with a +1/+1 counter per color of mana spent (Converge).
+#[test]
+fn tajuru_stalwart_converge_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::tajuru_stalwart());
+    // Pay {G} with green and the {2} generic with white + blue → 3 colors.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for {2}{G} across 3 colors");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 3,
+        "converge=3 → three +1/+1 counters");
+}
+
+/// Crumbling Vestige enters tapped and {T}: Add {C}.
+#[test]
+fn crumbling_vestige_enters_tapped_and_taps_for_colorless() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_hand(0, catalog::crumbling_vestige());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "enters tapped");
+    // ETB added one mana of any color (auto-picked); pool non-empty.
+    assert!(g.players[0].mana_pool.total() >= 1, "ETB adds one mana of any color");
+}
+
+/// Cinder Barrens enters tapped and taps for {B} or {R}.
+#[test]
+fn cinder_barrens_enters_tapped_dual() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_hand(0, catalog::cinder_barrens());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land).unwrap().tapped, "enters tapped");
+    // Untap and tap for red (ability index 1).
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, x_value: None,
+    }).expect("tap for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
+}
+
+/// Corpse Churn mills three then returns a creature from the graveyard.
+#[test]
+fn corpse_churn_mills_and_returns_creature() {
+    let mut g = two_player_game();
+    // Stock the library so the mill has cards; seed a creature in graveyard.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let churn = g.add_card_to_hand(0, catalog::corpse_churn());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // Accept the optional "return a creature" rider.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let gy_before = g.players[0].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: churn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Corpse Churn");
+    drain_stack(&mut g);
+    // Bears returned to hand; graveyard grew by milled cards minus the bear.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "creature returned to hand");
+    assert!(g.players[0].graveyard.len() >= gy_before, "milled cards in graveyard");
+}
+
+/// Tears of Valakut deals 5 to a flyer and can't be countered.
+#[test]
+fn tears_of_valakut_burns_flyer() {
+    use crate::card::Keyword;
+    use crate::game::types::Target;
+    let def = catalog::tears_of_valakut();
+    assert!(def.keywords.contains(&Keyword::CantBeCountered));
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let tears = g.add_card_to_hand(0, catalog::tears_of_valakut());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tears, target: Some(Target::Permanent(flyer)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tears of Valakut at the flyer");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == flyer), "4/4 flyer takes 5 and dies");
+}

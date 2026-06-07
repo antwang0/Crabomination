@@ -1746,6 +1746,43 @@ pub fn thought_knot_seer() -> CardDefinition {
     }
 }
 
+/// Sky Scourer — {1}{B} 1/2 Eldrazi Drone. Devoid, Flying; whenever you cast a
+/// colorless spell, it gets +1/+0 until end of turn.
+pub fn sky_scourer() -> CardDefinition {
+    use crate::effect::shortcut::cast_colorless;
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Flying],
+        triggered_abilities: vec![cast_colorless(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..drone("Sky Scourer", cost(&[crate::mana::generic(1), b()]), 1, 2)
+    }
+}
+
+/// Tajuru Stalwart — {2}{G} 0/1 Elf Scout Ally. Converge — enters with a +1/+1
+/// counter for each color of mana spent to cast it.
+pub fn tajuru_stalwart() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Value;
+    CardDefinition {
+        name: "Tajuru Stalwart",
+        cost: cost(&[crate::mana::generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Scout, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::ConvergedValue)),
+        ..Default::default()
+    }
+}
+
 /// Kozilek's Pathfinder — {6} 5/5 Eldrazi. {C}: Target creature can't block
 /// this creature this turn.
 pub fn kozileks_pathfinder() -> CardDefinition {
@@ -1761,6 +1798,62 @@ pub fn kozileks_pathfinder() -> CardDefinition {
             mana_cost: cost(&[crate::mana::colorless(1)]),
             effect: Effect::CantBlockSourceThisTurn {
                 target: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cinder Barrens — Land. Enters tapped; {T}: Add {B} or {R}.
+pub fn cinder_barrens() -> CardDefinition {
+    use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{ManaPayload, PlayerRef, Selector, Value};
+    let tap_for = |color| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana {
+            who: PlayerRef::You,
+            pool: ManaPayload::OfColor(color, Value::Const(1)),
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cinder Barrens",
+        cost: crate::mana::ManaCost::default(),
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap { what: Selector::This },
+        }],
+        activated_abilities: vec![tap_for(crate::mana::Color::Black), tap_for(crate::mana::Color::Red)],
+        ..Default::default()
+    }
+}
+
+/// Crumbling Vestige — Land. Enters tapped; ETB add one mana of any color;
+/// {T}: Add {C}.
+pub fn crumbling_vestige() -> CardDefinition {
+    use crate::card::{ActivatedAbility, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{ManaPayload, PlayerRef, Selector, Value};
+    CardDefinition {
+        name: "Crumbling Vestige",
+        cost: crate::mana::ManaCost::default(),
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Tap { what: Selector::This },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyColors(Value::Const(1)),
+                },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
             },
             ..Default::default()
         }],
