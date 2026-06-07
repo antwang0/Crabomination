@@ -4807,10 +4807,11 @@ impl GameState {
                         c.controller == p
                             && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, ctx.source)
                     })
-                    .map(|c| (c.id, c.power(), c.toughness()));
-                if let Some((cid, power, toughness)) = candidate {
+                    .map(|c| (c.id, c.power(), c.toughness(), c.definition.cost.cmc()));
+                if let Some((cid, power, toughness, mv)) = candidate {
                     self.sacrificed_power = Some(power);
                     self.sacrificed_toughness = Some(toughness);
+                    self.sacrificed_mana_value = Some(mv);
                     let is_creature = self
                         .battlefield_find(cid)
                         .map(|c| c.definition.is_creature())

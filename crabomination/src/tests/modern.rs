@@ -34985,3 +34985,26 @@ fn without_seedborn_permanents_stay_tapped_on_opponents_turn() {
     assert!(g.battlefield_find(land).unwrap().tapped,
         "normally a non-active player's permanents don't untap");
 }
+
+/// Birthing Pod sacrifices a creature and tutors a creature with mana value one
+/// higher straight to the battlefield.
+#[test]
+fn birthing_pod_sacrifices_then_tutors_one_higher() {
+    let mut g = two_player_game();
+    let pod = g.add_card_to_battlefield(0, catalog::birthing_pod());
+    g.clear_sickness(pod);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV 2
+    let centaur = g.add_card_to_library(0, catalog::centaur_courser()); // MV 3
+    g.add_card_to_library(0, catalog::shock()); // padding (not a creature)
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(centaur))]));
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pod, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Birthing Pod for {1}{G}, {T}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "the sacrificed MV-2 creature is in the graveyard");
+    assert!(g.battlefield.iter().any(|c| c.id == centaur),
+        "an MV-3 creature (sacrificed + 1) is put onto the battlefield");
+}

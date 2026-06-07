@@ -955,6 +955,10 @@ impl GameState {
                     R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
                     R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
                     R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
+                    R::ManaValueEqualsSacrificedPlus(off) => {
+                        card.definition.cost.cmc()
+                            == self.sacrificed_mana_value.unwrap_or(0) + *off
+                    }
                     R::HasCardType(ct) => {
                         // CR 715 — an adventuring card is its instant/sorcery
                         // half while on the stack, so report the adventure types.
@@ -1110,6 +1114,9 @@ impl GameState {
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,
             R::ManaValueAtLeast(n) => card.definition.cost.cmc() >= *n,
             R::ManaValueExactly(n) => card.definition.cost.cmc() == *n,
+            R::ManaValueEqualsSacrificedPlus(off) => {
+                card.definition.cost.cmc() == self.sacrificed_mana_value.unwrap_or(0) + *off
+            }
             R::HasCardType(ct) => {
                         // CR 715 — an adventuring card is its instant/sorcery
                         // half while on the stack, so report the adventure types.

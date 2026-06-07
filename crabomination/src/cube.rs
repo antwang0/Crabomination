@@ -2005,6 +2005,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         beastmaster_ascension,
         // untap on each other player's untap step
         seedborn_muse,
+        // sacrifice-to-tutor-by-mana-value engine
+        birthing_pod,
         // allied-color batch (modern_decks)
         llanowar_tribe,
         sakura_tribe_scout,

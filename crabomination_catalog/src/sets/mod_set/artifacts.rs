@@ -1489,3 +1489,49 @@ pub fn disrupting_scepter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Birthing Pod — {1}{G} Artifact (printed {1}{G/P}; Phyrexian mana simplified
+/// to green). "{1}{G}, {T}, Sacrifice a creature: Search your library for a
+/// creature card with mana value equal to 1 plus the sacrificed creature's
+/// mana value, put it onto the battlefield, then shuffle."
+///
+/// The sacrifice is modeled as the first step of the *effect*
+/// (`SacrificeAndRemember`) rather than a cost, so the sacrificed creature's
+/// mana value is recorded on the resolution scratch and read by the
+/// `ManaValueEqualsSacrificedPlus(1)` search filter in the same resolution
+/// (a stacked activated ability's effect resolves after the cost-time scratch
+/// would have been cleared). Activation is gated on controlling a creature so
+/// it can't fire as a free tutor.
+pub fn birthing_pod() -> CardDefinition {
+    use crate::effect::Predicate;
+    use crate::mana::g;
+    CardDefinition {
+        name: "Birthing Pod",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), g()]),
+            condition: Some(Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(1),
+            }),
+            effect: Effect::Seq(vec![
+                Effect::SacrificeAndRemember {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature,
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueEqualsSacrificedPlus(1)),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

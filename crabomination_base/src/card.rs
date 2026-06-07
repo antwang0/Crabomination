@@ -715,6 +715,12 @@ pub enum SelectionRequirement {
     /// shape rather than the `AtMost`/`AtLeast` approximations).
     /// Composes naturally with `And`/`Or` for range gates.
     ManaValueExactly(u32),
+    /// True when the card's mana value equals the most-recently-sacrificed
+    /// creature's mana value plus `offset`, read from the resolution scratch
+    /// (`GameState.sacrificed_mana_value`). Powers Birthing Pod's "search for a
+    /// creature card with mana value equal to 1 plus the sacrificed creature's
+    /// mana value." Evaluates to `mv == 0 + offset` when nothing was recorded.
+    ManaValueEqualsSacrificedPlus(u32),
     HasCardType(CardType),
     /// True when the card's printed mana cost contains at least one
     /// `{X}` symbol. Used by SOS Paradox Surveyor's reveal filter

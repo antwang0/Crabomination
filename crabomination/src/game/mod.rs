@@ -279,6 +279,13 @@ pub struct GameState {
     /// (Tribute to Hunger). Reset between independent resolutions.
     #[serde(default)]
     pub(crate) sacrificed_toughness: Option<i32>,
+    /// Transient: mana value of the most-recently-sacrificed creature within
+    /// the current effect/cost resolution. Set alongside `sacrificed_power`
+    /// (including the `sac_other_filter` activation-cost path); read by
+    /// `SelectionRequirement::ManaValueEqualsSacrificedPlus` (Birthing Pod).
+    /// Reset between independent resolutions.
+    #[serde(default)]
+    pub(crate) sacrificed_mana_value: Option<u32>,
     /// Transient: id of the most-recently-created token within the current
     /// effect resolution. Set by `Effect::CreateToken` and read by
     /// `Selector::LastCreatedToken` so a follow-up `AddCounter` /
@@ -668,6 +675,7 @@ impl Clone for GameState {
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
             sacrificed_power: self.sacrificed_power,
             sacrificed_toughness: self.sacrificed_toughness,
+            sacrificed_mana_value: self.sacrificed_mana_value,
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
             last_created_tokens: self.last_created_tokens.clone(),
@@ -763,6 +771,7 @@ impl GameState {
             attacking_token_cleanup: Vec::new(),
             sacrificed_power: None,
             sacrificed_toughness: None,
+            sacrificed_mana_value: None,
             last_created_token: None,
             last_die_roll: 0,
             last_created_tokens: Vec::new(),
