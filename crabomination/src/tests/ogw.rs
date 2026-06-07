@@ -625,6 +625,48 @@ fn bane_of_bala_ged_attack_exiles_two_permanents() {
     assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
 }
 
+/// Birthing Hulk mints two Eldrazi Scions on ETB.
+#[test]
+fn birthing_hulk_makes_two_scions() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::birthing_hulk());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    crate::game::cast(&mut g, id);
+    assert_eq!(scion_count(&g), 2);
+}
+
+/// Drowner of Hope sacrifices a Scion to tap a creature.
+#[test]
+fn drowner_of_hope_sacs_scion_to_tap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::drowner_of_hope());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    crate::game::cast(&mut g, id); // ETB mints two Scions
+    assert_eq!(scion_count(&g), 2);
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("sac scion, tap");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).unwrap().tapped, "target creature tapped");
+    assert_eq!(scion_count(&g), 1, "one Scion sacrificed");
+}
+
+/// Kozilek's Return deals 2 to each creature, killing a 2/2.
+#[test]
+fn kozileks_return_sweeps_two_toughness_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::kozileks_return());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast(&mut g, id);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "the 2/2 dies to 2 damage");
+}
+
 /// Kozilek's Shrieker pumps +1/+0 and gains menace for {C}.
 #[test]
 fn kozileks_shrieker_pumps_and_gains_menace() {

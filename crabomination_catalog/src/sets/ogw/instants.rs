@@ -102,6 +102,26 @@ pub fn witness_the_end() -> CardDefinition {
     }
 }
 
+/// Kozilek's Return — {2}{R} Devoid Instant. Deals 2 damage to each creature.
+/// (The graveyard-recur rider on casting a 7+ MV Eldrazi is dropped.)
+pub fn kozileks_return() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Kozilek's Return",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Devoid],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Scour from Existence — {7} Devoid Instant. Exile target permanent.
 pub fn scour_from_existence() -> CardDefinition {
     CardDefinition {

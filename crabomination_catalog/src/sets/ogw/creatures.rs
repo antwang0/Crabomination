@@ -535,6 +535,34 @@ pub fn bane_of_bala_ged() -> CardDefinition {
     }
 }
 
+/// Birthing Hulk — {6}{G} 5/4 Eldrazi Drone. Devoid; ETB create two Eldrazi
+/// Scions. (Its Awaken {7}{G} alt-cast is dropped.)
+pub fn birthing_hulk() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 2)],
+        ..drone("Birthing Hulk", cost(&[generic(6), g()]), 5, 4)
+    }
+}
+
+/// Drowner of Hope — {5}{U} 5/5 Eldrazi. Devoid; ETB create two Eldrazi
+/// Scions. Sacrifice an Eldrazi Scion: tap target creature.
+pub fn drowner_of_hope() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CreatureType, SelectionRequirement};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 2)],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Scion),
+                1,
+            )),
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..colossus("Drowner of Hope", cost(&[generic(5), u()]), 5, 5)
+    }
+}
+
 /// Kozilek's Shrieker — {2}{B} 3/2 Eldrazi Drone. Devoid; {C}: +1/+0 and gains
 /// menace until end of turn.
 pub fn kozileks_shrieker() -> CardDefinition {
