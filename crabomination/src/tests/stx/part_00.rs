@@ -2845,19 +2845,19 @@ fn quandrix_cultivator_etb_fetches_basic_forest_or_island() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
 
     let id = g.add_card_to_hand(0, catalog::quandrix_cultivator());
-    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Quandrix Cultivator castable for {3}{G}{U}");
+    .expect("Quandrix Cultivator castable for {1}{G}{G/U}{U}");
     drain_stack(&mut g);
 
-    // Forest should be on the battlefield, tapped.
+    // Forest should be on the battlefield, untapped.
     let f = g.battlefield_find(forest).expect("Forest should be in play");
-    assert!(f.tapped, "Tutored Forest should enter tapped");
+    assert!(!f.tapped, "Tutored Forest enters untapped");
     assert!(f.definition.is_land());
 }
 
@@ -2964,25 +2964,22 @@ fn twinscroll_shaman_is_a_double_striking_one_two() {
 }
 
 #[test]
-fn practical_research_doubles_plus_one_counters() {
+fn practical_research_draws_four_then_discards_two() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
-        c.add_counters(CounterType::PlusOnePlusOne, 3);
-    }
+    g.players[0].hand.clear();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::practical_research());
-    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Practical Research castable");
     drain_stack(&mut g);
 
-    let bear_c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(bear_c.counter_count(CounterType::PlusOnePlusOne), 6,
-        "3 +1/+1 doubled to 6");
+    // Started with 0 (after casting the spell from hand): +4 draw − 2 discard = 2.
+    assert_eq!(g.players[0].hand.len(), 2, "drew 4, discarded 2");
 }
 
 #[test]
@@ -3350,88 +3347,53 @@ fn dragonsguard_elite_magecraft_adds_counter_and_pumps_x_equal_to_power() {
 }
 
 #[test]
-fn quintorius_field_historian_etb_exiles_card_and_makes_spirit() {
+fn quintorius_makes_a_spirit_when_a_card_leaves_your_graveyard() {
     let mut g = two_player_game();
-    let target = g.add_card_to_graveyard(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::quintorius_field_historian());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Quintorius castable for {2}{R}{W}");
+    g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::CardLeftGraveyard {
+        player: 0, card_id: crate::card::CardId(999),
+    }]);
     drain_stack(&mut g);
-
-    assert!(!g.players[1].graveyard.iter().any(|c| c.id == target),
-        "exiled card no longer in gy");
     let spirit = g.battlefield.iter()
         .find(|c| c.is_token && c.definition.name == "Spirit")
-        .expect("3/2 Spirit minted");
-    assert_eq!(spirit.power(), 3);
-    assert_eq!(spirit.toughness(), 2);
-    let q = g.battlefield.iter()
-        .find(|c| c.definition.name == "Quintorius, Field Historian").unwrap();
-    assert!(q.has_keyword(&Keyword::Vigilance));
+        .expect("3/2 Spirit minted on gy-leave");
+    assert_eq!((spirit.power(), spirit.toughness()), (3, 2));
 }
 
-/// Quintorius, Field Historian's tribal anthem: "Other Spirit creatures
-/// you control get +1/+0." Wired via the compute-time injection in
-/// `GameState::compute_battlefield` using the new
-/// `AffectedPermanents::AllWithCreatureType.exclude_source` flag.
-///
-/// This test mints Quintorius alongside a friendly Spirit and verifies
-/// the Spirit gets +1/+0 (3/2 → 4/2) while Quintorius himself stays at
-/// his printed 3/3 (the "Other" gate excludes him).
 #[test]
-fn quintorius_anthem_pumps_other_spirits_not_self() {
+fn quintorius_anthem_pumps_spirits_not_himself() {
     let mut g = two_player_game();
-    // Put a Quintorius and one friendly Spirit (the minted 3/2 token-equivalent
-    // from his ETB; for the tribal test we just stage the Spirit Mascot from
-    // the SOS catalog which has the Spirit subtype).
     let qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
     let mascot = g.add_card_to_battlefield(0, catalog::spirit_mascot());
 
-    // Spirit Mascot is a 2/2 Spirit; Quintorius's anthem should bump it to 3/2.
+    // Spirit Mascot (2/2 Spirit) gets +1/+0 → 3/2.
     let mascot_card = g.compute_battlefield().into_iter()
-        .find(|c| c.id == mascot)
-        .expect("Spirit Mascot on battlefield");
-    assert_eq!(mascot_card.power, 3, "Other-Spirit gets +1 power");
-    assert_eq!(mascot_card.toughness, 2, "toughness unchanged");
+        .find(|c| c.id == mascot).expect("Spirit Mascot on battlefield");
+    assert_eq!((mascot_card.power, mascot_card.toughness), (3, 2));
 
-    // Quintorius himself is a Spirit too (printed creature types include
-    // Spirit), but the "Other" gate excludes him.
+    // Quintorius is an Elephant Cleric, not a Spirit → unaffected (2/4).
     let q_card = g.compute_battlefield().into_iter()
-        .find(|c| c.id == qid)
-        .expect("Quintorius on battlefield");
-    assert_eq!(q_card.power, 3, "Quintorius doesn't buff himself (Other gate)");
-    assert_eq!(q_card.toughness, 3);
+        .find(|c| c.id == qid).expect("Quintorius on battlefield");
+    assert_eq!((q_card.power, q_card.toughness), (2, 4));
 }
 
-/// When Quintorius leaves the battlefield, his anthem layer effect
-/// should evaporate (matching `EffectDuration::WhileSourceOnBattlefield`).
-/// This test stages two Spirits + Quintorius, kills Quintorius via
-/// lethal damage, and verifies the Spirits return to base P/T.
 #[test]
 fn quintorius_anthem_expires_when_he_leaves_battlefield() {
     let mut g = two_player_game();
     let qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
     let mascot = g.add_card_to_battlefield(0, catalog::spirit_mascot());
 
-    // Confirm anthem is active.
     let before = g.compute_battlefield().into_iter()
         .find(|c| c.id == mascot).unwrap();
     assert_eq!(before.power, 3);
 
-    // Lethal damage to Quintorius (3 toughness → 3 damage kills him).
-    g.battlefield_find_mut(qid).unwrap().damage = 3;
+    // Lethal damage to Quintorius (4 toughness → 4 damage kills him).
+    g.battlefield_find_mut(qid).unwrap().damage = 4;
     let _ = g.check_state_based_actions();
 
-    // Re-check the Spirit Mascot: anthem should be gone, base 2/2.
     let after = g.compute_battlefield().into_iter()
         .find(|c| c.id == mascot).unwrap();
     assert_eq!(after.power, 2, "anthem evaporates without Quintorius");
-    assert_eq!(after.toughness, 2);
 }
 
 #[test]
@@ -3545,20 +3507,21 @@ fn magma_opus_etb_deals_four_taps_creates_elemental_draws_two() {
 }
 
 #[test]
-fn reckless_amplimancer_pumps_by_x_paid() {
+fn reckless_amplimancer_doubles_power_and_toughness() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::reckless_amplimancer());
-    // {X} with X=4 → +4/+4.
+    g.clear_sickness(id);
+    // {4}{G}: double its 2/2 to 4/4.
+    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: Some(4) })
-        .expect("Reckless Amplimancer activates for {X}");
+        card_id: id, ability_index: 0, target: None, x_value: None })
+        .expect("Reckless Amplimancer activates {4}{G}");
     drain_stack(&mut g);
 
     let amp = g.battlefield.iter().find(|c| c.id == id).unwrap();
-    assert_eq!(amp.power(), 6, "2 + X(4) = 6");
-    assert_eq!(amp.toughness(), 6);
+    assert_eq!((amp.power(), amp.toughness()), (4, 4), "2/2 doubled to 4/4");
 }
 
 #[test]

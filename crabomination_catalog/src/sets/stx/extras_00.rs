@@ -11,11 +11,11 @@ use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AdditionalCastCost, CardDefinition, CardType, CounterType, CreatureType,
     Effect, EventKind, EventScope, EventSpec, Keyword, LandType, Predicate, Selector,
-    SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility, Value,
+    SelectionRequirement, SpellSubtype, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -1094,29 +1094,22 @@ pub fn honor_troll() -> CardDefinition {
 
 // ── Quandrix Cultivator ────────────────────────────────────────────────────
 
-/// Quandrix Cultivator — {3}{G}{U}, 3/3 Elf Druid. "When this creature
-/// enters, search your library for a basic Forest or Island card, put
-/// it onto the battlefield tapped, then shuffle."
-///
-/// ✅ Faithful ETB ramp wired via `Effect::Search` against
-/// `IsBasicLand & (HasLandType(Forest) ∨ HasLandType(Island))`. Lands
-/// enter tapped, matching the printed restriction.
+/// Quandrix Cultivator — {1}{G}{G/U}{U} 3/4 Turtle Druid. "When this creature
+/// enters, you may search your library for a basic Forest or Island card, put
+/// it onto the battlefield, then shuffle." (The "may" collapses to an
+/// auto-search.)
 pub fn quandrix_cultivator() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
         name: "Quandrix Cultivator",
-        cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
+        cost: cost(&[generic(1), g(), hybrid(Color::Green, Color::Blue), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            creature_types: vec![CreatureType::Turtle, CreatureType::Druid],
             ..Default::default()
         },
         power: 3,
-        toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -1125,33 +1118,10 @@ pub fn quandrix_cultivator() -> CardDefinition {
                     SelectionRequirement::HasLandType(LandType::Forest)
                         .or(SelectionRequirement::HasLandType(LandType::Island)),
                 ),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
-                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
@@ -1383,32 +1353,27 @@ pub fn specter_of_the_fens() -> CardDefinition {
     }
 }
 
-/// Mascot Interception — {4}{R}{W} Instant.
-/// "Gain control of target permanent until end of turn. Untap it.
-/// It gains haste until end of turn."
-///
-/// ✅ Threaten-with-untap-and-haste at instant speed against any
-/// permanent. Similar shape to Tempted by the Oriq (push XX) but
-/// instant-speed and any-permanent rather than sorcery-speed creature-only.
+/// Mascot Interception — {3}{R} Sorcery. "Gain control of target creature
+/// until end of turn. Untap that creature. It gets +2/+0 and gains haste
+/// until end of turn." (The "costs {3} less if it targets a token" reduction
+/// is dropped.)
 pub fn mascot_interception() -> CardDefinition {
     CardDefinition {
         name: "Mascot Interception",
-        cost: cost(&[generic(4), r(), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::GainControl {
-                what: target_filtered(SelectionRequirement::Permanent),
+                what: target_filtered(SelectionRequirement::Creature),
                 to: None,
                 duration: Duration::EndOfTurn,
             },
-            Effect::Untap {
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::PumpPT {
                 what: Selector::Target(0),
-                up_to: None,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
@@ -1416,34 +1381,10 @@ pub fn mascot_interception() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
-/// Twinscroll Shaman — {2}{U}{R} Creature — Human Wizard. 3/3.
-/// "Magecraft — Whenever you cast or copy an instant or sorcery
 /// Twinscroll Shaman — {2}{R} 1/2 Dwarf Shaman with double strike.
 pub fn twinscroll_shaman() -> CardDefinition {
     CardDefinition {
@@ -1461,57 +1402,19 @@ pub fn twinscroll_shaman() -> CardDefinition {
     }
 }
 
-/// Practical Research — {1}{G}{U} Sorcery.
-/// "Choose target creature you control. For each +1/+1 counter on
-/// it, put another +1/+1 counter on it."
-///
-/// ✅ Doubles +1/+1 counters on the chosen creature via
-/// `AddCounter(amount = CountersOn(target, +1/+1))`. Same shape as
-/// Growth Curve's second half but as a one-shot without the
-/// initial-counter bump.
+/// Practical Research — {3}{U}{R} Instant. "Draw four cards. Then discard two
+/// cards unless you discard an instant or sorcery card." (The discard is
+/// modeled as a flat discard-2; the IS-discard exemption is dropped.)
 pub fn practical_research() -> CardDefinition {
     CardDefinition {
         name: "Practical Research",
-        cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::AddCounter {
-            what: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::CountersOn {
-                what: Box::new(Selector::Target(0)),
-                kind: CounterType::PlusOnePlusOne,
-            },
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        cost: cost(&[generic(3), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+        ]),
+        ..Default::default()
     }
 }
 
@@ -1925,112 +1828,45 @@ pub fn mentors_guidance() -> CardDefinition {
     }
 }
 
-/// Quintorius, Field Historian — {2}{R}{W} Legendary Creature — Elephant
-/// Cleric Spirit, 3/3 (Lorehold). "Vigilance / When Quintorius enters,
-/// exile target card from a graveyard. Create a 3/2 red and white
-/// Spirit creature token."
-///
-/// ✅ ETB body (exile gy card + mint 3/2 R/W Spirit token) wired via the
-/// EntersBattlefield/SelfSource trigger. The printed static "Other
-/// Spirit creatures you control get +1/+0" anthem is now wired as a
-/// regular `StaticEffect::PumpPT` over
-/// `Selector::EachPermanent(Creature ∧ HasCreatureType(Spirit) ∧
-/// ControlledByYou ∧ OtherThanSource)` — same shape Hofri Ghostforge
-/// uses. The `OtherThanSource` predicate flows through
-/// `affected_from_requirement`, which flips
-/// `AffectedPermanents::AllWithCreatureType.exclude_source: true` so
-/// Quintorius himself doesn't buff himself (he IS a Spirit, matching
-/// the printed "Other" gate). Push (modern_decks) consolidation
-/// retired the `tribal_anthem_for_name` helper table.
+/// Quintorius, Field Historian — {3}{R}{W} Legendary 2/4 Elephant Cleric.
+/// "Spirits you control get +1/+0. Whenever one or more cards leave your
+/// graveyard, create a 3/2 red and white Spirit creature token." (The
+/// "one or more" batch collapses to a per-card trigger.)
 pub fn quintorius_field_historian() -> CardDefinition {
-    use crate::card::{SelectionRequirement, StaticAbility, Supertype};
+    use crate::card::{StaticAbility, Supertype};
     use crate::effect::StaticEffect;
-    let spirit = TokenDefinition {
-        name: "Spirit".to_string(),
-        power: 3,
-        toughness: 2,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Red, Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
-    };
     CardDefinition {
         name: "Quintorius, Field Historian",
-        cost: cost(&[generic(2), r(), w()]),
+        cost: cost(&[generic(3), r(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![
-                CreatureType::Elephant,
-                CreatureType::Cleric,
-                CreatureType::Spirit,
-            ],
+            creature_types: vec![CreatureType::Elephant, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
-        keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        power: 2,
+        toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                // "Exile target card from a graveyard" — needs the
-                // `Move(... → Exile)` path (`Effect::Exile` on an
-                // EntityRef::Permanent only no-ops for non-battlefield
-                // cards). Same shape as SOS Heated Argument mode 2.
-                Effect::Move {
-                    what: target_filtered(SelectionRequirement::Any),
-                    to: ZoneDest::Exile,
-                },
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: spirit,
-                },
-            ]),
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::lorehold_spirit_3_2_token(),
+            },
         }],
         static_abilities: vec![StaticAbility {
-            description: "Other Spirit creatures you control get +1/+0.",
+            description: "Spirits you control get +1/+0.",
             effect: StaticEffect::PumpPT {
                 applies_to: Selector::EachPermanent(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
+                        .and(SelectionRequirement::ControlledByYou),
                 ),
                 power: 1,
                 toughness: 0,
             },
         }],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
@@ -2238,12 +2074,12 @@ pub fn magma_opus() -> CardDefinition {
 
 // ── Reckless Amplimancer ────────────────────────────────────────────────────
 
-/// Reckless Amplimancer — {2}{G} Creature — Elf Druid, 2/2.
-/// `{X}: this creature gets +X/+X until end of turn.`
+/// Reckless Amplimancer — {1}{G} 2/2 Elf Druid. `{4}{G}: Double this
+/// creature's power and toughness until end of turn.`
 pub fn reckless_amplimancer() -> CardDefinition {
     CardDefinition {
         name: "Reckless Amplimancer",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -2251,16 +2087,13 @@ pub fn reckless_amplimancer() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        // {X}: +X/+X EOT, where X = the mana spent on this activation
-        // (`Value::XFromCost` reads `ActivateAbility.x_value`).
+        // Doubling = add the creature's current P/T as an EOT pump.
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            mana_cost: cost(&[crate::mana::ManaSymbol::X]),
+            mana_cost: cost(&[generic(4), g()]),
             effect: Effect::PumpPT {
                 what: Selector::This,
-                power: Value::XFromCost,
-                toughness: Value::XFromCost,
+                power: Value::PowerOf(Box::new(Selector::This)),
+                toughness: Value::ToughnessOf(Box::new(Selector::This)),
                 duration: Duration::EndOfTurn,
             },
             ..Default::default()
@@ -2674,24 +2507,20 @@ pub fn sparkmage_apprentice() -> CardDefinition {
 
 // ── Karok Wrangler ──────────────────────────────────────────────────────────
 
-/// Karok Wrangler — {1}{G}{U} Creature — Elf Druid, 2/2.
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// put a +1/+1 counter on target creature you control."
+/// Karok Wrangler — {4}{G} 3/3 Elf Druid. "Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, put a +1/+1 counter on target creature
+/// you control."
 pub fn karok_wrangler() -> CardDefinition {
     CardDefinition {
         name: "Karok Wrangler",
-        cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
+        cost: cost(&[generic(4), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        power: 3,
+        toughness: 3,
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -2699,27 +2528,7 @@ pub fn karok_wrangler() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
@@ -2735,102 +2544,63 @@ pub fn karok_wrangler() -> CardDefinition {
 
 // ── Defend the Campus ───────────────────────────────────────────────────────
 
-/// Defend the Campus — {3}{W}{W} Sorcery. "Create three 1/1 white and
-/// black Inkling creature tokens with flying."
-///
-/// ✅ Faithful 3x mint via `Effect::CreateToken { count: Value::Const(3) }`.
-/// Reuses the SOS catalog's `inkling_token()` definition for visual
-/// consistency with the other Silverquill Inkling cards.
+/// Defend the Campus — {3}{W} Instant. "Choose one — Creatures you control get
+/// +1/+1 until end of turn; or Destroy target creature with power 4 or
+/// greater." (AutoDecider keeps mode 0.)
 pub fn defend_the_campus() -> CardDefinition {
-    use crate::catalog::sets::sos::inkling_token;
     CardDefinition {
         name: "Defend the Campus",
-        cost: cost(&[generic(3), w(), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(3),
-            definition: inkling_token(),
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::PumpPT {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                },
+            ],
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
 // ── Hall Monitor ────────────────────────────────────────────────────────────
 
-/// Hall Monitor — {W} Creature — Human Cleric, 1/1. "Magecraft —
-/// Whenever you cast or copy an instant or sorcery spell, untap Hall
-/// Monitor."
-///
-/// ✅ Wired via the new `magecraft_self_untap()` shortcut (push XXVII).
-/// On every IS-cast trigger, the source is untapped (lets it block
-/// over multiple combat turns or chain Spectral Adversary-style
-/// re-tap activations).
+/// Hall Monitor — {R} 1/1 Lizard Shaman with haste. `{1}{R}, {T}: Target
+/// creature can't block this turn.`
 pub fn hall_monitor() -> CardDefinition {
-    use crate::effect::shortcut::magecraft_self_untap;
     CardDefinition {
         name: "Hall Monitor",
-        cost: cost(&[w()]),
-        supertypes: vec![],
+        cost: cost(&[r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Lizard, CreatureType::Shaman],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft_self_untap()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
     }
 }
 
@@ -2896,21 +2666,24 @@ pub fn stonebinders_familiar() -> CardDefinition {
 
 // ── Necrotic Fumes ──────────────────────────────────────────────────────────
 
-/// Necrotic Fumes — {2}{B}{B} Sorcery. "As an additional cost to cast
-/// this spell, sacrifice a creature. / Exile target creature." The
-/// sacrifice is a real cast-time additional cost via
-/// `AdditionalCastCost::SacrificePermanent`.
+/// Necrotic Fumes — {1}{B}{B} Sorcery — Lesson. "As an additional cost,
+/// exile a creature you control. Exile target creature or planeswalker."
+/// (The additional cost is modeled as a sacrifice — exile-as-cost isn't a
+/// distinct primitive.)
 pub fn necrotic_fumes() -> CardDefinition {
     CardDefinition {
         name: "Necrotic Fumes",
-        cost: cost(&[generic(2), b(), b()]),
+        cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
         additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Creature,
             count: 1,
         }],
         effect: Effect::Move {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
             to: ZoneDest::Exile,
         },
         ..Default::default()
@@ -2919,129 +2692,81 @@ pub fn necrotic_fumes() -> CardDefinition {
 
 // ── Make Your Mark ──────────────────────────────────────────────────────────
 
-/// Make Your Mark — {1}{W} Instant. "Target creature gets +1/+1 until
-/// end of turn. Draw a card."
-///
-/// ✅ Trivial pump + cantrip wire. The +1/+1 EOT goes on a chosen
-/// creature target via `target_filtered(Creature)`; the cantrip
-/// fires regardless of whether the pump finds a legal target.
+/// Make Your Mark — {R/W} Instant. "Target creature gets +1/+0 until end of
+/// turn. When that creature dies this turn, create a 3/2 red and white Spirit
+/// creature token."
 pub fn make_your_mark() -> CardDefinition {
     CardDefinition {
         name: "Make Your Mark",
-        cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
+        cost: cost(&[hybrid(Color::Red, Color::White)]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(1),
-                toughness: Value::Const(1),
+                toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            Effect::WhenTargetDiesThisTurn {
+                slot: 0,
+                body: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::lorehold_spirit_3_2_token(),
+                }),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
 // ── Containment Breach ──────────────────────────────────────────────────────
 
-/// Containment Breach — {1}{W} Sorcery. "Destroy target enchantment.
-/// Surveil 1."
-///
-/// ✅ Standard `Seq(Destroy + Surveil 1)` wire. The Surveil is the
-/// engine's existing `Effect::Surveil` primitive (top card → graveyard
-/// or stays on top per the controller's choice).
+/// Containment Breach — {2}{G} Sorcery — Lesson. "Destroy target artifact or
+/// enchantment. If its mana value is 2 or less, create a 1/1 black and green
+/// Pest token with 'When this token dies, you gain 1 life.'"
 pub fn containment_breach() -> CardDefinition {
     CardDefinition {
         name: "Containment Breach",
-        cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Enchantment),
-            },
-            Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
+        effect: Effect::If {
+            // Check the target's mana value before it's destroyed.
+            cond: Predicate::ValueAtLeast(
+                Value::Const(2),
+                Value::ManaValueOf(Box::new(Selector::Target(0))),
+            ),
+            then: Box::new(Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                    ),
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::stx_pest_token(),
+                },
+            ])),
+            else_: Box::new(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            }),
+        },
+        ..Default::default()
     }
 }
 
 // ── Burrog Befuddler ────────────────────────────────────────────────────────
 
-/// Burrog Befuddler — {1}{U} Creature — Frog Wizard, 2/1.
-/// "Flash. When this creature enters, target creature gets -3/-0 until
-/// end of turn."
-///
-/// Flash + ETB combat trick. The -3/-0 takes a 3/3 down to 0/3 which
-/// can no longer profitably attack; the body sticks around as a 2/1
-/// flier-blocker (well, 2/1 ground, but cheap interaction at instant
-/// speed). Standard `EntersBattlefield/SelfSource` trigger with a
-/// negative `Effect::PumpPT` against a `Creature` target.
+/// Burrog Befuddler — {1}{U} 2/1 Frog Wizard with flash. "When this creature
+/// enters, target creature an opponent controls gets -1/-0 until end of turn."
 pub fn burrog_befuddler() -> CardDefinition {
     CardDefinition {
         name: "Burrog Befuddler",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Frog, CreatureType::Wizard],
@@ -3050,38 +2775,18 @@ pub fn burrog_befuddler() -> CardDefinition {
         power: 2,
         toughness: 1,
         keywords: vec![Keyword::Flash],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-3),
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                power: Value::Const(-1),
                 toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
