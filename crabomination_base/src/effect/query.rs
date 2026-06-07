@@ -204,6 +204,7 @@ impl Effect {
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
             Effect::ShuffleGraveyardIntoLibrary { who } => player_has_target(who),
+            Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {

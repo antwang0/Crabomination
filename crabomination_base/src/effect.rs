@@ -1591,6 +1591,12 @@ pub enum Effect {
     /// (the value-maximizing default). Torsten, Founder of Benalia's
     /// "reveal seven, take creatures and/or lands."
     RevealTopTakeMatchingToHand { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
+    /// in hand moves to the graveyard and every card in the graveyard moves to
+    /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card
+    /// enters/leaves-graveyard triggers don't fire — a faithful-enough
+    /// approximation for the one card that does this.)
+    ExchangeHandAndGraveyard { who: PlayerRef },
     /// Each player in `who` exiles all but the bottom `keep` cards of their
     /// library (face down — face-down exile isn't modeled, so the cards are
     /// exiled plainly). Doomsday Excruciator's "each player exiles all but the

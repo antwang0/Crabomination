@@ -7,13 +7,13 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword,
-    Predicate, Selector, SelectionRequirement, SpellSubtype, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value, Zone,
+    Predicate, Selector, SelectionRequirement, SpellSubtype, StaticAbility, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, gain_life, on_dies, target, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
 
 // ── Lessons ──────────────────────────────────────────────────────────────────
 
@@ -569,6 +569,92 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+// ── More spells ──────────────────────────────────────────────────────────────
+
+/// Deadly Brew — {B}{G} Sorcery. Each player sacrifices a creature or
+/// planeswalker of their choice. Then you may return a permanent card from
+/// your graveyard to your hand. (The "if you sacrificed" gate collapses; the
+/// return auto-picks.)
+pub fn deadly_brew() -> CardDefinition {
+    CardDefinition {
+        name: "Deadly Brew",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            },
+            Effect::MayDo {
+                description: "Return a permanent card from your graveyard to your hand?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: SelectionRequirement::Permanent,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Dramatic Finale — {W/B}{W/B}{W/B}{W/B} Enchantment. Creature tokens you
+/// control get +1/+1. Whenever one or more nontoken creatures you control
+/// die, create a 2/1 white-and-black Inkling with flying. (The "only once
+/// each turn" limiter is dropped — each batch of deaths mints one.)
+pub fn dramatic_finale() -> CardDefinition {
+    CardDefinition {
+        name: "Dramatic Finale",
+        cost: cost(&[hybrid(Color::White, Color::Black); 4]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creature tokens you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::IsToken),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken,
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_2_1_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Harness Infinity — {1}{B}{B}{B}{G}{G}{G} Instant. Exchange your hand and
+/// graveyard, then exile Harness Infinity.
+pub fn harness_infinity() -> CardDefinition {
+    CardDefinition {
+        name: "Harness Infinity",
+        cost: cost(&[generic(1), b(), b(), b(), g(), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExchangeHandAndGraveyard { who: PlayerRef::You },
+        exile_on_resolve: true,
         ..Default::default()
     }
 }

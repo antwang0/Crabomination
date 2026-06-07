@@ -4319,6 +4319,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeHandAndGraveyard { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let (hand, gy) = (
+                        std::mem::take(&mut self.players[p].hand),
+                        std::mem::take(&mut self.players[p].graveyard),
+                    );
+                    // Hand cards → graveyard; graveyard cards → hand.
+                    self.players[p].graveyard = hand;
+                    self.players[p].hand = gy;
+                }
+                Ok(())
+            }
+
             Effect::ShuffleLibrary { who } => {
                 use rand::seq::SliceRandom;
                 if let Some(p) = self.resolve_player(who, ctx) {

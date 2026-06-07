@@ -252,6 +252,69 @@ fn elemental_masterpiece_makes_two_elementals() {
 }
 
 #[test]
+fn harness_infinity_swaps_hand_and_graveyard() {
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    let h = g.add_card_to_hand(0, catalog::island());
+    let gy1 = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let gy2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::harness_infinity());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // The two graveyard cards are now in hand; the old hand card (island) is in gy.
+    assert!(g.players[0].hand.iter().any(|c| c.id == gy1) && g.players[0].hand.iter().any(|c| c.id == gy2));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == h), "old hand card to graveyard");
+    assert!(g.exile.iter().any(|c| c.id == id), "Harness Infinity exiles itself");
+}
+
+#[test]
+fn dramatic_finale_anthems_tokens_and_mints_on_nontoken_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dramatic_finale());
+    // Token anthem: a creature token you control gets +1/+1.
+    let tok = g.add_token_to_battlefield(0, &catalog::sets::sos::inkling_token());
+    let computed = g.compute_battlefield();
+    let t = computed.iter().find(|c| c.id == tok).unwrap();
+    assert_eq!((t.power, t.toughness), (2, 2), "1/1 Inkling token gets +1/+1");
+    // Nontoken death mints a 2/1 Inkling.
+    let before = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling)).count();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling)).count();
+    assert_eq!(after, before + 1, "a 2/1 Inkling minted on the nontoken death");
+}
+
+#[test]
+fn deadly_brew_each_player_sacrifices() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::mind_stone()); // a permanent to return
+    let id = g.add_card_to_hand(0, catalog::deadly_brew());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "you sacrifice a creature");
+    assert!(g.battlefield_find(theirs).is_none(), "opponent sacrifices a creature");
+}
+
+#[test]
 fn detention_vortex_locks_activated_abilities() {
     // CR 602.5c — Detention Vortex shuts off the enchanted permanent's
     // activated abilities (and attack/block).

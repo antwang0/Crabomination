@@ -4247,5 +4247,8 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::illustrious_historian,
         super::grinning_ignus,
         super::rootha_mercurial_artist,
+        super::deadly_brew,
+        super::dramatic_finale,
+        super::harness_infinity,
     ]
 }
