@@ -2603,6 +2603,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoublePower { what, times, duration: _ } => {
+                // Double each resolved creature's current power `times` times
+                // (Exponential Growth). Adds power*(2^times - 1) as an EOT pump
+                // so the live power ends at power * 2^times.
+                let n = self.evaluate_value(times, ctx).max(0);
+                if n > 0 {
+                    let factor = 1i32.checked_shl(n as u32).unwrap_or(i32::MAX); // 2^n
+                    for ent in self.resolve_selector(what, ctx) {
+                        if let Some(cid) = ent.as_permanent_id()
+                            && let Some(c) = self.battlefield_find(cid) {
+                                let cur = c.power();
+                                let delta = cur.saturating_mul(factor - 1);
+                                if let Some(c) = self.battlefield_find_mut(cid) {
+                                    c.power_bonus += delta;
+                                    events.push(GameEvent::PumpApplied { card_id: cid, power: delta, toughness: 0 });
+                                }
+                            }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::LoseAllAbilities { what, duration } => {
                 // Layer-6 strip-abilities continuous effect (CR 113.10b).
                 // Installs `Modification::RemoveAllAbilities` against each

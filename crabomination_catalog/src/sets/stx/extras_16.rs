@@ -13,7 +13,7 @@ use crate::card::{
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, gain_life, on_dies, target, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
 // ── Lessons ──────────────────────────────────────────────────────────────────
 
@@ -292,6 +292,22 @@ pub fn golden_ratio() -> CardDefinition {
         cost: cost(&[generic(1), g(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Draw { who: Selector::You, amount: Value::DistinctPowerYouControl },
+        ..Default::default()
+    }
+}
+
+/// Exponential Growth — {X}{X}{G}{G} Sorcery. Until end of turn, double target
+/// creature's power X times.
+pub fn exponential_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Exponential Growth",
+        cost: cost(&[x(), x(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DoublePower {
+            what: target_filtered(SelectionRequirement::Creature),
+            times: Value::XFromCost,
+            duration: Duration::EndOfTurn,
+        },
         ..Default::default()
     }
 }

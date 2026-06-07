@@ -4238,6 +4238,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::devouring_tendrils,
         super::study_break,
         super::golden_ratio,
+        super::exponential_growth,
         super::elemental_masterpiece,
         super::gnarled_professor,
         super::dream_strix,

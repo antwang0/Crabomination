@@ -102,6 +102,23 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn exponential_growth_doubles_power_x_times() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::exponential_growth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(6); // {X}{X} with X=3 → 6 generic
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("castable");
+    drain_stack(&mut g);
+    // 2 power doubled 3 times = 2 * 2^3 = 16; toughness unchanged.
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (16, 2), "power doubled three times");
+}
+
+#[test]
 fn serpentine_curve_scales_with_instants_and_sorceries_in_yards() {
     let mut g = two_player_game();
     g.add_card_to_graveyard(0, catalog::lightning_bolt()); // 1 instant in gy

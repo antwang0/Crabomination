@@ -1725,6 +1725,12 @@ pub enum Effect {
     Untap   { what: Selector, #[serde(default)] up_to: Option<Value> },
     /// Give a temporary +P/+T bonus.
     PumpPT  { what: Selector, power: Value, toughness: Value, duration: Duration },
+    /// Double the resolved creature's power `times` times for `duration`
+    /// (CR — Exponential Growth: "double target creature's power X times").
+    /// Computes the creature's current power and adds `power * (2^times - 1)`
+    /// as a pump bonus, so power ends at `power * 2^times`. `times` ≤ 0 is a
+    /// no-op. Reusable for any "double power N times" card.
+    DoublePower { what: Selector, times: Value, duration: Duration },
     /// Override the resolved permanent's base power and toughness via a
     /// layer-7b continuous effect. Unlike `PumpPT` (which adds to the
     /// existing P/T via direct bonus fields), `SetBasePT` installs a

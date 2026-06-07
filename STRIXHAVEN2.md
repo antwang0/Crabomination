@@ -26,7 +26,8 @@ A handful of 🟡 partials remain (riders dropped, core wired):
 
 ⏳ work remaining: ~40 printed STX cards (the Dean MDFCs, Codie/Extus/Blex/
 Jadzi legends, study/hone-counter cards, blink/recursion spells, the
-remaining X-spells) — see the "Remaining real STX cards" entry in `TODO.md`.
+remaining X-spells — Exponential Growth now ✅ via `Effect::DoublePower`) — see
+the "Remaining real STX cards" entry in `TODO.md`.
 The modern_decks run added extras_14/15/16 (Campus lands, keyword creatures,
 the Lessons batch, Blot Out the Sky / Serpentine Curve / Golden Ratio,
 spell-copy/counter, and payoff creatures), mostly ✅.
