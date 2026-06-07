@@ -158,5 +158,9 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         wall_of_resurgence,
         cyclone_sire,
         boulder_salvo,
+        relentless_hunter,
+        inverter_of_truth,
+        linvala_the_preserver,
+        wretched_gryff,
     ]
 }

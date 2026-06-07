@@ -631,6 +631,42 @@ pub fn creeping_tar_pit() -> CardDefinition {
     )
 }
 
+/// Hissing Quagmire — BG manland. Enters tapped, taps for {B}/{G}.
+/// {1}{B}{G}: becomes a 2/2 black-green Elemental with deathtouch until end
+/// of turn (still a land).
+pub fn hissing_quagmire() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Hissing Quagmire",
+        LandType::Swamp,
+        LandType::Forest,
+        Color::Black,
+        Color::Green,
+        cost(&[generic(1), crate::mana::b(), crate::mana::g()]),
+        2,
+        2,
+        vec![Keyword::Deathtouch],
+    )
+}
+
+/// Needle Spires — RW manland. Enters tapped, taps for {R}/{W}.
+/// {2}{R}{W}: becomes a 2/1 red-white Elemental with double strike until end
+/// of turn (still a land).
+pub fn needle_spires() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Needle Spires",
+        LandType::Mountain,
+        LandType::Plains,
+        Color::Red,
+        Color::White,
+        cost(&[generic(2), crate::mana::r(), crate::mana::w()]),
+        2,
+        1,
+        vec![Keyword::DoubleStrike],
+    )
+}
+
 /// Hengegate Pathway // Mistgate Pathway — W/U MDFC.
 pub fn hengegate_pathway() -> CardDefinition {
     pathway(

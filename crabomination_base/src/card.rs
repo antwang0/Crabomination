@@ -48,7 +48,7 @@ pub enum CreatureType {
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith,
-    Drake, Griffin, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
+    Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat,
@@ -1408,6 +1408,13 @@ pub struct AlternativeCost {
     /// Valakut.
     #[serde(default)]
     pub marks_kicked: bool,
+    /// CR 702.119 — Emerge. When `Some(filter)`, this alternative cost
+    /// requires sacrificing a creature you control matching `filter`, and the
+    /// `mana_cost` (the emerge cost) is reduced generically by that creature's
+    /// mana value. The auto-picker sacrifices the highest-MV match (max
+    /// reduction). Elder Deep-Fiend, Wretched Gryff, Distended Mindbender.
+    #[serde(default)]
+    pub emerge: Option<SelectionRequirement>,
 }
 
 impl CardDefinition {

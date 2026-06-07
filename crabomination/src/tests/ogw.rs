@@ -2233,3 +2233,279 @@ fn wall_of_resurgence_animates_land_on_etb() {
     assert_eq!((cl.power, cl.toughness), (3, 3), "land animated to 3/3 on ETB");
     assert!(cl.card_types.contains(&crate::card::CardType::Creature));
 }
+
+/// Tyrant of Valakut's surge rider deals 3 damage to any target.
+#[test]
+fn tyrant_of_valakut_surge_pings() {
+    let mut g = two_player_game();
+    g.players[0].spells_cast_this_turn = 1;
+    let id = g.add_card_to_hand(0, catalog::tyrant_of_valakut());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[1].life;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("surge cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 3, "surge ETB pinged opponent for 3");
+}
+
+/// Cast normally (no prior spell), Tyrant's surge rider does NOT fire.
+#[test]
+fn tyrant_of_valakut_normal_cast_no_ping() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::tyrant_of_valakut());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    let before = g.players[1].life;
+    crate::game::cast_at(&mut g, id, Target::Player(1));
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before, "no surge → no ping");
+}
+
+/// Tajuru Warcaller's Rally pumps your team +2/+2 when an Ally enters.
+#[test]
+fn tajuru_warcaller_rally_pumps_team() {
+    let mut g = two_player_game();
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tw = g.add_card_to_battlefield(0, catalog::tajuru_warcaller());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: tw }]);
+    drain_stack(&mut g);
+    let b = g.computed_permanent(buddy).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 4), "buddy got +2/+2");
+}
+
+/// Cyclone Sire animates a land when it dies.
+#[test]
+fn cyclone_sire_animates_land_on_death() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let sire = g.add_card_to_battlefield(0, catalog::cyclone_sire());
+    g.battlefield_find_mut(sire).unwrap().damage = 99;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let cl = g.computed_permanent(land).unwrap();
+    assert_eq!((cl.power, cl.toughness), (3, 3), "land animated on Cyclone Sire's death");
+}
+
+/// Boulder Salvo deals 4 to a creature; surge makes it {1}{R}.
+#[test]
+fn boulder_salvo_deals_four() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::boulder_salvo());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "4 damage kills the 4/4");
+}
+
+/// Goblin Freerunner can be cast for its cheaper surge cost after a spell.
+#[test]
+fn goblin_freerunner_surge_cast_succeeds() {
+    let mut g = two_player_game();
+    g.players[0].spells_cast_this_turn = 1;
+    let id = g.add_card_to_hand(0, catalog::goblin_freerunner());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("surge cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Freerunner resolved onto the battlefield");
+}
+
+/// Comparative Analysis (surge {2}{U}) draws the target player two cards.
+#[test]
+fn comparative_analysis_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::comparative_analysis());
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    crate::game::cast_at(&mut g, id, Target::Player(0));
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 2, "target player drew two");
+}
+
+/// Mire's Malice cast for Awaken discards two AND animates a land.
+#[test]
+fn mires_malice_awaken_discards_and_animates() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let before = g.players[1].hand.len();
+    let land = g.add_card_to_battlefield(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::mires_malice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: Some(Target::Permanent(land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("awaken cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), before - 2, "opponent discarded two");
+    let cl = g.computed_permanent(land).unwrap();
+    assert_eq!((cl.power, cl.toughness), (3, 3), "land animated to 3/3");
+}
+
+// ── More OGW cards ────────────────────────────────────────────────────────
+
+/// Hissing Quagmire animates into a 2/2 deathtouch Elemental that's still a land.
+#[test]
+fn hissing_quagmire_animates_deathtouch() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::hissing_quagmire());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate {1}{B}{G}");
+    drain_stack(&mut g);
+    let cl = g.computed_permanent(land).unwrap();
+    assert_eq!((cl.power, cl.toughness), (2, 2));
+    assert!(cl.keywords.contains(&crate::card::Keyword::Deathtouch));
+    assert!(cl.card_types.contains(&crate::card::CardType::Land), "still a land");
+}
+
+/// Needle Spires animates into a 2/1 double-strike Elemental.
+#[test]
+fn needle_spires_animates_double_strike() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::needle_spires());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate {2}{R}{W}");
+    drain_stack(&mut g);
+    let cl = g.computed_permanent(land).unwrap();
+    assert_eq!((cl.power, cl.toughness), (2, 1));
+    assert!(cl.keywords.contains(&crate::card::Keyword::DoubleStrike));
+}
+
+/// Relentless Hunter pumps +1/+1 and gains trample for {1}{R}{G}.
+#[test]
+fn relentless_hunter_pumps_and_tramples() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::relentless_hunter());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(id).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(c.keywords.contains(&crate::card::Keyword::Trample));
+}
+
+/// Inverter of Truth's ETB swaps library for graveyard.
+#[test]
+fn inverter_of_truth_swaps_library_and_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    for _ in 0..2 {
+        let cid = g.next_id();
+        g.players[0].graveyard.push(crate::card::CardInstance::new(cid, catalog::mountain(), 0));
+    }
+    let lib_before = g.players[0].library.len();
+    let gy_before = g.players[0].graveyard.len();
+    let inv = g.add_card_to_battlefield(0, catalog::inverter_of_truth());
+    g.fire_self_etb_triggers(inv, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), gy_before, "library is now the old graveyard");
+    assert_eq!(g.players[0].graveyard.len(), 0, "graveyard emptied into library");
+    assert!(g.exile.len() >= lib_before, "old library exiled");
+}
+
+/// Linvala gains 5 life when an opponent is ahead on life.
+#[test]
+fn linvala_gains_life_when_opponent_ahead() {
+    let mut g = two_player_game();
+    g.players[0].life = 10;
+    g.players[1].life = 20;
+    let lin = g.add_card_to_battlefield(0, catalog::linvala_the_preserver());
+    g.fire_self_etb_triggers(lin, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 15, "gained 5 because opponent had more life");
+}
+
+/// Linvala makes a 3/3 Angel when an opponent has more creatures.
+#[test]
+fn linvala_makes_angel_when_outnumbered() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(1, catalog::grizzly_bears()); }
+    let lin = g.add_card_to_battlefield(0, catalog::linvala_the_preserver());
+    let angels_before = g.battlefield.iter().filter(|c| c.definition.name == "Angel").count();
+    g.fire_self_etb_triggers(lin, 0);
+    drain_stack(&mut g);
+    let angels = g.battlefield.iter().filter(|c| c.definition.name == "Angel").count();
+    assert_eq!(angels, angels_before + 1, "minted a 3/3 Angel");
+}
+
+/// Roil Spout's Awaken bounces a creature AND animates a land.
+#[test]
+fn roil_spout_awaken_bounces_and_animates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::roil_spout());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Permanent(land)], mode: None, x_value: None,
+    }).expect("awaken cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature bounced");
+    let cl = g.computed_permanent(land).unwrap();
+    assert_eq!((cl.power, cl.toughness), (4, 4), "land animated to 4/4");
+}
+
+// ── Emerge (CR 702.119) ───────────────────────────────────────────────────
+
+/// Wretched Gryff cast via Emerge sacrifices a creature, the emerge cost is
+/// reduced by its MV, and the cast trigger draws a card.
+#[test]
+fn wretched_gryff_emerge_reduces_cost_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    // A 4-MV creature to sacrifice → emerge {5}{U} becomes {1}{U}.
+    let fodder = g.add_card_to_battlefield(0, catalog::serra_angel()); // MV 5
+    let id = g.add_card_to_hand(0, catalog::wretched_gryff());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("emerge cast for {0}{U} after MV-5 sacrifice");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder), "fodder sacrificed");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Gryff resolved");
+    // -1 for the spell leaving hand, +1 from the cast trigger.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "cast trigger drew a card");
+}
+
+/// Emerge is illegal with no creature to sacrifice.
+#[test]
+fn emerge_requires_a_creature_to_sacrifice() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wretched_gryff());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    let r = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(r.is_err(), "no creature → emerge rejected");
+}

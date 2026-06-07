@@ -167,6 +167,16 @@ pub fn awaken(
     }
 }
 
+/// Emerge (CR 702.119) alternative cost: cast for `mana_cost` by sacrificing a
+/// creature you control, reducing the cost generically by that creature's MV.
+pub fn emerge(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        emerge: Some(SelectionRequirement::Creature),
+        ..Default::default()
+    }
+}
+
 /// Spectacle (CR 702.111) alternative cost: cast for `mana_cost` rather
 /// than the printed cost if an opponent lost life this turn.
 pub fn spectacle(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {

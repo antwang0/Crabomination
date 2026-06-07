@@ -714,6 +714,14 @@ pub enum Predicate {
     /// lands than you, …"), Tithe, Knight of the White Orchid's ETB
     /// trigger, and Land Tax.
     OpponentControlsMoreLandsThanYou,
+    /// True if any opponent of `ctx.controller` has a strictly higher life
+    /// total. Linvala, the Preserver's first ETB ("if an opponent has more
+    /// life than you, you gain 5 life").
+    AnOpponentHasMoreLife,
+    /// True if any opponent of `ctx.controller` controls strictly more
+    /// creatures. Linvala, the Preserver's second ETB ("if an opponent
+    /// controls more creatures than you, create a 3/3 Angel").
+    AnOpponentControlsMoreCreatures,
     /// True when exactly one creature is attacking this combat — the
     /// CR 702.83a "attacks alone" condition that gates Exalted. Read
     /// from `GameState.attacking.len() == 1`. Outside a combat with

@@ -2561,3 +2561,139 @@ pub fn cyclone_sire() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Relentless Hunter — {1}{R}{G} 3/3 Human Warrior. {1}{R}{G}: gets +1/+1 and
+/// gains trample until end of turn.
+pub fn relentless_hunter() -> CardDefinition {
+    use crate::effect::{ActivatedAbility, Duration, Selector, Value};
+    CardDefinition {
+        name: "Relentless Hunter",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r(), g()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Inverter of Truth — {2}{B}{B} 6/6 Eldrazi. Devoid, Flying. ETB: exile all
+/// cards from your library face down, then shuffle your graveyard into it.
+pub fn inverter_of_truth() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        name: "Inverter of Truth",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Devoid, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::ExileLibraryExceptBottom { who: PlayerRef::You, keep: Value::Const(0) },
+                Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Linvala, the Preserver — {4}{W}{W} 5/5 Angel. Flying. ETB: if an opponent
+/// has more life than you, gain 5 life; if an opponent controls more creatures
+/// than you, create a 3/3 white Angel with flying.
+pub fn linvala_the_preserver() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate, Supertype, TokenDefinition, TriggeredAbility};
+    use crate::effect::{PlayerRef, Selector, Value};
+    use crabomination_base::mana::Color;
+    let angel = TokenDefinition {
+        name: "Angel".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Linvala, the Preserver",
+        cost: cost(&[generic(4), crate::mana::w(), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::AnOpponentHasMoreLife,
+                    then: Box::new(Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::AnOpponentControlsMoreCreatures,
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: angel,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wretched Gryff — {7} 3/4 Eldrazi Hippogriff. Flying. Emerge {5}{U}. When you
+/// cast this spell, draw a card.
+pub fn wretched_gryff() -> CardDefinition {
+    use crate::effect::shortcut::{emerge, on_cast};
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        name: "Wretched Gryff",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Hippogriff],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_cast(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        alternative_cost: Some(emerge(cost(&[generic(5), u()]))),
+        ..Default::default()
+    }
+}

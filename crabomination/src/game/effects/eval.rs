@@ -694,6 +694,29 @@ impl GameState {
                 }
                 max_opp_lands > your_lands
             }
+            Predicate::AnOpponentHasMoreLife => {
+                let you = ctx.controller;
+                let your_life = self.players[you].life;
+                self.players.iter().enumerate().any(|(i, p)| {
+                    i != you && !p.eliminated && !self.same_team(i, you) && p.life > your_life
+                })
+            }
+            Predicate::AnOpponentControlsMoreCreatures => {
+                let you = ctx.controller;
+                let count_creatures = |seat: usize, g: &Self| {
+                    g.battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat && c.definition.is_creature())
+                        .count()
+                };
+                let your_creatures = count_creatures(you, self);
+                (0..self.players.len()).any(|i| {
+                    i != you
+                        && !self.players[i].eliminated
+                        && !self.same_team(i, you)
+                        && count_creatures(i, self) > your_creatures
+                })
+            }
             Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
             Predicate::RevoltActive { who } => self

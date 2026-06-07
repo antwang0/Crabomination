@@ -626,6 +626,7 @@ pub fn pyrokinesis() -> CardDefinition {
             blitz: false,
             flash: false,
             marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }

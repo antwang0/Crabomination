@@ -8,6 +8,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ✅ **Emerge (CR 702.119).** `AlternativeCost.emerge` + `shortcut::emerge` —
+  sacrifice a creature, reduce the emerge cost generically by its MV. Wretched
+  Gryff ✅. Remaining emerge cards (Elder Deep-Fiend's "tap up to four",
+  Distended Mindbender's reveal-and-choose-two) need their cast-trigger riders.
 - ✅ **Awaken (CR 702.113) + Surge (702.108) + Rally — OGW/BFZ blockers.**
   All three ship via existing primitives + a small `AlternativeCost.marks_kicked`
   flag. Awaken/Surge live in `shortcut::{awaken, surge, animate_land}`; Rally is

@@ -32,6 +32,7 @@ pub fn force_of_will() -> CardDefinition {
             blitz: false,
             flash: false,
             marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }

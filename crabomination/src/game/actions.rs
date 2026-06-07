@@ -3745,6 +3745,34 @@ impl GameState {
             Vec::new()
         };
 
+        // CR 702.119 — Emerge: pick the creature to sacrifice (auto: highest
+        // MV for max cost reduction) and record its MV. Rejected up front if
+        // the caster controls no matching creature. Sacrificed after payment.
+        let (emerge_sac, emerge_reduction): (Option<CardId>, u32) =
+            if let Some(filter) = &alt.emerge {
+                let best = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && c.definition.is_creature()
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                None,
+                            )
+                    })
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| (c.id, c.definition.cost.cmc()));
+                match best {
+                    Some((cid, mv)) => (Some(cid), mv),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            } else {
+                (None, 0)
+            };
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
@@ -3843,7 +3871,7 @@ impl GameState {
         // spell` returns the same delta in each. The alt cost is often
         // {0} for pitch spells (Force of Negation, Mystical Dispute), in
         // which case the reduction simply no-ops (clamps at zero).
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction;
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
@@ -3937,6 +3965,16 @@ impl GameState {
                 self.players[p].cards_left_graveyard_this_turn =
                     self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
             }
+        }
+
+        // CR 702.119 — Emerge: sacrifice the emerge creature now that the
+        // (reduced) mana cost is paid.
+        if let Some(sac_cid) = emerge_sac
+            && self.battlefield_find(sac_cid).is_some()
+        {
+            auto_events.push(GameEvent::PermanentSacrificed { card_id: sac_cid, who: p });
+            let mut die_evs = self.remove_to_graveyard_with_triggers(sac_cid);
+            auto_events.append(&mut die_evs);
         }
 
         // Sacrifice additional cost: sacrifice the picked permanents now

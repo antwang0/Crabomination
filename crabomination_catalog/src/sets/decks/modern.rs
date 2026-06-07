@@ -2347,6 +2347,7 @@ pub fn snuff_out() -> CardDefinition {
             blitz: false,
             flash: false,
             marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }
@@ -3942,6 +3943,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             blitz: false,
             flash: false,
             marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }
@@ -6828,6 +6830,7 @@ pub fn rout() -> CardDefinition {
             blitz: false,
             flash: true,
             marks_kicked: false,
+            emerge: None,
             ..Default::default()
         }),
         ..Default::default()
