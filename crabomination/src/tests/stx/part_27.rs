@@ -216,6 +216,22 @@ fn semesters_end_blinks_creature_and_returns_with_counter_at_end_step() {
 }
 
 #[test]
+fn disperse_bounces_a_nonland_permanent_to_owners_hand() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::disperse());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "bounced off the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == rock), "to owner's hand");
+}
+
+#[test]
 fn make_your_move_hits_big_creature_and_artifact_but_not_small_creature() {
     let mut g = two_player_game();
     let big = g.add_card_to_battlefield(1, catalog::gnarled_professor()); // 5/4

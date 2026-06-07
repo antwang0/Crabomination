@@ -458,6 +458,21 @@ pub fn semesters_end() -> CardDefinition {
     }
 }
 
+/// Disperse — {1}{U} Instant (Mystical Archive). Return target nonland
+/// permanent to its owner's hand.
+pub fn disperse() -> CardDefinition {
+    CardDefinition {
+        name: "Disperse",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
 /// Make Your Move — {2}{W} Instant. Destroy target artifact, enchantment, or
 /// creature with power 4 or greater.
 pub fn make_your_move() -> CardDefinition {
