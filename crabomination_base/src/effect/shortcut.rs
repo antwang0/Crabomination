@@ -552,6 +552,22 @@ pub fn magecraft(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// "Whenever you cast a colorless spell, `effect`." (Kozilek's Sentinel.)
+/// `SelectionRequirement::Colorless` reads cost pips, so genuinely colorless
+/// (generic-cost) spells match; Devoid spells with colored pips slip through
+/// (the known Devoid/colorless-filter gap tracked in TODO.md).
+pub fn cast_colorless(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Colorless,
+            },
+        ),
+        effect,
+    }
+}
+
 /// Cascade (CR 702.85). Wires the standard "when you cast this spell"
 /// (`SpellCast` / `SelfSource`) trigger whose body is
 /// [`Effect::Cascade`]. `mv` is the cascading spell's printed mana

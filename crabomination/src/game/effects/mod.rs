@@ -4463,6 +4463,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopPutPermanentMvElseHand { who, max_mv } => {
+                let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    let (cid, name, is_land, is_perm, mv) = (
+                        top.id, top.definition.name, top.definition.is_land(),
+                        top.definition.is_permanent(), top.definition.cost.cmc(),
+                    );
+                    events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+                    let dest = if is_perm && mv <= cap {
+                        ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false }
+                    } else {
+                        ZoneDest::Hand(PlayerRef::Seat(p))
+                    };
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::RevealTopLandToBattlefieldElseHand { who } => {
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };

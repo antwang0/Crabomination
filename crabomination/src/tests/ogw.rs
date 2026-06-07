@@ -625,6 +625,61 @@ fn bane_of_bala_ged_attack_exiles_two_permanents() {
     assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
 }
 
+/// Kozilek's Sentinel grows +1/+0 when its controller casts a colorless spell.
+#[test]
+fn kozileks_sentinel_pumps_on_colorless_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::kozileks_sentinel());
+    // Cast a colorless spell (generic-only cost → colorless).
+    let spell = g.add_card_to_hand(0, catalog::eldrazi_devastator());
+    g.players[0].mana_pool.add_colorless(8);
+    crate::game::cast(&mut g, spell);
+    let s = g.battlefield_find(id).unwrap();
+    assert_eq!((s.power(), s.toughness()), (2, 4), "+1/+0 after a colorless cast");
+}
+
+/// Spawnsire's {4} ability mints two Eldrazi Spawn; it has Annihilator 1.
+#[test]
+fn spawnsire_makes_two_spawn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spawnsire_of_ulamog());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("make spawn");
+    drain_stack(&mut g);
+    let spawn = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
+    assert_eq!(spawn, 2);
+    assert!(catalog::spawnsire_of_ulamog().keywords.contains(&crate::card::Keyword::Annihilator(1)));
+}
+
+/// Matter Reshaper's death puts a cheap permanent from the top onto the
+/// battlefield, but a 4-MV permanent goes to hand instead.
+#[test]
+fn matter_reshaper_dies_puts_cheap_permanent() {
+    let mut g = two_player_game();
+    // Top card is a 2-MV creature → onto battlefield.
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::matter_reshaper());
+    g.battlefield_find_mut(id).unwrap().damage = 99;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "MV-2 permanent enters from top");
+}
+
+/// A too-expensive top card goes to hand instead of the battlefield.
+#[test]
+fn matter_reshaper_expensive_top_goes_to_hand() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_library(0, catalog::eldrazi_devastator()); // MV 8
+    let id = g.add_card_to_battlefield(0, catalog::matter_reshaper());
+    g.battlefield_find_mut(id).unwrap().damage = 99;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == big), "MV-8 permanent goes to hand");
+    assert!(!g.battlefield.iter().any(|c| c.id == big));
+}
+
 /// Hand of Emrakul is a 7/7 with Annihilator 1.
 #[test]
 fn hand_of_emrakul_is_annihilator_one() {

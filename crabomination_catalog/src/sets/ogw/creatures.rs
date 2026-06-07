@@ -535,6 +535,58 @@ pub fn bane_of_bala_ged() -> CardDefinition {
     }
 }
 
+/// Kozilek's Sentinel — {1}{R} 1/4 Eldrazi Drone. Devoid; whenever you cast a
+/// colorless spell, it gets +1/+0 until end of turn.
+pub fn kozileks_sentinel() -> CardDefinition {
+    use crate::effect::shortcut::cast_colorless;
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![cast_colorless(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..drone("Kozilek's Sentinel", cost(&[generic(1), r()]), 1, 4)
+    }
+}
+
+/// Spawnsire of Ulamog — {10} 7/11. Annihilator 1; {4}: create two Eldrazi
+/// Spawn. (The {20} "cast Eldrazi from outside the game" ability is dropped —
+/// no wish/sideboard-cast primitive.)
+pub fn spawnsire_of_ulamog() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Annihilator(1)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: eldrazi_spawn_token(),
+            },
+            ..Default::default()
+        }],
+        ..colossus("Spawnsire of Ulamog", cost(&[generic(10)]), 7, 11)
+    }
+}
+
+/// Matter Reshaper — {2}{C} 3/2 Eldrazi. Dies → reveal top card; if it's a
+/// permanent with mana value 3 or less, put it onto the battlefield, otherwise
+/// into your hand.
+pub fn matter_reshaper() -> CardDefinition {
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        triggered_abilities: vec![on_dies(Effect::RevealTopPutPermanentMvElseHand {
+            who: PlayerRef::You,
+            max_mv: Value::Const(3),
+        })],
+        ..colossus("Matter Reshaper", cost(&[generic(2), crate::mana::colorless(1)]), 3, 2)
+    }
+}
+
 /// Sludge Crawler — {B} 1/1 Eldrazi Drone. Devoid, Ingest, {2}: +1/+1 EOT.
 pub fn sludge_crawler() -> CardDefinition {
     use crate::card::ActivatedAbility;

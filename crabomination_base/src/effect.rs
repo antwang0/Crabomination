@@ -2152,6 +2152,11 @@ pub enum Effect {
     /// Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
     RevealTopLandToBattlefieldElseHand { who: PlayerRef },
 
+    /// Reveal the top card of `who`'s library; if it's a permanent card with
+    /// mana value ≤ `max_mv`, put it onto the battlefield; otherwise put it
+    /// into their hand. Matter Reshaper's death trigger.
+    RevealTopPutPermanentMvElseHand { who: PlayerRef, max_mv: Value },
+
     /// Reveal the top `count` cards of the controller's library; an opponent
     /// chooses one of them, which goes to the controller's hand. Each
     /// remaining revealed card is exiled, gaining `counter` if `Some`.
