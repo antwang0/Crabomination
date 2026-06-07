@@ -35208,3 +35208,55 @@ fn jeskas_will_ritual_mode() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "added {{R}}{{R}}{{R}}");
 }
+
+/// Helper: opponent (seat 1) casts a Lightning Bolt at seat 0, then seat 0
+/// casts `counter` (already in hand, mana provided) targeting it. Returns the
+/// bolt's id so the caller can assert it was countered.
+fn cast_then_counter(g: &mut GameState, counter: crate::card::CardId, bolt: crate::card::CardId) {
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts Bolt");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast counter");
+    drain_stack(g);
+}
+
+#[test]
+fn mana_drain_counters_a_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let md = g.add_card_to_hand(0, catalog::mana_drain());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast_then_counter(&mut g, md, bolt);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
+    assert_eq!(g.players[0].life, 20, "no damage taken");
+}
+
+#[test]
+fn fierce_guardianship_counters_noncreature() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let fg = g.add_card_to_hand(0, catalog::fierce_guardianship());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_then_counter(&mut g, fg, bolt);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
+}
+
+#[test]
+fn deflecting_swat_counters_a_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let ds = g.add_card_to_hand(0, catalog::deflecting_swat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast_then_counter(&mut g, ds, bolt);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
+}

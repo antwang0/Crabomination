@@ -359,3 +359,41 @@ pub fn return_to_dust() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mana Drain — {U}{U} Instant. "Counter target spell." (The "add {C} for each
+/// of its mana value at your next precombat main phase" ritual rider is
+/// omitted.)
+pub fn mana_drain() -> CardDefinition {
+    CardDefinition {
+        name: "Mana Drain",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::Any) },
+        ..Default::default()
+    }
+}
+
+/// Fierce Guardianship — {2}{U} Instant. "Counter target noncreature spell."
+/// (The "if you control your commander, this costs {0}" alt-cost is omitted.)
+pub fn fierce_guardianship() -> CardDefinition {
+    CardDefinition {
+        name: "Fierce Guardianship",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::Noncreature) },
+        ..Default::default()
+    }
+}
+
+/// Deflecting Swat — {2}{R} Instant. "Counter target spell." (Printed: counter
+/// target spell or ability and you may choose new targets; the new-targets
+/// rider and the free-with-commander alt-cost are omitted.)
+pub fn deflecting_swat() -> CardDefinition {
+    CardDefinition {
+        name: "Deflecting Swat",
+        cost: cost(&[generic(2), crate::mana::r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell { what: target_filtered(SelectionRequirement::Any) },
+        ..Default::default()
+    }
+}

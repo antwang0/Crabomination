@@ -920,6 +920,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // untap-all combo enabler
         dramatic_reversal,
+        // counterspells
+        mana_drain,
+        fierce_guardianship,
         // allied-color batch (modern_decks)
         tolarian_terror,
         vodalian_arcanist,
@@ -1604,6 +1607,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         birgi_god_of_storytelling,
         // modal ritual / impulse
         jeskas_will,
+        // free-with-commander counter (simplified)
+        deflecting_swat,
         // allied-color batch (modern_decks)
         goblin_motivator,
         goblin_gang_leader,
