@@ -4250,5 +4250,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::deadly_brew,
         super::dramatic_finale,
         super::harness_infinity,
+        super::kasmina_enigma_sage,
+        super::the_biblioplex,
     ]
 }

@@ -315,6 +315,43 @@ fn deadly_brew_each_player_sacrifices() {
 }
 
 #[test]
+fn kasmina_minus_makes_a_counter_fractal() {
+    let mut g = two_player_game();
+    let k = g.add_card_to_battlefield(0, catalog::kasmina_enigma_sage());
+    g.battlefield_find_mut(k).unwrap()
+        .counters.insert(crate::card::CounterType::Loyalty, 5);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: k, ability_index: 1, target: None,
+    }).expect("-2 activatable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
+        .expect("a Fractal token");
+    assert_eq!(fractal.power(), 2, "0/0 + two +1/+1 counters");
+}
+
+#[test]
+fn biblioplex_taps_for_colorless_and_digs_for_spells() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::the_biblioplex());
+    // Mana ability.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("{T}: Add {C}");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "added one colorless");
+    // Dig: top card is an instant → goes to hand.
+    g.battlefield_find_mut(id).unwrap().tapped = false;
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("{2},{T}: dig");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "instant from top went to hand");
+}
+
+#[test]
 fn detention_vortex_locks_activated_abilities() {
     // CR 602.5c — Detention Vortex shuts off the enchanted permanent's
     // activated abilities (and attack/block).

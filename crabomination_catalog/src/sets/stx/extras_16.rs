@@ -658,3 +658,92 @@ pub fn harness_infinity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Planeswalker & Land ──────────────────────────────────────────────────────
+
+/// Kasmina, Enigma Sage — {1}{G}{U} 5-loyalty Planeswalker. +2: Scry 1.
+/// -X: Create a 0/0 G/U Fractal with X +1/+1 counters (approximated as a fixed
+/// -2 → two counters; the engine has no variable-X loyalty path yet). -8:
+/// Search your library for a card, put it into your hand, shuffle. (The "other
+/// planeswalkers you control gain Kasmina's abilities" static is dropped.)
+pub fn kasmina_enigma_sage() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Kasmina, Enigma Sage",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Kasmina],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: crate::catalog::sets::sos::fractal_token(),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::LastCreatedToken,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(2),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// The Biblioplex — Land. `{T}: Add {C}.` `{2}, {T}: Look at the top card of
+/// your library; if it's an instant or sorcery card, you may put it into your
+/// hand. Otherwise it goes to the bottom.`
+pub fn the_biblioplex() -> CardDefinition {
+    CardDefinition {
+        name: "The Biblioplex",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+                    take: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

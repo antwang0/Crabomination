@@ -167,6 +167,8 @@ pub enum PlaneswalkerSubtype {
     Saheeli, Tamiyo, Dihada, Urza,
     // modern_decks: Narset, Parter of Veils.
     Narset,
+    // STX: Kasmina, Enigma Sage.
+    Kasmina,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
