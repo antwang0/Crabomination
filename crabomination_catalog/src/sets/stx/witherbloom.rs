@@ -118,7 +118,7 @@ pub fn pest_summoning() -> CardDefinition {
 
 // ── Bayou Groff ─────────────────────────────────────────────────────────────
 
-/// Bayou Groff — {2}{B}{G}, 5/4 Beast. "When this creature dies, you
+/// Bayou Groff — {1}{G}, 5/4 Beast. "When this creature dies, you
 /// may pay {1}. If you do, return it to its owner's hand."
 ///
 /// Now wired (push XVI) via the new `Effect::MayPay` primitive: dies
@@ -132,7 +132,7 @@ pub fn pest_summoning() -> CardDefinition {
 pub fn bayou_groff() -> CardDefinition {
     CardDefinition {
         name: "Bayou Groff",
-        cost: cost(&[generic(2), b(), g()]),
+        cost: cost(&[generic(1), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -457,14 +457,14 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
 
 // ── Witherbloom Command ─────────────────────────────────────────────────
 
-/// Witherbloom Command — {2}{B}{G} Sorcery. Choose two among 4 modes.
+/// Witherbloom Command — {B}{G} Sorcery. Choose two among 4 modes.
 ///
 /// Approximation: AutoDecider picks mill 4 + drain 2. Choose-two
 /// collapsed to Seq of the two auto-default modes.
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
-        cost: cost(&[generic(2), b(), g()]),
+        cost: cost(&[b(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -11127,7 +11127,7 @@ pub fn pest_bonewright() -> CardDefinition {
     }
 }
 
-/// Witherbloom Decoder — {1}{U}, 1/3 Human Wizard. Magecraft mill 1
+/// Witherbloom Decoder — {1}{B}, 1/3 Human Wizard. Magecraft mill 1
 /// from each opponent. Cheap recurring graveyard fuel.
 pub fn witherbloom_decoder() -> CardDefinition {
     CardDefinition {

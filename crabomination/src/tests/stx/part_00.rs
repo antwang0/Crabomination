@@ -789,8 +789,8 @@ fn bury_in_books_returns_target_to_top_of_library() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::bury_in_books());
 
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -1051,7 +1051,8 @@ fn quandrix_apprentice_pumps_creature_you_control_on_instant_cast() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -1069,7 +1070,7 @@ fn quandrix_apprentice_pumps_creature_you_control_on_instant_cast() {
     let app_card = g.battlefield.iter().find(|c| c.id == app).unwrap();
     assert_eq!(
         (app_card.power(), app_card.toughness()),
-        (1, 1),
+        (2, 2),
         "Apprentice (trigger source) should not be the picked target",
     );
 }
@@ -1081,7 +1082,8 @@ fn quandrix_apprentice_falls_back_to_self_when_no_other_target() {
     let mut g = two_player_game();
     let app = g.add_card_to_battlefield(0, catalog::quandrix_apprentice());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -1090,7 +1092,7 @@ fn quandrix_apprentice_falls_back_to_self_when_no_other_target() {
     let app_card = g.battlefield.iter().find(|c| c.id == app).unwrap();
     assert_eq!(
         (app_card.power(), app_card.toughness()),
-        (2, 2),
+        (3, 3),
         "Apprentice pumps itself when it's the only legal Magecraft target",
     );
 }
@@ -1169,14 +1171,15 @@ fn symmetry_sage_pumps_self_and_grants_flying_on_instant_cast() {
     let sage = g.add_card_to_battlefield(0, catalog::symmetry_sage());
     g.clear_sickness(sage);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable");
     drain_stack(&mut g);
     let s = g.battlefield.iter().find(|c| c.id == sage).unwrap();
-    assert_eq!(s.power(), 2, "Sage should be 2/2 (1+1 from Magecraft)");
+    assert_eq!(s.power(), 1, "Sage 0/2 base +1/+0 Magecraft → 1/2");
     assert_eq!(s.toughness(), 2);
     assert!(s.has_keyword(&Keyword::Flying),
         "Magecraft should grant flying EOT");
@@ -1732,8 +1735,8 @@ fn bookwurm_etb_gains_four_life_and_draws_a_card() {
         g.add_card_to_library(0, catalog::island());
     }
     let id = g.add_card_to_hand(0, catalog::bookwurm());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(5);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     let life_before = g.players[0].life;
     let hand_before = g.players[0].hand.len();
@@ -1753,8 +1756,8 @@ fn bookwurm_etb_gains_four_life_and_draws_a_card() {
     let bw = g.battlefield.iter().find(|c| c.definition.name == "Bookwurm")
         .expect("Bookwurm should be on battlefield");
     assert!(bw.has_keyword(&Keyword::Trample));
-    assert_eq!(bw.power(), 5);
-    assert_eq!(bw.toughness(), 5);
+    assert_eq!(bw.power(), 7);
+    assert_eq!(bw.toughness(), 7);
 }
 
 // ── Field Trip ──────────────────────────────────────────────────────────────
@@ -2008,9 +2011,8 @@ fn returned_pastcaller_returns_instant_from_graveyard_on_etb() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(4);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     })
@@ -2049,10 +2051,11 @@ fn elemental_expressionist_flickers_opp_creature_on_magecraft() {
 fn spectacle_mage_prowess_pumps_on_noncreature_cast() {
     let mut g = two_player_game();
     let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
-    assert_eq!(g.battlefield.iter().find(|c| c.id == mage).unwrap().power(), 1);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == mage).unwrap().power(), 2);
 
     let bolt = g.add_card_to_hand(0, catalog::interjection());
-    g.players[0].mana_pool.add(Color::White, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Permanent(mage)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
@@ -2069,15 +2072,15 @@ fn spectacle_mage_prowess_does_not_fire_on_creature_cast() {
     let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
 
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
 
     let m = g.battlefield.iter().find(|c| c.id == mage).unwrap();
-    assert_eq!(m.power(), 1, "Prowess should NOT fire on creature spell");
+    assert_eq!(m.power(), 2, "Prowess should NOT fire on creature spell");
 }
 
 /// Reduce to Memory exiles the targeted permanent and mints a 2/2
@@ -2239,8 +2242,8 @@ fn snow_day_taps_and_stuns_target_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::snow_day());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -2266,8 +2269,8 @@ fn snow_day_taps_and_stuns_two_target_creatures() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let id = g.add_card_to_hand(0, catalog::snow_day());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -2650,9 +2653,8 @@ fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
     let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::daemogoth_woe_eater());
 
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -2668,8 +2670,8 @@ fn daemogoth_woe_eater_etb_sacrifices_another_creature() {
     // Woe-Eater itself should still be on the battlefield.
     let woe = g.battlefield.iter().find(|c| c.definition.name == "Daemogoth Woe-Eater")
         .expect("Woe-Eater should be on the battlefield");
-    assert_eq!(woe.power(), 4);
-    assert_eq!(woe.toughness(), 4);
+    assert_eq!(woe.power(), 7);
+    assert_eq!(woe.toughness(), 6);
 }
 
 #[test]
@@ -2815,8 +2817,8 @@ fn tempted_by_the_oriq_steals_and_grants_haste() {
     g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
 
     let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -2839,8 +2841,8 @@ fn confront_the_past_bounces_planeswalker_via_mode_1() {
     let mut g = two_player_game();
     let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
     let id = g.add_card_to_hand(0, catalog::confront_the_past());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -3013,8 +3015,8 @@ fn returned_pastcaller_etb_returns_instant_from_graveyard() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(4);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
@@ -3529,7 +3531,8 @@ fn first_day_of_class_pumps_each_creature_you_control() {
     let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::first_day_of_class());
-    g.players[0].mana_pool.add(Color::White, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
@@ -3555,8 +3558,8 @@ fn verdant_mastery_fetches_basic_for_you_and_opponent() {
         DecisionAnswer::Search(Some(island)),
     ]));
     let id = g.add_card_to_hand(0, catalog::verdant_mastery());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,

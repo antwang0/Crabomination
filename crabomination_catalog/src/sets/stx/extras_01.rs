@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, ManaCost};
+use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -290,7 +290,7 @@ pub fn vineglimmer_snarl() -> CardDefinition {
 
 // ── Dragon's Approach ───────────────────────────────────────────────────────
 
-/// Dragon's Approach — {B} Sorcery.
+/// Dragon's Approach — {2}{R} Sorcery.
 /// "Dragon's Approach deals 3 damage to any target. Then if you have
 /// four or more cards named Dragon's Approach in your graveyard, you
 /// may search your library for a Dragon creature card, put it onto
@@ -311,7 +311,7 @@ pub fn vineglimmer_snarl() -> CardDefinition {
 pub fn dragons_approach() -> CardDefinition {
     CardDefinition {
         name: "Dragon's Approach",
-        cost: cost(&[b()]),
+        cost: cost(&[generic(2), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -433,7 +433,7 @@ pub fn defiant_strike() -> CardDefinition {
 
 // ── Divine Gambit ───────────────────────────────────────────────────────────
 
-/// Divine Gambit — {2}{W} Instant (Strixhaven Mystical Archive).
+/// Divine Gambit — {W}{W} Instant (Strixhaven Mystical Archive).
 /// "Exile target nonland permanent. Its controller may put a permanent
 /// card from their hand onto the battlefield." Both clauses ship: the
 /// gift-back is a `MayDo(Move(hand → battlefield))` offered to the
@@ -442,7 +442,7 @@ pub fn divine_gambit() -> CardDefinition {
     use crate::card::Zone;
     CardDefinition {
         name: "Divine Gambit",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[w(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -534,7 +534,7 @@ pub fn cram_session() -> CardDefinition {
 
 // ── Soothsayer Adept ────────────────────────────────────────────────────────
 
-/// Soothsayer Adept — {1}{U} Creature — Merfolk Wizard, 2/2.
+/// Soothsayer Adept — {1}{U} Creature — Merfolk Wizard, 1/3.
 /// "{2}{U}: Surveil 1."
 ///
 /// Cheap interaction body for Quandrix/Prismari decks: a 2/2 for two
@@ -551,8 +551,8 @@ pub fn soothsayer_adept() -> CardDefinition {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
+        power: 1,
+        toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
@@ -789,7 +789,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
 
 // ── Pestilent Cauldron (front face) ─────────────────────────────────────────
 
-/// Pestilent Cauldron — {1}{B} Artifact (front face of the MDFC).
+/// Pestilent Cauldron — {2}{B} Artifact (front face of the MDFC).
 ///
 /// "{2}, {T}, Sacrifice this artifact: Each player puts the top four
 /// cards of their library into their graveyard. Each opponent loses 3
@@ -821,7 +821,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
     use crate::mana::g;
     let restorative_burst = CardDefinition {
         name: "Restorative Burst",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[generic(2), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -924,7 +924,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
 
 // ── Augusta, Dean of Order ──────────────────────────────────────────────────
 
-/// Augusta, Dean of Order — {2}{W}, 2/3 Legendary Human Cleric.
+/// Augusta, Dean of Order — {1}{R}, 2/2 Legendary Human Cleric.
 ///
 /// "Whenever you attack with three or more creatures with the same
 /// power, each of those creatures gets +1/+1 and gains your choice of
@@ -948,7 +948,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
 pub fn augusta_dean_of_order() -> CardDefinition {
     CardDefinition {
         name: "Augusta, Dean of Order",
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[generic(1), r()]),
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -956,7 +956,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 3,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1079,7 +1079,7 @@ pub fn moss_diamond() -> CardDefinition {
 
 // ── Goblin Lore (Future Sight / STA reprint) ────────────────────────────────
 
-/// Goblin Lore — {R} Sorcery (Strixhaven Mystical Archive). "Draw four
+/// Goblin Lore — {1}{R} Sorcery (Strixhaven Mystical Archive). "Draw four
 /// cards, then discard three cards at random."
 ///
 /// A classic Skred-Red staple. Discard-3-at-random is wired via
@@ -1089,7 +1089,7 @@ pub fn moss_diamond() -> CardDefinition {
 pub fn goblin_lore() -> CardDefinition {
     CardDefinition {
         name: "Goblin Lore",
-        cost: cost(&[r()]),
+        cost: cost(&[generic(1), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1135,7 +1135,7 @@ pub fn goblin_lore() -> CardDefinition {
 
 // ── Whirlwind Denial (Ravnica Allegiance / STA reprint) ─────────────────────
 
-/// Whirlwind Denial — {3}{U} Instant (Strixhaven Mystical Archive).
+/// Whirlwind Denial — {2}{U} Instant (Strixhaven Mystical Archive).
 /// "For each spell and ability your opponents control on the stack,
 /// counter it unless its controller pays {4}."
 ///
@@ -1148,7 +1148,7 @@ pub fn goblin_lore() -> CardDefinition {
 pub fn whirlwind_denial() -> CardDefinition {
     CardDefinition {
         name: "Whirlwind Denial",
-        cost: cost(&[generic(3), u()]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -1248,7 +1248,7 @@ pub fn eliminate() -> CardDefinition {
 pub fn pull_from_tomorrow() -> CardDefinition {
     CardDefinition {
         name: "Pull from Tomorrow",
-        cost: cost(&[u(), u()]),
+        cost: cost(&[x(), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -1324,7 +1324,7 @@ pub fn burst_lightning() -> CardDefinition {
 
 // ── Postmortem Lunge (STA reprint — Worldwake) ──────────────────────────────
 
-/// Postmortem Lunge — {X}{B} Sorcery (Strixhaven Mystical Archive). "Pay
+/// Postmortem Lunge — {X}{B/P} Sorcery (Strixhaven Mystical Archive). "Pay
 /// X life. Return target creature card with mana value X from your
 /// graveyard to the battlefield. It gains haste. Exile it at the
 /// beginning of the next end step."
@@ -1340,7 +1340,7 @@ pub fn postmortem_lunge() -> CardDefinition {
     use crate::card::{Keyword, Predicate};
     CardDefinition {
         name: "Postmortem Lunge",
-        cost: cost(&[b()]),
+        cost: cost(&[x(), phyrexian(Color::Black)]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1521,7 +1521,7 @@ pub fn verdant_pledgemage() -> CardDefinition {
 
 // ── Channeled Force (STX — base set Quandrix MDFC analog) ──────────────────
 
-/// Channeled Force — {1}{U}{R} Sorcery (Strixhaven base set). "Choose
+/// Channeled Force — {2}{U}{R} Sorcery (Strixhaven base set). "Choose
 /// target opponent and target player. The chosen player draws cards
 /// equal to the difference between their hand size and the chosen
 /// opponent's hand size."
@@ -1532,7 +1532,7 @@ pub fn verdant_pledgemage() -> CardDefinition {
 pub fn channeled_force() -> CardDefinition {
     CardDefinition {
         name: "Channeled Force",
-        cost: cost(&[generic(1), u(), r()]),
+        cost: cost(&[generic(2), u(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1599,7 +1599,7 @@ pub fn stonebound_mentor() -> CardDefinition {
 
 // ── Inscription of Insight (STX — base set Quandrix-leaning) ───────────────
 
-/// Inscription of Insight — {X}{G}{U} Sorcery (Strixhaven base set).
+/// Inscription of Insight — {3}{U} Sorcery (Strixhaven base set).
 /// "Choose one or more. X can't be 0. / • Put X +1/+1 counters on target
 /// creature. / • Target player draws a card for each 1/1 creature they
 /// control. / • Untap up to X target permanents."
@@ -1612,7 +1612,7 @@ pub fn inscription_of_insight() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
         name: "Inscription of Insight",
-        cost: cost(&[g(), u()]),
+        cost: cost(&[generic(3), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1770,7 +1770,7 @@ pub fn manifold_key() -> CardDefinition {
 
 // ── Leyline Invocation (STX — Quandrix rare) ───────────────────────────────
 
-/// Leyline Invocation — {3}{G}{G} Instant. "Target creature you
+/// Leyline Invocation — {5}{G} Instant. "Target creature you
 /// control gets +X/+X and gains trample until end of turn, where X is
 /// the number of lands you control."
 ///
@@ -1788,7 +1788,7 @@ pub fn leyline_invocation() -> CardDefinition {
     )));
     CardDefinition {
         name: "Leyline Invocation",
-        cost: cost(&[generic(3), g(), g()]),
+        cost: cost(&[generic(5), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -1838,7 +1838,7 @@ pub fn leyline_invocation() -> CardDefinition {
 
 // ── Spitfire Lagac (STX — Lorehold uncommon) ───────────────────────────────
 
-/// Spitfire Lagac — {2}{R}{R} Creature — Lizard, 3/3. "Magecraft —
+/// Spitfire Lagac — {3}{R} Creature — Lizard, 3/4. "Magecraft —
 /// Whenever you cast or copy an instant or sorcery spell, Spitfire
 /// Lagac deals 2 damage to each opponent."
 ///
@@ -1851,7 +1851,7 @@ pub fn leyline_invocation() -> CardDefinition {
 pub fn spitfire_lagac() -> CardDefinition {
     CardDefinition {
         name: "Spitfire Lagac",
-        cost: cost(&[generic(2), r(), r()]),
+        cost: cost(&[generic(3), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -1859,7 +1859,7 @@ pub fn spitfire_lagac() -> CardDefinition {
             ..Default::default()
         },
         power: 3,
-        toughness: 3,
+        toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1893,7 +1893,7 @@ pub fn spitfire_lagac() -> CardDefinition {
 
 // ── Settle the Score (STX — Witherbloom uncommon) ──────────────────────────
 
-/// Settle the Score — {3}{B} Sorcery. "Destroy target creature. Put
+/// Settle the Score — {2}{B}{B} Sorcery. "Destroy target creature. Put
 /// two loyalty counters on a planeswalker you control."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): Witherbloom-flavoured
@@ -1907,7 +1907,7 @@ pub fn spitfire_lagac() -> CardDefinition {
 pub fn settle_the_score() -> CardDefinition {
     CardDefinition {
         name: "Settle the Score",
-        cost: cost(&[generic(3), b()]),
+        cost: cost(&[generic(2), b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2078,7 +2078,7 @@ pub fn fire_prophecy() -> CardDefinition {
 
 // ── Divide by Zero (STX — Quandrix uncommon) ───────────────────────────────
 
-/// Divide by Zero — {1}{U} Instant. "Return target spell or nonland
+/// Divide by Zero — {2}{U} Instant. "Return target spell or nonland
 /// permanent to its owner's hand. Learn."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): Quandrix's signature
@@ -2090,7 +2090,7 @@ pub fn fire_prophecy() -> CardDefinition {
 pub fn divide_by_zero() -> CardDefinition {
     CardDefinition {
         name: "Divide by Zero",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -2141,7 +2141,7 @@ pub fn divide_by_zero() -> CardDefinition {
 
 // ── Maelstrom Muse ──────────────────────────────────────────────────────────
 
-/// Maelstrom Muse — {3}{U}{R} 3/3 Djinn Wizard with Flying.
+/// Maelstrom Muse — {1}{U}{U/R}{R} 2/4 Djinn Wizard with Flying.
 ///
 /// Real Oracle: "Magecraft — Whenever you cast or copy an instant or
 /// sorcery spell, draw a card, then discard a card. If five or more
@@ -2158,15 +2158,15 @@ pub fn maelstrom_muse() -> CardDefinition {
     use crate::effect::shortcut::opus_trigger;
     CardDefinition {
         name: "Maelstrom Muse",
-        cost: cost(&[generic(3), u(), r()]),
+        cost: cost(&[generic(1), u(), hybrid(Color::Blue, Color::Red), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
+        power: 2,
+        toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -2222,7 +2222,7 @@ pub fn maelstrom_muse() -> CardDefinition {
 
 // ── Approach of the Second Sun (STA reprint, Amonkhet) ──────────────────────
 
-/// Approach of the Second Sun — {6}{W}{W} Sorcery (Strixhaven Mystical
+/// Approach of the Second Sun — {6}{W} Sorcery (Strixhaven Mystical
 /// Archive). Real Oracle: "If this spell was cast from your hand and
 /// you've cast another spell named Approach of the Second Sun this game,
 /// you win the game. Otherwise, put this card seventh from the top of
@@ -2251,7 +2251,7 @@ pub fn approach_of_the_second_sun() -> CardDefinition {
     use crate::card::Zone;
     CardDefinition {
         name: "Approach of the Second Sun",
-        cost: cost(&[generic(6), w(), w()]),
+        cost: cost(&[generic(6), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2362,7 +2362,7 @@ pub fn resurrection() -> CardDefinition {
 
 // ── Pursuit of Knowledge ────────────────────────────────────────────────────
 
-/// Pursuit of Knowledge — {1}{W} Enchantment. "Whenever you draw a
+/// Pursuit of Knowledge — {3}{W} Enchantment. "Whenever you draw a
 /// card, you may put a study counter on this enchantment. / Remove
 /// four study counters from this enchantment and sacrifice it: Draw
 /// three cards."
@@ -2385,7 +2385,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
     use crate::card::Predicate as P;
     CardDefinition {
         name: "Pursuit of Knowledge",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[generic(3), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
@@ -2508,7 +2508,7 @@ pub fn eladamris_call() -> CardDefinition {
 
 // ── Yawning Fissure (STA reprint, Mercadian Masques) ────────────────────────
 
-/// Yawning Fissure — {3}{R} Sorcery (Strixhaven Mystical Archive).
+/// Yawning Fissure — {4}{R} Sorcery (Strixhaven Mystical Archive).
 /// "Each opponent sacrifices a land."
 ///
 /// Mass land-attack against multi-opponent boards — the Mercadian Masques
@@ -2520,7 +2520,7 @@ pub fn eladamris_call() -> CardDefinition {
 pub fn yawning_fissure() -> CardDefinition {
     CardDefinition {
         name: "Yawning Fissure",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(4), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2695,7 +2695,7 @@ pub fn tendrils_of_agony() -> CardDefinition {
 
 // ── Saw It Coming (STA reprint, Kaldheim) ───────────────────────────────────
 
-/// Saw It Coming — {2}{U} Instant (Strixhaven Mystical Archive). "Counter
+/// Saw It Coming — {1}{U}{U} Instant (Strixhaven Mystical Archive). "Counter
 /// target spell. Foretell {1}{U}."
 ///
 /// Kaldheim's foretell counterspell — cast for {2}{U}, or foretold (exile
@@ -2704,7 +2704,7 @@ pub fn tendrils_of_agony() -> CardDefinition {
 pub fn saw_it_coming() -> CardDefinition {
     CardDefinition {
         name: "Saw It Coming",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(1), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -2742,7 +2742,7 @@ pub fn saw_it_coming() -> CardDefinition {
 
 // ── Dueling Coach (STX uncommon) ────────────────────────────────────────────
 
-/// Dueling Coach — {1}{W} Creature — Human Cleric (1/2). "When this
+/// Dueling Coach — {3}{W} Creature — Human Cleric (1/2). "When this
 /// creature enters, put a +1/+1 counter on target creature you control. /
 /// {2}{W}: Put a +1/+1 counter on each creature you control with a +1/+1
 /// counter on it."
@@ -2958,7 +2958,7 @@ pub fn spined_karok() -> CardDefinition {
 
 // ── Show of Confidence is in mono.rs ────────────────────────────────────────
 
-/// Inspiring Veteran — {1}{W} Creature — Human Knight, 2/2.
+/// Inspiring Veteran — {R}{W} Creature — Human Knight, 2/2.
 ///
 /// Push (modern_decks) NEW (`stx::extras`): standard Silverquill/STX
 /// uncommon shell — "Other creatures you control get +1/+1." Same
@@ -2975,7 +2975,7 @@ pub fn inspiring_veteran() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Inspiring Veteran",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

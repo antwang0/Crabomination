@@ -4893,8 +4893,8 @@ fn closing_statement_exiles_target_and_gains_x_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::closing_statement());
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(bear)),
@@ -4938,8 +4938,8 @@ fn devastating_mastery_destroys_each_nonland_permanent() {
     let bear0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::devastating_mastery());
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(4);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })

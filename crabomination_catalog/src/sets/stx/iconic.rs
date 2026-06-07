@@ -81,7 +81,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
 
 // ── Spectacle Mage ──────────────────────────────────────────────────────────
 
-/// Spectacle Mage — {U/R}{U/R}, 1/2 Human Wizard. Prowess. Real Oracle:
+/// Spectacle Mage — {1}{U}{R}, 2/2 Human Wizard. Prowess. Real Oracle:
 /// "Prowess (Whenever you cast a noncreature spell, this creature gets
 /// +1/+1 until end of turn.)"
 ///
@@ -92,16 +92,15 @@ pub fn sedgemoor_witch() -> CardDefinition {
 /// +1/+1 EOT.
 pub fn spectacle_mage() -> CardDefinition {
     use crate::effect::shortcut::prowess;
-    use crate::mana::{hybrid, Color};
     CardDefinition {
         name: "Spectacle Mage",
-        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+        cost: cost(&[generic(1), u(), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
@@ -193,7 +192,7 @@ pub fn heroic_defiance() -> CardDefinition {
 
 // ── Tome Shredder (batch 20+) ──────────────────────────────────────────────
 
-/// Tome Shredder — {2}{B}, 2/2 Human Warlock.
+/// Tome Shredder — {2}{R}, 2/2 Human Warlock.
 ///
 /// Printed Oracle (synthesised): "When this creature enters, target
 /// opponent reveals their hand. Choose a nonland card. That player
@@ -207,7 +206,7 @@ pub fn tome_shredder() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Tome Shredder",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warlock],

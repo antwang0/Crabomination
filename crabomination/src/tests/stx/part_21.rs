@@ -1171,7 +1171,8 @@ fn prowess_pumps_on_noncreature_cast() {
     g.clear_sickness(mage_id);
     let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
     let opp_creature = g.add_card_to_battlefield(1, catalog::serra_angel());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt_id,
         target: Some(Target::Permanent(opp_creature)),
@@ -1181,7 +1182,7 @@ fn prowess_pumps_on_noncreature_cast() {
     }).unwrap();
     drain_stack(&mut g);
     let mage = g.battlefield.iter().find(|c| c.id == mage_id).unwrap();
-    assert_eq!(mage.power(), 2, "Prowess should pump +1/+1, making 1→2 power");
+    assert_eq!(mage.power(), 3, "Prowess should pump +1/+1, making 2→3 power");
     assert_eq!(mage.toughness(), 3, "Prowess should pump +1/+1, making 2→3 toughness");
 }
 

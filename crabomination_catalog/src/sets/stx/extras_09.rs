@@ -2500,7 +2500,7 @@ pub fn strixhaven_reservoir() -> CardDefinition {
 
 // ── Lone Rider (batch 12, CR 506.5 exerciser) ──────────────────────────────
 
-/// Lone Rider — {1}{R}, 2/2 Human Knight, Haste.
+/// Lone Rider — {1}{W}, 1/1 Human Knight, Haste.
 ///
 /// Printed Oracle (synthesised): "Haste / Whenever this creature attacks
 /// alone, it gets +2/+0 and gains trample until end of turn."
@@ -2515,15 +2515,15 @@ pub fn lone_rider() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
         name: "Lone Rider",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(1), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Knight],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
+        power: 1,
+        toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),

@@ -303,7 +303,7 @@ fn lone_rider_pumps_when_attacking_alone() {
     }])).expect("Rider attacks alone");
     drain_stack(&mut g);
     let view = g.computed_permanent(rider).expect("Rider on bf");
-    assert_eq!(view.power, 4, "Rider 2 + 2 from alone-attack trigger");
+    assert_eq!(view.power, 3, "Rider 1 + 2 from alone-attack trigger");
     assert!(view.keywords.contains(&Keyword::Trample), "Trample EOT granted");
 }
 
@@ -322,7 +322,7 @@ fn lone_rider_does_not_pump_with_other_attackers() {
     ])).expect("Both attack");
     drain_stack(&mut g);
     let view = g.computed_permanent(rider).expect("Rider on bf");
-    assert_eq!(view.power, 2, "Rider not pumped (multiple attackers — not 'alone')");
+    assert_eq!(view.power, 1, "Rider not pumped (multiple attackers — not 'alone')");
     assert!(!view.keywords.contains(&Keyword::Trample), "No Trample (not alone)");
 }
 

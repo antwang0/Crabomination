@@ -63,7 +63,7 @@ pub fn lorehold_mentor() -> CardDefinition {
 
 // ── Prismari Bauble ────────────────────────────────────────────────────────
 
-/// Prismari Bauble — {0} Artifact. "When this artifact enters, scry
+/// Prismari Bauble — {1} Artifact. "When this artifact enters, scry
 /// 1. / {1}, Sacrifice this artifact: Draw a card."
 ///
 /// Zero-mana cantrip artifact with a Scry-on-ETB rider. Same template
@@ -210,13 +210,13 @@ pub fn inkling_aether_smith() -> CardDefinition {
 
 // ── Disciplined Duelist ────────────────────────────────────────────────────
 
-/// Disciplined Duelist — {1}{W}, 2/1 Human Cleric with First Strike.
+/// Disciplined Duelist — {G}{W}{U}, 2/1 Human Cleric with First Strike.
 /// Vanilla aggressive Silverquill body — First Strike on a 2-mana 2/1
 /// trades up cleanly against the typical 2/2 ground creature.
 pub fn disciplined_duelist() -> CardDefinition {
     CardDefinition {
         name: "Disciplined Duelist",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[g(), w(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

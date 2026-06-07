@@ -1062,8 +1062,8 @@ fn reduce_to_ashes_burns_creature_for_four() {
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     drain_stack(&mut g);
     let id = g.add_card_to_hand(0, catalog::reduce_to_ashes());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
         additional_targets: vec![], mode: None, x_value: None,
@@ -1079,8 +1079,8 @@ fn reduce_to_ashes_only_damages_a_tall_creature() {
     let mut g = two_player_game();
     let hulk = g.add_card_to_battlefield(1, catalog::torrential_gearhulk()); // 5/6
     let id = g.add_card_to_hand(0, catalog::reduce_to_ashes());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(crate::game::types::Target::Permanent(hulk)),
         additional_targets: vec![], mode: None, x_value: None,

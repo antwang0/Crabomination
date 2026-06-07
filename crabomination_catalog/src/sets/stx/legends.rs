@@ -59,7 +59,7 @@ pub fn galazeth_prismari() -> CardDefinition {
 
 // ── Beledros Witherbloom (B/G) ─────────────────────────────────────────────
 
-/// Beledros Witherbloom — {3}{B}{B}{G}{G}, 6/6 Legendary Demon. Flying,
+/// Beledros Witherbloom — {5}{B}{G}, 4/4 Legendary Demon. Flying,
 /// trample, lifelink. Activated: "Pay 10 life: Untap each land you
 /// control. Activate only as a sorcery."
 ///
@@ -82,15 +82,15 @@ pub fn beledros_witherbloom() -> CardDefinition {
     use crate::mana::ManaCost;
     CardDefinition {
         name: "Beledros Witherbloom",
-        cost: cost(&[generic(3), b(), b(), g(), g()]),
+        cost: cost(&[generic(5), b(), g()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Demon],
             ..Default::default()
         },
-        power: 6,
-        toughness: 6,
+        power: 4,
+        toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
@@ -123,7 +123,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
 
 // ── Velomachus Lorehold (R/W) ──────────────────────────────────────────────
 
-/// Velomachus Lorehold — {3}{R}{R}{W}, 5/5 Legendary Dragon, Flying /
+/// Velomachus Lorehold — {5}{R}{W}, 5/5 Legendary Dragon, Flying /
 /// vigilance / haste. Attack trigger reveals from the top until an IS card
 /// with MV ≤ 5 (printed power) is found, exiles it, and grants a free cast
 /// this turn (`RevealUntilFind` + `GrantMayPlay`).
@@ -132,7 +132,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
     use crate::effect::{PlayerRef, RevealMissDest, ZoneDest};
     CardDefinition {
         name: "Velomachus Lorehold",
-        cost: cost(&[generic(3), r(), r(), w()]),
+        cost: cost(&[generic(5), r(), w()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -184,7 +184,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
 
 // ── Tanazir Quandrix (G/U) ─────────────────────────────────────────────────
 
-/// Tanazir Quandrix — {2}{G}{G}{U}{U}, 5/5 Legendary Dragon. Flying,
+/// Tanazir Quandrix — {3}{G}{U}, 4/4 Legendary Dragon. Flying,
 /// trample. Real Oracle ETB doubles +1/+1 counters on each creature you
 /// control; attack trigger doubles toughness of target creature you
 /// control.
@@ -209,15 +209,15 @@ pub fn tanazir_quandrix() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Tanazir Quandrix",
-        cost: cost(&[generic(2), g(), g(), u(), u()]),
+        cost: cost(&[generic(3), g(), u()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dragon],
             ..Default::default()
         },
-        power: 5,
-        toughness: 5,
+        power: 4,
+        toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Trample],
         effect: Effect::Noop,
         triggered_abilities: vec![
@@ -260,7 +260,7 @@ pub fn tanazir_quandrix() -> CardDefinition {
 
 // ── Shadrix Silverquill (W/B) ──────────────────────────────────────────────
 
-/// Shadrix Silverquill — {2}{W}{B}, 4/4 Legendary Dragon. Flying, double
+/// Shadrix Silverquill — {3}{W}{B}, 2/5 Legendary Dragon. Flying, double
 /// strike. Real Oracle attack-trigger: "Whenever Shadrix Silverquill
 /// attacks, choose two. You may choose the same mode more than once.
 /// • You and target opponent each draw a card.
@@ -290,15 +290,15 @@ pub fn shadrix_silverquill() -> CardDefinition {
     use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Shadrix Silverquill",
-        cost: cost(&[generic(2), w(), b()]),
+        cost: cost(&[generic(3), w(), b()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dragon],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 2,
+        toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike],
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {

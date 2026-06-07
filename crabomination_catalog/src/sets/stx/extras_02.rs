@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, ManaCost};
+use crate::mana::{Color, b, colorless, cost, g, generic, hybrid, mono_hybrid, phyrexian, r, u, w, x, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -542,7 +542,7 @@ pub fn past_in_flames() -> CardDefinition {
 
 // ── Inspired Idea (STA reprint, M11) — synthesized for Strixhaven slot ──────
 
-/// Inspired Idea — {1}{U}{U} Sorcery.
+/// Inspired Idea — {2}{U} Sorcery.
 ///
 /// Push (modern_decks) NEW: blue card-velocity sorcery. "Draw three cards,
 /// then put two cards from your hand on top of your library."
@@ -559,7 +559,7 @@ pub fn past_in_flames() -> CardDefinition {
 pub fn inspired_idea() -> CardDefinition {
     CardDefinition {
         name: "Inspired Idea",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -689,7 +689,7 @@ pub fn resurgent_belief() -> CardDefinition {
 
 // ── Enthusiastic Study (STX 2021) ───────────────────────────────────────────
 
-/// Enthusiastic Study — {1}{G} Instant.
+/// Enthusiastic Study — {2}{R} Instant.
 ///
 /// "Target creature gets +2/+2 until end of turn. If you've cast another
 /// spell this turn, that creature gains trample until end of turn."
@@ -704,7 +704,7 @@ pub fn resurgent_belief() -> CardDefinition {
 pub fn enthusiastic_study() -> CardDefinition {
     CardDefinition {
         name: "Enthusiastic Study",
-        cost: cost(&[generic(1), g()]),
+        cost: cost(&[generic(2), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -880,7 +880,7 @@ pub fn storms_wrath() -> CardDefinition {
 
 // ── Cinderclasm (STX) ──────────────────────────────────────────────────────
 
-/// Cinderclasm — {1}{R}{R} Sorcery (STX 2021). "Kicker {R}. / Cinderclasm
+/// Cinderclasm — {1}{R} Sorcery (STX 2021). "Kicker {R}. / Cinderclasm
 /// deals 1 damage to each creature and each planeswalker. If Cinderclasm
 /// was kicked, it deals 2 damage to each creature and each planeswalker
 /// instead."
@@ -893,7 +893,7 @@ pub fn storms_wrath() -> CardDefinition {
 pub fn cinderclasm() -> CardDefinition {
     CardDefinition {
         name: "Cinderclasm",
-        cost: cost(&[generic(1), r(), r()]),
+        cost: cost(&[generic(1), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1194,7 +1194,7 @@ pub fn sublime_epiphany() -> CardDefinition {
 
 // ── Persist (STA reprint) ──────────────────────────────────────────────────
 
-/// Persist — {1}{B}{G} Sorcery (Strixhaven Mystical Archive reprint,
+/// Persist — {1}{B} Sorcery (Strixhaven Mystical Archive reprint,
 /// originally Shadowmoor). "Return target nonlegendary creature card
 /// from your graveyard to the battlefield with a -1/-1 counter on it."
 ///
@@ -1207,7 +1207,7 @@ pub fn sublime_epiphany() -> CardDefinition {
 pub fn persist() -> CardDefinition {
     CardDefinition {
         name: "Persist",
-        cost: cost(&[generic(1), b(), g()]),
+        cost: cost(&[generic(1), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1263,7 +1263,7 @@ pub fn persist() -> CardDefinition {
 
 // ── Bone to Ash (STX) ──────────────────────────────────────────────────────
 
-/// Bone to Ash — {1}{U}{U} Instant (STX 2021). "Counter target creature
+/// Bone to Ash — {2}{U}{U} Instant (STX 2021). "Counter target creature
 /// spell. Draw a card."
 ///
 /// ✅ Wired as `Seq(CounterSpell(creature on stack), Draw 1)`. Strong
@@ -1271,7 +1271,7 @@ pub fn persist() -> CardDefinition {
 pub fn bone_to_ash() -> CardDefinition {
     CardDefinition {
         name: "Bone to Ash",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(2), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -1318,7 +1318,7 @@ pub fn bone_to_ash() -> CardDefinition {
 
 // ── Ingenious Mastery (STX, STA Mastery cycle) ─────────────────────────────
 
-/// Ingenious Mastery — {3}{U}{U} Sorcery (STX 2021). "You may pay
+/// Ingenious Mastery — {X}{2}{U} Sorcery (STX 2021). "You may pay
 /// {1}{U}{U} rather than pay this spell's mana cost. / Choose one — /
 /// • Draw three cards, put two cards from your hand on top of your
 /// library, then an opponent draws a card. / • Put X +1/+1 counters
@@ -1335,7 +1335,7 @@ pub fn bone_to_ash() -> CardDefinition {
 pub fn ingenious_mastery() -> CardDefinition {
     CardDefinition {
         name: "Ingenious Mastery",
-        cost: cost(&[generic(3), u(), u()]),
+        cost: cost(&[x(), generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1388,7 +1388,7 @@ pub fn ingenious_mastery() -> CardDefinition {
 
 // ── Acolyte of Affliction (STX) ────────────────────────────────────────────
 
-/// Acolyte of Affliction — {3}{B}{B} Creature — Zombie Cleric, 4/3 (STX
+/// Acolyte of Affliction — {2}{B}{G} Creature — Zombie Cleric, 2/3 (STX
 /// 2021). "When this creature enters, each player mills three cards.
 /// Return up to one target permanent card from a graveyard to its
 /// owner's hand."
@@ -1400,14 +1400,14 @@ pub fn ingenious_mastery() -> CardDefinition {
 pub fn acolyte_of_affliction() -> CardDefinition {
     CardDefinition {
         name: "Acolyte of Affliction",
-        cost: cost(&[generic(3), b(), b()]),
+        cost: cost(&[generic(2), b(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Zombie, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 4,
+        power: 2,
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
@@ -1461,7 +1461,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
 pub fn damnable_pact() -> CardDefinition {
     CardDefinition {
         name: "Damnable Pact",
-        cost: cost(&[generic(0), b(), b()]), // X is added at cast time via `x_value`
+        cost: cost(&[x(), b(), b()]), // X is added at cast time via `x_value`
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1619,7 +1619,7 @@ pub fn symbol_of_strength() -> CardDefinition {
 
 // ── Magmatic Sinkhole (STA reprint, Modern Horizons 2) ─────────────────────
 
-/// Magmatic Sinkhole — {1}{B}{R} Sorcery (STA reprint). "Surveil 2, then
+/// Magmatic Sinkhole — {5}{R} Sorcery (STA reprint). "Surveil 2, then
 /// Magmatic Sinkhole deals 4 damage to target creature or planeswalker."
 ///
 /// ✅ Wired as `Seq(Surveil 2 → DealDamage 4 to Creature/PW)`. The
@@ -1632,7 +1632,7 @@ pub fn symbol_of_strength() -> CardDefinition {
 pub fn magmatic_sinkhole() -> CardDefinition {
     CardDefinition {
         name: "Magmatic Sinkhole",
-        cost: cost(&[generic(1), b(), r()]),
+        cost: cost(&[generic(5), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1761,7 +1761,7 @@ pub fn sevinnes_reclamation() -> CardDefinition {
 
 // ── Light of Promise (STX) ──────────────────────────────────────────────────
 
-/// Light of Promise — {3}{W} Enchantment (STX 2021).
+/// Light of Promise — {2}{W} Enchantment (STX 2021).
 /// "Whenever you gain life, put that many +1/+1 counters on target
 /// creature you control."
 ///
@@ -1777,7 +1777,7 @@ pub fn sevinnes_reclamation() -> CardDefinition {
 pub fn light_of_promise() -> CardDefinition {
     CardDefinition {
         name: "Light of Promise",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
@@ -1822,7 +1822,7 @@ pub fn light_of_promise() -> CardDefinition {
 
 // ── Skywarp Skaab (STX) ────────────────────────────────────────────────────
 
-/// Skywarp Skaab — {1}{U}{U} Creature — Zombie Wizard, 2/3 (STX 2021).
+/// Skywarp Skaab — {3}{U}{U} Creature — Zombie Wizard, 2/5 (STX 2021).
 /// "Flying / When this creature enters, you may discard a card. If you
 /// do, return up to one target creature to its owner's hand."
 ///
@@ -1833,7 +1833,7 @@ pub fn light_of_promise() -> CardDefinition {
 pub fn skywarp_skaab() -> CardDefinition {
     CardDefinition {
         name: "Skywarp Skaab",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(3), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -1841,7 +1841,7 @@ pub fn skywarp_skaab() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 3,
+        toughness: 5,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1889,7 +1889,7 @@ pub fn skywarp_skaab() -> CardDefinition {
 
 // ── Anger (STA reprint, Judgment) ───────────────────────────────────────────
 
-/// Anger — {2}{R} Creature — Incarnation, 2/2 (Judgment / STA reprint).
+/// Anger — {3}{R} Creature — Incarnation, 2/2 (Judgment / STA reprint).
 ///
 /// "Haste / As long as Anger is in your graveyard and you control a
 /// Mountain, creatures you control have haste."
@@ -1909,7 +1909,7 @@ pub fn anger() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
         name: "Anger",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(3), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -1949,7 +1949,7 @@ pub fn anger() -> CardDefinition {
 
 // ── Triskaidekaphile (STX 2021, mono blue) ──────────────────────────────────
 
-/// Triskaidekaphile — {1}{U}{U}, 3/4 Human Wizard (STX 2021 rare).
+/// Triskaidekaphile — {1}{U}, 1/3 Human Wizard (STX 2021 rare).
 ///
 /// "When this creature enters, draw a card.
 ///  You have no maximum hand size.
@@ -1981,15 +1981,15 @@ pub fn triskaidekaphile() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Triskaidekaphile",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(1), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 3,
-        toughness: 4,
+        power: 1,
+        toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -2108,7 +2108,7 @@ pub fn excellent_education() -> CardDefinition {
 
 // ── Sproutback Trudge (STX 2021, mono green) ────────────────────────────────
 
-/// Sproutback Trudge — {3}{G}{G} Creature — Plant, 5/6 (STX 2021 common).
+/// Sproutback Trudge — {7}{G}{G} Creature — Plant, 9/7 (STX 2021 common).
 ///
 /// "When this creature enters, you gain X life, where X is the number
 /// of creature cards in your graveyard."
@@ -2124,15 +2124,15 @@ pub fn sproutback_trudge() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Sproutback Trudge",
-        cost: cost(&[generic(3), g(), g()]),
+        cost: cost(&[generic(7), g(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant],
             ..Default::default()
         },
-        power: 5,
-        toughness: 6,
+        power: 9,
+        toughness: 7,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -2174,7 +2174,7 @@ pub fn sproutback_trudge() -> CardDefinition {
 
 // ── Wonder (STA reprint, Judgment) ──────────────────────────────────────────
 
-/// Wonder — {3}{U} Creature — Incarnation, 2/2 (Judgment / STA reprint).
+/// Wonder — {3}{B} Creature — Incarnation, 2/2 (Judgment / STA reprint).
 ///
 /// "Flying / As long as Wonder is in your graveyard and you control an
 /// Island, creatures you control have flying."
@@ -2195,14 +2195,14 @@ pub fn filth() -> CardDefinition {
     use crate::card::LandType;
     CardDefinition {
         name: "Filth",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Incarnation],
             ..Default::default()
         },
         power: 2,
-        toughness: 1,
+        toughness: 2,
         keywords: vec![Keyword::Landwalk(LandType::Swamp)],
         ..Default::default()
     }
@@ -2251,7 +2251,7 @@ pub fn wonder() -> CardDefinition {
 
 // ── Brawn (STA reprint, Judgment) ───────────────────────────────────────────
 
-/// Brawn — {2}{G} Creature — Incarnation, 3/3 (Judgment / STA reprint).
+/// Brawn — {3}{G} Creature — Incarnation, 3/3 (Judgment / STA reprint).
 ///
 /// "Trample / As long as Brawn is in your graveyard and you control a
 /// Forest, creatures you control have trample."
@@ -2266,7 +2266,7 @@ pub fn wonder() -> CardDefinition {
 pub fn brawn() -> CardDefinition {
     CardDefinition {
         name: "Brawn",
-        cost: cost(&[generic(2), g()]),
+        cost: cost(&[generic(3), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -2362,7 +2362,7 @@ pub fn deep_analysis() -> CardDefinition {
 
 // ── Kasmina's Transmutation (STA reprint, Strixhaven Loyalty) ──────────────
 
-/// Kasmina's Transmutation — {1}{U}{U} Sorcery (STA reprint, Strixhaven).
+/// Kasmina's Transmutation — {1}{U} Sorcery (STA reprint, Strixhaven).
 ///
 /// "Target creature loses all abilities and becomes a blue Frog with
 /// base power and toughness 1/1 until end of turn."
@@ -2378,7 +2378,7 @@ pub fn deep_analysis() -> CardDefinition {
 pub fn kasminas_transmutation() -> CardDefinition {
     CardDefinition {
         name: "Kasmina's Transmutation",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(1), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2426,7 +2426,7 @@ pub fn kasminas_transmutation() -> CardDefinition {
 
 // ── Crippling Fear (STA reprint, Conflux) ──────────────────────────────────
 
-/// Crippling Fear — {3}{B} Sorcery (STA reprint, originally Conflux).
+/// Crippling Fear — {2}{B}{B} Sorcery (STA reprint, originally Conflux).
 ///
 /// "All creatures get -3/-3 until end of turn."
 ///
@@ -2444,7 +2444,7 @@ pub fn kasminas_transmutation() -> CardDefinition {
 pub fn crippling_fear() -> CardDefinition {
     CardDefinition {
         name: "Crippling Fear",
-        cost: cost(&[generic(3), b()]),
+        cost: cost(&[generic(2), b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2561,7 +2561,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
 
 // ── Valor (STA reprint, Judgment) ───────────────────────────────────────────
 
-/// Valor — {1}{W} Creature — Incarnation, 2/2 (Judgment / STA reprint).
+/// Valor — {3}{W} Creature — Incarnation, 2/2 (Judgment / STA reprint).
 ///
 /// "First strike / As long as Valor is in your graveyard and you
 /// control a Plains, creatures you control have first strike."
@@ -2574,7 +2574,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
 pub fn valor() -> CardDefinition {
     CardDefinition {
         name: "Valor",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[generic(3), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -2613,7 +2613,7 @@ pub fn valor() -> CardDefinition {
 
 // ── Pigment Storm (STX 2021) ────────────────────────────────────────────────
 
-/// Pigment Storm — {3}{R} Instant (STX 2021).
+/// Pigment Storm — {3}{R}{R} Instant (STX 2021).
 ///
 /// "Pigment Storm deals 4 damage to target creature. If that creature
 /// would die this turn, exile it instead."
@@ -2627,7 +2627,7 @@ pub fn valor() -> CardDefinition {
 pub fn pigment_storm() -> CardDefinition {
     CardDefinition {
         name: "Pigment Storm",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(3), r(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -2666,7 +2666,7 @@ pub fn pigment_storm() -> CardDefinition {
 
 // ── Step Through (STA reprint, originally Stronghold) ───────────────────────
 
-/// Step Through — {U} Sorcery (STA reprint).
+/// Step Through — {3}{U}{U} Sorcery (STA reprint).
 ///
 /// "Search your library for an instant or sorcery card named Step
 /// Through. Reveal it, put it into your hand, then shuffle."
@@ -2683,7 +2683,7 @@ pub fn pigment_storm() -> CardDefinition {
 pub fn step_through() -> CardDefinition {
     CardDefinition {
         name: "Step Through",
-        cost: cost(&[u()]),
+        cost: cost(&[generic(3), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2724,7 +2724,7 @@ pub fn step_through() -> CardDefinition {
 
 // ── Inkling Summoning Mascot (STX 2021 - simplified) ────────────────────────
 
-/// Inkfathom Witch — {3}{U}{B}, 2/3 Inkling Spectre (homage to the
+/// Inkfathom Witch — {1}{U/B}, 1/1 Inkling Spectre (homage to the
 /// Mystery Booster spectre-style designs).
 ///
 /// "Flying / When this creature enters, target opponent reveals their
@@ -2739,15 +2739,15 @@ pub fn inkfathom_witch() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Inkfathom Witch",
-        cost: cost(&[generic(3), u(), b()]),
+        cost: cost(&[generic(1), hybrid(Color::Blue, Color::Black)]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Inkling],
             ..Default::default()
         },
-        power: 2,
-        toughness: 3,
+        power: 1,
+        toughness: 1,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -2785,7 +2785,7 @@ pub fn inkfathom_witch() -> CardDefinition {
 
 // ── Inscription of Ruin (STX 2021) ──────────────────────────────────────────
 
-/// Inscription of Ruin — {2}{B}{B} Sorcery (STX 2021).
+/// Inscription of Ruin — {2}{B} Sorcery (STX 2021).
 ///
 /// "Choose one or more. If this spell was kicked, you may choose two or
 /// three instead. / • Target player discards two cards. / • Return up
@@ -2804,7 +2804,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Inscription of Ruin",
-        cost: cost(&[generic(2), b(), b()]),
+        cost: cost(&[generic(2), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2863,7 +2863,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
 
 // ── Tome of the Infinite (STX-flavor utility artifact) ──────────────────────
 
-/// Tome of the Infinite — {1} Legendary Artifact (STX-flavor).
+/// Tome of the Infinite — {2}{U} Legendary Artifact (STX-flavor).
 ///
 /// "When this enters, scry 1. / {2}, {T}: Draw a card."
 ///
@@ -2875,7 +2875,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Tome of the Infinite",
-        cost: cost(&[generic(1)]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
@@ -2937,7 +2937,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
 
 // ── Bury in Books revisited: Drannith Stinger (STX 2021) ────────────────────
 
-/// Drannith Stinger — {2}{R}, 2/2 Goblin Wizard (Ikoria reprint via
+/// Drannith Stinger — {1}{R}, 2/2 Goblin Wizard (Ikoria reprint via
 /// STX flavor — Drannith was the white-red flagship city).
 ///
 /// "Whenever you cast a noncreature spell, this creature deals 1
@@ -2952,7 +2952,7 @@ pub fn drannith_stinger() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Drannith Stinger",
-        cost: cost(&[generic(2), r()]),
+        cost: cost(&[generic(1), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -3060,7 +3060,7 @@ pub fn mage_mauler() -> CardDefinition {
 
 // ── Heirloom Mirror (STX-flavor common artifact) ────────────────────────────
 
-/// Heirloom Mirror — {3} Artifact (STX-flavor utility rock).
+/// Heirloom Mirror — {1}{B} Artifact (STX-flavor utility rock).
 ///
 /// "{T}: Add one mana of any color. / {3}, {T}, Sacrifice this
 /// artifact: Draw a card."
@@ -3073,7 +3073,7 @@ pub fn heirloom_mirror() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Heirloom Mirror",
-        cost: cost(&[generic(3)]),
+        cost: cost(&[generic(1), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
@@ -3279,7 +3279,7 @@ pub fn witherbloom_mascot() -> CardDefinition {
 
 // ── Spiteful Squad (STX 2021) ───────────────────────────────────────────────
 
-/// Spiteful Squad — {2}{B}, 1/1 Skeleton (STX 2021).
+/// Spiteful Squad — {2}{W}{B}, 0/0 Skeleton (STX 2021).
 ///
 /// "Deathtouch / When this creature dies, target opponent loses 2
 /// life and you gain 2 life."
@@ -3293,15 +3293,15 @@ pub fn spiteful_squad() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Spiteful Squad",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(2), w(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Skeleton],
             ..Default::default()
         },
-        power: 1,
-        toughness: 1,
+        power: 0,
+        toughness: 0,
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3344,7 +3344,7 @@ pub fn spiteful_squad() -> CardDefinition {
 
 // ── Master Symmetrist (STX 2021) ────────────────────────────────────────────
 
-/// Master Symmetrist — {2}{G}{U}, 3/3 Fractal Wizard (STX 2021).
+/// Master Symmetrist — {2}{G}{G}, 4/4 Fractal Wizard (STX 2021).
 ///
 /// "When this creature enters, double the number of +1/+1 counters on
 /// each creature you control."
@@ -3356,15 +3356,15 @@ pub fn spiteful_squad() -> CardDefinition {
 pub fn master_symmetrist() -> CardDefinition {
     CardDefinition {
         name: "Master Symmetrist",
-        cost: cost(&[generic(2), g(), u()]),
+        cost: cost(&[generic(2), g(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
+        power: 4,
+        toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3410,7 +3410,7 @@ pub fn master_symmetrist() -> CardDefinition {
 
 // ── Stinging Cave Crawler (STX 2021) ────────────────────────────────────────
 
-/// Stinging Cave Crawler — {3}{B}{B}, 3/4 Insect (STX 2021).
+/// Stinging Cave Crawler — {2}{B}, 1/3 Insect (STX 2021).
 ///
 /// "When this creature enters, scry 2. / Whenever this creature attacks,
 /// target opponent loses 1 life and you gain 1 life."
@@ -3423,15 +3423,15 @@ pub fn stinging_cave_crawler() -> CardDefinition {
     use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Stinging Cave Crawler",
-        cost: cost(&[generic(3), b(), b()]),
+        cost: cost(&[generic(2), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Insect],
             ..Default::default()
         },
-        power: 3,
-        toughness: 4,
+        power: 1,
+        toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3483,7 +3483,7 @@ pub fn stinging_cave_crawler() -> CardDefinition {
 
 // ── Cogwork Archivist (STX 2021) ────────────────────────────────────────────
 
-/// Cogwork Archivist — {6} Artifact Creature — Construct, 4/4 (STX 2021).
+/// Cogwork Archivist — {6} Artifact Creature — Construct, 4/5 (STX 2021).
 ///
 /// "When this creature enters, target player puts the top four cards
 /// of their library into their graveyard."
@@ -3503,7 +3503,7 @@ pub fn cogwork_archivist() -> CardDefinition {
             ..Default::default()
         },
         power: 4,
-        toughness: 4,
+        toughness: 5,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3605,7 +3605,7 @@ pub fn lorehold_mascot() -> CardDefinition {
 
 // ── Adrix and Nev, Twincasters (STX 2021 Quandrix legendary) ───────────────
 
-/// Adrix and Nev, Twincasters — {1}{G}{G}{U}{U}, 3/3 Legendary Merfolk Wizard.
+/// Adrix and Nev, Twincasters — {2}{G}{U}, 2/2 Legendary Merfolk Wizard.
 /// "If one or more tokens would be created under your control, twice that
 /// many of those tokens are created instead."
 ///
@@ -3624,15 +3624,15 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
     use crate::effect::StaticEffect;
     CardDefinition {
         name: "Adrix and Nev, Twincasters",
-        cost: cost(&[generic(1), g(), g(), u(), u()]),
+        cost: cost(&[generic(2), g(), u()]),
         supertypes: vec![Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
+        power: 2,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3668,7 +3668,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
 
 // ── Strixhaven Stadium (STX 2021 rare artifact) ─────────────────────────────
 
-/// Strixhaven Stadium — {4} Artifact (STX 2021 rare).
+/// Strixhaven Stadium — {3} Artifact (STX 2021 rare).
 /// "Whenever a creature you control attacks, it gets +1/+1 until end of turn.
 /// / Whenever a creature you control deals combat damage to a player, put a
 /// charge counter on this artifact. / {T}, Remove three charge counters
@@ -3689,7 +3689,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
 pub fn strixhaven_stadium() -> CardDefinition {
     CardDefinition {
         name: "Strixhaven Stadium",
-        cost: cost(&[generic(4)]),
+        cost: cost(&[generic(3)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),

@@ -27,7 +27,7 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 
 // ── Brackish Trudge (STX 2021 Witherbloom common creature) ─────────────────
 
-/// Brackish Trudge — {2}{B}{G}, 4/3 Lizard Horror (STX 2021 common).
+/// Brackish Trudge — {2}{B}, 4/3 Lizard Horror (STX 2021 common).
 /// "Escape—{4}{B}{G}, exile four other cards from your graveyard. (You may
 /// cast this card from your graveyard for its escape cost.)"
 ///
@@ -73,7 +73,7 @@ pub fn brackish_trudge() -> CardDefinition {
 
 // ── Lurking Deadeye (STX 2021 Witherbloom uncommon creature) ───────────────
 
-/// Lurking Deadeye — {3}{B}, 2/2 Snake Assassin (STX 2021 uncommon).
+/// Lurking Deadeye — {3}{B}, 4/2 Snake Assassin (STX 2021 uncommon).
 /// "Flash / Deathtouch / When this creature enters, target creature dealt
 /// damage this turn gets -2/-2 until end of turn."
 ///
@@ -97,7 +97,7 @@ pub fn lurking_deadeye() -> CardDefinition {
             creature_types: vec![CreatureType::Snake, CreatureType::Assassin],
             ..Default::default()
         },
-        power: 2,
+        power: 4,
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Deathtouch],
         effect: Effect::Noop,
@@ -137,7 +137,7 @@ pub fn lurking_deadeye() -> CardDefinition {
 
 // ── Aether Helix (STX 2021 Prismari rare sorcery) ───────────────────────────
 
-/// Aether Helix — {3}{U}{R} Sorcery (STX 2021 rare).
+/// Aether Helix — {3}{G}{U} Sorcery (STX 2021 rare).
 /// "Return up to two target nonland permanents to their owners' hands.
 /// Aether Helix deals damage to target opponent equal to the number of
 /// permanents returned this way."
@@ -153,7 +153,7 @@ pub fn lurking_deadeye() -> CardDefinition {
 pub fn aether_helix() -> CardDefinition {
     CardDefinition {
         name: "Aether Helix",
-        cost: cost(&[generic(3), u(), r()]),
+        cost: cost(&[generic(3), g(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -198,7 +198,7 @@ pub fn aether_helix() -> CardDefinition {
 
 // ── Reflective Golem (STX 2021 uncommon artifact) ───────────────────────────
 
-/// Reflective Golem — {2}, 1/1 Artifact Creature — Golem (STX 2021 uncommon).
+/// Reflective Golem — {3}, 2/3 Artifact Creature — Golem (STX 2021 uncommon).
 /// "As this creature enters, choose a creature type. / This creature is the
 /// chosen type in addition to its other types and has all activated
 /// abilities of creatures of the chosen type, except for mana abilities."
@@ -212,15 +212,15 @@ pub fn aether_helix() -> CardDefinition {
 pub fn reflective_golem() -> CardDefinition {
     CardDefinition {
         name: "Reflective Golem",
-        cost: cost(&[generic(2)]),
+        cost: cost(&[generic(3)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Golem],
             ..Default::default()
         },
-        power: 1,
-        toughness: 1,
+        power: 2,
+        toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -251,7 +251,7 @@ pub fn reflective_golem() -> CardDefinition {
 
 // ── Tempest Caller (STX 2021 Quandrix-flavor rare creature) ────────────────
 
-/// Tempest Caller — {3}{U}, 2/3 Merfolk Wizard (STX 2021 rare).
+/// Tempest Caller — {2}{U}{U}, 2/3 Merfolk Wizard (STX 2021 rare).
 /// "When this creature enters, tap all creatures target opponent
 /// controls."
 ///
@@ -263,7 +263,7 @@ pub fn reflective_golem() -> CardDefinition {
 pub fn tempest_caller() -> CardDefinition {
     CardDefinition {
         name: "Tempest Caller",
-        cost: cost(&[generic(3), u()]),
+        cost: cost(&[generic(2), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -313,7 +313,7 @@ pub fn tempest_caller() -> CardDefinition {
 
 // ── Pillardrop Warden (STX 2021 Lorehold uncommon creature) ────────────────
 
-/// Pillardrop Warden — {3}{W}, 2/4 Spirit Soldier (STX 2021 uncommon).
+/// Pillardrop Warden — {3}{R}, 1/5 Spirit Soldier (STX 2021 uncommon).
 /// "Flying / When this creature enters, you may pay {2}. If you do, return
 /// target creature card from your graveyard to your hand."
 ///
@@ -328,15 +328,15 @@ pub fn tempest_caller() -> CardDefinition {
 pub fn pillardrop_warden() -> CardDefinition {
     CardDefinition {
         name: "Pillardrop Warden",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(3), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
             ..Default::default()
         },
-        power: 2,
-        toughness: 4,
+        power: 1,
+        toughness: 5,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -382,7 +382,7 @@ pub fn pillardrop_warden() -> CardDefinition {
 
 // ── Devourer of Memory (STX 2021 Quandrix uncommon creature) ────────────────
 
-/// Devourer of Memory — {1}{U}{B}, 2/2 Nightmare Horror (STX 2021 uncommon).
+/// Devourer of Memory — {U}{B}, 2/1 Nightmare Horror (STX 2021 uncommon).
 /// "Flying / Magecraft — Whenever you cast or copy an instant or sorcery
 /// spell, this creature gets +1/+0 until end of turn. Then if it has power
 /// 4 or greater, draw a card."
@@ -396,7 +396,7 @@ pub fn pillardrop_warden() -> CardDefinition {
 pub fn devourer_of_memory() -> CardDefinition {
     CardDefinition {
         name: "Devourer of Memory",
-        cost: cost(&[generic(1), u(), b()]),
+        cost: cost(&[u(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -404,7 +404,7 @@ pub fn devourer_of_memory() -> CardDefinition {
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
+        toughness: 1,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -682,7 +682,7 @@ pub fn inkwood_scrivener() -> CardDefinition {
 
 // ── Furnace Hellkite (STX-flavor red rare creature) ─────────────────────────
 
-/// Furnace Hellkite — {4}{R}{R}, 5/5 Dragon.
+/// Furnace Hellkite — {5}{R}{R}, 5/5 Dragon.
 /// "Flying / When this creature enters, deal 2 damage to each opponent."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): Top-end red finisher.
@@ -691,7 +691,7 @@ pub fn inkwood_scrivener() -> CardDefinition {
 pub fn furnace_hellkite() -> CardDefinition {
     CardDefinition {
         name: "Furnace Hellkite",
-        cost: cost(&[generic(4), r(), r()]),
+        cost: cost(&[generic(5), r(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -980,7 +980,7 @@ pub fn vortex_runner() -> CardDefinition {
 
 // ── Sage of the Beyond (STX-flavor B/U uncommon creature) ───────────────────
 
-/// Sage of the Beyond — {3}{U}{B}, 4/3 Specter Wizard.
+/// Sage of the Beyond — {5}{U}{U}, 5/5 Specter Wizard.
 /// "Flying / Whenever this creature deals combat damage to a player,
 /// that player discards a card."
 ///
@@ -990,15 +990,15 @@ pub fn vortex_runner() -> CardDefinition {
 pub fn sage_of_the_beyond() -> CardDefinition {
     CardDefinition {
         name: "Sage of the Beyond",
-        cost: cost(&[generic(3), u(), b()]),
+        cost: cost(&[generic(5), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Specter, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 4,
-        toughness: 3,
+        power: 5,
+        toughness: 5,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1044,7 +1044,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
 
 // ── Frostpyre Arcanist (STX-flavor Prismari uncommon creature) ──────────────
 
-/// Frostpyre Arcanist — {3}{U}{R}, 4/4 Elemental Wizard.
+/// Frostpyre Arcanist — {4}{U}, 2/5 Elemental Wizard.
 /// "Whenever you cast or copy an instant or sorcery spell, you may
 /// return target instant or sorcery card from your graveyard to your
 /// hand. Activate only once each turn."
@@ -1059,15 +1059,15 @@ pub fn sage_of_the_beyond() -> CardDefinition {
 pub fn frostpyre_arcanist() -> CardDefinition {
     CardDefinition {
         name: "Frostpyre Arcanist",
-        cost: cost(&[generic(3), u(), r()]),
+        cost: cost(&[generic(4), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 4,
-        toughness: 4,
+        power: 2,
+        toughness: 5,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1109,7 +1109,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
 
 // ── Inkfathom Divers (STX-flavor U/B uncommon creature) ─────────────────────
 
-/// Inkfathom Divers — {2}{U}{B}, 3/2 Merfolk Rogue.
+/// Inkfathom Divers — {3}{U}{U}, 3/3 Merfolk Rogue.
 /// "Flying / When this creature enters, look at target opponent's hand
 /// and choose a nonland card from it. That player discards that card."
 ///
@@ -1121,7 +1121,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
 pub fn inkfathom_divers() -> CardDefinition {
     CardDefinition {
         name: "Inkfathom Divers",
-        cost: cost(&[generic(2), u(), b()]),
+        cost: cost(&[generic(3), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -1129,7 +1129,7 @@ pub fn inkfathom_divers() -> CardDefinition {
             ..Default::default()
         },
         power: 3,
-        toughness: 2,
+        toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1358,7 +1358,7 @@ pub fn fervent_strike() -> CardDefinition {
 
 // ── Waker of Waves (STX Quandrix rare creature) ────────────────────────────
 
-/// Waker of Waves — {3}{U}{U}, 5/5 Elemental (STX 2021, Quandrix rare).
+/// Waker of Waves — {5}{U}{U}, 7/7 Elemental (STX 2021, Quandrix rare).
 /// "When this creature enters, draw two cards, then discard two cards.
 /// / {2}{U}{U}, Exile this card from your graveyard: Target creature
 /// gets +5/+5 and gains trample until end of turn."
@@ -1375,15 +1375,15 @@ pub fn fervent_strike() -> CardDefinition {
 pub fn waker_of_waves() -> CardDefinition {
     CardDefinition {
         name: "Waker of Waves",
-        cost: cost(&[generic(3), u(), u()]),
+        cost: cost(&[generic(5), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
             ..Default::default()
         },
-        power: 5,
-        toughness: 5,
+        power: 7,
+        toughness: 7,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
@@ -1456,7 +1456,7 @@ pub fn waker_of_waves() -> CardDefinition {
 
 // ── Discover the Formula (STX Quandrix uncommon) ───────────────────────────
 
-/// Discover the Formula — {3}{U}{U} Sorcery (STX 2021, Quandrix
+/// Discover the Formula — {4}{U}{U} Sorcery (STX 2021, Quandrix
 /// uncommon). "Draw three cards. Magecraft — Whenever you cast or
 /// copy an instant or sorcery spell, scry 1."
 ///
@@ -1471,7 +1471,7 @@ pub fn waker_of_waves() -> CardDefinition {
 pub fn discover_the_formula() -> CardDefinition {
     CardDefinition {
         name: "Discover the Formula",
-        cost: cost(&[generic(3), u(), u()]),
+        cost: cost(&[generic(4), u(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1692,7 +1692,7 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
 
 // ── Wandering Mind (STX-flavor Magecraft loot) ─────────────────────────────
 
-/// Wandering Mind — {1}{U} Creature — Spirit Wizard, 1/3 (synthesised STX
+/// Wandering Mind — {1}{U}{R} Creature — Spirit Wizard, 2/1 (synthesised STX
 /// Prismari-flavor). "Flying / Magecraft — Whenever you cast or copy an
 /// instant or sorcery spell, scry 1."
 ///
@@ -1705,15 +1705,15 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
 pub fn wandering_mind() -> CardDefinition {
     CardDefinition {
         name: "Wandering Mind",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(1), u(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 1,
-        toughness: 3,
+        power: 2,
+        toughness: 1,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -1814,7 +1814,7 @@ pub fn lecturing_loxodon() -> CardDefinition {
 
 // ── Sequence Engine (synthesised STX Lorehold tutor) ────────────────────────
 
-/// Sequence Engine — {2}{R}{W} Sorcery (synthesised STX Lorehold
+/// Sequence Engine — {2}{G} Sorcery (synthesised STX Lorehold
 /// flavor). "Reveal cards from the top of your library until you
 /// reveal an instant or sorcery card. Put it into your hand and the
 /// rest on the bottom of your library in a random order."
@@ -1831,7 +1831,7 @@ pub fn sequence_engine() -> CardDefinition {
     use crate::effect::RevealMissDest;
     CardDefinition {
         name: "Sequence Engine",
-        cost: cost(&[generic(2), r(), w()]),
+        cost: cost(&[generic(2), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1945,7 +1945,7 @@ pub fn curriculum_crab() -> CardDefinition {
 
 // ── Walk the Plank (synthesised STX-flavor removal) ────────────────────────
 
-/// Pyrotechnics — {3}{R} Sorcery (synthesised STX Prismari-flavor
+/// Pyrotechnics — {4}{R} Sorcery (synthesised STX Prismari-flavor
 /// reprint of the classic burn variant). "Pyrotechnics deals 4 damage
 /// divided as you choose among any number of target creatures and/or
 /// planeswalkers."
@@ -1957,7 +1957,7 @@ pub fn curriculum_crab() -> CardDefinition {
 pub fn pyrotechnics() -> CardDefinition {
     CardDefinition {
         name: "Pyrotechnics",
-        cost: cost(&[generic(3), r()]),
+        cost: cost(&[generic(4), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -1997,7 +1997,7 @@ pub fn pyrotechnics() -> CardDefinition {
 
 // ── Stormwild Capridor (real STX {3}{W} Goat) ──────────────────────────────
 
-/// Stormwild Capridor — {3}{W} Creature — Goat Beast, 1/4 (STX 2021).
+/// Stormwild Capridor — {2}{W} Creature — Goat Beast, 1/3 (STX 2021).
 /// "Flying / If noncombat damage would be dealt to this creature, prevent
 /// that damage and put that many +1/+1 counters on this creature."
 ///
@@ -2012,7 +2012,7 @@ pub fn pyrotechnics() -> CardDefinition {
 pub fn stormwild_capridor() -> CardDefinition {
     CardDefinition {
         name: "Stormwild Capridor",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -2020,7 +2020,7 @@ pub fn stormwild_capridor() -> CardDefinition {
             ..Default::default()
         },
         power: 1,
-        toughness: 4,
+        toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -2114,7 +2114,7 @@ pub fn final_payment() -> CardDefinition {
 
 // ── Witch's Cauldron (synthesised STX Witherbloom artifact) ───────────────
 
-/// Witch's Cauldron — {1}{B}{G} Artifact (synthesised STX Witherbloom).
+/// Witch's Cauldron — {B} Artifact (synthesised STX Witherbloom).
 /// "{T}, Sacrifice a creature: You gain X life and draw a card, where X
 /// is the sacrificed creature's toughness."
 ///
@@ -2133,7 +2133,7 @@ pub fn final_payment() -> CardDefinition {
 pub fn witchs_cauldron() -> CardDefinition {
     CardDefinition {
         name: "Witch's Cauldron",
-        cost: cost(&[generic(1), b(), g()]),
+        cost: cost(&[b()]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
@@ -2267,7 +2267,7 @@ pub fn steady_stance() -> CardDefinition {
 
 // ── Tome of the Guildpact (synthesised STX colorless utility) ──────────────
 
-/// Tome of the Guildpact — {2} Artifact (synthesised STX colorless
+/// Tome of the Guildpact — {5} Artifact (synthesised STX colorless
 /// utility). "{2}, {T}: Draw a card."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A 4-mana-rate cantrip
@@ -2279,7 +2279,7 @@ pub fn steady_stance() -> CardDefinition {
 pub fn tome_of_the_guildpact() -> CardDefinition {
     CardDefinition {
         name: "Tome of the Guildpact",
-        cost: cost(&[generic(2)]),
+        cost: cost(&[generic(5)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
@@ -2395,7 +2395,7 @@ pub fn revitalize() -> CardDefinition {
 
 // ── Grim Bounty (synthesised STX Witherbloom flavor) ───────────────────────
 
-/// Grim Bounty — {3}{B} Instant (synthesised STX Witherbloom flavor).
+/// Grim Bounty — {2}{B}{B} Instant (synthesised STX Witherbloom flavor).
 /// "Destroy target creature. Create a Treasure token."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A 4-mana single-target
@@ -2407,7 +2407,7 @@ pub fn grim_bounty() -> CardDefinition {
     use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Grim Bounty",
-        cost: cost(&[generic(3), b()]),
+        cost: cost(&[generic(2), b(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -2601,7 +2601,7 @@ pub fn idyllic_tutor() -> CardDefinition {
 
 // ── Gift of Estates (Urza's Destiny reprint flavor) ────────────────────────
 
-/// Gift of Estates — {W} Sorcery (Urza's Destiny reprint flavor). "If
+/// Gift of Estates — {1}{W} Sorcery (Urza's Destiny reprint flavor). "If
 /// an opponent controls more lands than you, search your library for up
 /// to three Plains cards, reveal them, put them into your hand, then
 /// shuffle."
@@ -2626,7 +2626,7 @@ pub fn gift_of_estates() -> CardDefinition {
     };
     CardDefinition {
         name: "Gift of Estates",
-        cost: cost(&[w()]),
+        cost: cost(&[generic(1), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2857,7 +2857,7 @@ pub fn battle_mammoth() -> CardDefinition {
 
 // ── Mind Drain (synthesised STX Witherbloom flavor) ────────────────────────
 
-/// Mind Drain — {1}{B}{B} Sorcery (synthesised STX Witherbloom flavor).
+/// Mind Drain — {2}{B} Sorcery (synthesised STX Witherbloom flavor).
 /// "Each opponent discards two cards."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A 3-mana symmetric
@@ -2869,7 +2869,7 @@ pub fn battle_mammoth() -> CardDefinition {
 pub fn mind_drain() -> CardDefinition {
     CardDefinition {
         name: "Mind Drain",
-        cost: cost(&[generic(1), b(), b()]),
+        cost: cost(&[generic(2), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2970,7 +2970,7 @@ pub fn hindering_light() -> CardDefinition {
 
 // ── Soul Shatter (STX Lorehold/Witherbloom flavor) ─────────────────────────
 
-/// Soul Shatter — {2}{B}{R} Instant (synthesised STX Lorehold flavor).
+/// Soul Shatter — {2}{B} Instant (synthesised STX Lorehold flavor).
 /// "Each opponent sacrifices a creature or planeswalker with the
 /// greatest mana value among permanents that player controls."
 ///
@@ -2986,7 +2986,7 @@ pub fn hindering_light() -> CardDefinition {
 pub fn soul_shatter() -> CardDefinition {
     CardDefinition {
         name: "Soul Shatter",
-        cost: cost(&[generic(2), b(), r()]),
+        cost: cost(&[generic(2), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -3107,7 +3107,7 @@ pub fn lurking_predators() -> CardDefinition {
 
 // ── Prowling Caracal (vanilla white aggro body) ────────────────────────────
 
-/// Prowling Caracal — {1}{W} Creature — Cat, 3/2 (synthesised STX
+/// Prowling Caracal — {1}{W} Creature — Cat, 3/1 (synthesised STX
 /// flavor, originally Theros Beyond Death adjacent). Vanilla 3/2
 /// white aggro body — same stat-for-mana as the Watchwolf curve but
 /// mono-white.
@@ -3126,7 +3126,7 @@ pub fn prowling_caracal() -> CardDefinition {
             ..Default::default()
         },
         power: 3,
-        toughness: 2,
+        toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3212,7 +3212,7 @@ pub fn elvish_visionary() -> CardDefinition {
 
 // ── Sungrass Egg (synthesised STX Quandrix flavor) ─────────────────────────
 
-/// Sungrass Egg — {2} Artifact (synthesised STX Quandrix flavor).
+/// Sungrass Egg — {1} Artifact (synthesised STX Quandrix flavor).
 /// "{1}, {T}, Sacrifice this artifact: Add two mana of any one color."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): A two-mana ramp rock that
@@ -3224,7 +3224,7 @@ pub fn elvish_visionary() -> CardDefinition {
 pub fn sungrass_egg() -> CardDefinition {
     CardDefinition {
         name: "Sungrass Egg",
-        cost: cost(&[generic(2)]),
+        cost: cost(&[generic(1)]),
         supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
@@ -3406,7 +3406,7 @@ pub fn scry_inversion() -> CardDefinition {
 
 // ── Cunning Rhetoric (synthesised STX Silverquill flavor) ──────────────────
 
-/// Cunning Rhetoric — {2}{W}{B} Enchantment (synthesised STX
+/// Cunning Rhetoric — {2}{B} Enchantment (synthesised STX
 /// Silverquill flavor). "Whenever an opponent casts a spell, you gain
 /// 1 life and they lose 1 life."
 ///
@@ -3419,7 +3419,7 @@ pub fn scry_inversion() -> CardDefinition {
 pub fn cunning_rhetoric() -> CardDefinition {
     CardDefinition {
         name: "Cunning Rhetoric",
-        cost: cost(&[generic(2), w(), b()]),
+        cost: cost(&[generic(2), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
@@ -3462,7 +3462,7 @@ pub fn cunning_rhetoric() -> CardDefinition {
 
 // ── Library Larcenist (synthesised STX Witherbloom flavor) ─────────────────
 
-/// Library Larcenist — {1}{B}{G} Creature — Pest Rogue, 2/3
+/// Library Larcenist — {2}{U} Creature — Pest Rogue, 1/2
 /// (synthesised STX Witherbloom flavor). "Whenever this creature deals
 /// combat damage to a player, that player mills two cards."
 ///
@@ -3475,15 +3475,15 @@ pub fn cunning_rhetoric() -> CardDefinition {
 pub fn library_larcenist() -> CardDefinition {
     CardDefinition {
         name: "Library Larcenist",
-        cost: cost(&[generic(1), b(), g()]),
+        cost: cost(&[generic(2), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Pest, CreatureType::Rogue],
             ..Default::default()
         },
-        power: 2,
-        toughness: 3,
+        power: 1,
+        toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
@@ -3580,7 +3580,7 @@ pub fn deans_list() -> CardDefinition {
 
 // ── Inkrise Infiltrator (STX 2021 Silverquill common) ─────────────────────
 
-/// Inkrise Infiltrator — {1}{B}, 2/1 Inkling Rogue (synthesised STX
+/// Inkrise Infiltrator — {1}{B}, 1/2 Inkling Rogue (synthesised STX
 /// Silverquill flavor). "Menace. (This creature can't be blocked except
 /// by two or more creatures.)"
 ///
@@ -3601,8 +3601,8 @@ pub fn inkrise_infiltrator() -> CardDefinition {
             creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
             ..Default::default()
         },
-        power: 2,
-        toughness: 1,
+        power: 1,
+        toughness: 2,
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),

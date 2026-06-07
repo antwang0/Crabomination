@@ -418,12 +418,12 @@ pub fn elemental_summoning() -> CardDefinition {
 
 // ── Teach by Example ───────────────────────────────────────────────────────
 
-/// Teach by Example — {1}{U}{R} Instant. "Copy target instant or
+/// Teach by Example — {U/R}{U/R} Instant. "Copy target instant or
 /// sorcery spell. You may choose new targets for the copy."
 pub fn teach_by_example() -> CardDefinition {
     CardDefinition {
         name: "Teach by Example",
-        cost: cost(&[generic(1), u(), r()]),
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -448,7 +448,7 @@ pub fn teach_by_example() -> CardDefinition {
 
 // ── Symmetry Sage ───────────────────────────────────────────────────────────
 
-/// Symmetry Sage — {U}, 1/2 Human Wizard.
+/// Symmetry Sage — {U}, 0/2 Human Wizard.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// Symmetry Sage gets +1/+0 and gains flying until end of turn." Single
 /// magecraft `Seq` so the pump and flying grant land as one trigger.
@@ -461,7 +461,7 @@ pub fn symmetry_sage() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 1,
+        power: 0,
         toughness: 2,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::PumpPT {
@@ -1137,7 +1137,7 @@ pub fn prismari_alchemist() -> CardDefinition {
 
 // ── Elemental Expressionist ───────────────────────────────────────────────
 
-/// Elemental Expressionist — {2}{U}{R}, 4/3 Human Wizard.
+/// Elemental Expressionist — {U/R}{U/R}{U/R}{U/R}, 4/4 Human Wizard.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// exile target creature an opponent controls, then return it to the
 /// battlefield under its owner's control at the beginning of the next
@@ -1145,14 +1145,14 @@ pub fn prismari_alchemist() -> CardDefinition {
 pub fn elemental_expressionist() -> CardDefinition {
     CardDefinition {
         name: "Elemental Expressionist",
-        cost: cost(&[generic(2), u(), r()]),
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 4,
-        toughness: 3,
+        toughness: 4,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Exile {
                 what: target_filtered(

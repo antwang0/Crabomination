@@ -105,7 +105,7 @@ fn inkling_2_1_token() -> TokenDefinition {
 pub fn blot_out_the_sky() -> CardDefinition {
     CardDefinition {
         name: "Blot Out the Sky",
-        cost: cost(&[w(), b()]),
+        cost: cost(&[x(), w(), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
@@ -1018,7 +1018,7 @@ pub fn deadly_brew() -> CardDefinition {
 pub fn dramatic_finale() -> CardDefinition {
     CardDefinition {
         name: "Dramatic Finale",
-        cost: cost(&[hybrid(Color::White, Color::Black); 4]),
+        cost: cost(&[hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creature tokens you control get +1/+1.",
@@ -1118,7 +1118,7 @@ pub fn kasmina_enigma_sage() -> CardDefinition {
     }
 }
 
-/// The Biblioplex — Land. `{T}: Add {C}.` `{2}, {T}: Look at the top card of
+/// The Biblioplex — Land. `{T}: Add {2}.` `{2}, {T}: Look at the top card of
 /// your library; if it's an instant or sorcery, you may put it into your hand,
 /// otherwise you may bin it. Activate only with exactly 0 or 7 cards in hand.`
 pub fn the_biblioplex() -> CardDefinition {

@@ -251,8 +251,8 @@ fn vanquish_the_horde_affinity_for_creatures_reduces_cost() {
     let _b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let _b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::vanquish_the_horde());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     // Should be castable at {3}{W} (6 - 3 creatures = 3 generic).
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,

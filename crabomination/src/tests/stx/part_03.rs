@@ -772,8 +772,8 @@ fn brilliant_restoration_returns_creature_card_and_gains_life() {
     let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     let res = g.add_card_to_hand(0, catalog::brilliant_restoration());
     let life_before = g.players[0].life;
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: res, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Restoration castable");
@@ -1265,12 +1265,11 @@ fn witherbloom_lifedrinker_grows_on_lifegain() {
 #[test]
 fn prismari_spellfire_burns_for_five_and_cantrips() {
     let mut g = two_player_game();
-    let wurm = g.add_card_to_battlefield(1, catalog::bookwurm()); // 5/5
+    let wurm = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
     g.add_card_to_library(0, catalog::island());
     let sf = g.add_card_to_hand(0, catalog::prismari_spellfire());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: sf,
@@ -1856,8 +1855,8 @@ fn reduce_rubble_deals_three_to_creature() {
     g.add_card_to_library(0, catalog::island());
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
     let rr = g.add_card_to_hand(0, catalog::reduce_rubble());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     g.perform_action(GameAction::CastSpell {
         card_id: rr, target: Some(Target::Permanent(angel)),
         additional_targets: vec![], mode: None, x_value: None,

@@ -208,8 +208,8 @@ fn tome_shredder_etb_makes_opp_discard() {
     let _ = g.add_card_to_hand(1, catalog::lightning_bolt());
     let _ = g.add_card_to_hand(1, catalog::island());
     let id = g.add_card_to_hand(0, catalog::tome_shredder());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
     let opp_hand_before = g.players[1].hand.len();
     g.perform_action(GameAction::CastSpell {
         card_id: id,

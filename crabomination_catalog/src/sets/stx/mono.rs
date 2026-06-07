@@ -13,7 +13,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, u, w};
 
 // ── Pop Quiz ────────────────────────────────────────────────────────────────
 
@@ -123,7 +123,7 @@ pub fn mascot_exhibition() -> CardDefinition {
 
 // ── Plumb the Forbidden ─────────────────────────────────────────────────────
 
-/// Plumb the Forbidden — {X}{B}{B} Instant. "Sacrifice X creatures. Each
+/// Plumb the Forbidden — {1}{B} Instant. "Sacrifice X creatures. Each
 /// player who controlled a sacrificed creature draws X cards and loses X
 /// life."
 ///
@@ -135,7 +135,7 @@ pub fn mascot_exhibition() -> CardDefinition {
 pub fn plumb_the_forbidden() -> CardDefinition {
     CardDefinition {
         name: "Plumb the Forbidden",
-        cost: cost(&[x(), b(), b()]),
+        cost: cost(&[generic(1), b()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -306,13 +306,13 @@ pub fn show_of_confidence() -> CardDefinition {
 
 // ── Bury in Books ───────────────────────────────────────────────────────────
 
-/// Bury in Books — {3}{U} Sorcery. "Put target creature on top of its
+/// Bury in Books — {4}{U} Sorcery. "Put target creature on top of its
 /// owner's library." A clean library-position bounce — same shape as
 /// Hinder/Spell Crumple but for permanents.
 pub fn bury_in_books() -> CardDefinition {
     CardDefinition {
         name: "Bury in Books",
-        cost: cost(&[generic(3), u()]),
+        cost: cost(&[generic(4), u()]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -332,7 +332,7 @@ pub fn bury_in_books() -> CardDefinition {
 
 // ── Test of Talents ─────────────────────────────────────────────────────────
 
-/// Test of Talents — {1}{U}{U} Instant. "Counter target instant or sorcery
+/// Test of Talents — {1}{U} Instant. "Counter target instant or sorcery
 /// spell. Search its controller's graveyard, hand, and library for any
 /// number of cards with the same name as that spell, exile them, then
 /// that player shuffles."
@@ -348,7 +348,7 @@ pub fn bury_in_books() -> CardDefinition {
 pub fn test_of_talents() -> CardDefinition {
     CardDefinition {
         name: "Test of Talents",
-        cost: cost(&[generic(1), u(), u()]),
+        cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -450,7 +450,7 @@ pub fn multiple_choice() -> CardDefinition {
 
 // ── Quick Study ─────────────────────────────────────────────────────────────
 
-/// Quick Study — {1}{U} Instant. "Target player draws two cards."
+/// Quick Study — {2}{U} Instant. "Target player draws two cards."
 ///
 /// ✅ Simple targeted card-draw instant. The auto-decider aims at the
 /// caster by default (Draw effects bind to the caster when no target
@@ -459,7 +459,7 @@ pub fn multiple_choice() -> CardDefinition {
 pub fn quick_study() -> CardDefinition {
     CardDefinition {
         name: "Quick Study",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -513,7 +513,7 @@ pub fn lash_of_malice() -> CardDefinition {
 
 // ── Big Play ────────────────────────────────────────────────────────────────
 
-/// Big Play — {3}{R}{W} Instant.
+/// Big Play — {1}{G} Instant.
 /// "Choose one — / • Target creature you don't control attacks during
 /// its controller's next turn if able. / • Tap target creature, then
 /// put a stun counter on it. / • Creatures you control gain trample
@@ -757,13 +757,13 @@ pub fn tangletrap() -> CardDefinition {
 
 // ── Introduction to Prophecy ───────────────────────────────────────────────
 
-/// Introduction to Prophecy — {2}{U} Sorcery. "Scry 2, then draw a card."
+/// Introduction to Prophecy — {3} Sorcery. "Scry 2, then draw a card."
 ///
 /// Straightforward scry-then-draw spell. No Lesson subtype on this one.
 pub fn introduction_to_prophecy() -> CardDefinition {
     CardDefinition {
         name: "Introduction to Prophecy",
-        cost: cost(&[generic(2), u()]),
+        cost: cost(&[generic(3)]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],

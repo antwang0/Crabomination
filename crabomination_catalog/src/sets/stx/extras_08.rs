@@ -27,7 +27,7 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 
 // ── Silverquill Lecturer (synthesised STX Silverquill) ──────────────────────
 
-/// Silverquill Lecturer — {1}{W}{B}, 2/2 Human Cleric.
+/// Silverquill Lecturer — {4}{W}, 3/3 Human Cleric.
 ///
 /// Printed Oracle (synthesised): "Lifelink / Magecraft — Whenever you
 /// cast or copy an instant or sorcery spell, target creature gets
@@ -40,15 +40,15 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 pub fn silverquill_lecturer() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Lecturer",
-        cost: cost(&[generic(1), w(), b()]),
+        cost: cost(&[generic(4), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
+        power: 3,
+        toughness: 3,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
