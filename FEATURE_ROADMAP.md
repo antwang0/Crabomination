@@ -338,10 +338,10 @@ feature; sweep card-batch by card-batch.
   CantBlock, CR 701.60; Barbed Servitor, Repeat Offender, Reasonable Doubt,
   Person of Interest), ✅ Discover (`Effect::Discover { n }` — CR 701.57,
   cascade-style exile-until-MV≤N then cast-free-or-to-hand; Geological
-  Appraiser, Trumpeting Carnosaur), 🟡 Collect Evidence
-  (`Effect::CollectEvidence { amount, then }` — CR 701.59, auto-picks the
-  cheapest graveyard cards summing ≥ N then runs the reflexive payoff; Sample
-  Collector, Izoni. Player which-cards picker ⏳).
+  Appraiser, Trumpeting Carnosaur), ✅ Collect Evidence
+  (`Effect::CollectEvidence { amount, then }` — CR 701.59; `wants_ui` controller
+  picks the exiled cards via a sum-validated `ChooseCards`, bots auto-pick the
+  cheapest set; Sample Collector, Izoni).
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
   per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,
@@ -349,7 +349,9 @@ feature; sweep card-batch by card-batch.
   (`shortcut::spectacle` / `AlternativeCost.condition` —
   `Predicate::PlayerLostLifeThisTurn` + `Player.lost_life_this_turn`, CR
   702.111: cast for the spectacle cost if an opponent lost life this turn;
-  Skewer the Critics, Light Up the Stage), ⏳ Addendum,
+  Skewer the Critics, Light Up the Stage), ✅ Addendum
+  (`shortcut::addendum` / `cast_during_your_main` — CR 702.124; resolution-time
+  main-phase gate; Sphinx's Insight, Precognitive Perception),
   ⏳ Conspire, ⏳ Demonstrate.
 - **Resource systems:** ✅ Energy ({E}) — `Player.energy` pool +
   `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`

@@ -901,6 +901,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // allied-color batch (modern_decks)
         tolarian_terror,
         vodalian_arcanist,
+        sphinxs_insight,
+        precognitive_perception,
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
         snapping_drake,

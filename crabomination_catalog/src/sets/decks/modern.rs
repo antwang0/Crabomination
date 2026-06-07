@@ -25978,3 +25978,41 @@ pub fn onakke_ogre() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sphinx's Insight — {2}{W}{U} Instant. Draw two cards. Addendum (CR 702.124)
+/// — if cast during your main phase, gain 2 life.
+pub fn sphinxs_insight() -> CardDefinition {
+    use crate::effect::shortcut::addendum;
+    CardDefinition {
+        name: "Sphinx's Insight",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: addendum(
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ),
+        ..Default::default()
+    }
+}
+
+/// Precognitive Perception — {3}{U}{U} Instant. Draw three cards. Addendum —
+/// if cast during your main phase, scry 3 first.
+pub fn precognitive_perception() -> CardDefinition {
+    use crate::effect::shortcut::cast_during_your_main;
+    let draw3 = || Effect::Draw { who: Selector::You, amount: Value::Const(3) };
+    CardDefinition {
+        name: "Precognitive Perception",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Instant],
+        // Addendum: scry 3 before the draw when cast in your main phase.
+        effect: Effect::If {
+            cond: cast_during_your_main(),
+            then: Box::new(Effect::Seq(vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) },
+                draw3(),
+            ])),
+            else_: Box::new(draw3()),
+        },
+        ..Default::default()
+    }
+}

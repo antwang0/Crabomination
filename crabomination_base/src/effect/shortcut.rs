@@ -744,6 +744,33 @@ pub fn etb_pump_each_with_type(creature_type: crate::card::CreatureType) -> Trig
     })
 }
 
+/// Predicate matching "it's your turn and the current step is a main phase"
+/// — the resolution-time test for Addendum (CR 702.124): a spell cast during
+/// your main phase resolves during that same step, so this is exact.
+pub fn cast_during_your_main() -> Predicate {
+    use crate::turn_step::TurnStep;
+    Predicate::All(vec![
+        Predicate::IsTurnOf(PlayerRef::You),
+        Predicate::Any(vec![
+            Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+            Predicate::CurrentStepIs(TurnStep::PostCombatMain),
+        ]),
+    ])
+}
+
+/// Addendum (CR 702.124): run `base`, then — if the spell was cast during the
+/// caster's main phase — also run `bonus`.
+pub fn addendum(base: Effect, bonus: Effect) -> Effect {
+    Effect::Seq(vec![
+        base,
+        Effect::If {
+            cond: cast_during_your_main(),
+            then: Box::new(bonus),
+            else_: Box::new(Effect::Noop),
+        },
+    ])
+}
+
 /// Predicate matching "the just-cast spell is a noncreature spell".
 pub fn cast_is_noncreature() -> Predicate {
     Predicate::EntityMatches {

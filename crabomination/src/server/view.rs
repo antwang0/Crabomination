@@ -873,6 +873,11 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.tap_cost {
         parts.push("{T}".into());
     }
+    // {E} (energy) cost — Aether Hub's `{T}, Pay {E}`, Servant of the Conduit.
+    // Rendered as one `{E}` per energy so the tooltip mirrors card text.
+    if ability.energy_cost > 0 {
+        parts.push("{E}".repeat(ability.energy_cost as usize));
+    }
     // Sacrifice-cost activations (Lotus Petal, Wasteland, Mind Stone's draw
     // ability, Tormod's Crypt, …) carry a `sac_cost: true` flag — render it
     // explicitly so the UI shows the sacrifice rider rather than a label
@@ -923,6 +928,26 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some(req) = ability.tap_other_filter.as_ref() {
         parts.push(format!("Tap a {}", requirement_noun(req)));
     }
+    // Discard-as-cost (Fauna Shaman, Survival of the Fittest) — `discard_cost`.
+    if let Some((req, n)) = ability.discard_cost.as_ref() {
+        let noun = requirement_noun(req);
+        if *n == 1 {
+            parts.push(format!("Discard a {noun}"));
+        } else {
+            parts.push(format!("Discard {n} {noun}s"));
+        }
+    }
+    // Remove-counter-as-cost (Walking Ballista, Triskelion, Hangarback Walker)
+    // — `remove_counter_cost`. The counter kind is rendered with a short label.
+    if let Some((kind, n)) = ability.remove_counter_cost.as_ref() {
+        let label = counter_kind_label(kind);
+        let sep = if label.is_empty() { "" } else { " " };
+        if *n == 1 {
+            parts.push(format!("Remove a{sep}{label} counter"));
+        } else {
+            parts.push(format!("Remove {n}{sep}{label} counters"));
+        }
+    }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }
 
@@ -941,6 +966,19 @@ fn requirement_noun(req: &crate::card::SelectionRequirement) -> &'static str {
         // ControlledByYou → "creature").
         R::And(a, _) => requirement_noun(a),
         _ => "permanent",
+    }
+}
+
+/// Short label for a counter kind used in "Remove a [label] counter" cost
+/// riders. Falls back to a generic "counter" wording for rarer kinds.
+fn counter_kind_label(kind: &crate::card::CounterType) -> &'static str {
+    use crate::card::CounterType as C;
+    match kind {
+        C::PlusOnePlusOne => "+1/+1",
+        C::MinusOneMinusOne => "-1/-1",
+        C::Charge => "charge",
+        C::Loyalty => "loyalty",
+        _ => "",
     }
 }
 
@@ -1732,6 +1770,33 @@ mod tests {
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),
             "{label} = `{{T}}, Sac`-style for Lotus Petal");
+    }
+
+    /// Energy, discard, and remove-counter costs must surface in the tooltip
+    /// so abilities like Aether Hub, Fauna Shaman, and Walking Ballista don't
+    /// look free for their mana/tap alone.
+    #[test]
+    fn ability_cost_label_renders_energy_discard_and_counter_riders() {
+        use crate::card::{CounterType, SelectionRequirement as R};
+        use crate::effect::ActivatedAbility;
+        use crate::mana::{cost, generic};
+        // Aether Hub: {T}, Pay {E}: Add any color.
+        let hub = ActivatedAbility { tap_cost: true, energy_cost: 1, ..Default::default() };
+        assert!(ability_cost_label(&hub).contains("{E}"), "energy cost shown");
+        // Fauna Shaman: {G}, {T}, Discard a creature card.
+        let shaman = ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            discard_cost: Some((R::Creature, 1)),
+            ..Default::default()
+        };
+        assert!(ability_cost_label(&shaman).contains("Discard a creature"), "discard cost shown");
+        // Walking Ballista: Remove a +1/+1 counter.
+        let ballista = ActivatedAbility {
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            ..Default::default()
+        };
+        assert_eq!(ability_cost_label(&ballista), "Remove a +1/+1 counter");
     }
 
     /// `sac_other_filter` / `tap_other_filter` additional costs must show

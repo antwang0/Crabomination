@@ -1756,7 +1756,7 @@ fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
 /// main_phase_action uses; the simpler signature is kept for
 /// existing callers that don't have a `GameState` handy.
 pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
-    can_afford_with_extra(def, pool, 0)
+    can_afford_with_extra(def, pool, 0, 0)
 }
 
 /// State-aware affordability check: queries the engine for any
@@ -1772,7 +1772,13 @@ pub fn can_afford_in_state(
     card: &crate::card::CardInstance,
 ) -> bool {
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
-    can_afford_with_extra(&card.definition, &state.players[seat].mana_pool, extra)
+    // Fold in generic cost *reductions* (Affinity, CostReduction statics,
+    // graveyard-affinity) the same way the real cast path does — otherwise the
+    // bot overestimates the cost of e.g. Tolarian Terror with a full graveyard
+    // and never casts it. Target-dependent reductions are skipped (no target
+    // chosen yet), so this stays conservative.
+    let reduction = crate::game::actions::cost_reduction_for_spell(state, seat, card, None);
+    can_afford_with_extra(&card.definition, &state.players[seat].mana_pool, extra, reduction)
 }
 
 /// For an X-cost spell (or a spell whose effect reads
@@ -1908,12 +1914,20 @@ fn mode_branch(eff: &Effect, mode: Option<usize>) -> &Effect {
     }
 }
 
-fn can_afford_with_extra(def: &CardDefinition, pool: &ManaPool, extra_generic: u32) -> bool {
+fn can_afford_with_extra(
+    def: &CardDefinition,
+    pool: &ManaPool,
+    extra_generic: u32,
+    reduction: u32,
+) -> bool {
     let mut cost = if def.cost.has_x() {
         def.cost.with_x_value(0)
     } else {
         def.cost.clone()
     };
+    if reduction > 0 {
+        cost.reduce_generic(reduction);
+    }
     if extra_generic > 0 {
         cost.symbols.push(crate::mana::ManaSymbol::Generic(extra_generic));
     }
@@ -2933,6 +2947,22 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// The bot's affordability check folds in generic cost reductions:
+    /// Tolarian Terror ({6}{U}) is castable on {3}{U} with three instants/
+    /// sorceries in the graveyard.
+    #[test]
+    fn bot_affordability_honors_graveyard_affinity() {
+        let mut g = two_player_game();
+        let terror = g.add_card_to_hand(0, catalog::tolarian_terror());
+        let card = g.players[0].hand.iter().find(|c| c.id == terror).unwrap().clone();
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(3); // {3}{U} only
+        assert!(!can_afford_in_state(&g, 0, &card), "no discount yet → unaffordable");
+        for _ in 0..3 { g.add_card_to_graveyard(0, catalog::lightning_bolt()); }
+        let card = g.players[0].hand.iter().find(|c| c.id == terror).unwrap().clone();
+        assert!(can_afford_in_state(&g, 0, &card), "−{{3}} discount → now affordable");
     }
 
     /// Regression for the second deadlock observed at

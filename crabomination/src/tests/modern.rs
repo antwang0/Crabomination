@@ -34454,3 +34454,51 @@ fn gain_taplands_enter_tapped_and_gain_life() {
         assert_eq!(g.players[0].life, before + 1, "gained 1 life");
     }
 }
+
+// ── Addendum (CR 702.124) ────────────────────────────────────────────────────
+
+/// Sphinx's Insight gains 2 life when cast during your main phase.
+#[test]
+fn sphinxs_insight_addendum_main_phase_gains_life() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::sphinxs_insight());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].life, 22, "drew 2 + gained 2 (addendum active)");
+}
+
+/// Cast outside your main phase, Sphinx's Insight only draws — no life.
+#[test]
+fn sphinxs_insight_no_addendum_off_main_phase() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::End;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::sphinxs_insight());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    assert_eq!(g.players[0].life, 20, "no addendum off main phase");
+}
+
+/// Precognitive Perception always draws three.
+#[test]
+fn precognitive_perception_draws_three() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::precognitive_perception());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[0].hand.len();
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), before - 1 + 3, "spell left hand, drew 3");
+}

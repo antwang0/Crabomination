@@ -95,10 +95,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   the stack trigger resolves (CR 603.10 full LKI for stack resolution is
   unmodeled). Carded without the rider. Fix needs either a snapshot kept alive
   through resolution or a captured-at-trigger-time value.
-- ⏳ **Collect Evidence which-cards picker.** `Effect::CollectEvidence`
-  auto-exiles the cheapest graveyard cards summing to ≥ N; a player-driven
-  pick (which cards to exile) would need a sum-constrained `ChooseCards`
-  variant. Sample Collector / Izoni work today via the auto-pick.
+- ✅ **Collect Evidence which-cards picker.** A `wants_ui` controller now
+  picks via `ChooseCards` (validated to clear the MV threshold, else declined);
+  bots/tests keep the auto cheapest-pick. `collect_evidence_ui_picker_honors_chosen_cards`.
 - ⏳ **"Up to one target" for Suspect (Reasonable Doubt).** Currently modeled
   as a required creature target; a true optional single-target slot would let
   it resolve with the counter clause alone.
@@ -722,6 +721,8 @@ picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
 - ✅ **CR 603.3b — Same-controller trigger ordering** (server *suspend* path for a networked human still ⏳).
+- ✅ **CR 702.124 — Addendum** (`shortcut::addendum` / `cast_during_your_main`: a resolution-time `IsTurnOf(You) ∧ main-phase` gate — exact since a main-phase cast resolves in the same step. Sphinx's Insight, Precognitive Perception).
+- ✅ **CR 601.2f — generic cost reduction (graveyard-Affinity)** (`CardDefinition.affinity_graveyard_filter`: {1} less per matching graveyard card, generalizing the old per-name Dawning Archaic hook; clamped generic-only. The bot's `can_afford_in_state` folds in cost reductions too. Tolarian Terror, The Dawning Archaic).
 - ✅ **CR 702.32 — Kicker** (client opt-in affordance + a kick-when-profitable bot heuristic still ⏳).
 - ✅ **CR 702.164 — Backup** (`shortcut::backup` / `backup_with`).
 - ✅ **CR 702.95 — Soulbond** (auto-pairs lowest-CardId partner; a controller "may"/decline prompt still ⏳).
@@ -777,7 +778,7 @@ picking an item up.
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker.
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
 - ✅ **CR 701.57 — Discover N** — `Effect::Discover { n }`: exile from top until a nonland MV≤N, cast it free or put in hand (controller's choice), bottom the rest. Ships Geological Appraiser, Trumpeting Carnosaur. (Cascade-adjacent; shares the bottom-the-rest tail.)
-- 🟡 **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N (engine auto-picks the cheapest set), then run the reflexive payoff with auto-chosen targets. Ships Sample Collector. Remaining ⏳: a player-driven which-cards-to-exile picker.
+- ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework; true damage *redirection* (614.9) + damage *halving*; general skip-step/turn (614.10). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
 - 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Remaining: source-of-your-choice restriction (the shield soaks any source's next hit).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Phasing / extra-step insertion still ⏳.
