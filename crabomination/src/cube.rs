@@ -278,6 +278,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         aetherflux_reservoir,
         mox_diamond,
         chrome_mox,
+        isochron_scepter,
         ornithopter,
         ornithopter_of_paradise,
         mind_stone,

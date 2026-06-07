@@ -35413,3 +35413,23 @@ fn comeuppance_prevents_damage_to_you() {
     opponent_casts_bolt(&mut g);
     assert_eq!(g.players[0].life, life, "damage to you is prevented");
 }
+
+/// Isochron Scepter (approximated) copies an instant spell on the stack.
+#[test]
+fn isochron_scepter_copies_an_instant_on_the_stack() {
+    let mut g = two_player_game();
+    let scepter = g.add_card_to_battlefield(0, catalog::isochron_scepter());
+    g.clear_sickness(scepter);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt (stays on the stack)");
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scepter, ability_index: 0, target: Some(Target::Permanent(bolt)), x_value: None,
+    }).expect("Isochron copies the Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20 - 6, "Bolt + its copy deal 6");
+}

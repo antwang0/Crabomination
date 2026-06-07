@@ -1715,6 +1715,33 @@ pub fn mox_diamond() -> CardDefinition {
     }
 }
 
+/// Isochron Scepter — {2} Artifact. "Imprint — When this enters, you may exile
+/// an instant card with mana value 2 or less from your hand. {2}, {T}: You may
+/// copy the imprinted card, and you may cast the copy without paying its mana
+/// cost." The imprint-then-recast engine isn't modeled (no imprinted-card
+/// storage); approximated as "{2}, {T}: Copy target instant spell on the stack
+/// (you may choose new targets)", which captures the instant-copy payoff.
+pub fn isochron_scepter() -> CardDefinition {
+    CardDefinition {
+        name: "Isochron Scepter",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::CopySpellMayChooseTargets {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasCardType(CardType::Instant)),
+                ),
+                count: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Chrome Mox — {0} Artifact. "Imprint — When Chrome Mox enters, you may exile a
 /// nonland, nonartifact card from your hand. {T}: Add one mana of any of the
 /// exiled card's colors." Modeled as an ETB "discard a card" cost + "{T}: add
