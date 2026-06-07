@@ -1185,22 +1185,32 @@ fn symmetry_sage_pumps_self_and_grants_flying_on_instant_cast() {
 // ── Witherbloom (B/G) ──────────────────────────────────────────────────────
 
 #[test]
-fn witherbloom_pledgemage_taps_for_mana_at_life_cost() {
+fn witherbloom_pledgemage_magecraft_gains_one_life() {
     let mut g = two_player_game();
-    let pm = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
-    g.clear_sickness(pm);
+    g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
     let life_before = g.players[0].life;
-    let pool_before = g.players[0].mana_pool.total();
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: pm, ability_index: 0, target: None, x_value: None })
-    .expect("Witherbloom Pledgemage tap activatable");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
     drain_stack(&mut g);
-    // Pay 1 life, gain 1 mana.
-    assert_eq!(g.players[0].life, life_before - 1, "should pay 1 life");
-    assert_eq!(g.players[0].mana_pool.total(), pool_before + 1,
-        "should gain 1 mana");
-    let pm_card = g.battlefield.iter().find(|c| c.id == pm).unwrap();
-    assert!(pm_card.tapped, "should be tapped after activating");
+    assert_eq!(g.players[0].life, life_before + 1, "magecraft gains 1 life on IS cast");
+}
+
+#[test]
+fn prismari_pledgemage_is_a_defender_that_pumps_on_magecraft() {
+    let mut g = two_player_game();
+    let pm = g.add_card_to_battlefield(0, catalog::prismari_pledgemage());
+    assert!(g.battlefield_find(pm).unwrap().has_keyword(&Keyword::Defender));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // 3/3 + magecraft +1/+1 → 4/4 EOT.
+    assert_eq!(g.battlefield_find(pm).unwrap().power(), 4, "magecraft self-pump +1/+1");
 }
 
 #[test]
@@ -1562,15 +1572,13 @@ fn sparring_regimen_creates_spirit_etb_and_pumps_attacker() {
     assert_eq!(counters, 1, "Sparring Regimen should pump the attacker");
 }
 
-/// CR 605.4 — a mana ability resolves immediately without going on the
-/// stack. Witherbloom Pledgemage's `{T}, Pay 1 life: Add {B}/{G}` is a
-/// mana ability (no target, could add mana, not a loyalty ability) so
-/// the engine should add the mana to the player's pool synchronously,
-/// without leaving a StackItem behind for priority to resolve.
+/// CR 605.4 — a life-cost mana ability resolves immediately without going on
+/// the stack. Kozilek's Translator's "Pay 1 life: Add {C}" adds the mana
+/// synchronously, leaving no StackItem behind.
 #[test]
-fn witherbloom_pledgemage_is_a_mana_ability_per_cr_605() {
+fn life_cost_mana_ability_is_a_mana_ability_per_cr_605() {
     let mut g = two_player_game();
-    let pledge = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    let pledge = g.add_card_to_battlefield(0, catalog::kozileks_translator());
     g.clear_sickness(pledge);
 
     let stack_before = g.stack.len();
@@ -1579,41 +1587,24 @@ fn witherbloom_pledgemage_is_a_mana_ability_per_cr_605() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: pledge, ability_index: 0, target: None, x_value: None })
-    .expect("Pledgemage mana ability activatable");
+    .expect("mana ability activatable");
 
-    // CR 605.4a: mana abilities don't go on the stack. Stack length should
-    // not have grown.
-    assert_eq!(g.stack.len(), stack_before,
-        "Mana ability should not push onto the stack");
-    // Life was paid as part of cost.
-    assert_eq!(g.players[0].life, life_before - 1,
-        "Should pay 1 life as cost");
-    // Mana pool grew by 1.
-    assert_eq!(g.players[0].mana_pool.total(), mana_before + 1,
-        "Pledgemage should add one mana of any color");
-    // Source is tapped.
-    assert!(g.battlefield_find(pledge).unwrap().tapped,
-        "Pledgemage should be tapped");
+    assert_eq!(g.stack.len(), stack_before, "mana ability should not push onto the stack");
+    assert_eq!(g.players[0].life, life_before - 1, "should pay 1 life as cost");
+    assert_eq!(g.players[0].mana_pool.total(), mana_before + 1, "adds one mana");
 }
 
-/// CR 605.4a: mana abilities can't be responded to. Without a stack
-/// entry, an opponent has no priority window to counter the activation.
-/// Stress-test by activating then immediately checking stack emptiness
-/// (no priority round happened) — verifies the engine drains the mana
-/// ability path synchronously.
+/// CR 119.4 — a life-cost ability can't be activated with insufficient life.
 #[test]
-fn witherbloom_pledgemage_rejects_activation_with_zero_life() {
+fn life_cost_mana_ability_rejects_activation_with_zero_life() {
     let mut g = two_player_game();
-    let pledge = g.add_card_to_battlefield(0, catalog::witherbloom_pledgemage());
+    let pledge = g.add_card_to_battlefield(0, catalog::kozileks_translator());
     g.clear_sickness(pledge);
     g.players[0].life = 0;
 
     let r = g.perform_action(GameAction::ActivateAbility {
         card_id: pledge, ability_index: 0, target: None, x_value: None });
-    assert!(r.is_err(), "Should reject when life < 1");
-    // Source not tapped (rolled back).
-    assert!(!g.battlefield_find(pledge).unwrap().tapped,
-        "Tap cost should be rolled back on rejection");
+    assert!(r.is_err(), "should reject when life < 1");
 }
 
 // ── Vanishing Verse: Monocolored predicate ──────────────────────────────────

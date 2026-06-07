@@ -17,53 +17,28 @@ use crate::effect::shortcut::{
     magecraft_treasure, target_filtered,
 };
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, r, u, Color};
+use crate::mana::{cost, generic, hybrid, r, u, Color};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
 
-/// Prismari Pledgemage — {1}{U}{R}, 2/3 Elemental. "Trample, haste."
-///
-/// Pure stat-line + keyword body. Prismari Pledgemage is the "free
-/// vanilla beater" of the Prismari arsenal: a 2/3 trample-haste for
-/// {URR}-equivalent costs is solid, and it composes against every
-/// pump and copy effect in the college.
+/// Prismari Pledgemage — {U/R}{U/R} 3/3 Orc Wizard with defender. "Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, this creature gets
+/// +1/+1 until end of turn."
 pub fn prismari_pledgemage() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
     CardDefinition {
         name: "Prismari Pledgemage",
-        cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
+            creature_types: vec![CreatureType::Orc, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 2,
+        power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Trample, Keyword::Haste],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        ..Default::default()
     }
 }
 
