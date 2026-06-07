@@ -35062,3 +35062,92 @@ fn vodalian_illusionist_phases_target_out() {
     g.do_phasing();
     assert!(g.battlefield_find(victim).is_some(), "phased back in on owner's untap");
 }
+
+/// Changeling Hero (Champion, CR 702.77) exiles another creature you control
+/// on ETB; when the Hero leaves, the championed creature returns.
+#[test]
+fn changeling_hero_champions_and_returns_on_leave() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hero = g.add_card_to_hand(0, catalog::changeling_hero());
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hero, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Changeling Hero castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "championed bear is exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear sits in exile");
+    // Hero dies → the championed bear returns to the battlefield.
+    let hero_id = g.battlefield.iter().find(|c| c.definition.name == "Changeling Hero").unwrap().id;
+    g.remove_to_graveyard_with_triggers(hero_id);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bear returns when the Hero leaves");
+}
+
+/// Breezekeeper is a 4/4 flyer with Phasing.
+#[test]
+fn breezekeeper_phases_on_untap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::breezekeeper());
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "Breezekeeper phased out");
+}
+
+/// Reality Ripple phases out a target creature.
+#[test]
+fn reality_ripple_phases_target_out() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rip = g.add_card_to_hand(0, catalog::reality_ripple());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rip, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reality Ripple castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == bear));
+}
+
+// ── Forecast (CR 702.56) ───────────────────────────────────────────────────
+
+/// Steeling Stance's Forecast ability pumps a target creature from hand
+/// during the controller's upkeep, leaving the card in hand.
+#[test]
+fn steeling_stance_forecast_pumps_from_hand_in_upkeep() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stance = g.add_card_to_hand(0, catalog::steeling_stance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stance, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Forecast activatable from hand in upkeep");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (3, 3), "Forecast pumped the bear +1/+1");
+    assert!(g.players[0].hand.iter().any(|c| c.id == stance), "card stays in hand (revealed)");
+}
+
+/// The Forecast ability can't be activated outside the controller's upkeep.
+#[test]
+fn steeling_stance_forecast_blocked_outside_upkeep() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stance = g.add_card_to_hand(0, catalog::steeling_stance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: stance, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).is_err(), "Forecast is upkeep-only");
+}

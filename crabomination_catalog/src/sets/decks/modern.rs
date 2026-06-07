@@ -14832,6 +14832,43 @@ pub fn tolarian_drake() -> CardDefinition {
     }
 }
 
+/// Changeling Hero — {4}{W} 4/4 Shapeshifter. Changeling.
+/// Champion a creature (CR 702.77).
+///
+/// Champion is wired as an ETB linked-exile: the controller exiles another
+/// creature they control via `Effect::ExileUntilSourceLeaves`, and
+/// `return_linked_exiles` returns it when the Hero leaves. The "sacrifice it
+/// unless you exile" clause collapses to "the trigger does nothing if you
+/// control no other creature" (no forced self-sacrifice yet).
+pub fn changeling_hero() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Changeling Hero",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Changeling],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vodalian Illusionist — {2}{U} 2/2 Merfolk Wizard.
 /// `{U}{U}, {T}: Target creature phases out.` (CR 702.26)
 pub fn vodalian_illusionist() -> CardDefinition {
@@ -14855,6 +14892,84 @@ pub fn vodalian_illusionist() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+/// Steeling Stance — {1}{W}{W} Instant. "Creatures you control get +1/+1
+/// until end of turn." Forecast — {W}, Reveal from hand: target creature gets
+/// +1/+1 until end of turn. (CR 702.56)
+///
+/// Forecast rides the engine's `from_hand` activated-ability path: the
+/// ability is activatable only from hand (`from_hand`), only during the
+/// controller's upkeep (`condition`), and once per turn (`once_per_turn`);
+/// the card stays in hand ("reveal").
+pub fn steeling_stance() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::{each_your_creature, target_filtered};
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Steeling Stance",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: each_your_creature(),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            from_hand: true,
+            once_per_turn: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Breezekeeper — {3}{U} 4/4 Djinn. Flying, Phasing (CR 702.26).
+pub fn breezekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Breezekeeper",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
+/// Reality Ripple — {1}{U} Instant. "Target artifact, creature, or land
+/// phases out." (CR 702.26)
+pub fn reality_ripple() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Reality Ripple",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PhaseOut {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Land),
+            ),
+        },
         ..Default::default()
     }
 }

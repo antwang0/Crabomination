@@ -732,6 +732,14 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.26 — Phasing** (`GameState.phased_out` side zone + `do_phasing`
+  at the top of the untap step; `Effect::PhaseOut` for targeted phase-out.
+  Tolarian Drake, Breezekeeper, Vodalian Illusionist, Reality Ripple).
+- ✅ **CR 702.77 — Champion** (ETB linked-exile via `ExileUntilSourceLeaves`;
+  returns on leave. "Sacrifice unless you exile" collapses to a no-op when no
+  other creature is controlled. Changeling Hero).
+- ✅ **CR 702.56 — Forecast** (`ActivatedAbility.from_hand` + upkeep-only
+  `condition` + `once_per_turn`; card stays in hand. Steeling Stance).
 - ✅ **CR 603.3b — Same-controller trigger ordering** (server *suspend* path for a networked human still ⏳).
 - ✅ **CR 702.124 — Addendum** (`shortcut::addendum` / `cast_during_your_main`: a resolution-time `IsTurnOf(You) ∧ main-phase` gate — exact since a main-phase cast resolves in the same step. Sphinx's Insight, Precognitive Perception).
 - ✅ **CR 601.2f — generic cost reduction (graveyard-Affinity)** (`CardDefinition.affinity_graveyard_filter`: {1} less per matching graveyard card, generalizing the old per-name Dawning Archaic hook; clamped generic-only. The bot's `can_afford_in_state` folds in cost reductions too. Tolarian Terror, The Dawning Archaic).
