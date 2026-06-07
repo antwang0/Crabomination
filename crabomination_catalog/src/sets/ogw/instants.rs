@@ -303,3 +303,24 @@ pub fn flaying_tendrils() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mighty Leap — {1}{W} Instant. Target creature gets +2/+2 and gains flying
+/// until end of turn.
+pub fn mighty_leap() -> CardDefinition {
+    use crate::effect::shortcut::target;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Mighty Leap",
+        cost: cost(&[generic(1), crate::mana::w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            pump_target(2, 2),
+            Effect::GrantKeyword {
+                what: target(),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}

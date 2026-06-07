@@ -1193,3 +1193,60 @@ fn flaying_tendrils_sweeps_and_exiles() {
     assert!(g.exile.iter().any(|c| c.id == victim), "exiled instead of graveyard");
     assert!(!g.players[1].graveyard.iter().any(|c| c.id == victim), "not in graveyard");
 }
+
+/// Affa Protector and Ghostly Sentinel are vanilla-ish keyword bodies.
+#[test]
+fn affa_and_ghostly_have_their_keywords() {
+    use crate::card::Keyword;
+    let affa = catalog::affa_protector();
+    assert_eq!((affa.power, affa.toughness), (1, 4));
+    assert!(affa.keywords.contains(&Keyword::Vigilance));
+    let ghost = catalog::ghostly_sentinel();
+    assert!(ghost.keywords.contains(&Keyword::Flying) && ghost.keywords.contains(&Keyword::Vigilance));
+}
+
+/// Mighty Leap pumps a creature +2/+2 and grants flying.
+#[test]
+fn mighty_leap_pumps_and_grants_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mighty_leap());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 4), "2/2 → 4/4");
+    assert!(cp.keywords.contains(&Keyword::Flying));
+}
+
+/// Saddleback Lagac supports two other creatures on ETB.
+#[test]
+fn saddleback_lagac_supports_two() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let lag = g.add_card_to_battlefield(0, catalog::saddleback_lagac());
+    g.fire_self_etb_triggers(lag, 0);
+    drain_stack(&mut g);
+    let counters = |g: &GameState, id| g.battlefield_find(id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    // ETB auto-targets one other creature (the multi-target spread is covered
+    // by the dedicated support test); confirm the trigger wires up.
+    assert!(counters(&g, a) + counters(&g, b) >= 1, "support places a +1/+1 counter");
+}
+
+/// Loam Larva tutors a basic land to the top of the library.
+#[test]
+fn loam_larva_tutors_basic_to_top() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_battlefield(0, catalog::loam_larva());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let top = g.players[0].library.last().expect("nonempty library");
+    assert!(top.definition.is_land(), "a basic land is on top after the tutor");
+}

@@ -356,6 +356,90 @@ pub fn reaver_drone() -> CardDefinition {
     }
 }
 
+/// Affa Protector — {2}{W} 1/4 Human Soldier Ally. Vigilance.
+pub fn affa_protector() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Affa Protector",
+        cost: cost(&[generic(2), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Ghostly Sentinel — {4}{W} 3/3 Kor Spirit. Flying, Vigilance.
+pub fn ghostly_sentinel() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Ghostly Sentinel",
+        cost: cost(&[generic(4), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        ..Default::default()
+    }
+}
+
+/// Saddleback Lagac — {3}{G} 3/1 Lizard. ETB support 2 (a +1/+1 counter on
+/// each of up to two other target creatures).
+pub fn saddleback_lagac() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::effect::shortcut::{etb, support};
+    CardDefinition {
+        name: "Saddleback Lagac",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![etb(support(2))],
+        ..Default::default()
+    }
+}
+
+/// Loam Larva — {1}{G} 1/3 Insect. ETB you may search your library for a basic
+/// land card and put it on top (shuffling first).
+pub fn loam_larva() -> CardDefinition {
+    use crate::card::{CreatureType, SelectionRequirement};
+    use crate::effect::shortcut::etb;
+    use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
+    CardDefinition {
+        name: "Loam Larva",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Search for a basic land and put it on top?".into(),
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Stormrider Spirit — {4}{U} 3/3 Spirit. Flash, Flying.
 pub fn stormrider_spirit() -> CardDefinition {
     use crate::card::CreatureType;
