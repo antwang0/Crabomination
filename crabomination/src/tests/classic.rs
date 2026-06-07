@@ -258,3 +258,18 @@ fn essence_scatter_cannot_counter_a_noncreature_spell() {
     });
     assert!(res.is_err(), "Essence Scatter can't target a noncreature spell");
 }
+
+/// Smoke (LEA) — creatures don't untap during untap steps, but noncreature
+/// permanents (lands) untap normally.
+#[test]
+fn smoke_prevents_creatures_from_untapping() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::smoke());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.do_untap();
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Smoke keeps the creature tapped");
+    assert!(!g.battlefield_find(land).unwrap().tapped, "Smoke leaves noncreature permanents alone");
+}

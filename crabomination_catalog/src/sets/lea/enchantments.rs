@@ -3,7 +3,7 @@ use crate::card::{
     StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
 };
 use crate::effect::{PlayerRef, Selector, ZoneDest};
-use crate::mana::{b, cost, generic, w};
+use crate::mana::{b, cost, generic, r, w};
 
 /// Glorious Anthem — {1}{W}{W} Enchantment
 /// Creatures you control get +1/+1.
@@ -26,6 +26,26 @@ pub fn glorious_anthem() -> CardDefinition {
                 ),
                 power: 1,
                 toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Smoke — {1}{R} Enchantment (LEA). "Creatures don't untap during their
+/// controllers' untap steps." Modeled as a global `PreventUntap` keyed on the
+/// `Creature` filter, which `do_untap` (CR 502.3) intersects against the
+/// untapping player's permanents every untap step — so it applies symmetrically
+/// to every player's creatures.
+pub fn smoke() -> CardDefinition {
+    CardDefinition {
+        name: "Smoke",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(SelectionRequirement::Creature),
             },
         }],
         ..Default::default()

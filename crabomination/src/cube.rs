@@ -1586,6 +1586,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // untap-prevention stax enchantment
+        smoke,
         // allied-color batch (modern_decks)
         goblin_motivator,
         goblin_gang_leader,
