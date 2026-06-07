@@ -246,6 +246,48 @@ pub fn sphere_of_safety() -> CardDefinition {
     }
 }
 
+/// Beastmaster Ascension — {1}{G} Enchantment. "Whenever a creature you control
+/// attacks, put a quest counter on Beastmaster Ascension. As long as it has
+/// seven or more quest counters, creatures you control get +5/+5." The anthem
+/// is a `StaticEffect::PumpTeamIf` gated on the quest-counter threshold.
+pub fn beastmaster_ascension() -> CardDefinition {
+    CardDefinition {
+        name: "Beastmaster Ascension",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::Quest,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![StaticAbility {
+            description: "As long as this has seven or more quest counters, creatures you control get +5/+5.",
+            effect: StaticEffect::PumpTeamIf {
+                condition: crate::effect::Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: crate::card::CounterType::Quest,
+                    },
+                    Value::Const(7),
+                ),
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 5,
+                toughness: 5,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Aura Shards — {G}{W} Enchantment. "Whenever a creature you control enters,
 /// you may destroy target artifact or enchantment." The optional clause is
 /// collapsed to a mandatory destroy-if-a-legal-target-exists (matching

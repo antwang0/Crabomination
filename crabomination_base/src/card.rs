@@ -245,6 +245,10 @@ pub enum CounterType {
     /// Luck counter — pure bookkeeping marker. Chance Encounter accrues one
     /// per won coin flip and wins the game at ten (CR 705.1 payoff).
     Luck,
+    /// Quest counter — accrues on quest enchantments (Beastmaster Ascension:
+    /// one per creature you control that attacks; at 7+ counters its team
+    /// anthem switches on via a `StaticEffect::PumpTeamIf` threshold).
+    Quest,
 }
 
 /// Every zone a card can occupy.

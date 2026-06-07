@@ -34913,3 +34913,18 @@ fn avenger_of_zendikar_makes_plants_then_landfall_pumps() {
         assert_eq!((p.power(), p.toughness()), (1, 2), "landfall pumped the Plant to 1/2");
     }
 }
+
+/// Beastmaster Ascension's anthem switches on at seven quest counters.
+#[test]
+fn beastmaster_ascension_anthem_at_seven_quest_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let asc = g.add_card_to_battlefield(0, catalog::beastmaster_ascension());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 6);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "no anthem below seven quest counters");
+    g.battlefield_find_mut(asc).unwrap().add_counters(CounterType::Quest, 1); // → 7
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "+5/+5 once at seven quest counters");
+}

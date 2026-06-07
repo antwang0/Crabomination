@@ -2001,6 +2001,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         triumph_of_the_hordes,
         // landfall payoff
         avenger_of_zendikar,
+        // quest-counter team anthem
+        beastmaster_ascension,
         // allied-color batch (modern_decks)
         llanowar_tribe,
         sakura_tribe_scout,

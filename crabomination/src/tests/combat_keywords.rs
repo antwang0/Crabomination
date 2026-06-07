@@ -1078,3 +1078,22 @@ fn sphere_of_safety_scales_with_enchantment_count() {
     }])).expect("pay {2} for two enchantments");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
+
+/// Beastmaster Ascension gains a quest counter whenever a creature you control
+/// attacks.
+#[test]
+fn beastmaster_ascension_accrues_quest_counter_on_attack() {
+    use crate::card::CounterType;
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let asc = g.add_card_to_battlefield(0, catalog::beastmaster_ascension());
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 1,
+        "one quest counter per attacking creature");
+}

@@ -2179,6 +2179,43 @@ impl GameState {
                 }
             }
         }
+        // "As long as [condition], [creatures the selector picks] get +P/+T."
+        // (`StaticEffect::PumpTeamIf`) — the conditional team anthem. Evaluate
+        // the gate against the source; while it holds, emit a layer-7 pump for
+        // every permanent the selector resolves to (e.g. Beastmaster Ascension
+        // at 7+ quest counters → all your creatures +5/+5).
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::PumpTeamIf {
+                    condition,
+                    applies_to,
+                    power,
+                    toughness,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                let ctx = crate::game::effects::EffectContext::for_ability(
+                    card.id,
+                    card.controller,
+                    None,
+                );
+                if !self.evaluate_predicate(condition, &ctx) {
+                    continue;
+                }
+                if let Some(affected) = selector_to_affected(applies_to, card) {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected,
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::Modify),
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::ModifyPowerToughness(*power, *toughness),
+                    });
+                }
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -6152,6 +6189,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PumpSelfIf — needs live predicate evaluation; resolved in
             // `gather_continuous_effects`.
             | StaticEffect::PumpSelfIf { .. }
+            // PumpTeamIf — conditional team anthem, resolved in
+            // `gather_continuous_effects` (needs live predicate eval).
+            | StaticEffect::PumpTeamIf { .. }
             // ExileNontokenCreaturesNotCast (Containment Priest) — read at
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.

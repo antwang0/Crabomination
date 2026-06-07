@@ -58,6 +58,20 @@ pub enum StaticEffect {
         #[serde(default)]
         keywords: Vec<Keyword>,
     },
+    /// "As long as [condition], [creatures the selector picks] get +P/+T."
+    /// The conditional-team sibling of `PumpSelfIf` (self) and `PumpPT`
+    /// (unconditional team). Resolved live in `gather_continuous_effects`:
+    /// the predicate is evaluated with the source as context, and while it
+    /// holds a layer-7 pump is emitted for `selector_to_affected(applies_to)`.
+    /// Powers quest/threshold anthems — Beastmaster Ascension ("as long as
+    /// this has seven or more quest counters, creatures you control get
+    /// +5/+5").
+    PumpTeamIf {
+        condition: Predicate,
+        applies_to: Selector,
+        power: i32,
+        toughness: i32,
+    },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
