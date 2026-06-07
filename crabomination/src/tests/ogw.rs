@@ -1002,3 +1002,39 @@ fn blight_herder_processes_two_then_makes_three_scions() {
         .filter(|c| c.definition.name == "Eldrazi Scion").count();
     assert_eq!(scions_after - scions_before, 3, "three Scions created");
 }
+
+/// Eldrazi Aggressor gains haste only while another colorless creature is on
+/// its controller's battlefield (static keyword grant gated by a live predicate).
+#[test]
+fn eldrazi_aggressor_has_haste_only_with_another_colorless() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let agg = g.add_card_to_battlefield(0, catalog::eldrazi_aggressor());
+    // Alone: no haste.
+    assert!(!g.computed_permanent(agg).unwrap().keywords.contains(&Keyword::Haste),
+        "no haste while it is the only colorless creature");
+    // Add another colorless creature → haste turns on.
+    g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
+    assert!(g.computed_permanent(agg).unwrap().keywords.contains(&Keyword::Haste),
+        "haste while controlling another colorless creature");
+}
+
+/// Reaver Drone costs you 1 life at upkeep unless you control another
+/// colorless creature.
+#[test]
+fn reaver_drone_upkeep_life_loss_unless_another_colorless() {
+    let mut g = two_player_game();
+    let drone = g.add_card_to_battlefield(0, catalog::reaver_drone());
+    // Lone Reaver Drone: lose 1 at upkeep.
+    let before = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before - 1, "lone drone bleeds 1 at upkeep");
+    // Add another colorless creature → no life loss.
+    g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
+    let _ = drone;
+    let before2 = g.players[0].life;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before2, "no bleed with another colorless creature");
+}

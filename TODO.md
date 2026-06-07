@@ -22,13 +22,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   rider). Ships Wasteland Strangler, Mind Raker, Blight Herder. Still ⏳:
   Oblivion Sower (process puts *lands onto battlefield*, not graveyard) and
   Processor Assault (process as a cast-time *additional cost*, not a trigger).
-  (b) **conditional static keyword grant**
-  ("has haste as long as you control another colorless creature") — Eldrazi
-  Aggressor; (c) **non-linked exile-from-opponent-hand** ("you choose a nonland
+  (b) **conditional static keyword grant** ✅ — Eldrazi Aggressor rides
+  `StaticEffect::PumpSelfIf { keywords: [Haste], … }` gated on an
+  `OtherThanSource` colorless-creature count.
+  (c) **non-linked exile-from-opponent-hand** ("you choose a nonland
   card and exile it" + a separate LTB draw) — Thought-Knot Seer; (d) Reaver
-  Drone's upkeep "lose life unless you control another colorless creature" needs
-  the `OtherThanSource` self-exclusion to thread through the `SelectorCountAtLeast`
-  condition path (works for Dominator Drone's ETB but unverified for upkeep).
+  Drone ✅ — the `OtherThanSource` self-exclusion threads through the
+  `SelectorCountAtLeast` upkeep-condition path correctly (verified by test).
 - ⏳ **Hand of Emrakul / Spawnsire alt-cost & wish.** Hand of Emrakul's
   "sacrifice four Eldrazi Spawn rather than pay mana" alt-cost and Spawnsire's
   {20} cast-from-outside-the-game are both dropped (no sacrifice-N-of-a-type

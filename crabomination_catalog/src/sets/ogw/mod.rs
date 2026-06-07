@@ -64,6 +64,8 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         wasteland_strangler,
         mind_raker,
         blight_herder,
+        eldrazi_aggressor,
+        reaver_drone,
         sludge_crawler,
         murderous_compulsion,
         sweep_away,

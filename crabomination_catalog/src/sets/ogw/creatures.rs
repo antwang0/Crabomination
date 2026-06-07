@@ -297,6 +297,65 @@ pub fn vile_aggregate() -> CardDefinition {
     }
 }
 
+/// Eldrazi Aggressor — {2}{R} 2/3 Eldrazi Drone. Devoid; has haste as long as
+/// you control another colorless creature.
+pub fn eldrazi_aggressor() -> CardDefinition {
+    use crate::card::{SelectionRequirement, StaticAbility};
+    use crate::effect::{Predicate, Selector, StaticEffect, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        static_abilities: vec![StaticAbility {
+            description: "Has haste as long as you control another colorless creature.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::Colorless)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::Haste],
+            },
+        }],
+        ..drone("Eldrazi Aggressor", cost(&[generic(2), r()]), 2, 3)
+    }
+}
+
+/// Reaver Drone — {B} 2/1 Eldrazi Drone. Devoid; at the beginning of your
+/// upkeep, you lose 1 life unless you control another colorless creature.
+pub fn reaver_drone() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::game::types::TurnStep;
+    use crate::effect::{Predicate, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::Colorless)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(1) }),
+            },
+        }],
+        ..drone("Reaver Drone", cost(&[b()]), 2, 1)
+    }
+}
+
 /// Dread Drone — {4}{B} 4/1 Eldrazi Drone. Devoid, ETB make two 0/1
 /// Eldrazi Spawn.
 pub fn dread_drone() -> CardDefinition {
