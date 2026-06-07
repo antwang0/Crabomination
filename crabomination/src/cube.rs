@@ -643,6 +643,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Attack-tax statics (CR 508.1g).
         ghostly_prison,
         propaganda,
+        windborn_muse,
+        baird_steward_of_argive,
         prey_upon,
         hedron_archive,
         soul_warden,

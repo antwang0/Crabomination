@@ -203,7 +203,7 @@ pub fn ghostly_prison() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you unless their controller pays {2} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: 2 },
+            effect: StaticEffect::AttackTaxToController { amount: 2, protect_planeswalkers: false },
         }],
         ..Default::default()
     }
@@ -217,7 +217,7 @@ pub fn propaganda() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you unless their controller pays {2} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: 2 },
+            effect: StaticEffect::AttackTaxToController { amount: 2, protect_planeswalkers: false },
         }],
         ..Default::default()
     }

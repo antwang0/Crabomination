@@ -926,3 +926,20 @@ fn cr_508_1g_ghostly_prison_taxes_attackers() {
     }])).expect("attack legal once tax is payable");
     assert_eq!(g.players[0].mana_pool.total(), 0, "the tax was spent");
 }
+
+#[test]
+fn cr_508_1g_windborn_muse_does_not_tax_planeswalker_attacks() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    // Player 1 has Windborn Muse (player-only tax) and a planeswalker.
+    g.add_card_to_battlefield(1, catalog::windborn_muse());
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    // Attacking the planeswalker is free (Windborn Muse protects only the player).
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Planeswalker(pw),
+    }])).expect("planeswalker attack is untaxed");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

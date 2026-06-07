@@ -120,14 +120,16 @@ pub enum StaticEffect {
     /// instead."). Consulted in `adjust_life` for positive deltas before the
     /// gain applies; the redirected loss is itself final (not re-replaced).
     LifeGainBecomesLoss { target: PlayerStaticTarget },
-    /// CR 508.1g — creatures can't attack the source's controller (or a
-    /// planeswalker they control) unless the attacking player pays `amount`
-    /// generic mana for each such attacker. Checked in `declare_attackers`,
-    /// which sums the tax across every attacker hitting a protected player and
-    /// auto-pays it from the active player's mana pool (rejecting the
-    /// declaration if it can't be covered). Ghostly Prison, Propaganda; two
-    /// copies stack ({2}+{2}). A wants_ui interactive pay prompt is a TODO.
-    AttackTaxToController { amount: u32 },
+    /// CR 508.1g — creatures can't attack the source's controller (and, when
+    /// `protect_planeswalkers`, a planeswalker they control) unless the
+    /// attacking player pays `amount` generic mana for each such attacker.
+    /// Checked in `declare_attackers`, which sums the tax across every
+    /// attacker hitting a protected player/walker and auto-pays it from the
+    /// active player's mana pool (rejecting the declaration if it can't be
+    /// covered). Ghostly Prison / Propaganda / Windborn Muse
+    /// (`protect_planeswalkers: false`), Baird (true); copies stack. A
+    /// wants_ui interactive pay prompt is a TODO.
+    AttackTaxToController { amount: u32, protect_planeswalkers: bool },
     /// CR 121.2b — Targeted players can't draw more than `max` cards each
     /// turn. While active, an `Effect::Draw` that would push a player past
     /// `max` (counting `Player.cards_drawn_this_turn`) is truncated. Models

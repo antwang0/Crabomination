@@ -8350,3 +8350,46 @@ pub fn dictate_of_the_twin_gods() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Windborn Muse — {3}{W} 2/3 Spirit with Flying and Propaganda's attack tax
+/// (CR 508.1g — {2} per attacker to attack you).
+pub fn windborn_muse() -> CardDefinition {
+    CardDefinition {
+        name: "Windborn Muse",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures can't attack you unless their controller pays {2} for each.",
+            effect: StaticEffect::AttackTaxToController { amount: 2, protect_planeswalkers: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Baird, Steward of Argive — {2}{W}{W} Legendary 2/4 Human Soldier with
+/// Vigilance; creatures can't attack you or your planeswalkers unless their
+/// controller pays {1} for each (CR 508.1g).
+pub fn baird_steward_of_argive() -> CardDefinition {
+    CardDefinition {
+        name: "Baird, Steward of Argive",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures can't attack you or your planeswalkers unless their controller pays {1} for each.",
+            effect: StaticEffect::AttackTaxToController { amount: 1, protect_planeswalkers: true },
+        }],
+        ..Default::default()
+    }
+}

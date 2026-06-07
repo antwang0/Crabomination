@@ -123,13 +123,26 @@ impl GameState {
         // pool can't cover it (a wants_ui interactive pay prompt is a TODO).
         let mut total_tax = 0u32;
         for atk in &attacks {
-            let crate::game::types::AttackTarget::Player(d) = atk.target else { continue };
+            // The defending player whose statics apply, and whether the attack
+            // is aimed at a planeswalker (so `protect_planeswalkers` gates it).
+            let (defender, at_planeswalker) = match atk.target {
+                crate::game::types::AttackTarget::Player(d) => (Some(d), false),
+                crate::game::types::AttackTarget::Planeswalker(pw) => {
+                    (self.battlefield_find(pw).map(|c| c.controller), true)
+                }
+            };
+            let Some(d) = defender else { continue };
             for c in &self.battlefield {
                 if c.controller != d {
                     continue;
                 }
                 for sa in &c.definition.static_abilities {
-                    if let crate::effect::StaticEffect::AttackTaxToController { amount } = &sa.effect {
+                    if let crate::effect::StaticEffect::AttackTaxToController {
+                        amount,
+                        protect_planeswalkers,
+                    } = &sa.effect
+                        && (!at_planeswalker || *protect_planeswalkers)
+                    {
                         total_tax += amount;
                     }
                 }
