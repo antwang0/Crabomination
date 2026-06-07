@@ -825,6 +825,24 @@ picking an item up.
 
 ## Suggested next-up tasks
 
+- ⚠️ **Fabricated real-name STX cards (correctness sweep).** Many `extras_00.rs`
+  factories reuse *real* STX card names but carry invented cost/types/oracle
+  text (the synthesizer collided with real names). The modern_decks run
+  corrected ~23 to their Scryfall text (Twinscroll Shaman, Ageless Guardian,
+  Specter of the Fens, Star Pupil, Letter of Acceptance, Charge Through, Hall
+  Monitor, Make Your Mark, Mascot Interception, Quandrix Cultivator, Karok
+  Wrangler, Defend the Campus, Containment Breach, Necrotic Fumes, Practical
+  Research, Quintorius, Reckless Amplimancer, Burrog Befuddler, Honor Troll,
+  Manifestation Sage). **Still wrong** (verified vs Scryfall, blocked on a
+  primitive or just not yet done): Tempted by the Oriq (per-opponent permanent
+  steal, MV≤3), Mentor's Guidance (conditional copy-on-cast + scry/draw),
+  Illuminate History (discard-any-number→draw-that-many + gy≥7 Spirit), First
+  Day of Class ("creatures entering this turn" delayed trigger), Stonebinder's
+  Familiar (needs a generic `CardExiled` event), Hofri Ghostforge, Confront the
+  Past, Verdant/Fervent Mastery, Mage Duel, Strixhaven Stadium, Rise of Extus.
+  To re-audit: fetch `set:stx` from Scryfall and diff cost/PT/oracle against the
+  `name: "…"` literals (the cmc parser in this run's scratch was noisy — verify
+  by hand).
 - ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is now near-complete;
   the modern_decks run also shipped Exponential Growth (`Effect::DoublePower`),
   Sticky Fingers, Make Your Move, Semester's End (`Effect::ExileReturnNextEndStep`),
