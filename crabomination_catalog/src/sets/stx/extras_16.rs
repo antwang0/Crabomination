@@ -296,6 +296,44 @@ pub fn golden_ratio() -> CardDefinition {
     }
 }
 
+/// Culmination of Studies — {X}{U}{R} Sorcery. Exile the top X cards of your
+/// library. For each land exiled this way create a Treasure, for each blue card
+/// draw a card, and for each red card deal 1 damage to each opponent.
+pub fn culmination_of_studies() -> CardDefinition {
+    let last = || Box::new(Selector::LastMoved);
+    CardDefinition {
+        name: "Culmination of Studies",
+        cost: cost(&[x(), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::XFromCost },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountMatching {
+                    sel: last(),
+                    filter: SelectionRequirement::HasCardType(CardType::Land),
+                },
+                definition: crate::game::effects::treasure_token(),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountMatching {
+                    sel: last(),
+                    filter: SelectionRequirement::HasColor(Color::Blue),
+                },
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::CountMatching {
+                    sel: last(),
+                    filter: SelectionRequirement::HasColor(Color::Red),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Semester's End — {3}{W} Instant. Exile target creature or planeswalker you
 /// control; at the next end step return it under its owner's control with an
 /// extra +1/+1 (creature) or loyalty (planeswalker) counter. (Printed as "any

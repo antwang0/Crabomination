@@ -102,6 +102,31 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn culmination_of_studies_scales_treasure_draw_and_burn_by_exiled_types() {
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    // Top three of library: a land, a blue card, a red card.
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::frost_trickster()); // blue
+    g.add_card_to_library(0, catalog::lightning_bolt());  // red
+    // Filler below the top three so the blue-card draw has something to pull.
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::culmination_of_studies());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3); // X = 3
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1,
+        "one land → one Treasure");
+    assert_eq!(g.players[0].hand.len(), 1, "one blue card → draw one");
+    assert_eq!(g.players[1].life, opp_life - 1, "one red card → 1 damage to opponent");
+}
+
+#[test]
 fn semesters_end_blinks_creature_and_returns_with_counter_at_end_step() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2

@@ -276,6 +276,11 @@ pub enum Value {
     Const(i32),
     /// Number of entities the selector resolves to.
     CountOf(Box<Selector>),
+    /// Number of entities the selector resolves to that also match `filter`.
+    /// Lets a count read a filtered slice of a non-zone selector (e.g. count
+    /// the land/blue/red cards among `Selector::LastMoved`). Culmination of
+    /// Studies.
+    CountMatching { sel: Box<Selector>, filter: SelectionRequirement },
     PowerOf(Box<Selector>),
     ToughnessOf(Box<Selector>),
     LifeOf(PlayerRef),

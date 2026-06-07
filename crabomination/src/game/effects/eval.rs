@@ -37,6 +37,16 @@ impl GameState {
         match v {
             Value::Const(n) => *n,
             Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
+            Value::CountMatching { sel, filter } => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .filter(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(*cid), ctx.controller, ctx.source)
+                    }
+                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                })
+                .count() as i32,
             // CR-spec: "the power of X" returns the total across all
             // entities X resolves to. Single-entity selectors (Target,
             // This, TriggerSource) return that entity's power; fan-out
