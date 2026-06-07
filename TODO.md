@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Discovered this run (sagas / attack-tax / pillowfort batch):**
+  - **Attack-tax interactive pay** — `AttackTaxToController` auto-pays from the
+    active player's floating mana; a wants_ui player needs a real "pay {N}?"
+    prompt during declare-attackers (and a per-attacker / partial-pay choice).
+  - **DFC / read-ahead Sagas** — `saga_chapters` covers single-faced Sagas only;
+    transforming saga-lands (The Everflowing Well) and read-ahead chapter choice
+    are still ⏳.
+  - **`AddCardType` one-shot effect** — needed for "becomes an artifact in
+    addition to its other types" riders (Phyrexian Scriptures chapter I), which
+    blocks faithfully shipping that Saga.
+  - **Variable attack tax** — Sphere of Safety / Collective Restraint scale the
+    tax by a board count (enchantments / basic land types); needs a `Value`-typed
+    amount on `AttackTaxToController`.
+
 - ✅ **`AdditionalCastCost::ReturnToHand { filter, count }`** — mandatory
   "return N permanents you control to hand" additional cast cost (auto-picks
   the lowest-impact matches). Devour in Flames ("return a land you control").
