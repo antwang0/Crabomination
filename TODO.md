@@ -722,10 +722,12 @@ picking an item up.
     analogue of Annihilator's forced sac. Ships Bane of Bala Ged. The affected
     player auto-picks the weakest N; a human-defender chooser (a UI suspend
     like the Sacrifice path) is the remaining follow-up.
-  - **Computed-color-aware `Colorless` filter.** `SelectionRequirement::Colorless`
-    reads cost pips, so Devoid creatures (colored pips, colorless object) slip
-    through colorless-matters filters/anthems (Ruination Guide, Dominator
-    Drone). Route the filter through computed colors.
+  - ✅ **Devoid-aware `Colorless` filter.** `SelectionRequirement::Colorless`
+    now treats `Keyword::Devoid` as colorless (CR 702.114 CDA) at every static
+    eval site (`eval.rs` ×2, `layers.rs`), so Devoid creatures with colored
+    pips count for colorless-matters triggers/filters. Exercised by Flayer
+    Drone (drains on a Devoid creature entering). Full color-setting effects
+    (rare type/color changers) still read cost pips — a deeper follow-up.
 - ⏳ **Discovered this run (modern_decks card pass), not yet done:**
   - **Rhystic "draw unless they pay X" rider** (Esper Sentinel, Mystic
     Remora) — needs a "first noncreature spell each turn" trigger + a

@@ -578,11 +578,14 @@ pub(crate) fn requirement_matches_card(
             .symbols
             .iter()
             .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(col) if col == c)),
-        R::Colorless => !def
-            .cost
-            .symbols
-            .iter()
-            .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))),
+        // CR 702.114 — Devoid is a CDA: the object is colorless regardless of
+        // its (possibly colored) cost pips.
+        R::Colorless => def.keywords.contains(&crate::card::Keyword::Devoid)
+            || !def
+                .cost
+                .symbols
+                .iter()
+                .any(|s| matches!(s, crate::mana::ManaSymbol::Colored(_))),
         R::And(a, b) => {
             requirement_matches_card(a, card, source_controller)
                 && requirement_matches_card(b, card, source_controller)

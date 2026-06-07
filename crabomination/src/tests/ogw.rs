@@ -625,6 +625,53 @@ fn bane_of_bala_ged_attack_exiles_two_permanents() {
     assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
 }
 
+/// Blinding Drone taps a target creature for {C}{T}.
+#[test]
+fn blinding_drone_taps_target_creature() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::blinding_drone());
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("tap target");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).unwrap().tapped, "target creature is tapped");
+}
+
+/// Kozilek's Translator taps for {C} by paying 1 life, once per turn.
+#[test]
+fn kozileks_translator_pays_life_for_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::kozileks_translator());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("translate");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+    assert_eq!(g.players[0].life, life - 1, "paid 1 life");
+    // Once-per-turn: a second activation is rejected.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "only once each turn");
+}
+
+/// Flayer Drone drains when another *Devoid* (colorless-despite-pips) creature
+/// enters — exercising the Devoid-aware Colorless filter.
+#[test]
+fn flayer_drone_drains_on_devoid_creature_enter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::flayer_drone());
+    let before = g.players[1].life;
+    // Mist Intruder is Devoid (has a {U} pip) — must still count as colorless.
+    let mist = g.add_card_to_hand(0, catalog::mist_intruder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    crate::game::cast(&mut g, mist);
+    assert_eq!(g.players[1].life, before - 1, "Devoid creature entering drains the opponent");
+}
+
 /// Kozilek's Sentinel grows +1/+0 when its controller casts a colorless spell.
 #[test]
 fn kozileks_sentinel_pumps_on_colorless_cast() {

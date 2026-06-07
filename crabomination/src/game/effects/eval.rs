@@ -918,7 +918,9 @@ impl GameState {
                         }
                     }
                     R::Multicolored => card.definition.cost.distinct_colors() >= 2,
-                    R::Colorless => card.definition.cost.distinct_colors() == 0,
+                    // CR 702.114 — Devoid CDA: colorless despite colored pips.
+                    R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+                        || card.definition.cost.distinct_colors() == 0,
                     R::Monocolored => card.definition.cost.distinct_colors() == 1,
                     R::HasXInCost => card.definition.cost.has_x(),
                     // OtherThanSource: enforce "different from the source"
@@ -1071,7 +1073,9 @@ impl GameState {
                         }
                     }
             R::Multicolored => card.definition.cost.distinct_colors() >= 2,
-            R::Colorless => card.definition.cost.distinct_colors() == 0,
+            // CR 702.114 — Devoid CDA: colorless despite colored pips.
+            R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+                || card.definition.cost.distinct_colors() == 0,
             R::Monocolored => card.definition.cost.distinct_colors() == 1,
             R::HasXInCost => card.definition.cost.has_x(),
             // OtherThanSource is `applies_to`-pipeline-only — see the

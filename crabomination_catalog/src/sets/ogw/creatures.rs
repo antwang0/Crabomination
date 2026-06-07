@@ -535,6 +535,66 @@ pub fn bane_of_bala_ged() -> CardDefinition {
     }
 }
 
+/// Blinding Drone — {1}{U} 1/3 Eldrazi Drone. Devoid; {C}, {T}: tap target
+/// creature.
+pub fn blinding_drone() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::colorless(1)]),
+            tap_cost: true,
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..drone("Blinding Drone", cost(&[generic(1), u()]), 1, 3)
+    }
+}
+
+/// Kozilek's Translator — {4}{B} 3/5 Eldrazi Drone. Devoid; "Pay 1 life:
+/// Add {C}." Activate only once each turn.
+pub fn kozileks_translator() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{ManaPayload, PlayerRef, Value};
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 1,
+            once_per_turn: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..drone("Kozilek's Translator", cost(&[generic(4), b()]), 3, 5)
+    }
+}
+
+/// Flayer Drone — {1}{B}{R} 3/1 Eldrazi Drone. Devoid, First strike; whenever
+/// another colorless creature you control enters, target opponent loses 1 life.
+pub fn flayer_drone() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{PlayerRef, Predicate, Selector, Value};
+    let drain = TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::Colorless)
+                    .and(SelectionRequirement::OtherThanSource),
+            }),
+        effect: Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        },
+    };
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::FirstStrike],
+        triggered_abilities: vec![drain],
+        ..drone("Flayer Drone", cost(&[generic(1), b(), r()]), 3, 1)
+    }
+}
+
 /// Kozilek's Sentinel — {1}{R} 1/4 Eldrazi Drone. Devoid; whenever you cast a
 /// colorless spell, it gets +1/+0 until end of turn.
 pub fn kozileks_sentinel() -> CardDefinition {
