@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -518,53 +518,17 @@ pub fn divine_gambit() -> CardDefinition {
 
 // ── Cram Session ────────────────────────────────────────────────────────────
 
-/// Cram Session — {3}{W} Instant.
-/// "Target player gains 5 life. Flashback {5}{W}."
-///
-/// Pure lifegain at instant speed with a Flashback recast. The body
-/// gains 5 life to its controller (`Selector::You` — the multi-target
-/// "target player" prompt collapses to the caster; auto-target picker
-/// has no friendlier candidate). Flashback {5}{W} via the engine's
-/// existing `Keyword::Flashback` keyword (push X) — the cast-from-
-/// graveyard path is the same one used by Pursue the Past, Sacred
-/// Fire, and Tome Blast.
+/// Cram Session — {1}{B/G} Sorcery. "You gain 4 life. Learn."
 pub fn cram_session() -> CardDefinition {
     CardDefinition {
         name: "Cram Session",
-        cost: cost(&[generic(3), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![Keyword::Flashback(cost(&[generic(5), w()]))],
-        effect: Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(5),
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        cost: cost(&[generic(1), hybrid(Color::Black, Color::Green)]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            Effect::Learn { who: PlayerRef::You },
+        ]),
+        ..Default::default()
     }
 }
 
@@ -1610,66 +1574,26 @@ pub fn channeled_force() -> CardDefinition {
 
 // ── Stonebound Mentor (STX — original creature) ────────────────────────────
 
-/// Stonebound Mentor — {2}{R}{W} Creature — Spirit Soldier (Strixhaven
-/// supplemental). 2/4 Vigilance. "Magecraft — Whenever you cast or copy
-/// an instant or sorcery spell, target creature you control gets +1/+0
-/// and gains haste until end of turn."
-///
-/// Wired via the `magecraft` shortcut + `Seq(PumpPT(+1/+0), GrantKeyword(
-/// Haste, EOT))` against a friendly Creature target. The auto-target
-/// picker prefers a non-source friendly creature (typically a finisher
-/// without haste) to maximize tempo.
+/// Stonebound Mentor — {1}{R}{W} 3/3 Spirit Advisor. "Whenever one or more
+/// cards leave your graveyard, scry 1." (The "one or more" batch collapses to
+/// a per-card trigger.)
 pub fn stonebound_mentor() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Stonebound Mentor",
-        cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
+        cost: cost(&[generic(1), r(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Advisor],
             ..Default::default()
         },
-        power: 2,
-        toughness: 4,
-        keywords: vec![Keyword::Vigilance],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Haste,
-                duration: Duration::EndOfTurn,
-            },
-        ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
     }
 }
 

@@ -1245,10 +1245,11 @@ fn lorehold_lookback_returns_creature_from_gy_and_creates_spirit() {
 fn witherbloom_lifedrinker_grows_on_lifegain() {
     let mut g = two_player_game();
     let dr = g.add_card_to_battlefield(0, catalog::witherbloom_lifedrinker());
-    // Cast a lifegain spell — Cram Session gains 5 life.
+    // Cast a lifegain spell — Cram Session gains 4 life.
+    g.add_card_to_library(0, catalog::island());
     let cs = g.add_card_to_hand(0, catalog::cram_session());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: cs, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Cram Session castable");

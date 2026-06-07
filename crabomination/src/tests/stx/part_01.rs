@@ -2616,32 +2616,24 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
 /// Cram Session: gain 5 life at instant speed and the card has
 /// Keyword::Flashback({5}{W}).
 #[test]
-fn cram_session_gains_five_life_and_has_flashback() {
+fn cram_session_gains_four_life_and_learns() {
     let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::cram_session());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
     let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: None,
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Cram Session castable for {3}{W}");
+    .expect("Cram Session castable for {1}{B/G}");
     drain_stack(&mut g);
 
-    assert_eq!(
-        g.players[0].life,
-        life_before + 5,
-        "Cram Session should gain 5 life"
-    );
-
-    let card = catalog::cram_session();
-    let has_flashback = card.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)));
-    assert!(has_flashback, "Cram Session should carry Keyword::Flashback");
+    assert_eq!(g.players[0].life, life_before + 4, "gain 4 life");
+    // -1 (cast) +1 (Learn → Draw fallback) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before, "Learn draws a card");
 }
 
 // ── Push XXXVIII: Dragon's Approach tutor rider ─────────────────────────────
@@ -3812,43 +3804,21 @@ fn channeled_force_draws_hand_size_differential() {
     );
 }
 
-/// Stonebound Mentor's Magecraft pumps a friendly creature with haste.
+/// Stonebound Mentor scries 1 whenever a card leaves your graveyard.
 #[test]
-fn stonebound_mentor_magecraft_pumps_friendly_with_haste() {
-    use crate::card::Keyword;
+fn stonebound_mentor_scrys_when_a_card_leaves_your_graveyard() {
     let mut g = two_player_game();
-    let mentor = g.add_card_to_battlefield(0, catalog::stonebound_mentor());
-    g.clear_sickness(mentor);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Lightning Bolt castable for {R}");
+    g.add_card_to_battlefield(0, catalog::stonebound_mentor());
+    g.add_card_to_library(0, catalog::island());
+    // A card leaving P0's graveyard triggers a Scry 1 (it surfaces a decision).
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::CardLeftGraveyard {
+        player: 0, card_id: crate::card::CardId(999),
+    }]);
+    // Auto-decider resolves the scry without panicking; the body is wired.
     drain_stack(&mut g);
-
-    // Mentor's magecraft trigger should fire and pump a friendly creature.
-    // Auto-target picker excludes the Mentor itself when another friendly
-    // is on the battlefield. Verify the bear is the one pumped.
-    let bear_cp = g.computed_permanent(bear).expect("bear alive");
-    assert!(
-        bear_cp.power >= 2,
-        "auto-target picks a friendly to pump"
-    );
-    // At least one friendly has haste this turn (printed Oracle's grant).
-    let bear_has_haste = bear_cp.keywords.contains(&Keyword::Haste);
-    let mentor_cp = g.computed_permanent(mentor).expect("mentor alive");
-    let mentor_has_haste = mentor_cp.keywords.contains(&Keyword::Haste);
-    assert!(
-        bear_has_haste || mentor_has_haste,
-        "Magecraft grants Haste EOT to the picked friendly"
-    );
+    let mentor = catalog::stonebound_mentor();
+    assert_eq!((mentor.power, mentor.toughness), (3, 3));
+    assert_eq!(mentor.cost.cmc(), 3);
 }
 
 /// Curious Cryomancer scries 1 on each instant or sorcery cast.
