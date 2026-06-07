@@ -1730,6 +1730,38 @@ pub fn catalog_draw() -> CardDefinition {
     }
 }
 
+/// Fact or Fiction — {3}{U} Instant. "Reveal the top five cards of your library.
+/// An opponent separates them into two piles; put one pile into your hand and
+/// the rest into your graveyard." Simplified to "draw two cards" (the
+/// reveal-and-split is not modeled).
+pub fn fact_or_fiction() -> CardDefinition {
+    CardDefinition {
+        name: "Fact or Fiction",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Settle the Wreckage — {2}{W}{W} Instant. "Exile all attacking creatures
+/// target player controls. That player may search for that many basic lands."
+/// Simplified to exiling all attacking creatures (the basic-land compensation
+/// is omitted).
+pub fn settle_the_wreckage() -> CardDefinition {
+    CardDefinition {
+        name: "Settle the Wreckage",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Dramatic Reversal — {1}{U} Instant. "Untap all nonland permanents you
 /// control." (Famous with Isochron Scepter.)
 pub fn dramatic_reversal() -> CardDefinition {

@@ -1689,3 +1689,53 @@ pub fn aetherflux_reservoir() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mox Diamond — {0} Artifact. "If Mox Diamond would enter, you may discard a
+/// land card instead. If you don't, sacrifice it." "{T}: Add one mana of any
+/// color." Modeled as an ETB "discard a card" cost (the land-specific / sac-
+/// fallback replacement is simplified to a plain discard).
+pub fn mox_diamond() -> CardDefinition {
+    CardDefinition {
+        name: "Mox Diamond",
+        cost: cost(&[generic(0)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chrome Mox — {0} Artifact. "Imprint — When Chrome Mox enters, you may exile a
+/// nonland, nonartifact card from your hand. {T}: Add one mana of any of the
+/// exiled card's colors." Modeled as an ETB "discard a card" cost + "{T}: add
+/// any color" (imprint storage / color restriction simplified).
+pub fn chrome_mox() -> CardDefinition {
+    CardDefinition {
+        name: "Chrome Mox",
+        cost: cost(&[generic(0)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

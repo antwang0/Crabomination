@@ -1079,6 +1079,28 @@ fn sphere_of_safety_scales_with_enchantment_count() {
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
+/// Settle the Wreckage exiles all attacking creatures.
+#[test]
+fn settle_the_wreckage_exiles_attackers() {
+    use crate::game::types::{AttackTarget, Attack};
+    use crate::mana::Color;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    let settle = g.add_card_to_hand(0, catalog::settle_the_wreckage());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: settle, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Settle the Wreckage");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == atk), "attacking creature exiled");
+}
+
 /// Beastmaster Ascension gains a quest counter whenever a creature you control
 /// attacks.
 #[test]

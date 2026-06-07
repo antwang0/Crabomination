@@ -276,6 +276,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         chromatic_lantern,
         field_of_ruin,
         aetherflux_reservoir,
+        mox_diamond,
+        chrome_mox,
         ornithopter,
         ornithopter_of_paradise,
         mind_stone,
@@ -443,6 +445,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // draw-tax payoffs (simplified)
         smothering_tithe,
         esper_sentinel,
+        // modal sweeper + attacker exile
+        austere_command,
+        settle_the_wreckage,
         // allied-color batch (modern_decks)
         ministrant_of_obligation,
         dragons_eye_sentry,
@@ -923,6 +928,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // untap-all combo enabler
         dramatic_reversal,
+        // card-advantage instant (simplified)
+        fact_or_fiction,
         // counterspells
         mana_drain,
         fierce_guardianship,

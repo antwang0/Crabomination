@@ -35317,3 +35317,65 @@ fn smothering_tithe_makes_treasure_on_opponent_draw() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
         "Smothering Tithe created a Treasure for you");
 }
+
+#[test]
+fn mox_diamond_discards_on_etb_and_taps_for_any() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_hand(0, catalog::mox_diamond());
+    g.add_card_to_hand(0, catalog::forest()); // a card to discard
+    let gy = g.players[0].graveyard.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Mox Diamond for {0}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy + 1, "discarded a card on ETB");
+    g.clear_sickness(mox);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "Mox Diamond tapped for one mana");
+}
+
+#[test]
+fn chrome_mox_taps_for_any_color() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_battlefield(0, catalog::chrome_mox());
+    g.clear_sickness(mox);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, x_value: None,
+    }).expect("tap Chrome Mox");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1);
+}
+
+#[test]
+fn fact_or_fiction_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::shock()); }
+    let lib = g.players[0].library.len();
+    let fof = g.add_card_to_hand(0, catalog::fact_or_fiction());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fof, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fact or Fiction");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 2, "drew two");
+}
+
+#[test]
+fn austere_command_mode_destroys_big_creatures() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // MV 6
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let cmd = g.add_card_to_hand(0, catalog::austere_command());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cmd, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("cast Austere Command, mode 2 (creatures MV 4+)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "MV-6 creature destroyed");
+    assert!(g.battlefield_find(small).is_some(), "MV-2 creature survives");
+}
