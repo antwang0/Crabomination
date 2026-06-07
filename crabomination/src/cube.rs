@@ -442,7 +442,6 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         giver_of_runes,
         avacyns_pilgrim,
         // Lifegain + targeted removal.
-        congregate,
         smite_the_monstrous,
         reprisal,
         // Pinger + linked-exile hatebear.
@@ -678,6 +677,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         final_judgment,
         planar_cleansing,
         akromas_vengeance,
+        // White lifegain + reset.
+        fumigate,
+        terminus,
+        gerrards_wisdom,
+        grapple_with_the_past,
         prey_upon,
         hedron_archive,
         soul_warden,

@@ -24349,6 +24349,60 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn grapple_with_the_past_mills_then_returns_a_creature() {
+    let mut g = two_player_game();
+    // A creature in the graveyard for the return half.
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::plains()); }
+    let id = g.add_card_to_hand(0, catalog::grapple_with_the_past());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Serra Angel"), "returned to hand");
+    assert!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Plains").count() >= 3,
+        "milled three cards");
+}
+
+#[test]
+fn fumigate_destroys_creatures_and_gains_life_per_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fumigate());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.is_creature()), "all creatures destroyed");
+    assert_eq!(g.players[0].life, life + 3, "gained 1 per destroyed creature (3)");
+}
+
+#[test]
+fn gerrards_wisdom_gains_two_life_per_card_in_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gerrards_wisdom());
+    g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::plains()); // hand = 3 incl. the spell
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // After casting, the spell left hand → 2 cards remain → gain 4.
+    assert_eq!(g.players[0].life, life + 4, "2 life per remaining hand card");
+}
+
+#[test]
 fn planar_cleansing_destroys_nonland_permanents_only() {
     let mut g = two_player_game();
     let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());

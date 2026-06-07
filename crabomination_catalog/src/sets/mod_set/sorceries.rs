@@ -1171,3 +1171,79 @@ pub fn akromas_vengeance() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Fumigate — {3}{W}{W} Sorcery. Destroy all creatures. You gain 1 life for
+/// each creature destroyed this way.
+pub fn fumigate() -> CardDefinition {
+    CardDefinition {
+        name: "Fumigate",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            // Gain first so the count reflects the creatures about to die.
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(SelectionRequirement::Creature)),
+            },
+            Effect::DestroyNoRegen { what: Selector::EachPermanent(SelectionRequirement::Creature) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Terminus — {4}{W} Sorcery. Put all creatures on the bottom of their
+/// owners' libraries.
+pub fn terminus() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Terminus",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: LibraryPosition::Bottom,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Gerrard's Wisdom — {3}{W} Sorcery. You gain 2 life for each card in your
+/// hand.
+pub fn gerrards_wisdom() -> CardDefinition {
+    CardDefinition {
+        name: "Gerrard's Wisdom",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(
+                Box::new(Value::HandSizeOf(PlayerRef::You)),
+                Box::new(Value::Const(2)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Grapple with the Past — {1}{G} Sorcery. Mill three cards, then return a
+/// creature or land card from your graveyard to your hand.
+pub fn grapple_with_the_past() -> CardDefinition {
+    CardDefinition {
+        name: "Grapple with the Past",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
