@@ -35123,3 +35123,48 @@ fn birgi_adds_red_on_cast() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "Birgi refunded {{R}} on cast");
 }
+
+/// Field of Ruin taps for {C} and can sacrifice to destroy a nonbasic land.
+#[test]
+fn field_of_ruin_destroys_a_nonbasic_land() {
+    let mut g = two_player_game();
+    let field = g.add_card_to_battlefield(0, catalog::field_of_ruin());
+    g.clear_sickness(field);
+    let target = g.add_card_to_battlefield(1, catalog::reliquary_tower()); // nonbasic land
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: field, ability_index: 1, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("activate Field of Ruin's destroy ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "nonbasic land destroyed");
+}
+
+/// Aura of Silence taxes artifact/enchantment spells and can sac to destroy one.
+#[test]
+fn aura_of_silence_taxes_and_destroys() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_battlefield(0, catalog::aura_of_silence());
+    let relic = g.add_card_to_battlefield(1, catalog::mind_stone());
+    // Sac to destroy the opponent's artifact.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: Some(Target::Permanent(relic)), x_value: None,
+    }).expect("sac Aura of Silence to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(relic).is_none(), "artifact destroyed");
+}
+
+/// Return to Dust exiles a target artifact or enchantment.
+#[test]
+fn return_to_dust_exiles_artifact() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let spell = g.add_card_to_hand(0, catalog::return_to_dust());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(relic)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Return to Dust");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == relic), "artifact exiled");
+}

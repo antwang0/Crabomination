@@ -274,6 +274,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         sol_ring,
         mana_vault,
         chromatic_lantern,
+        field_of_ruin,
         ornithopter,
         ornithopter_of_paradise,
         mind_stone,
@@ -435,6 +436,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // enchantment-scaled attack tax (pillowfort)
         sphere_of_safety,
+        // artifact/enchantment hate
+        aura_of_silence,
+        return_to_dust,
         // allied-color batch (modern_decks)
         ministrant_of_obligation,
         dragons_eye_sentry,

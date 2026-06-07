@@ -788,6 +788,32 @@ pub fn ghost_quarter() -> CardDefinition {
     }
 }
 
+/// Field of Ruin — Land. "{T}: Add {C}." "{2}, {T}, Sacrifice this: Destroy
+/// target nonbasic land." (The symmetric "each player searches for a basic
+/// land" rider is omitted.)
+pub fn field_of_ruin() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Field of Ruin",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                mana_cost: crate::mana::cost(&[crate::mana::generic(2)]),
+                effect: Effect::Destroy {
+                    what: crate::effect::shortcut::target_filtered(
+                        SelectionRequirement::IsNonbasicLand,
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 // ── Khans life-gain taplands ───────────────────────────────────────────────
 //
 // "~ enters tapped. When ~ enters, you gain 1 life. {T}: Add {C1} or {C2}."

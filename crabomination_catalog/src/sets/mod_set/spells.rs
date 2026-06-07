@@ -312,3 +312,50 @@ pub fn aura_shards() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aura of Silence — {1}{W}{W} Enchantment. "Artifact and enchantment spells
+/// cost {2} more to cast." (Printed: only opponents' spells; modeled as an
+/// all-players `AdditionalCost` tax.) "Sacrifice this: Destroy target artifact
+/// or enchantment."
+pub fn aura_of_silence() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Aura of Silence",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Artifact and enchantment spells cost {2} more to cast.",
+            effect: StaticEffect::AdditionalCost {
+                filter: SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                amount: 2,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Return to Dust — {2}{W}{W} Sorcery. "Exile target artifact or enchantment."
+/// (The "if you cast this at sorcery speed, you may exile up to one additional"
+/// rider is simplified to a single target.)
+pub fn return_to_dust() -> CardDefinition {
+    CardDefinition {
+        name: "Return to Dust",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+        },
+        ..Default::default()
+    }
+}
