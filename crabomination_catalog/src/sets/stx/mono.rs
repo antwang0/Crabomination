@@ -184,39 +184,21 @@ pub fn plumb_the_forbidden() -> CardDefinition {
 
 // ── Owlin Shieldmage ────────────────────────────────────────────────────────
 
-/// Owlin Shieldmage — {3}{W} Creature — Bird Wizard. Flash, flying, 2/3.
-/// "When this enters, prevent all combat damage that would be dealt this
-/// turn."
-///
-/// ✅ ETB trigger now wired via the new `Effect::PreventAllCombat
-/// DamageThisTurn` primitive (CR 615.1 replacement effect). The combat
-/// damage resolver consults the `prevent_combat_damage_this_turn` flag
-/// and zeroes both attacker→blocker/player and blocker→attacker damage
-/// (plus the corresponding lifelink). The flag clears in `do_cleanup`
-/// alongside the other until-end-of-turn state. The "this turn"
-/// scoping handles flashing in at end of opponent's combat to prevent
-/// the damage about to be dealt in the **same** combat step (the
-/// `compute_battlefield` + combat-damage resolver reads the live game
-/// state, so the ETB triggered ability resolving before damage zeroes
-/// the assignment).
+/// Owlin Shieldmage — {3}{W}{B} 3/3 Bird Warlock with flying and Ward—Pay 3
+/// life.
 pub fn owlin_shieldmage() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::card::WardCost;
     CardDefinition {
         name: "Owlin Shieldmage",
-        cost: cost(&[generic(3), w()]),
+        cost: cost(&[generic(3), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Bird, CreatureType::Warlock],
             ..Default::default()
         },
-        power: 2,
+        power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Flash, Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::PreventAllCombatDamageThisTurn,
-        }],
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::Life(3))],
         ..Default::default()
     }
 }

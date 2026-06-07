@@ -1489,7 +1489,7 @@ fn eager_first_year_magecraft_pumps_a_creature() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("bolt");
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(efy).unwrap().power(), 3, "magecraft +1/+1 on the 2/1");
+    assert_eq!(g.battlefield_find(efy).unwrap().power(), 3, "magecraft self-pump +1/+0 on the 2/2");
 }
 
 #[test]

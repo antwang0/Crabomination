@@ -696,51 +696,13 @@ fn plumb_the_forbidden_at_x_two_sacs_two_draws_two_loses_two() {
 }
 
 #[test]
-fn owlin_shieldmage_etb_prevents_combat_damage_this_turn() {
-    // Push (modern_decks): Owlin Shieldmage's "prevent all combat damage
-    // this turn" ETB now lands via the new Effect::PreventAllCombat
-    // DamageThisTurn primitive. Wire test: cast Shieldmage on opp's
-    // declare-attackers step → opp swings with a 2/2 Bear at the
-    // defending player → combat damage resolves to 0 (no life loss).
-    let mut g = two_player_game();
-    // Opponent has an untapped attacker.
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(bear);
-    let id = g.add_card_to_hand(0, catalog::owlin_shieldmage());
-
-    // P1 declares the attacker.
-    g.active_player_idx = 1;
-    g.priority.player_with_priority = 1;
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
-        attacker: bear,
-        target: AttackTarget::Player(0),
-    }]))
-    .expect("Bear can attack P0");
-    drain_stack(&mut g);
-
-    // P0 flashes in Owlin Shieldmage (it has Flash).
-    g.priority.player_with_priority = 0;
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Owlin Shieldmage castable at instant speed for {3}{W}");
-    drain_stack(&mut g);
-
-    assert!(
-        g.prevent_combat_damage_this_turn,
-        "Owlin Shieldmage's ETB should flag the engine to prevent combat damage this turn"
-    );
-
-    // Combat damage step.
-    g.step = TurnStep::CombatDamage;
-    g.resolve_combat().expect("combat damage resolved");
-
-    // CR 615.1 — combat damage was prevented; P0's life unchanged.
-    assert_eq!(g.players[0].life, 20,
-        "Combat damage from the attacker should be prevented");
+fn owlin_shieldmage_is_a_warding_flyer() {
+    use crate::card::WardCost;
+    let c = catalog::owlin_shieldmage();
+    assert_eq!(c.cost.cmc(), 5);
+    assert_eq!((c.power, c.toughness), (3, 3));
+    assert!(c.keywords.contains(&Keyword::Flying));
+    assert!(c.keywords.contains(&Keyword::Ward(WardCost::Life(3))), "Ward—Pay 3 life");
 }
 
 #[test]

@@ -841,8 +841,23 @@ picking an item up.
   Familiar (needs a generic `CardExiled` event), Hofri Ghostforge, Confront the
   Past, Verdant/Fervent Mastery, Mage Duel, Strixhaven Stadium, Rise of Extus.
   To re-audit: fetch `set:stx` from Scryfall and diff cost/PT/oracle against the
-  `name: "…"` literals (the cmc parser in this run's scratch was noisy — verify
-  by hand).
+  `name: "…"` literals. **Scope is systematic, not isolated** — a cmc diff this
+  run flagged ~67 real-name STX factories (across `extras_00..03`, `mono`,
+  `silverquill`, `lorehold`, `witherbloom`, `iconic`, `prismari`, `legends`,
+  `lessons`, `shared`) whose printed *cost* (and often type/keywords) drifts from
+  Scryfall, even when the effect body is right (e.g. Frost Trickster is wired
+  correctly but printed {1}{U} Spirit Wizard +Flash vs. the real {2}{U} Bird
+  Wizard, no Flash). This is a multi-run cleanup: correct cost/type/PT/keywords
+  to the real card and update each card's test mana. Watch for fixture coupling
+  — several of these cards are reused as generic bodies in unrelated tests.
+  **Effects drift too, not only stats**: spot-checks show many school-file cards
+  carry entirely invented oracle text under a real name (Eager First-Year wired
+  as "magecraft pumps a target" vs. the real self-pump; Owlin Shieldmage as an
+  ETB combat-damage-preventer vs. the real Flying + Ward; Bayou Groff as a
+  "dies, may pay to return" body vs. the real {1}{G} 5/4 with a sac-or-pay-{3}
+  additional cost; Promising Duskmage as a drain vs. the real death-draw). Treat
+  this as a full set re-import — per card replace the body with the Scryfall text
+  and rewrite its test(s) + fixture uses. Budget several runs.
 - ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is now near-complete;
   the modern_decks run also shipped Exponential Growth (`Effect::DoublePower`),
   Sticky Fingers, Make Your Move, Semester's End (`Effect::ExileReturnNextEndStep`),

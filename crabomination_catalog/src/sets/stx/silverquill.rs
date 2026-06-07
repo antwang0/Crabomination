@@ -350,35 +350,22 @@ pub fn mavinda_students_advocate() -> CardDefinition {
 
 // ── Eager First-Year ────────────────────────────────────────────────────────
 
-/// Eager First-Year — {W}, 2/1 Human Student. "Magecraft — Whenever you
-/// cast or copy an instant or sorcery spell, target creature gets +1/+1
-/// until end of turn."
-///
-/// The magecraft trigger uses the new `EventSpec.filter` evaluation at the
-/// spell-cast site: `Predicate::EntityMatches { what: TriggerSource, filter:
-/// HasCardType(Instant) ∨ HasCardType(Sorcery) }`. The filter is evaluated
-/// against the just-cast spell — `Selector::TriggerSource` is bound to its
-/// `CardId` for the duration of filter evaluation, then the trigger's own
-/// body runs with the auto-targeted creature.
+/// Eager First-Year — {1}{W} 2/2 Human Wizard. "Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, this creature gets +1/+0 until end of
+/// turn."
 pub fn eager_first_year() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
     CardDefinition {
         name: "Eager First-Year",
-        cost: cost(&[w()]),
+        cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
-        toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
-        })],
+        toughness: 2,
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
         ..Default::default()
     }
 }
