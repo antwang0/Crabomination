@@ -6,7 +6,7 @@ use crate::card::{
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::effects::treasure_token;
-use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w, x};
 
 /// Anger of the Gods — {1}{R}{R} Sorcery. Deals 3 damage to each creature.
 /// If a creature would die this turn, exile it instead.
@@ -1035,6 +1035,56 @@ pub fn commune_with_nature() -> CardDefinition {
             rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Creature),
             take: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Fireball — {X}{R} Sorcery. Deals X damage to any target. (The "divide
+/// among additional targets for {1} more each" rider is not modeled; the
+/// common single-target line is faithful.)
+pub fn fireball() -> CardDefinition {
+    CardDefinition {
+        name: "Fireball",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Disintegrate — {X}{R} Sorcery. Deals X damage to any target. If a creature
+/// dealt damage this way would die this turn, exile it instead.
+pub fn disintegrate() -> CardDefinition {
+    CardDefinition {
+        name: "Disintegrate",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_filtered(SelectionRequirement::Any) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flame Sweep — {2}{R} Sorcery. Deals 2 damage to each creature without
+/// flying.
+pub fn flame_sweep() -> CardDefinition {
+    CardDefinition {
+        name: "Flame Sweep",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::HasKeyword(crate::card::Keyword::Flying),
+                ))),
+            ),
+            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(2) }),
         },
         ..Default::default()
     }

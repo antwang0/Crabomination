@@ -24349,6 +24349,37 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn fireball_deals_x_damage_to_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fireball());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4); // X=4
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: Some(4),
+    }).expect("castable for X=4");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4, "X=4 damage");
+}
+
+#[test]
+fn flame_sweep_hits_nonfliers_only() {
+    let mut g = two_player_game();
+    let ground = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2, dies
+    let flier = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flyer, survives
+    let id = g.add_card_to_hand(0, catalog::flame_sweep());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == ground), "non-flier took 2 and died");
+    assert!(g.battlefield.iter().any(|c| c.id == flier), "flier untouched");
+}
+
+#[test]
 fn lead_the_stampede_puts_creatures_from_top_five_into_hand() {
     let mut g = two_player_game();
     // Top of library: 2 creatures + a land among the top five.

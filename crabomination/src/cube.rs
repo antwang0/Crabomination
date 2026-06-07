@@ -665,6 +665,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         lead_the_stampede,
         commune_with_nature,
         reclaim,
+        // Red X-burn / sweeper.
+        fireball,
+        disintegrate,
+        flame_sweep,
         prey_upon,
         hedron_archive,
         soul_warden,
