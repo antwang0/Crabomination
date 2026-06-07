@@ -1180,6 +1180,7 @@ impl GameState {
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
         self.combat_damage_prevented_creatures.clear();
+        self.cant_block_pairs.clear();
         // CR 615 — prevention shields and the "can't be prevented" rider
         // are "this turn" effects; they expire at cleanup too.
         self.prevention_shields.clear();
@@ -1553,8 +1554,15 @@ impl GameState {
                         .triggered_abilities
                         .iter()
                         .chain(granted)
-                        .filter(|_| !dies_suppressed)
-                        .filter(|t| t.event.kind == EventKind::CreatureDied)
+                        // PermanentLeavesBattlefield ("when this leaves the
+                        // battlefield") fires on any departure, including a
+                        // lethal-damage death (Thought-Knot Seer); CreatureDied
+                        // is suppressed by Hushbringer-style statics.
+                        .filter(|t| match t.event.kind {
+                            EventKind::CreatureDied => !dies_suppressed,
+                            EventKind::PermanentLeavesBattlefield => true,
+                            _ => false,
+                        })
                         .filter(|t| matches!(
                             t.event.scope,
                             crate::effect::EventScope::SelfSource

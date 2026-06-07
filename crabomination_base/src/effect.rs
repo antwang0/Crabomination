@@ -2212,6 +2212,17 @@ pub enum Effect {
         return_to: crate::card::ExileReturnZone,
     },
 
+    /// "Target player reveals their hand; you choose [count] card(s) matching
+    /// [filter] and exile [them]." Same caster-picks-from-hand shape as
+    /// `DiscardChosen`, but the chosen cards are exiled permanently (not
+    /// linked to a source, unlike `ExileChosenUntilSourceLeaves`). Thought-Knot
+    /// Seer.
+    ExileChosenFromHand {
+        from: Selector,
+        count: Value,
+        filter: SelectionRequirement,
+    },
+
     // ── Delayed triggers and pact costs ──────────────────────────────────────
     /// Register a delayed triggered ability that fires later. `kind` selects
     /// the future event (your next upkeep, next end step, …); `body` is the
@@ -2372,6 +2383,12 @@ pub enum Effect {
     /// `GameState.combat_damage_prevented_creatures`; the combat resolver
     /// then skips that creature in both directions. Maze of Ith.
     PreventAllCombatDamageInvolving { target: Selector },
+
+    /// "Target creature can't block `source` this turn." Records a
+    /// `(target, source)` pair in `GameState.cant_block_pairs`; the
+    /// declare-blockers validator rejects that specific block. Kozilek's
+    /// Pathfinder ({C}: target creature can't block this creature this turn).
+    CantBlockSourceThisTurn { target: Selector },
 
     /// "Prevent the next N damage that would be dealt to `target` this
     /// turn." (CR 615.7) Pushes a per-target prevention shield consumed

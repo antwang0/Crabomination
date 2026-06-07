@@ -1480,3 +1480,79 @@ fn murasa_ranger_landfall_pays_for_counters() {
     assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
         "two +1/+1 counters after paying the landfall cost");
 }
+
+/// Thought-Knot Seer ETB exiles a nonland card from the opponent's hand; when
+/// it leaves, that opponent draws a card.
+#[test]
+fn thought_knot_seer_etb_exiles_and_ltb_draws() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let tks = g.add_card_to_hand(0, catalog::thought_knot_seer());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tks, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("TKS castable for {3}{C}");
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "Bolt exiled from hand");
+    assert!(g.exile.iter().any(|c| c.id == bolt), "Bolt in exile");
+    g.add_card_to_library(1, catalog::forest());
+    let hand_before = g.players[1].hand.len();
+    // Kill TKS via SBA so its self-source LTB trigger fires.
+    g.battlefield_find_mut(tks).unwrap().damage = 4;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before + 1, "opponent draws when TKS leaves");
+    // The exiled card stays exiled (not linked to the source).
+    assert!(g.exile.iter().any(|c| c.id == bolt), "Bolt remains exiled");
+}
+
+/// Wastes taps for {C}.
+#[test]
+fn wastes_taps_for_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::wastes());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for {C}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
+}
+
+/// Walker of the Wastes grows +1/+1 for each Wastes its controller has.
+#[test]
+fn walker_of_the_wastes_scales_with_wastes() {
+    let mut g = two_player_game();
+    let walker = g.add_card_to_battlefield(0, catalog::walker_of_the_wastes());
+    assert_eq!(g.computed_permanent(walker).unwrap().power, 4, "base 4/4 with no Wastes");
+    g.add_card_to_battlefield(0, catalog::wastes());
+    g.add_card_to_battlefield(0, catalog::wastes());
+    let cp = g.computed_permanent(walker).unwrap();
+    assert_eq!((cp.power, cp.toughness), (6, 6), "+1/+1 per Wastes → 6/6");
+}
+
+/// Kozilek's Pathfinder's {C} ability bars one creature from blocking it; other
+/// creatures can still block.
+#[test]
+fn kozileks_pathfinder_bars_target_from_blocking() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::kozileks_pathfinder());
+    let barred = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let other = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: atk, ability_index: 0, target: Some(Target::Permanent(barred)), x_value: None,
+    }).expect("activate {C} ability");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(barred, atk)])).is_err(),
+        "barred creature can't block Kozilek's Pathfinder");
+    g.perform_action(GameAction::DeclareBlockers(vec![(other, atk)]))
+        .expect("a different creature can still block");
+}

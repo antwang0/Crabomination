@@ -346,7 +346,8 @@ impl Effect {
                     || value_has_target(cap)
             }
             Effect::DiscardChosen { from, count, .. }
-            | Effect::ExileChosenUntilSourceLeaves { from, count, .. } => {
+            | Effect::ExileChosenUntilSourceLeaves { from, count, .. }
+            | Effect::ExileChosenFromHand { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
@@ -366,6 +367,7 @@ impl Effect {
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
+            Effect::CantBlockSourceThisTurn { target } => sel_has_target(target),
             Effect::PreventNextDamage { target, amount }
             | Effect::PreventNextDamageAndGainLife { target, amount } => {
                 sel_has_target(target) || value_has_target(amount)

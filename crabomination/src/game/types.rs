@@ -754,6 +754,10 @@ pub enum PendingEffectState {
         source: CardId,
         return_to: crate::card::ExileReturnZone,
     },
+    /// Suspended on an `ExileChosenFromHand` decision (Thought-Knot Seer). The
+    /// caster picks cards from `target_player`'s hand; the apply step exiles
+    /// them permanently.
+    ExileChosenFromHandPending { target_player: usize },
     /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.

@@ -415,6 +415,12 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // Per-pair "can't block this creature this turn" (Kozilek's
+            // Pathfinder): the blocker is barred only from this attacker.
+            if self.cant_block_pairs.contains(&(blocker_id, attacker_id)) {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             // "Can't block unless it has an even number of counters on it"
             // (Sab-Sunen). Zero is even; reject an odd total counter count.
             if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)

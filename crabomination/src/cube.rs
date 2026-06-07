@@ -187,7 +187,7 @@ fn sample_with_cap<R: Rng>(
 /// each color's pool with every other color paired in.
 pub fn all_cube_cards() -> Vec<CardFactory> {
     use std::collections::HashSet;
-    let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest];
+    let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest, wastes];
     all.extend(colorless_pool());
     let colors = [
         Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,

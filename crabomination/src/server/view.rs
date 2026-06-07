@@ -990,6 +990,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::SacrificeAnyNumber { .. } => "Sacrifice any number",
         Effect::PayLifeLookTake { .. } => "Pay life, dig, take one",
         Effect::DiscardChosen { .. } => "Discard chosen",
+        Effect::ExileChosenFromHand { .. } => "Exile chosen from hand",
         Effect::PayOrLoseGame { .. } => "Pay or lose",
         Effect::DelayUntil { .. } => "Delayed trigger",
         Effect::Tap { .. } => "Tap",

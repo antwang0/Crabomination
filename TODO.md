@@ -14,18 +14,16 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     under your control). Needs a "play lands from opponent's exile" move.
   - **Processor Assault** — Process as a cast-time *additional cost* (not a
     trigger); needs the additional-cost-process hook.
-  - **Thought-Knot Seer** — non-linked "you choose a nonland card from an
-    opponent's revealed hand and exile it" + a separate LTB "that player
-    draws". Needs an `ExileChosenFromHand` (non-linked) variant of
-    `DiscardChosen` and a leaves-the-battlefield draw rider.
-  - **Kozilek's Pathfinder** — "{C}: target creature can't block this creature
-    this turn" needs a per-pair block restriction (today only the blanket
-    `Keyword::CantBlock` exists).
-  - **Walker of the Wastes** — `PumpSelfByControlledPermanents` with a
-    `HasName("Wastes")` land filter; needs a Wastes land in the catalog first.
-  - **Eldrazi Displacer / Vile Redeemer / Cyclone Sire / Inverter of Truth /
-    Conduit of Ruin** — blink-with-tapped-return, per-creature-died token
-    scaling, awaken, whole-library-exile, and tutor+cost-reduction respectively.
+  - **Vile Redeemer / Cyclone Sire / Inverter of Truth / Conduit of Ruin** —
+    per-creature-died token scaling, awaken, whole-library-exile, and
+    tutor+cost-reduction respectively.
+  - ✅ **Thought-Knot Seer** — `Effect::ExileChosenFromHand` (non-linked exile)
+    + `PermanentLeavesBattlefield` LTB draw. The SBA lethal-damage path now
+    also fires `PermanentLeavesBattlefield` self-source triggers.
+  - ✅ **Kozilek's Pathfinder** — `Effect::CantBlockSourceThisTurn` +
+    `GameState.cant_block_pairs` (per-pair block restriction).
+  - ✅ **Walker of the Wastes** — `PumpSelfByControlledPermanents` +
+    `HasName("Wastes")`; a basic **Wastes** land (`{T}: Add {C}`) was added.
 - ⏳ **Client crate can't be built/linted in the web sandbox** (missing the
   `wayland-client` system library; `wayland-sys` build script panics). Engine,
   catalog, base, and server crates all build + clippy-clean + test-green.

@@ -477,6 +477,12 @@ pub struct GameState {
     /// in this set. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
+    /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
+    /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
+    /// "{C}: Target creature can't block this creature this turn"). Cleared at
+    /// cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) cant_block_pairs: Vec<(CardId, CardId)>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -676,6 +682,7 @@ impl Clone for GameState {
             mana_production_doublers: self.mana_production_doublers,
             additional_combat_phases: self.additional_combat_phases,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
+            cant_block_pairs: self.cant_block_pairs.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             replacement_effects: self.replacement_effects.clone(),
@@ -768,6 +775,7 @@ impl GameState {
             mana_production_doublers: 0,
             additional_combat_phases: 0,
             combat_damage_prevented_creatures: Vec::new(),
+            cant_block_pairs: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
             replacement_effects: Vec::new(),
@@ -5159,6 +5167,22 @@ impl GameState {
                             source,
                             return_to,
                         });
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: *cid });
+                    }
+                }
+                Ok(events)
+            }
+            PendingEffectState::ExileChosenFromHandPending { target_player } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::with_capacity(card_ids.len());
+                for cid in card_ids {
+                    if let Some(pos) =
+                        self.players[target_player].hand.iter().position(|c| c.id == *cid)
+                    {
+                        let card = self.players[target_player].hand.remove(pos);
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     }

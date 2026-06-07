@@ -4613,6 +4613,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileChosenFromHand { from, count, filter } => {
+                // Same caster-picks-from-hand shape as DiscardChosen, but the
+                // chosen card is exiled permanently (Thought-Knot Seer).
+                use crate::decision::Decision;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let picker = ctx.controller;
+                for ent in self.resolve_selector(from, ctx) {
+                    let EntityRef::Player(target_player) = ent else { continue };
+                    let candidates: Vec<(crate::card::CardId, String)> = self
+                        .players[target_player]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, picker))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() { continue; }
+                    let decision = Decision::Discard {
+                        player: picker,
+                        count: n as u32,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::ExileChosenFromHandPending { target_player };
+                    if self.players[picker].wants_ui {
+                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
             Effect::SacrificeAndRemember { who, filter } => {
                 // Resolve `who` to a single player; pick one of their
                 // controlled permanents matching `filter`; sacrifice it and
@@ -5380,6 +5414,21 @@ impl GameState {
                         && !self.combat_damage_prevented_creatures.contains(&id)
                     {
                         self.combat_damage_prevented_creatures.push(id);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::CantBlockSourceThisTurn { target } => {
+                // Record (blocker, attacker=source) so the declare-blockers
+                // validator bars only this pairing (Kozilek's Pathfinder).
+                let Some(source) = ctx.source else { return Ok(()); };
+                for ent in self.resolve_selector(target, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent {
+                        let pair = (id, source);
+                        if !self.cant_block_pairs.contains(&pair) {
+                            self.cant_block_pairs.push(pair);
+                        }
                     }
                 }
                 Ok(())

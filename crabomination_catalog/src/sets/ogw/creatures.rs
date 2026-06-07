@@ -1711,6 +1711,88 @@ pub fn blight_herder() -> CardDefinition {
     }
 }
 
+/// Thought-Knot Seer — {3}{C} 4/4 Eldrazi. ETB: target opponent reveals their
+/// hand, you choose a nonland card and exile it. LTB: that player draws a card.
+pub fn thought_knot_seer() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement,
+        TriggeredAbility};
+    use crate::effect::{PlayerRef, Selector, Value};
+    CardDefinition {
+        name: "Thought-Knot Seer",
+        cost: cost(&[generic(3), crate::mana::colorless(1)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::ExileChosenFromHand {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Nonland,
+                },
+            },
+            // "That player draws a card" — modeled as each opponent (exact in 1v1).
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kozilek's Pathfinder — {6} 5/5 Eldrazi. {C}: Target creature can't block
+/// this creature this turn.
+pub fn kozileks_pathfinder() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement};
+    CardDefinition {
+        name: "Kozilek's Pathfinder",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::colorless(1)]),
+            effect: Effect::CantBlockSourceThisTurn {
+                target: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Walker of the Wastes — {4}{C} 4/4 Eldrazi. Trample; gets +1/+1 for each
+/// land you control named Wastes.
+pub fn walker_of_the_wastes() -> CardDefinition {
+    use crate::card::{SelectionRequirement, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Walker of the Wastes",
+        cost: cost(&[generic(4), crate::mana::colorless(1)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "Gets +1/+1 for each land you control named Wastes.",
+            effect: StaticEffect::PumpSelfByControlledPermanents {
+                filter: SelectionRequirement::HasName("Wastes".into())
+                    .and(SelectionRequirement::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sludge Crawler — {B} 1/1 Eldrazi Drone. Devoid, Ingest, {2}: +1/+1 EOT.
 pub fn sludge_crawler() -> CardDefinition {
     use crate::card::ActivatedAbility;
