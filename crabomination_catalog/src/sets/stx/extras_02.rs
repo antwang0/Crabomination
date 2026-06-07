@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
+use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
@@ -3838,70 +3838,34 @@ pub fn awesome_presentation() -> CardDefinition {
 
 // ── Rise of Extus (STX 2021 Lorehold rare sorcery) ──────────────────────────
 
-/// Rise of Extus — {3}{R}{W} Sorcery (STX 2021 rare).
-/// "Rise of Extus deals 5 damage to target creature or planeswalker. Return
-/// target instant or sorcery card from your graveyard to your hand. /
-/// Learn."
-///
-/// Push (modern_decks, NEW, `stx::extras`): Lorehold's premier removal +
-/// reanimator spell. The single-target slot covers the damage half; the
-/// reanimate half is run unconditionally against the controller's
-/// graveyard via `Selector::one_of(...)`. Learn uses `Effect::Learn`.
-/// The multi-target ("damage one target, return another") collapses to:
-/// damage slot 0 (Creature/PW), reanimate an auto-picked IS card.
-/// Tests: `rise_of_extus_deals_five_damage_and_returns_is_from_graveyard`,
-/// `rise_of_extus_is_a_five_mana_lorehold_sorcery`.
+/// Rise of Extus — {4}{W/B}{W/B} Sorcery. "Exile target creature. Exile up to
+/// one target instant or sorcery card from a graveyard. Learn." (The second,
+/// optional exile auto-picks an instant/sorcery from any graveyard.)
 pub fn rise_of_extus() -> CardDefinition {
+    let wb = || hybrid(Color::White, Color::Black);
     CardDefinition {
         name: "Rise of Extus",
-        cost: cost(&[generic(3), r(), w()]),
-        supertypes: vec![],
+        cost: cost(&[generic(4), wb(), wb()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                amount: Value::Const(5),
+            // Exile target creature.
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Exile,
             },
+            // Exile up to one instant/sorcery card from a graveyard.
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
-                    who: PlayerRef::You,
+                    who: PlayerRef::EachPlayer,
                     zone: crate::card::Zone::Graveyard,
                     filter: SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                 }),
-                to: ZoneDest::Hand(PlayerRef::You),
+                to: ZoneDest::Exile,
             },
             // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
             Effect::Learn { who: PlayerRef::You },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }

@@ -2715,7 +2715,7 @@ fn awesome_presentation_mints_two_inkling_tokens() {
 // ── Rise of Extus (modern_decks push) ──────────────────────────────────────
 
 #[test]
-fn rise_of_extus_deals_five_damage_and_returns_is_from_graveyard() {
+fn rise_of_extus_exiles_a_creature_and_a_graveyard_spell_then_learns() {
     let mut g = two_player_game();
     // Seed library for Learn's Draw.
     g.add_card_to_library(0, catalog::island());
@@ -2723,9 +2723,8 @@ fn rise_of_extus_deals_five_damage_and_returns_is_from_graveyard() {
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::rise_of_extus());
 
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
 
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::CastSpell {
@@ -2734,18 +2733,16 @@ fn rise_of_extus_deals_five_damage_and_returns_is_from_graveyard() {
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    }).expect("Rise of Extus castable");
+    }).expect("Rise of Extus castable for {4}{W/B}{W/B}");
     drain_stack(&mut g);
 
-    // 5 damage kills the 2/2 bear.
-    let bear_dead = g.battlefield.iter().all(|c| c.id != opp_bear);
-    assert!(bear_dead, "5 damage kills the bear");
-    // Lightning Bolt should be back in hand. Plus Learn (Draw 1).
-    let hand_after = g.players[0].hand.len();
-    let bolt_in_hand = g.players[0].hand.iter().any(|c| c.id == bolt);
-    assert!(bolt_in_hand, "Lightning Bolt returned to hand");
-    // Hand: -1 (cast Rise of Extus) +1 (Lightning Bolt return) +1 (Learn) = +1.
-    assert_eq!(hand_after - hand_before, 1);
+    // Target creature is exiled (not in graveyard).
+    assert!(g.exile.iter().any(|c| c.id == opp_bear), "bear exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == opp_bear), "not destroyed");
+    // The graveyard Bolt is exiled too.
+    assert!(g.exile.iter().any(|c| c.id == bolt), "graveyard Bolt exiled");
+    // Hand: -1 (cast) +1 (Learn draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before, "Learn draws back the cast card");
 }
 
 // ── Brackish Trudge (modern_decks push) ────────────────────────────────────
