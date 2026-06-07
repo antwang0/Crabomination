@@ -823,26 +823,25 @@ picking an item up.
 
 ## Suggested next-up tasks
 
-- ⏳ **Remaining real STX (Strixhaven 2021) cards (~45 left).** extras_16
-  shipped the Lessons (Basic Conjuration, Start from Scratch, Teachings of
-  the Archaics), X-spells (Blot Out the Sky, Serpentine Curve), the
-  spell-copy/counter package (Double Major, Reject, Rootha), Golden Ratio,
-  Devouring Tendrils, Study Break, Elemental Masterpiece, Flunk, Detention
-  Vortex, and payoff creatures (Gnarled Professor, Dream Strix, Retriever
-  Phoenix, Accomplished Alchemist, Oriq Loremage, Illustrious Historian,
-  Grinning Ignus). Still unimplemented printed STX cards, grouped by the
-  primitive they're blocked on:
+- ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is now near-complete;
+  the modern_decks run also shipped Exponential Growth (`Effect::DoublePower`),
+  Sticky Fingers, Make Your Move, Semester's End (`Effect::ExileReturnNextEndStep`),
+  and Culmination of Studies (`Value::CountMatching`). Still unimplemented
+  printed STX cards, grouped by the primitive they're blocked on:
   - **Study / hone counters** — needed for the Kianne/Imbraham and
-    Uvilda/Nassari Deans (exile-with-counter-then-cast mechanics) and
-    Culmination of Studies-adjacent exile payoffs.
+    Uvilda/Nassari Deans (exile-with-counter-then-cast mechanics).
   - **Variable-X loyalty** (see below) — Kasmina, Enigma Sage's -X.
   - **Entered-this-turn filter** (`SelectionRequirement::EnteredThisTurn`) —
     Shaile, Dean of Radiance's `{T}: +1/+1 on each creature that entered
     this turn.`
-  - **Blink-and-return-at-end-step** — Semester's End (exile your
-    permanents, return EOT with counters).
-  - The Codie/Extus/Blex/Jadzi legends, the X-spells Culmination of Studies /
-    Exponential Growth / Ecological Appreciation, and the rest of the Deans.
+  - **MDFC legends** — Codie/Extus/Blex/Jadzi and the Dean cycle (two-faced).
+  - **Spell-MV-in-trigger** — Geometric Nexus ("charge counters equal to that
+    spell's mana value"); needs the cast spell's MV plumbed into the trigger's
+    `event_amount` + a remove-all-counters-and-count activation cost.
+  - **Group land-search** — Scholarship Sponsor's catch-up basic-land tutor.
+  - **Variable-number-of-targets** — Semester's End is shipped single-target;
+    Ecological Appreciation needs "up to four with different names" + an
+    opponent-chooses-two split.
   Diff `set:stx` Scryfall names against the catalog string literals (note:
   helper-built names like the Snarl cycle are passed as `name` params, so
   grep the whole file, not just `name: "…"`).
