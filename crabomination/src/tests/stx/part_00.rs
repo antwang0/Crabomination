@@ -2914,36 +2914,20 @@ fn confront_the_past_bounces_planeswalker_via_mode_1() {
 }
 
 #[test]
-fn specter_of_the_fens_etb_returns_creature_card_to_hand() {
+fn specter_of_the_fens_drains_two() {
     let mut g = two_player_game();
-    // Seed P0's graveyard with a creature card.
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap().clone();
-    g.players[0].graveyard.push(bear_card);
-    g.battlefield.retain(|c| c.id != bear);
-
-    let id = g.add_card_to_hand(0, catalog::specter_of_the_fens());
+    let spec = g.add_card_to_battlefield(0, catalog::specter_of_the_fens());
+    g.clear_sickness(spec);
+    let (opp_before, you_before) = (g.players[1].life, g.players[0].life);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(4);
-    let hand_before = g.players[0].hand.len();
-    let gy_before = g.players[0].graveyard.len();
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    }).expect("Specter castable for {4}{B}");
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spec, ability_index: 0, target: None, x_value: None,
+    }).expect("{5}{B} drain");
     drain_stack(&mut g);
-
-    // Bear returned to hand.
-    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "Bear in hand");
-    assert_eq!(g.players[0].graveyard.len(), gy_before - 1, "one less in gy");
-    assert_eq!(g.players[0].hand.len(), hand_before, "hand: -1 cast + 1 return");
-    let spec = g.battlefield.iter().find(|c| c.definition.name == "Specter of the Fens")
-        .expect("Specter in play");
-    assert!(spec.has_keyword(&Keyword::Flying));
+    assert_eq!(g.players[1].life, opp_before - 2, "opponent loses 2");
+    assert_eq!(g.players[0].life, you_before + 2, "you gain 2");
+    assert!(g.battlefield_find(spec).unwrap().has_keyword(&Keyword::Flying));
 }
 
 #[test]
@@ -2972,29 +2956,11 @@ fn mascot_interception_gains_control_untaps_grants_haste() {
 }
 
 #[test]
-fn twinscroll_shaman_magecraft_copies_spell() {
-    let mut g = two_player_game();
-    let twin = g.add_card_to_battlefield(0, catalog::twinscroll_shaman());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == twin) {
-        c.summoning_sick = false;
-    }
-    let opp_life_before = g.players[1].life;
-
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Bolt castable");
-    drain_stack(&mut g);
-
-    // Original bolt: 3 dmg. Copy: another 3 dmg. Total: -6.
-    assert_eq!(g.players[1].life, opp_life_before - 6,
-        "Twinscroll Shaman copies the Bolt for another 3 damage");
+fn twinscroll_shaman_is_a_double_striking_one_two() {
+    let g = catalog::twinscroll_shaman();
+    assert_eq!(g.cost.cmc(), 3);
+    assert_eq!((g.power, g.toughness), (1, 2));
+    assert!(g.keywords.contains(&Keyword::DoubleStrike));
 }
 
 #[test]
@@ -3053,10 +3019,10 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
 fn star_pupil_enters_with_a_plus_one_counter() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::star_pupil());
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Star Pupil castable for {B}");
+    }).expect("Star Pupil castable for {W}");
     drain_stack(&mut g);
 
     let star = g.battlefield.iter()
@@ -3064,16 +3030,19 @@ fn star_pupil_enters_with_a_plus_one_counter() {
         .expect("Star Pupil in play");
     assert_eq!(star.counter_count(CounterType::PlusOnePlusOne), 1,
         "Star Pupil enters with one +1/+1 counter");
-    // 0/1 base + 1 from counter = 1/2 effective stats.
+    // 0/0 base + 1 from counter = 1/1 effective stats.
     assert_eq!(star.power(), 1);
-    assert_eq!(star.toughness(), 2);
+    assert_eq!(star.toughness(), 1);
 }
 
 #[test]
-fn star_pupil_death_puts_counter_on_target_creature() {
+fn star_pupil_death_puts_its_counters_on_target_creature() {
     let mut g = two_player_game();
     let star = g.add_card_to_battlefield(0, catalog::star_pupil());
     let recipient = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Give Star Pupil two +1/+1 counters so we exercise "its counters" (all of them).
+    g.battlefield_find_mut(star).unwrap()
+        .counters.insert(CounterType::PlusOnePlusOne, 2);
     g.clear_sickness(star);
     g.clear_sickness(recipient);
 
@@ -3088,29 +3057,16 @@ fn star_pupil_death_puts_counter_on_target_creature() {
     drain_stack(&mut g);
 
     let bear = g.battlefield.iter().find(|c| c.id == recipient).unwrap();
-    // Printed Oracle: put exactly one +1/+1 counter on target.
-    assert_eq!(bear.counter_count(CounterType::PlusOnePlusOne), 1,
-        "death-trigger puts a single +1/+1 counter on target creature");
+    assert_eq!(bear.counter_count(CounterType::PlusOnePlusOne), 2,
+        "death moves all of Star Pupil's +1/+1 counters to the target");
 }
 
 #[test]
-fn ageless_guardian_pumps_on_instant_cast() {
-    let mut g = two_player_game();
-    let guardian = g.add_card_to_battlefield(0, catalog::ageless_guardian());
-    g.clear_sickness(guardian);
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-
-    let g_card = g.battlefield.iter().find(|c| c.id == guardian).unwrap();
-    // Base 1/4 + magecraft +1/+0 = 2/4 EOT.
-    assert_eq!(g_card.power(), 2,
-        "Ageless Guardian gets +1/+0 from magecraft");
-    assert_eq!(g_card.toughness(), 4);
+fn ageless_guardian_is_a_vanilla_one_four() {
+    let c = catalog::ageless_guardian();
+    assert_eq!(c.cost.cmc(), 2);
+    assert_eq!((c.power, c.toughness), (1, 4));
+    assert!(c.triggered_abilities.is_empty() && c.activated_abilities.is_empty());
 }
 
 #[test]
@@ -3136,34 +3092,18 @@ fn returned_pastcaller_etb_returns_instant_from_graveyard() {
 }
 
 #[test]
-fn letter_of_acceptance_etb_gain_life_then_sac_to_draw() {
+fn letter_of_acceptance_fixes_mana_then_sacs_to_draw() {
     let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::letter_of_acceptance());
-    g.players[0].mana_pool.add_colorless(1);
-    let life_before = g.players[0].life;
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Letter castable for {1}");
-    drain_stack(&mut g);
-
-    let letter_id = g.battlefield.iter()
-        .find(|c| c.definition.name == "Letter of Acceptance")
-        .expect("Letter in play")
-        .id;
-    assert_eq!(g.players[0].life, life_before + 1, "ETB +1 life");
-
-    // Tap for {C}.
+    let letter_id = g.add_card_to_battlefield(0, catalog::letter_of_acceptance());
     g.clear_sickness(letter_id);
-    let c_before = g.players[0].mana_pool.colorless_amount();
+
+    // Tap for one mana of any color.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: letter_id, ability_index: 0, target: None, x_value: None }).expect("{T}: Add {C}");
-    assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
+        card_id: letter_id, ability_index: 0, target: None, x_value: None }).expect("{T}: Add any color");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "added one mana");
 
     // Untap, then sac to draw.
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == letter_id) {
-        c.tapped = false;
-    }
+    g.battlefield_find_mut(letter_id).unwrap().tapped = false;
     g.players[0].mana_pool.add_colorless(2);
     g.add_card_to_library(0, catalog::island());
     let hand_before = g.players[0].hand.len();
@@ -3172,18 +3112,17 @@ fn letter_of_acceptance_etb_gain_life_then_sac_to_draw() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
-    assert!(!g.battlefield.iter().any(|c| c.id == letter_id),
-        "Letter sacrificed");
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == letter_id),
-        "Letter in graveyard");
+    assert!(!g.battlefield.iter().any(|c| c.id == letter_id), "Letter sacrificed");
 }
 
 #[test]
-fn charge_through_pumps_and_grants_trample() {
+fn charge_through_grants_trample_and_cantrips() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::charge_through());
     g.players[0].mana_pool.add(Color::Green, 1);
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
@@ -3191,9 +3130,9 @@ fn charge_through_pumps_and_grants_trample() {
     drain_stack(&mut g);
 
     let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(b.power(), 3, "+1/+1");
-    assert_eq!(b.toughness(), 3);
     assert!(b.has_keyword(&Keyword::Trample), "trample granted EOT");
+    // Cast (-1) + draw (+1) nets the same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "cantrip replaces itself");
 }
 
 #[test]

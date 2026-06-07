@@ -1360,57 +1360,26 @@ pub fn confront_the_past() -> CardDefinition {
     }
 }
 
-/// Specter of the Fens — {4}{B} Creature — Specter. 3/4 Flying.
-/// "When this creature enters, return target creature or planeswalker
-/// card from your graveyard to your hand."
-///
-/// ✅ Reanimation-flavoured ETB on a sizeable flier. Standard
-/// `Move(filter → Hand(You))` against a graveyard creature/PW.
+/// Specter of the Fens — {3}{B} 2/3 Specter with flying. `{5}{B}: Target
+/// opponent loses 2 life and you gain 2 life.`
 pub fn specter_of_the_fens() -> CardDefinition {
     CardDefinition {
         name: "Specter of the Fens",
-        cost: cost(&[generic(4), b()]),
-        supertypes: vec![],
+        cost: cost(&[generic(3), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Specter],
             ..Default::default()
         },
-        power: 3,
-        toughness: 4,
+        power: 2,
+        toughness: 3,
         keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(5), b()]),
+            effect: crate::effect::shortcut::drain(2),
+            ..Default::default()
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
@@ -1475,54 +1444,20 @@ pub fn mascot_interception() -> CardDefinition {
 
 /// Twinscroll Shaman — {2}{U}{R} Creature — Human Wizard. 3/3.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery
-/// spell, copy that spell. You may choose new targets for the copy."
-///
-/// ✅ The Magecraft trigger uses the existing `Effect::CopySpell`
-/// primitive (push XVII), pointed at `Selector::TriggerSource` —
-/// which `fire_spell_cast_triggers` binds to the cast spell's
-/// CardId. The "may choose new targets" rider collapses to keep
-/// (auto-decider default).
+/// Twinscroll Shaman — {2}{R} 1/2 Dwarf Shaman with double strike.
 pub fn twinscroll_shaman() -> CardDefinition {
-    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Twinscroll Shaman",
-        cost: cost(&[generic(2), u(), r()]),
-        supertypes: vec![],
+        cost: cost(&[generic(2), r()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Shaman],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::CopySpell {
-            what: Selector::TriggerSource,
-            count: Value::Const(1),
-        })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::DoubleStrike],
+        ..Default::default()
     }
 }
 
@@ -1673,236 +1608,94 @@ pub fn hall_of_oracles() -> CardDefinition {
 pub fn star_pupil() -> CardDefinition {
     CardDefinition {
         name: "Star Pupil",
-        cost: cost(&[b()]),
-        supertypes: vec![],
+        cost: cost(&[w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat, CreatureType::Spirit],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 0,
-        toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![
-            // ETB: put a +1/+1 counter on self (approximating the
-            // "enters with" replacement effect with a trigger; matches
-            // the Pterafractyl pattern).
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
+        toughness: 0,
+        // Enters with a +1/+1 counter (→ 1/1).
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        // Dies: put its +1/+1 counters on target creature you control.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::This),
                     kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
                 },
             },
-            // Dies: put a +1/+1 counter on target creature. Exactly
-            // one counter per the printed Oracle (CR 122.8-friendly).
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-            },
-        ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        }],
+        ..Default::default()
     }
 }
 
-/// Ageless Guardian — {2}{W} Creature — Spirit Cleric, 1/4 (Silverquill).
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// Ageless Guardian gets +1/+0 until end of turn."
-///
-/// ✅ Pure magecraft self-pump via `effect::shortcut::magecraft_self_pump(1, 0)`.
-/// Same shape as Symmetry Sage's first half but without the flying-grant
-/// rider. The 1/4 body soaks early aggression while spellslinging chip.
+/// Ageless Guardian — {1}{W} 1/4 Spirit Soldier (vanilla).
 pub fn ageless_guardian() -> CardDefinition {
-    use crate::effect::shortcut::magecraft_self_pump;
     CardDefinition {
         name: "Ageless Guardian",
-        cost: cost(&[generic(2), w()]),
-        supertypes: vec![],
+        cost: cost(&[generic(1), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
             ..Default::default()
         },
         power: 1,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
-/// Letter of Acceptance — {1} Artifact (Colorless).
-/// "When Letter of Acceptance enters, you gain 1 life. / {T}: Add {C}.
-/// / {2}, {T}, Sacrifice this artifact: Draw a card."
-///
-/// ✅ A two-cost artifact mana-rock with an ETB lifegain rider and a
-/// late-game sac-to-draw mode. All three abilities use existing
-/// engine primitives (ETB trigger, mana ability via `tap_add_colorless`,
-/// `sac_cost: true` on the draw activation).
+/// Letter of Acceptance — {3} Artifact. `{T}: Add one mana of any color.`
+/// `{2}, {T}, Sacrifice this artifact: Draw a card.`
 pub fn letter_of_acceptance() -> CardDefinition {
     CardDefinition {
         name: "Letter of Acceptance",
-        cost: cost(&[generic(1)]),
-        supertypes: vec![],
+        cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
         activated_abilities: vec![
-            super::super::tap_add_colorless(),
             ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2)]),
-                effect: Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                once_per_turn: false,
-                sorcery_speed: false,
                 sac_cost: true,
-                condition: None,
-                life_cost: 0,
-                from_graveyard: false,
-                exile_self_cost: false,
-                exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 ..Default::default()
             },
         ],
-        triggered_abilities: vec![etb_gain_life(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
-/// Charge Through — {G} Sorcery (Mono-G STX).
-/// "Target creature you control gets +1/+1 and gains trample until
-/// end of turn."
-///
-/// ✅ A one-mana pump-and-trample combat trick. Wired as a `Seq` of
-/// `PumpPT(+1/+1, EOT)` and `GrantKeyword(Trample, EOT)`. Both halves
-/// reference the same `Target(0)` slot.
+/// Charge Through — {G} Instant. "Target creature gains trample until end of
+/// turn. Draw a card."
 pub fn charge_through() -> CardDefinition {
     CardDefinition {
         name: "Charge Through",
         cost: cost(&[g()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            },
             Effect::GrantKeyword {
-                what: Selector::Target(0),
+                what: target_filtered(SelectionRequirement::Creature),
                 keyword: Keyword::Trample,
                 duration: Duration::EndOfTurn,
             },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
