@@ -1694,3 +1694,19 @@ pub fn pressure_point() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Reclaim — {G} Instant. Put target card from your graveyard on top of your
+/// library.
+pub fn reclaim() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Reclaim",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Any),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+        },
+        ..Default::default()
+    }
+}

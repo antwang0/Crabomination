@@ -1003,3 +1003,39 @@ pub fn zombify() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Lead the Stampede — {2}{G} Sorcery. Look at the top five cards of your
+/// library; put all creature cards among them into your hand and the rest on
+/// the bottom in a random order.
+pub fn lead_the_stampede() -> CardDefinition {
+    CardDefinition {
+        name: "Lead the Stampede",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RevealTopTakeMatchingToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            filter: SelectionRequirement::Creature,
+        },
+        ..Default::default()
+    }
+}
+
+/// Commune with Nature — {G} Sorcery. Look at the top five cards of your
+/// library. You may put a creature card from among them into your hand. Put
+/// the rest on the bottom in a random order.
+pub fn commune_with_nature() -> CardDefinition {
+    CardDefinition {
+        name: "Commune with Nature",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Creature),
+            take: None,
+        },
+        ..Default::default()
+    }
+}

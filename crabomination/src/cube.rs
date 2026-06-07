@@ -661,6 +661,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         ajanis_welcome,
         impassioned_orator,
         zombify,
+        // Green card selection / recursion.
+        lead_the_stampede,
+        commune_with_nature,
+        reclaim,
         prey_upon,
         hedron_archive,
         soul_warden,

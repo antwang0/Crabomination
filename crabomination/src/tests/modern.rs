@@ -24349,6 +24349,42 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn lead_the_stampede_puts_creatures_from_top_five_into_hand() {
+    let mut g = two_player_game();
+    // Top of library: 2 creatures + a land among the top five.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::plains());
+    g.add_card_to_library(0, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::lead_the_stampede());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let creatures_before = g.players[0].hand.iter()
+        .filter(|c| c.definition.is_creature()).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let creatures_after = g.players[0].hand.iter()
+        .filter(|c| c.definition.is_creature()).count();
+    assert_eq!(creatures_after, creatures_before + 2, "both creatures went to hand, land did not");
+}
+
+#[test]
+fn reclaim_returns_graveyard_card_to_top_of_library() {
+    let mut g = two_player_game();
+    let card = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::reclaim());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(card)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].library.last().is_some_and(|c| c.definition.name == "Serra Angel"),
+        "card on top of library");
+}
+
+#[test]
 fn ajanis_welcome_gains_life_on_your_creature_etb() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::ajanis_welcome());
