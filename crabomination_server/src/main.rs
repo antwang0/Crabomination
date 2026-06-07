@@ -225,6 +225,13 @@ struct MatchStats {
     /// concession — is skipped in the cumulative sum but still counted
     /// in `wins`).
     win_life_samples: u64,
+    /// Bucketed histogram of win-by-life deltas, parallel to
+    /// `duration_buckets`. Buckets: `[0]` = 0 (won at parity / race),
+    /// `[1]` = 1-3, `[2]` = 4-6, `[3]` = 7-10, `[4]` = 11-15, `[5]` = 16+.
+    /// The average + σ give the centre and spread; this gives the
+    /// distribution *shape*, and feeds a median (p50) estimate that's
+    /// robust to the blowout outliers the mean is sensitive to.
+    win_life_delta_buckets: [u32; 6],
     /// Bucketed histogram of final turn counts, parallel to
     /// `duration_buckets`. Buckets: `[0]` = 1-2 turns, `[1]` = 3-5,
     /// `[2]` = 6-8, `[3]` = 9-12, `[4]` = 13-20, `[5]` = 21+. The
@@ -416,6 +423,50 @@ impl MatchStats {
             .cumulative_win_life_delta_squared
             .saturating_add((delta as u128) * (delta as u128));
         self.win_life_samples = self.win_life_samples.saturating_add(1);
+        let b = Self::win_life_delta_bucket_index(delta);
+        self.win_life_delta_buckets[b] = self.win_life_delta_buckets[b].saturating_add(1);
+    }
+    /// Partition a (clamped ≥0) win-by-life delta into one of six buckets.
+    fn win_life_delta_bucket_index(delta: i64) -> usize {
+        match delta {
+            0 => 0,
+            1..=3 => 1,
+            4..=6 => 2,
+            7..=10 => 3,
+            11..=15 => 4,
+            _ => 5,
+        }
+    }
+    /// Representative upper bound of win-life-delta bucket `i` (the open
+    /// final bucket reports its lower edge, 16). Mirrors the duration /
+    /// turn `*_upper_bound` helpers.
+    fn win_life_delta_bucket_upper_bound(i: usize) -> i64 {
+        match i {
+            0 => 0,
+            1 => 3,
+            2 => 6,
+            3 => 10,
+            4 => 15,
+            _ => 16,
+        }
+    }
+    /// Estimate the median (p50) win-by-life delta from the histogram —
+    /// robust to the blowout outliers that inflate the mean. Returns the
+    /// upper edge of the bucket holding the median sample, or 0 with no
+    /// samples.
+    fn win_life_delta_median(&self) -> i64 {
+        if self.win_life_samples == 0 {
+            return 0;
+        }
+        let target = self.win_life_samples.div_ceil(2);
+        let mut acc = 0u64;
+        for (i, &n) in self.win_life_delta_buckets.iter().enumerate() {
+            acc = acc.saturating_add(n as u64);
+            if acc >= target {
+                return Self::win_life_delta_bucket_upper_bound(i);
+            }
+        }
+        Self::win_life_delta_bucket_upper_bound(5)
     }
     /// Classify one clean win as a damage win or an "alternate" win
     /// (deckout / poison / mill / win-the-game). Prefers the outcome's
@@ -801,9 +852,10 @@ fn format_match_stats(s: &MatchStats) -> String {
         // ended in a race. Push (claude/modern_decks batch 202).
         if s.win_life_samples > 0 {
             out.push_str(&format!(
-                " avg_win_life_lead={} (σ={:.1})",
+                " avg_win_life_lead={} (σ={:.1}, p50={})",
                 s.avg_win_life_delta(),
-                s.win_life_delta_stddev()
+                s.win_life_delta_stddev(),
+                s.win_life_delta_median()
             ));
         }
     }
@@ -1781,6 +1833,26 @@ mod tests {
         s.observe_win_life_delta(0, &[18, 0]);
         let line = format_match_stats(&s);
         assert!(line.contains("avg_win_life_lead=18"), "got: {line}");
+    }
+
+    #[test]
+    fn win_life_delta_median_is_robust_to_blowout_outliers() {
+        let mut s = MatchStats::default();
+        // Three squeakers (delta 1) and one blowout (delta 40). The mean is
+        // pulled up by the blowout; the median stays in the squeaker bucket.
+        for d in [1, 1, 1, 40] {
+            s.observe_win_life_delta(0, &[d, 0]);
+        }
+        assert_eq!(s.avg_win_life_delta(), (1 + 1 + 1 + 40) / 4); // 10
+        assert_eq!(s.win_life_delta_median(), 3, "median lands in the 1-3 bucket");
+        assert!(format_match_stats_with_win(&s).contains("p50=3"));
+    }
+
+    fn format_match_stats_with_win(s: &MatchStats) -> String {
+        let mut s = *s;
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_winner(Some(Some(0)));
+        format_match_stats(&s)
     }
 
     #[test]
