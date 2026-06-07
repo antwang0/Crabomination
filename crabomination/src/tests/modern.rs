@@ -24349,6 +24349,37 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn ajanis_welcome_gains_life_on_your_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ajanis_welcome());
+    let life0 = g.players[0].life;
+    // Your creature entering (cast so ETB fires) triggers +1 life.
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 1, "gained 1 on your creature ETB");
+}
+
+#[test]
+fn zombify_reanimates_from_your_graveyard() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_graveyard(0, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::zombify());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Serra Angel" && c.controller == 0),
+        "reanimated under your control");
+}
+
+#[test]
 fn pressure_point_taps_a_creature_and_cantrips() {
     let mut g = two_player_game();
     let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -24482,6 +24513,18 @@ fn triumph_of_gerrard_pumps_then_buffs_greatest_power() {
     drain_stack(&mut g);
     let serra = g.battlefield.iter().find(|c| c.id == big).unwrap();
     assert!(serra.has_keyword(&crate::card::Keyword::Lifelink), "chapter III grants lifelink");
+}
+
+#[test]
+fn the_eldest_reborn_chapter_three_reanimates_from_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::the_eldest_reborn());
+    g.add_card_to_graveyard(0, catalog::serra_angel());
+    g.saga_advance(id); drain_stack(&mut g); // I
+    g.saga_advance(id); drain_stack(&mut g); // II
+    g.saga_advance(id); drain_stack(&mut g); // III — reanimate target
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Serra Angel" && c.controller == 0),
+        "chapter III reanimated the creature under your control");
 }
 
 #[test]

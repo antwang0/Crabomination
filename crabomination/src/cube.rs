@@ -657,6 +657,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         costly_plunder,
         pressure_point,
         seal_of_strength,
+        // Lifegain matters + reanimation.
+        ajanis_welcome,
+        impassioned_orator,
+        zombify,
         prey_upon,
         hedron_archive,
         soul_warden,

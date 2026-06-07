@@ -8518,3 +8518,49 @@ pub fn seal_of_strength() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ajani's Welcome — {W} Enchantment. Whenever a creature enters under your
+/// control, you gain 1 life.
+pub fn ajanis_welcome() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Ajani's Welcome",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Impassioned Orator — {1}{W} 1/3 Human Cleric. Whenever another creature
+/// enters under your control, you gain 1 life.
+pub fn impassioned_orator() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Impassioned Orator",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Cleric], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}

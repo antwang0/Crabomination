@@ -988,3 +988,18 @@ pub fn ancient_craving() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Zombify — {3}{B} Sorcery. Return target creature card from your graveyard
+/// to the battlefield.
+pub fn zombify() -> CardDefinition {
+    CardDefinition {
+        name: "Zombify",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
