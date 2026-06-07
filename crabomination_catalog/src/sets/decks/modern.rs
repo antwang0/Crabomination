@@ -15197,6 +15197,113 @@ pub fn reality_ripple() -> CardDefinition {
     }
 }
 
+/// Meekstone — {1} Artifact. "Creatures with power 3 or greater don't untap
+/// during their controller's untap step." (CR 502.3)
+pub fn meekstone() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Meekstone",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures with power 3 or greater don't untap during their controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(3)),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aether Flash — {2}{R} Enchantment. "Whenever a creature enters, Aether
+/// Flash deals 2 damage to it."
+pub fn aether_flash() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Aether Flash",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spitting Earth — {1}{R} Sorcery. "Deals damage to target creature equal to
+/// the number of Mountains you control."
+pub fn spitting_earth() -> CardDefinition {
+    use crate::card::LandType;
+    use crate::effect::shortcut::target_filtered;
+    let mountains = Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(LandType::Mountain)
+            .and(SelectionRequirement::ControlledByYou),
+    )));
+    CardDefinition {
+        name: "Spitting Earth",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: mountains,
+        },
+        ..Default::default()
+    }
+}
+
+/// Carbonize — {1}{R}{R} Instant. "Deals 3 damage to any target. If a
+/// creature dealt damage this way would die this turn, exile it instead."
+pub fn carbonize() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Carbonize",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rolling Thunder — {X}{R}{R} Sorcery. "Deals X damage divided as you choose
+/// among any number of targets." (`max_targets` capped at 6 — the divided
+/// decision can't enumerate truly unbounded targets.)
+pub fn rolling_thunder() -> CardDefinition {
+    CardDefinition {
+        name: "Rolling Thunder",
+        cost: cost(&[x(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::XFromCost,
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 6,
+        },
+        ..Default::default()
+    }
+}
+
 /// Bloodbraid Elf — {2}{R}{G} Creature 3/2. Haste. Cascade.
 ///
 /// Cascade (CR 702.85) is now a first-class engine mechanic: the

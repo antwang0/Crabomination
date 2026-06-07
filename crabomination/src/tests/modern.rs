@@ -35343,3 +35343,84 @@ fn game_trail_changeling_is_a_changeling_trampler() {
         &Target::Permanent(gt), 0,
     ), "Changeling counts as a Dragon");
 }
+
+/// Meekstone keeps power-3+ creatures from untapping; small ones untap.
+#[test]
+fn meekstone_locks_down_big_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::meekstone());
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(big).unwrap().tapped = true;
+    g.battlefield_find_mut(small).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(big).unwrap().tapped, "power-4 creature stays tapped");
+    assert!(!g.battlefield_find(small).unwrap().tapped, "power-2 creature untaps");
+}
+
+/// Aether Flash deals 2 damage to each creature as it enters (killing a 2/2).
+#[test]
+fn aether_flash_punishes_entering_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aether_flash());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to Aether Flash's 2 damage");
+}
+
+/// Spitting Earth deals damage equal to Mountains you control.
+#[test]
+fn spitting_earth_scales_with_mountains() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::mountain()); }
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let se = g.add_card_to_hand(0, catalog::spitting_earth());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: se, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spitting Earth castable");
+    drain_stack(&mut g);
+    // 3 Mountains → 3 damage to a 4/4 → survives with 3 marked.
+    assert_eq!(g.battlefield_find(angel).unwrap().damage, 3, "dealt 3 (Mountains controlled)");
+}
+
+/// Carbonize deals 3 and exiles a creature that would die (no graveyard).
+#[test]
+fn carbonize_exiles_creature_it_kills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let carb = g.add_card_to_hand(0, catalog::carbonize());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: carb, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Carbonize castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "killed creature is exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+}
+
+/// Rolling Thunder deals X damage spread across targets (auto-split even).
+#[test]
+fn rolling_thunder_deals_x_damage() {
+    let mut g = two_player_game();
+    let p1 = g.players[1].life;
+    let rt = g.add_card_to_hand(0, catalog::rolling_thunder());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("Rolling Thunder castable for X=4");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 4, "X=4 damage to a single target player");
+}
