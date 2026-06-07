@@ -249,6 +249,25 @@ pub(crate) fn cost_reduction_for_spell(
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
+    // Card-intrinsic "costs {X} less, where X is the greatest power among
+    // creatures you control" (The Great Henge) — a `SelfCostReducedByGreatest-
+    // Power` static carried by the spell being cast. Generic-only, clamped by
+    // the caller via `ManaCost::reduce_generic`.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByGreatestPower))
+    {
+        let greatest = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == caster && c.definition.is_creature())
+            .map(|c| c.power().max(0) as u32)
+            .max()
+            .unwrap_or(0);
+        reduction = reduction.saturating_add(greatest);
+    }
     // One-shot "the next instant or sorcery you cast this turn costs {N}
     // less" discounts (Thundertrap Trainer). Each was stamped with the
     // caster's instant/sorcery tally at grant time; it applies only while

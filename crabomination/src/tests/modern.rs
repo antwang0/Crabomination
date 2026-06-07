@@ -35008,3 +35008,48 @@ fn birthing_pod_sacrifices_then_tutors_one_higher() {
     assert!(g.battlefield.iter().any(|c| c.id == centaur),
         "an MV-3 creature (sacrificed + 1) is put onto the battlefield");
 }
+
+/// The Great Henge's cast cost drops by the greatest power among your creatures.
+#[test]
+fn the_great_henge_cost_reduced_by_greatest_power() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::colossal_dreadmaw()); // power 6
+    let henge = g.add_card_to_hand(0, catalog::the_great_henge());
+    // {7}{G}{G} − 6 = {1}{G}{G}: three mana is enough.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: henge, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Henge costs {1}{G}{G} with a 6-power creature out");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == henge), "Henge resolved");
+}
+
+/// The Great Henge taps for {G} and 2 life, and on a nontoken creature ETB it
+/// draws a card and puts a +1/+1 counter on that creature.
+#[test]
+fn the_great_henge_mana_life_and_etb_payoff() {
+    let mut g = two_player_game();
+    let henge = g.add_card_to_battlefield(0, catalog::the_great_henge());
+    g.clear_sickness(henge);
+    // {T}: add {G}, gain 2 life.
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: henge, ability_index: 0, target: None, x_value: None,
+    }).expect("tap Henge for mana + life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "added {{G}}");
+    assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
+    // Nontoken creature ETB → draw + counter.
+    g.add_card_to_library(0, catalog::shock()); // something to draw
+    let lib_before = g.players[0].library.len();
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1); // {G} already floating from the tap
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a nontoken creature");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (3, 3), "nontoken creature got a +1/+1 counter");
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "Henge drew a card");
+}

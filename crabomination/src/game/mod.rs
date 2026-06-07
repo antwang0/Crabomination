@@ -6273,7 +6273,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::ExileCardsBoundForGraveyard { .. }
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
-            | StaticEffect::UntapAllYoursEachUntapStep => vec![],
+            | StaticEffect::UntapAllYoursEachUntapStep
+            // SelfCostReducedByGreatestPower (The Great Henge) — read by
+            // `cost_reduction_for_spell` off the spell being cast; no layer.
+            | StaticEffect::SelfCostReducedByGreatestPower => vec![],
         })
         .collect()
 }

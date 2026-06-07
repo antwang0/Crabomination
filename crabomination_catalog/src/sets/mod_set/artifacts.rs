@@ -1535,3 +1535,49 @@ pub fn birthing_pod() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Great Henge — {7}{G}{G} Artifact. "This spell costs {X} less to cast,
+/// where X is the greatest power among creatures you control." "{T}: Add {G} and
+/// you gain 2 life." "Whenever a nontoken creature you control enters, draw a
+/// card and put a +1/+1 counter on that creature."
+pub fn the_great_henge() -> CardDefinition {
+    use crate::card::{CounterType, StaticAbility, StaticEffect};
+    use crate::effect::Predicate;
+    use crate::mana::{Color, g};
+    CardDefinition {
+        name: "The Great Henge",
+        cost: cost(&[generic(7), g(), g()]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is the greatest power among creatures you control.",
+            effect: StaticEffect::SelfCostReducedByGreatestPower,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Green]),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::NotToken),
+                }),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

@@ -103,6 +103,12 @@ pub enum StaticEffect {
     /// cast time alongside `AdditionalCostAfterFirstSpell` in
     /// `extra_cost_for_spell`.
     AdditionalCost { filter: SelectionRequirement, amount: u32 },
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is the
+    /// greatest power among creatures you control" (The Great Henge). Read by
+    /// `cost_reduction_for_spell` off the *spell being cast* (not battlefield
+    /// permanents), so it only discounts its own cast. Generic-only; clamped by
+    /// `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByGreatestPower,
     /// Leyline-of-Sanctity-style "you have hexproof": opponents can't
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.

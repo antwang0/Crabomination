@@ -2007,6 +2007,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         seedborn_muse,
         // sacrifice-to-tutor-by-mana-value engine
         birthing_pod,
+        // cost-reduced-by-greatest-power payoff
+        the_great_henge,
         // allied-color batch (modern_decks)
         llanowar_tribe,
         sakura_tribe_scout,
