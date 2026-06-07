@@ -5153,14 +5153,21 @@ impl GameState {
             return Err(GameError::CardNotOnBattlefield(card_id));
         }
 
-        // Only the controller (or graveyard/hand owner) can activate abilities.
+        // Only the controller (or graveyard/hand owner) can activate abilities,
+        // except abilities flagged `opponents_only` (CR 602.5 — Detention
+        // Vortex's escape clause), which only an opponent of the controller may.
         if source_in_gy || source_in_hand {
             if source_owner != Some(p) {
                 return Err(GameError::NotYourPriority);
             }
         } else {
             let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
-            if self.battlefield[pos].controller != p {
+            let controller = self.battlefield[pos].controller;
+            if ability.opponents_only {
+                if self.same_team(controller, p) {
+                    return Err(GameError::NotYourPriority);
+                }
+            } else if controller != p {
                 return Err(GameError::NotYourPriority);
             }
         }
@@ -5891,6 +5898,15 @@ impl GameState {
                     .cards_exiled_this_turn
                     .saturating_add(1);
             }
+        }
+
+        // Discard-self-as-cost (hand activations): the "Discard this card:"
+        // cost line of Elemental Masterpiece. Routes hand → graveyard via the
+        // shared discard path (CardDiscarded event, madness, etc.) after mana
+        // payments succeed but before the effect resolves.
+        if ability.discard_self_cost && source_in_hand {
+            let owner = source_owner.unwrap();
+            self.discard_card(owner, card_id, &mut events);
         }
 
         // Mana abilities resolve immediately (no stack, no priority reset).

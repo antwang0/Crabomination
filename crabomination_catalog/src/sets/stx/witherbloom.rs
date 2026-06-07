@@ -550,6 +550,7 @@ pub fn rushed_rebirth() -> CardDefinition {
                 filter: SelectionRequirement::Creature,
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
             }),
+            slot: 0,
         },
         ..Default::default()
     }

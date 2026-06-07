@@ -1631,6 +1631,7 @@ pub fn force_spike() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: crate::effect::shortcut::target(),
             mana_cost: cost(&[generic(1)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -5358,6 +5359,7 @@ pub fn mana_tithe() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: crate::effect::shortcut::target(),
             mana_cost: cost(&[generic(1)]),
+            exile: false,
         },
         ..Default::default()
     }
@@ -7590,6 +7592,7 @@ pub fn miscalculation() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         ..Default::default()
     }
@@ -10099,6 +10102,7 @@ pub fn searing_blood() -> CardDefinition {
                     to: Selector::Target(0),
                     amount: Value::Const(3),
                 }),
+                slot: 0,
             },
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
@@ -10540,10 +10544,12 @@ pub fn stubborn_denial() -> CardDefinition {
             then: Box::new(Effect::CounterUnlessPaid {
                 what: target_filtered(spell_filter.clone()),
                 mana_cost: cost(&[generic(3)]),
+                exile: false,
             }),
             else_: Box::new(Effect::CounterUnlessPaid {
                 what: target_filtered(spell_filter),
                 mana_cost: cost(&[generic(1)]),
+                exile: false,
             }),
         },
         ..Default::default()
@@ -15607,6 +15613,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                     },
                     Value::Const(100),
                 )),
+                once_per_turn: false,
             },
             effect: Effect::WinGame { who: PlayerRef::You },
         }],
@@ -21085,6 +21092,7 @@ pub fn spiketail_hatchling() -> CardDefinition {
             effect: Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: cost(&[generic(1)]),
+                exile: false,
             },
             ..Default::default()
         }],
@@ -24122,7 +24130,7 @@ pub fn izzet_charm() -> CardDefinition {
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
-            Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(2)]) },
+            Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(2)]), exile: false },
             Effect::DealDamage { to: tf(SelectionRequirement::Creature), amount: Value::Const(2) },
             Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::Const(2) },
@@ -24183,7 +24191,7 @@ pub fn flusterstorm() -> CardDefinition {
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Storm],
-        effect: Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(1)]) },
+        effect: Effect::CounterUnlessPaid { what: Selector::Target(0), mana_cost: cost(&[generic(1)]), exile: false },
         ..Default::default()
     }
 }

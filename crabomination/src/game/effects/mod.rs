@@ -535,6 +535,7 @@ impl GameState {
         self.nonland_cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
         self.permanents_destroyed_this_resolution = 0;
+        self.players_sacrificed_this_resolution.clear();
         self.named_card_this_resolution = None;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
@@ -560,6 +561,7 @@ impl GameState {
             events.push(GameEvent::CreatureDied { card_id: id });
         }
         events.push(GameEvent::PermanentSacrificed { card_id: id, who });
+        self.players_sacrificed_this_resolution.insert(who);
         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
         events.append(&mut die_evs);
     }
@@ -2377,6 +2379,53 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileReturnNextEndStep { what } => {
+                // Exile each resolved permanent now; register a per-card
+                // NextEndStep delayed trigger that returns it under its owner's
+                // control with an extra +1/+1 (creature) or loyalty (PW)
+                // counter. Semester's End.
+                use crate::card::CounterType;
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let EntityRef::Permanent(cid) = ent else { continue; };
+                    let is_pw = self
+                        .battlefield_find(cid)
+                        .is_some_and(|c| c.definition.is_planeswalker());
+                    self.remove_from_battlefield_to_exile(cid);
+                    if ctx.controller < self.players.len() {
+                        self.players[ctx.controller].cards_exiled_this_turn =
+                            self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
+                    }
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    let counter_kind = if is_pw {
+                        CounterType::Loyalty
+                    } else {
+                        CounterType::PlusOnePlusOne
+                    };
+                    let body = Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                        Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: counter_kind,
+                            amount: crate::effect::Value::Const(1),
+                        },
+                    ]);
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: DelayedKind::NextEndStep,
+                        effect: body,
+                        target: Some(Target::Permanent(cid)),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ExileTaggedWithSource { what } => {
                 let source = ctx.source;
                 for ent in self.resolve_selector(what, ctx) {
@@ -2597,6 +2646,28 @@ impl GameState {
                             c.toughness_bonus += t;
                             events.push(GameEvent::PumpApplied { card_id: cid, power: p, toughness: t });
                         }
+                }
+                Ok(())
+            }
+
+            Effect::DoublePower { what, times, duration: _ } => {
+                // Double each resolved creature's current power `times` times
+                // (Exponential Growth). Adds power*(2^times - 1) as an EOT pump
+                // so the live power ends at power * 2^times.
+                let n = self.evaluate_value(times, ctx).max(0);
+                if n > 0 {
+                    let factor = 1i32.checked_shl(n as u32).unwrap_or(i32::MAX); // 2^n
+                    for ent in self.resolve_selector(what, ctx) {
+                        if let Some(cid) = ent.as_permanent_id()
+                            && let Some(c) = self.battlefield_find(cid) {
+                                let cur = c.power();
+                                let delta = cur.saturating_mul(factor - 1);
+                                if let Some(c) = self.battlefield_find_mut(cid) {
+                                    c.power_bonus += delta;
+                                    events.push(GameEvent::PumpApplied { card_id: cid, power: delta, toughness: 0 });
+                                }
+                            }
+                    }
                 }
                 Ok(())
             }
@@ -3673,11 +3744,12 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::CounterUnlessPaid { what, mana_cost } => {
+            Effect::CounterUnlessPaid { what, mana_cost, exile } => {
                 // Counter target spell unless its controller pays `mana_cost`.
                 // Auto-pays on behalf of the spell's controller via the
                 // existing `auto_tap_for_cost` + `mana_pool.pay` path: if
-                // affordable, the spell stays; otherwise it's countered.
+                // affordable, the spell stays; otherwise it's countered (and
+                // exiled instead of binned when `exile` is set — Reject).
                 let targets = self.resolve_selector(what, ctx);
                 let target_id = targets.into_iter().find_map(|t| match t {
                     EntityRef::Permanent(cid) | EntityRef::Card(cid) => Some(cid),
@@ -3705,7 +3777,11 @@ impl GameState {
                 if !paid
                     && let StackItem::Spell { card, .. } = self.stack.remove(pos)
                 {
-                    self.route_to_graveyard(*card, events);
+                    if *exile {
+                        self.exile.push(*card);
+                    } else {
+                        self.route_to_graveyard(*card, events);
+                    }
                 }
                 Ok(())
             }
@@ -4846,12 +4922,12 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::WhenTargetDiesThisTurn { body } => {
+            Effect::WhenTargetDiesThisTurn { body, slot } => {
                 // Watch the targeted creature's death; capture its controller
                 // as the body's Target(0) so it survives the creature leaving
                 // play. No-op if there's no permanent target (the creature
                 // already left, or none was chosen).
-                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.first().cloned()
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.get(*slot).cloned()
                     && let Some(controller) = self.battlefield_find(cid).map(|c| c.controller)
                 {
                     let source = ctx.source.unwrap_or(crate::card::CardId(0));

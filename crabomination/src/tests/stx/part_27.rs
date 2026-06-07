@@ -3,7 +3,7 @@
 //! Exercises `ActivatedAbility.return_self_cost`, `Value::LifeGainedThisTurn`,
 //! and `Value::DistinctPowerYouControl`.
 
-use crate::card::{CardType, CreatureType, Keyword};
+use crate::card::{CreatureType, Keyword};
 use crate::catalog;
 use crate::game::types::Target;
 use crate::game::{drain_stack, two_player_game};
@@ -102,6 +102,308 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn burn_down_the_house_mode0_sweeps_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::gnarled_professor()); // 5/4
+    let id = g.add_card_to_hand(0, catalog::burn_down_the_house());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(),
+        "5 damage to each creature kills both");
+}
+
+#[test]
+fn burn_down_the_house_mode1_makes_three_hasty_devils() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::burn_down_the_house());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let devils: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Devil))
+        .collect();
+    assert_eq!(devils.len(), 3, "three Devil tokens");
+    assert!(devils.iter().all(|c| c.has_keyword(&Keyword::Haste)), "devils have haste");
+}
+
+#[test]
+fn geometric_nexus_charges_on_spell_cast_then_mints_a_scaled_fractal() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let nexus = g.add_card_to_battlefield(0, catalog::geometric_nexus());
+    // Cast a 3-MV instant (Counterspell {U}{U}? use a known 3-MV IS). Use a
+    // sorcery with cmc 3 — Golden Ratio ({1}{G}{U}) = 3.
+    let spell = g.add_card_to_hand(0, catalog::golden_ratio());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a 3-MV sorcery");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(nexus).unwrap().counter_count(CounterType::Charge), 3,
+        "charge counters equal the spell's mana value");
+    // Activate: spend {6}, tap, remove all charge → 0/0 Fractal with 3 +1/+1.
+    g.clear_sickness(nexus);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nexus, ability_index: 0, target: None, x_value: None,
+    }).expect("activate the Fractal-maker");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
+        .expect("a Fractal token");
+    assert_eq!((fractal.power(), fractal.toughness()), (3, 3), "X = 3 charge counters removed");
+    assert_eq!(g.battlefield_find(nexus).unwrap().counter_count(CounterType::Charge), 0,
+        "all charge counters removed");
+}
+
+#[test]
+fn culmination_of_studies_scales_treasure_draw_and_burn_by_exiled_types() {
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    // Top three of library: a land, a blue card, a red card.
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::frost_trickster()); // blue
+    g.add_card_to_library(0, catalog::lightning_bolt());  // red
+    // Filler below the top three so the blue-card draw has something to pull.
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::culmination_of_studies());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3); // X = 3
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count(), 1,
+        "one land → one Treasure");
+    assert_eq!(g.players[0].hand.len(), 1, "one blue card → draw one");
+    assert_eq!(g.players[1].life, opp_life - 1, "one red card → 1 damage to opponent");
+}
+
+#[test]
+fn semesters_end_blinks_creature_and_returns_with_counter_at_end_step() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::semesters_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Exiled now; not on the battlefield.
+    assert!(g.battlefield_find(bear).is_none(), "exiled by Semester's End");
+    assert!(g.exile.iter().any(|c| c.id == bear), "in exile");
+    // Advance to the end step so the delayed trigger returns it.
+    while g.step != crate::game::types::TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("returned at end step");
+    assert_eq!((back.power(), back.toughness()), (3, 3), "returns with a +1/+1 counter");
+}
+
+#[test]
+fn claim_the_firstborn_steals_a_small_creature_with_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::claim_the_firstborn());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.controller, 0, "control stolen");
+    assert!(!b.tapped, "untapped");
+    assert!(b.has_keyword(&Keyword::Haste), "gains haste");
+}
+
+#[test]
+fn guttural_response_counters_a_blue_instant_only() {
+    let mut g = two_player_game();
+    // Opponent casts a blue instant (Disperse, {1}{U}).
+    let blue_instant = g.add_card_to_hand(1, catalog::disperse());
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: blue_instant, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts blue instant");
+    // P0 responds with Guttural Response.
+    g.priority.player_with_priority = 0;
+    let resp = g.add_card_to_hand(0, catalog::guttural_response());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: resp, target: Some(Target::Permanent(blue_instant)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter the blue instant");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == blue_instant), "blue instant countered");
+}
+
+#[test]
+fn bond_of_flourishing_digs_for_a_permanent_and_gains_life() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.players[0].hand.clear();
+    let perm = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt()); // nonpermanent filler
+    let id = g.add_card_to_hand(0, catalog::bond_of_flourishing());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(perm))]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == perm), "took the permanent card");
+    assert_eq!(g.players[0].life, life + 3, "gain 3 life");
+}
+
+#[test]
+fn tamiyos_safekeeping_grants_hexproof_indestructible_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::tamiyos_safekeeping());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let computed = g.compute_battlefield();
+    let cb = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(cb.keywords.contains(&Keyword::Hexproof) && cb.keywords.contains(&Keyword::Indestructible),
+        "gains hexproof and indestructible");
+    assert_eq!(g.players[0].life, life + 2, "gain 2 life");
+}
+
+#[test]
+fn weather_the_storm_copies_for_prior_spells() {
+    let mut g = two_player_game();
+    // Pretend two spells were already cast this turn.
+    g.spells_cast_this_turn = 2;
+    let id = g.add_card_to_hand(0, catalog::weather_the_storm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Original + 2 Storm copies = 3 × gain 3 = 9 life.
+    assert_eq!(g.players[0].life, life + 9, "Storm gains 3 life per copy + original");
+}
+
+#[test]
+fn disperse_bounces_a_nonland_permanent_to_owners_hand() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::disperse());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rock).is_none(), "bounced off the battlefield");
+    assert!(g.players[1].hand.iter().any(|c| c.id == rock), "to owner's hand");
+}
+
+#[test]
+fn make_your_move_hits_big_creature_and_artifact_but_not_small_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::gnarled_professor()); // 5/4
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone()); // artifact
+    // Small creature isn't a legal target.
+    let id = g.add_card_to_hand(0, catalog::make_your_move());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(small)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "power-2 creature is not a legal target");
+    // Big creature is.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("power-5 creature is legal");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "destroys the 5/4");
+    assert!(g.battlefield_find(rock).is_some(), "artifact untouched this cast");
+}
+
+#[test]
+fn sticky_fingers_grants_menace_and_mints_treasure_on_combat_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let aura = g.add_card_to_hand(0, catalog::sticky_fingers());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("aura castable");
+    drain_stack(&mut g);
+    let computed = g.compute_battlefield();
+    let cb = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(cb.keywords.contains(&Keyword::Menace), "grants menace");
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker: bear, target: crate::game::AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != crate::game::types::TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "combat damage to a player mints a Treasure");
+}
+
+#[test]
+fn exponential_growth_doubles_power_x_times() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::exponential_growth());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(6); // {X}{X} with X=3 → 6 generic
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("castable");
+    drain_stack(&mut g);
+    // 2 power doubled 3 times = 2 * 2^3 = 16; toughness unchanged.
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (16, 2), "power doubled three times");
+}
+
+#[test]
 fn serpentine_curve_scales_with_instants_and_sorceries_in_yards() {
     let mut g = two_player_game();
     g.add_card_to_graveyard(0, catalog::lightning_bolt()); // 1 instant in gy
@@ -179,8 +481,11 @@ fn reject_counters_when_controller_cant_pay() {
     drain_stack(&mut g);
     // No floating mana and no lands → the controller can't pay {3}.
     assert!(g.battlefield_find(bear).is_none(), "spell countered, not on battlefield");
-    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
-        "countered spell to graveyard");
+    // Reject exiles the countered spell instead of putting it in the graveyard.
+    assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "countered spell exiled");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "not in graveyard");
 }
 
 #[test]
@@ -195,8 +500,11 @@ fn devouring_tendrils_deals_power_to_an_opponents_creature() {
         card_id: id, target: Some(Target::Permanent(mine)),
         additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
     }).expect("castable");
+    let life_before = g.players[0].life;
     drain_stack(&mut g);
     assert!(g.battlefield_find(theirs).is_none(), "5 power kills the 2/2");
+    // The damaged permanent died this turn → you gain 2 life.
+    assert_eq!(g.players[0].life, life_before + 2, "gain 2 when the permanent dies");
 }
 
 #[test]
@@ -252,6 +560,19 @@ fn elemental_masterpiece_makes_two_elementals() {
 }
 
 #[test]
+fn elemental_masterpiece_discard_from_hand_makes_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::elemental_masterpiece());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("{U/R}{U/R}, Discard this card: make a Treasure");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded as cost");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "made a Treasure");
+}
+
+#[test]
 fn harness_infinity_swaps_hand_and_graveyard() {
     let mut g = two_player_game();
     g.players[0].hand.clear();
@@ -295,6 +616,18 @@ fn dramatic_finale_anthems_tokens_and_mints_on_nontoken_death() {
     let after = g.battlefield.iter()
         .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling)).count();
     assert_eq!(after, before + 1, "a 2/1 Inkling minted on the nontoken death");
+    // Triggers only once each turn: a second nontoken death this turn mints nothing.
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Permanent(bear2)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the second bear");
+    drain_stack(&mut g);
+    let after2 = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling)).count();
+    assert_eq!(after2, after, "second death in the same turn mints no Inkling");
 }
 
 #[test]
@@ -306,12 +639,36 @@ fn deadly_brew_each_player_sacrifices() {
     let id = g.add_card_to_hand(0, catalog::deadly_brew());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
+    // Accept the optional "return a permanent" rider.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(mine).is_none(), "you sacrifice a creature");
     assert!(g.battlefield_find(theirs).is_none(), "opponent sacrifices a creature");
+    // You sacrificed, so the gated return fires and pulls the permanent back.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Mind Stone"),
+        "returned a permanent from graveyard");
+}
+
+#[test]
+fn deadly_brew_no_return_if_you_didnt_sacrifice() {
+    // You control no creature/PW to sacrifice → the "if you sacrificed" gate
+    // closes and nothing is returned.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::deadly_brew());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Mind Stone"),
+        "no sacrifice → permanent stays in graveyard");
 }
 
 #[test]
@@ -376,6 +733,36 @@ fn detention_vortex_locks_activated_abilities() {
         card_id: prowler, ability_index: 0, target: None, x_value: None,
     });
     assert!(err.is_err(), "activated abilities are locked while enchanted");
+}
+
+#[test]
+fn detention_vortex_only_opponents_destroy_the_aura() {
+    // The {3}: Destroy this Aura escape clause may only be activated by an
+    // opponent of the Aura's controller, and only at sorcery speed.
+    let mut g = two_player_game();
+    let prowler = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::detention_vortex());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(prowler)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("aura castable");
+    drain_stack(&mut g);
+    // Controller (P0) can't activate the opponent-only escape.
+    g.players[0].mana_pool.add_colorless(3);
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(err.is_err(), "the Aura's controller can't activate the escape");
+    // The opponent (P1), on their turn at sorcery speed, can.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, x_value: None,
+    }).expect("an opponent may activate the escape");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "the Aura is destroyed");
 }
 
 // ── Creatures ────────────────────────────────────────────────────────────────
@@ -445,6 +832,27 @@ fn oriq_loremage_mills_a_searched_card_to_graveyard() {
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == target_card),
         "searched card placed in graveyard");
+    // The searched card was an instant → +1/+1 counter on Oriq Loremage.
+    let oriq = g.battlefield_find(id).unwrap();
+    assert_eq!((oriq.power(), oriq.toughness()), (4, 4), "instant search adds a +1/+1 counter");
+}
+
+#[test]
+fn oriq_loremage_no_counter_when_searching_a_noninstant() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::oriq_loremage());
+    g.clear_sickness(id);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let target_card = g.players[0].library[0].id;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new(vec![
+        crate::decision::DecisionAnswer::Search(Some(target_card)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("{T}: search to graveyard");
+    drain_stack(&mut g);
+    let oriq = g.battlefield_find(id).unwrap();
+    assert_eq!((oriq.power(), oriq.toughness()), (3, 3), "creature search adds no counter");
 }
 
 #[test]

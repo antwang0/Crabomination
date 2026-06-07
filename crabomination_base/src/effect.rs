@@ -276,6 +276,11 @@ pub enum Value {
     Const(i32),
     /// Number of entities the selector resolves to.
     CountOf(Box<Selector>),
+    /// Number of entities the selector resolves to that also match `filter`.
+    /// Lets a count read a filtered slice of a non-zone selector (e.g. count
+    /// the land/blue/red cards among `Selector::LastMoved`). Culmination of
+    /// Studies.
+    CountMatching { sel: Box<Selector>, filter: SelectionRequirement },
     PowerOf(Box<Selector>),
     ToughnessOf(Box<Selector>),
     LifeOf(PlayerRef),
@@ -500,6 +505,10 @@ pub enum Predicate {
     /// riders (Sab-Sunen, Luxa Embodied). `ValueIsOdd(0)` is false (zero is
     /// even, CR-flavor).
     ValueIsOdd(Value),
+    /// True if `who` sacrificed at least one permanent during the current
+    /// resolution. Backed by `GameState::players_sacrificed_this_resolution`.
+    /// Gates "if you sacrificed a permanent this way, …" (Deadly Brew).
+    PlayerSacrificedThisResolution(PlayerRef),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
     /// The game is currently in the given turn step (CR 500). Gates
@@ -1097,14 +1106,25 @@ pub struct EventSpec {
     /// Optional cast-time predicate (e.g. "whenever you cast a noncreature
     /// spell" is SpellCast + filter=NotCreatureSpell).
     pub filter: Option<Predicate>,
+    /// CR 603.3d — "This ability triggers only once each turn." When set, the
+    /// trigger fires at most once per turn (and once per batch of simultaneous
+    /// events), tracked via `GameState::triggered_once_per_turn_used`. Defaults
+    /// to false via `#[serde(default)]` for snapshot back-compat. Dramatic Finale.
+    #[serde(default)]
+    pub once_per_turn: bool,
 }
 
 impl EventSpec {
     pub fn new(kind: EventKind, scope: EventScope) -> Self {
-        Self { kind, scope, filter: None }
+        Self { kind, scope, filter: None, once_per_turn: false }
     }
     pub fn with_filter(mut self, p: Predicate) -> Self {
         self.filter = Some(p);
+        self
+    }
+    /// Mark this trigger "only once each turn" (CR 603.3d).
+    pub fn once_per_turn(mut self) -> Self {
+        self.once_per_turn = true;
         self
     }
 }
@@ -1698,6 +1718,11 @@ pub enum Effect {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
     },
+    /// Exile each resolved permanent, then return it to the battlefield under
+    /// its owner's control at the beginning of the next end step, entering with
+    /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).
+    /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
+    ExileReturnNextEndStep { what: Selector },
     Tap     { what: Selector },
     /// Untap every permanent the selector resolves to. The optional
     /// `up_to` cap limits the count to "up to N" — used by Frantic
@@ -1710,6 +1735,12 @@ pub enum Effect {
     Untap   { what: Selector, #[serde(default)] up_to: Option<Value> },
     /// Give a temporary +P/+T bonus.
     PumpPT  { what: Selector, power: Value, toughness: Value, duration: Duration },
+    /// Double the resolved creature's power `times` times for `duration`
+    /// (CR — Exponential Growth: "double target creature's power X times").
+    /// Computes the creature's current power and adds `power * (2^times - 1)`
+    /// as a pump bonus, so power ends at `power * 2^times`. `times` ≤ 0 is a
+    /// no-op. Reusable for any "double power N times" card.
+    DoublePower { what: Selector, times: Value, duration: Duration },
     /// Override the resolved permanent's base power and toughness via a
     /// layer-7b continuous effect. Unlike `PumpPT` (which adds to the
     /// existing P/T via direct bonus fields), `SetBasePT` installs a
@@ -1974,6 +2005,11 @@ pub enum Effect {
     CounterUnlessPaid {
         what: Selector,
         mana_cost: crate::mana::ManaCost,
+        /// CR — "If that spell is countered this way, exile it instead of
+        /// putting it into its owner's graveyard." When true, a successful
+        /// counter routes the spell to exile. Reject. Defaults to false.
+        #[serde(default)]
+        exile: bool,
     },
     /// CR 702.21 — Ward's "counter that spell or ability unless its
     /// controller pays [cost]" trigger body. Walks the stack for the
@@ -2272,12 +2308,18 @@ pub enum Effect {
     },
 
     /// "When [target creature] dies this turn, [body]." Registers an
-    /// event-keyed delayed trigger watching `ctx.targets[0]`'s death. The
+    /// event-keyed delayed trigger watching `ctx.targets[slot]`'s death. The
     /// targeted creature's controller is captured as `Target::Player` so the
     /// body can reference it via `Selector::Target(0)` even after the
     /// creature has left the battlefield. Expires at cleanup. Used by
-    /// Searing Blood ("deals 3 damage to its controller").
-    WhenTargetDiesThisTurn { body: Box<Effect> },
+    /// Searing Blood ("deals 3 damage to its controller", slot 0) and
+    /// Devouring Tendrils ("gain 2 life", the damaged permanent in slot 1).
+    WhenTargetDiesThisTurn {
+        body: Box<Effect>,
+        /// Which target slot to watch (default 0 via `#[serde(default)]`).
+        #[serde(default)]
+        slot: usize,
+    },
 
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller

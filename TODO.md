@@ -756,6 +756,9 @@ picking an item up.
 - ✅ **CR 602.5b — Return-to-hand activation cost** — `ActivatedAbility.return_self_cost` bounces the source to its owner's hand after tap/mana/life payments (mirrors `sac_cost`). Grinning Ignus (mana), Rootha (spell-copy).
 - ✅ **CR 602.5c — "Abilities can't be activated"** — `Keyword::CantActivateAbilities` read from the *computed* keyword set in `activate_ability` rejects non-mana abilities (mana abilities unaffected). Detention Vortex (Aura grant).
 - ✅ **CR 119.3 — Life gained this turn** — `Value::LifeGainedThisTurn(who)` (reads `Player.life_gained_this_turn`). Accomplished Alchemist's second mana ability.
+- ✅ **CR 603.3d — "Triggers only once each turn"** — `EventSpec::once_per_turn` tracked via `GameState::triggered_once_per_turn_used` (also collapses same-batch fan-out to a single fire). Dramatic Finale.
+- ✅ **CR 602.5 — "Only your opponents may activate"** — `ActivatedAbility.opponents_only` bars the source's controller and lets an opponent activate; affordances surface it cross-seat. Detention Vortex's `{3}: Destroy this Aura`.
+- ✅ **CR 602.5b — Discard-self activation cost** — `ActivatedAbility.discard_self_cost` routes the source hand→graveyard via the shared discard path. Elemental Masterpiece's `{U/R}{U/R}, Discard this card: Treasure`.
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
@@ -820,47 +823,34 @@ picking an item up.
 
 ## Suggested next-up tasks
 
-- ⏳ **Remaining real STX (Strixhaven 2021) cards (~45 left).** extras_16
-  shipped the Lessons (Basic Conjuration, Start from Scratch, Teachings of
-  the Archaics), X-spells (Blot Out the Sky, Serpentine Curve), the
-  spell-copy/counter package (Double Major, Reject, Rootha), Golden Ratio,
-  Devouring Tendrils, Study Break, Elemental Masterpiece, Flunk, Detention
-  Vortex, and payoff creatures (Gnarled Professor, Dream Strix, Retriever
-  Phoenix, Accomplished Alchemist, Oriq Loremage, Illustrious Historian,
-  Grinning Ignus). Still unimplemented printed STX cards, grouped by the
-  primitive they're blocked on:
+- ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is now near-complete;
+  the modern_decks run also shipped Exponential Growth (`Effect::DoublePower`),
+  Sticky Fingers, Make Your Move, Semester's End (`Effect::ExileReturnNextEndStep`),
+  Culmination of Studies (`Value::CountMatching`), Geometric Nexus, Burn Down
+  the House, and the Mystical-Archive reprints Disperse / Weather the Storm /
+  Bond of Flourishing / Tamiyo's Safekeeping / Claim the Firstborn / Guttural
+  Response. Still unimplemented
+  printed STX cards, grouped by the primitive they're blocked on:
   - **Study / hone counters** — needed for the Kianne/Imbraham and
-    Uvilda/Nassari Deans (exile-with-counter-then-cast mechanics) and
-    Culmination of Studies-adjacent exile payoffs.
+    Uvilda/Nassari Deans (exile-with-counter-then-cast mechanics).
   - **Variable-X loyalty** (see below) — Kasmina, Enigma Sage's -X.
   - **Entered-this-turn filter** (`SelectionRequirement::EnteredThisTurn`) —
     Shaile, Dean of Radiance's `{T}: +1/+1 on each creature that entered
     this turn.`
-  - **Blink-and-return-at-end-step** — Semester's End (exile your
-    permanents, return EOT with counters).
-  - The Codie/Extus/Blex/Jadzi legends, the X-spells Culmination of Studies /
-    Exponential Growth / Ecological Appreciation, and the rest of the Deans.
+  - **MDFC legends** — Codie/Extus/Blex/Jadzi and the Dean cycle (two-faced).
+  - **Group land-search** — Scholarship Sponsor's catch-up basic-land tutor.
+  - **Variable-number-of-targets** — Semester's End is shipped single-target;
+    Ecological Appreciation needs "up to four with different names" + an
+    opponent-chooses-two split.
   Diff `set:stx` Scryfall names against the catalog string literals (note:
   helper-built names like the Snarl cycle are passed as `name` params, so
   grep the whole file, not just `name: "…"`).
-- ⏳ **Discovered this run (extras_16 follow-ups):**
-  - **`CounterUnlessPaid` exile-on-counter flag** — Reject exiles the
-    countered spell instead of bin. Add an `exile: bool` (new variant or
-    field across the ~41 call sites) to promote Reject 🟡 → ✅.
-  - **Variable-X loyalty abilities** — `activate_loyalty_ability` hardcodes
-    `x_value: 0` and `LoyaltyAbility.loyalty_cost` is a fixed `i32`. A "-X /
-    {X}" loyalty path (thread `x_value` through the action + a sentinel cost)
-    would let Kasmina, Sorin, Saheeli ultimates read X faithfully.
-  - **Search-result type introspection** — Oriq Loremage's "if it's an
-    instant or sorcery, +1/+1 counter" needs the searched card's type fed
-    back to a reflexive rider (today `Effect::Search` is fire-and-forget).
-  - **`WhenTargetDiesThisTurn` for non-zero slots** — it watches `targets[0]`
-    only; Devouring Tendrils' lifegain rider needs the slot-1 target.
-  - **From-hand discard-cost mana ability** — Elemental Masterpiece's
-    `{U/R}{U/R}, Discard this: Create a Treasure` (a cycling-adjacent
-    from-hand activated ability that mints a token).
-  - ✅ **`Effect::ExchangeHandAndGraveyard { who }`** — direct zone-vector
-    swap (per-card enters/leaves-gy triggers don't fire). Harness Infinity.
+- ⏳ **Variable-X loyalty abilities** — `activate_loyalty_ability` hardcodes
+  `x_value: 0` and `LoyaltyAbility.loyalty_cost` is a fixed `i32` (103 literals,
+  no Default derive). A "-X / {X}" loyalty path (prompt for X at activation via a
+  `Decision::ChooseAmount`, remove X loyalty, thread X into the stacked effect)
+  would let Kasmina, Sorin, Saheeli ultimates read X faithfully. Until then
+  Kasmina's -X stays the fixed -2 approximation.
 - ✅ **`Effect::PayManaOrElse { mana_cost, otherwise }`** (this run) —
   the mana sibling of `PayEnergyOrElse`; pays from the floating pool when
   able, else runs the fallback (Archway Commons' "sacrifice unless pay

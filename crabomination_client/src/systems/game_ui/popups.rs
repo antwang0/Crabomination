@@ -48,14 +48,19 @@ pub fn spawn_ability_menu(
     // mana abilities so multi-colour lands surface all the pip choices
     // when opened via the left-click mana-source picker (see the
     // `mana_abilities.len() > 1` branch in `handle_game_input`).
+    // An `opponents_only` ability (CR 602.5 — Detention Vortex's escape) can't
+    // be activated by the permanent's controller, so grey it out in their own
+    // menu just like a once-per-turn ability that's already been used.
+    let viewer_controls = pv.controller == cv.your_seat;
     let abilities: Vec<(usize, String, bool)> = pv.abilities.iter()
         .map(|a| {
+            let blocked_opp = a.opponents_only && viewer_controls;
             let label = if a.once_per_turn_used {
                 format!("{}: {} (used)", a.cost_label, a.effect_label)
             } else {
                 format!("{}: {}", a.cost_label, a.effect_label)
             };
-            (a.index, label, a.once_per_turn_used)
+            (a.index, label, a.once_per_turn_used || blocked_opp)
         })
         .collect();
     if abilities.is_empty() { return; }

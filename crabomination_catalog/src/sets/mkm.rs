@@ -53,6 +53,7 @@ pub fn reasonable_doubt() -> CardDefinition {
             Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: cost(&[generic(2)]),
+                exile: false,
             },
             Effect::Suspect {
                 what: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },

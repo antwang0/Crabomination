@@ -13,7 +13,7 @@ use crate::card::{
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, gain_life, on_dies, target, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
-use crate::mana::{b, cost, g, generic, hybrid, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color};
 
 // ── Lessons ──────────────────────────────────────────────────────────────────
 
@@ -213,9 +213,8 @@ pub fn double_major() -> CardDefinition {
 }
 
 /// Reject — {1}{U} Instant. Counter target creature or planeswalker spell
-/// unless its controller pays {3}. (The exile-instead-of-graveyard rider on
-/// a successful counter is dropped — the countered spell goes to its owner's
-/// graveyard.)
+/// unless its controller pays {3}. If countered this way, exile it instead of
+/// putting it into its owner's graveyard.
 pub fn reject() -> CardDefinition {
     CardDefinition {
         name: "Reject",
@@ -227,6 +226,7 @@ pub fn reject() -> CardDefinition {
                     .or(SelectionRequirement::HasCardType(CardType::Planeswalker)),
             )),
             mana_cost: cost(&[generic(3)]),
+            exile: true,
         },
         ..Default::default()
     }
@@ -234,24 +234,35 @@ pub fn reject() -> CardDefinition {
 
 /// Devouring Tendrils — {1}{G} Sorcery. Target creature you control deals
 /// damage equal to its power to target creature or planeswalker you don't
-/// control. (The "gain 2 when it dies this turn" rider is dropped.)
+/// control. When that permanent dies this turn, you gain 2 life.
 pub fn devouring_tendrils() -> CardDefinition {
     CardDefinition {
         name: "Devouring Tendrils",
         cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: Selector::TargetFiltered {
+        effect: Effect::Seq(vec![
+            // Register the death watch before dealing damage so the kill's
+            // death event is caught (mirrors Searing Blood's ordering).
+            Effect::WhenTargetDiesThisTurn {
+                body: Box::new(Effect::GainLife {
+                    who: Selector::Player(PlayerRef::You),
+                    amount: Value::Const(2),
+                }),
                 slot: 1,
-                filter: SelectionRequirement::Creature
-                    .or(SelectionRequirement::Planeswalker)
-                    .and(SelectionRequirement::ControlledByOpponent),
             },
-            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
-                slot: 0,
-                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            })),
-        },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+                amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                })),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -285,10 +296,325 @@ pub fn golden_ratio() -> CardDefinition {
     }
 }
 
+/// 1/1 red Devil token with "When this token dies, it deals 1 damage to any
+/// target." (Burn Down the House / Mayhem devils.)
+fn devil_1_1_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Devil".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        triggered_abilities: vec![on_dies(Effect::DealDamage {
+            to: target(),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Burn Down the House — {3}{R}{R} Sorcery. Choose one — deal 5 damage to each
+/// creature and planeswalker; or create three 1/1 red Devil tokens (death-ping)
+/// with haste until end of turn.
+pub fn burn_down_the_house() -> CardDefinition {
+    CardDefinition {
+        name: "Burn Down the House",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(5),
+                }),
+            },
+            Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: devil_1_1_token(),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedTokens,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Geometric Nexus — {2} Artifact. Whenever a player casts an instant or
+/// sorcery spell, put charge counters on this equal to that spell's mana value.
+/// `{6}, {T}, Remove all charge counters: Create a 0/0 G/U Fractal with X +1/+1
+/// counters, where X is the number removed.` (The removal is modeled as part of
+/// the resolution rather than a paid cost.)
+pub fn geometric_nexus() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    let charge_on_self = || Value::CountersOn {
+        what: Box::new(Selector::This),
+        kind: CounterType::Charge,
+    };
+    CardDefinition {
+        name: "Geometric Nexus",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::catalog::sets::sos::fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: charge_on_self(),
+                },
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: charge_on_self(),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Culmination of Studies — {X}{U}{R} Sorcery. Exile the top X cards of your
+/// library. For each land exiled this way create a Treasure, for each blue card
+/// draw a card, and for each red card deal 1 damage to each opponent.
+pub fn culmination_of_studies() -> CardDefinition {
+    let last = || Box::new(Selector::LastMoved);
+    CardDefinition {
+        name: "Culmination of Studies",
+        cost: cost(&[x(), u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::XFromCost },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountMatching {
+                    sel: last(),
+                    filter: SelectionRequirement::HasCardType(CardType::Land),
+                },
+                definition: crate::game::effects::treasure_token(),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountMatching {
+                    sel: last(),
+                    filter: SelectionRequirement::HasColor(Color::Blue),
+                },
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::CountMatching {
+                    sel: last(),
+                    filter: SelectionRequirement::HasColor(Color::Red),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Semester's End — {3}{W} Instant. Exile target creature or planeswalker you
+/// control; at the next end step return it under its owner's control with an
+/// extra +1/+1 (creature) or loyalty (planeswalker) counter. (Printed as "any
+/// number of targets"; modeled single-target — no variable-target primitive.)
+pub fn semesters_end() -> CardDefinition {
+    CardDefinition {
+        name: "Semester's End",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileReturnNextEndStep {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Guttural Response — {R/G} Instant. Counter target blue instant spell.
+pub fn guttural_response() -> CardDefinition {
+    CardDefinition {
+        name: "Guttural Response",
+        cost: cost(&[hybrid(Color::Red, Color::Green)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Instant))
+                    .and(SelectionRequirement::HasColor(Color::Blue)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Claim the Firstborn — {R} Sorcery. Gain control of target creature with
+/// mana value 3 or less until end of turn. Untap it; it gains haste.
+pub fn claim_the_firstborn() -> CardDefinition {
+    CardDefinition {
+        name: "Claim the Firstborn",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+                to: None,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Untap { what: Selector::Target(0), up_to: None },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bond of Flourishing — {1}{G} Sorcery. Look at the top three cards of your
+/// library; you may put a permanent card from among them into your hand, the
+/// rest on the bottom. You gain 3 life.
+pub fn bond_of_flourishing() -> CardDefinition {
+    CardDefinition {
+        name: "Bond of Flourishing",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+                pick_filter: Some(SelectionRequirement::Permanent),
+                take: None,
+            },
+            gain_life(3),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Tamiyo's Safekeeping — {G} Instant. Target permanent you control gains
+/// hexproof and indestructible until end of turn. You gain 2 life.
+pub fn tamiyos_safekeeping() -> CardDefinition {
+    CardDefinition {
+        name: "Tamiyo's Safekeeping",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou)),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            gain_life(2),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Weather the Storm — {1}{G} Instant (Mystical Archive). You gain 3 life.
+/// Storm — copy this for each spell cast before it this turn.
+pub fn weather_the_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Weather the Storm",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Storm],
+        effect: gain_life(3),
+        ..Default::default()
+    }
+}
+
+/// Disperse — {1}{U} Instant (Mystical Archive). Return target nonland
+/// permanent to its owner's hand.
+pub fn disperse() -> CardDefinition {
+    CardDefinition {
+        name: "Disperse",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Make Your Move — {2}{W} Instant. Destroy target artifact, enchantment, or
+/// creature with power 4 or greater.
+pub fn make_your_move() -> CardDefinition {
+    CardDefinition {
+        name: "Make Your Move",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Creature
+                        .and(SelectionRequirement::PowerAtLeast(4))),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Exponential Growth — {X}{X}{G}{G} Sorcery. Until end of turn, double target
+/// creature's power X times.
+pub fn exponential_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Exponential Growth",
+        cost: cost(&[x(), x(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DoublePower {
+            what: target_filtered(SelectionRequirement::Creature),
+            times: Value::XFromCost,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 /// Elemental Masterpiece — {5}{U}{R} Sorcery. Create two 4/4 blue-and-red
-/// Elemental creature tokens. (The discard-this-from-hand-for-a-Treasure
-/// activated ability is dropped — no from-hand discard-cost mana rider yet.)
+/// Elemental creature tokens. `{U/R}{U/R}, Discard this card: Create a Treasure
+/// token.`
 pub fn elemental_masterpiece() -> CardDefinition {
+    use crate::card::ActivatedAbility;
     let elemental_4_4 = TokenDefinition {
         name: "Elemental".into(),
         power: 4,
@@ -307,16 +633,27 @@ pub fn elemental_masterpiece() -> CardDefinition {
             count: Value::Const(2),
             definition: elemental_4_4,
         },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+            from_hand: true,
+            discard_self_cost: true,
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
 
 /// Detention Vortex — {W} Aura. Enchant nonland permanent. The enchanted
 /// permanent can't attack or block, and its activated abilities can't be
-/// activated (CR 602.5c). (The opponent-only `{3}: Destroy this Aura` escape
-/// clause is dropped — no "only your opponents may activate" path yet.)
+/// activated (CR 602.5c). `{3}: Destroy this Aura.` — only your opponents may
+/// activate this ability and only as a sorcery.
 pub fn detention_vortex() -> CardDefinition {
-    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::card::{ActivatedAbility, EnchantmentSubtype, EquipBonus};
     CardDefinition {
         name: "Detention Vortex",
         cost: cost(&[w()]),
@@ -335,6 +672,46 @@ pub fn detention_vortex() -> CardDefinition {
                 Keyword::CantBlock,
                 Keyword::CantActivateAbilities,
             ],
+            ..Default::default()
+        }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Destroy { what: Selector::This },
+            sorcery_speed: true,
+            opponents_only: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sticky Fingers — {R} Aura. Enchant creature. The enchanted creature has
+/// menace and "Whenever this creature deals combat damage to a player, create
+/// a Treasure token."
+pub fn sticky_fingers() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Sticky Fingers",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Menace],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                },
+            }],
             ..Default::default()
         }),
         ..Default::default()
@@ -445,9 +822,8 @@ pub fn accomplished_alchemist() -> CardDefinition {
 }
 
 /// Oriq Loremage — {2}{B}{B} 3/3 Human Warlock. `{T}: Search your library
-/// for a card, put it into your graveyard, then shuffle.` (The "if it's an
-/// instant or sorcery, put a +1/+1 counter on this" rider is dropped — the
-/// search result type isn't surfaced back to the activation.)
+/// for a card, put it into your graveyard, then shuffle. If it's an instant
+/// or sorcery card, put a +1/+1 counter on this creature.`
 pub fn oriq_loremage() -> CardDefinition {
     CardDefinition {
         name: "Oriq Loremage",
@@ -461,11 +837,29 @@ pub fn oriq_loremage() -> CardDefinition {
         toughness: 3,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Any,
-                to: ZoneDest::Graveyard,
-            },
+            effect: Effect::Seq(vec![
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Graveyard,
+                },
+                Effect::If {
+                    cond: Predicate::All(vec![
+                        Predicate::SelectorExists(Selector::LastMoved),
+                        Predicate::EntityMatches {
+                            what: Selector::LastMoved,
+                            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        },
+                    ]),
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
@@ -576,9 +970,8 @@ pub fn rootha_mercurial_artist() -> CardDefinition {
 // ── More spells ──────────────────────────────────────────────────────────────
 
 /// Deadly Brew — {B}{G} Sorcery. Each player sacrifices a creature or
-/// planeswalker of their choice. Then you may return a permanent card from
-/// your graveyard to your hand. (The "if you sacrificed" gate collapses; the
-/// return auto-picks.)
+/// planeswalker of their choice. If you sacrificed a permanent this way, you
+/// may return a permanent card from your graveyard to your hand.
 pub fn deadly_brew() -> CardDefinition {
     CardDefinition {
         name: "Deadly Brew",
@@ -590,19 +983,23 @@ pub fn deadly_brew() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
             },
-            Effect::MayDo {
-                description: "Return a permanent card from your graveyard to your hand?".into(),
-                body: Box::new(Effect::Move {
-                    what: Selector::take(
-                        Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: SelectionRequirement::Permanent,
-                        },
-                        Value::Const(1),
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::You),
+            Effect::If {
+                cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
+                then: Box::new(Effect::MayDo {
+                    description: "Return a permanent card from your graveyard to your hand?".into(),
+                    body: Box::new(Effect::Move {
+                        what: Selector::take(
+                            Selector::CardsInZone {
+                                who: PlayerRef::You,
+                                zone: Zone::Graveyard,
+                                filter: SelectionRequirement::Permanent,
+                            },
+                            Value::Const(1),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
                 }),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()
@@ -610,9 +1007,8 @@ pub fn deadly_brew() -> CardDefinition {
 }
 
 /// Dramatic Finale — {W/B}{W/B}{W/B}{W/B} Enchantment. Creature tokens you
-/// control get +1/+1. Whenever one or more nontoken creatures you control
-/// die, create a 2/1 white-and-black Inkling with flying. (The "only once
-/// each turn" limiter is dropped — each batch of deaths mints one.)
+/// control get +1/+1. Whenever one or more nontoken creatures you control die,
+/// create a 2/1 white-and-black Inkling with flying. Triggers only once each turn.
 pub fn dramatic_finale() -> CardDefinition {
     CardDefinition {
         name: "Dramatic Finale",
@@ -635,7 +1031,8 @@ pub fn dramatic_finale() -> CardDefinition {
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::NotToken,
-                }),
+                })
+                .once_per_turn(),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),

@@ -808,6 +808,7 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
                 once_per_turn_used: a.once_per_turn && card.once_per_turn_used.contains(&i),
                 gate_label,
                 gate_blocked: false,
+                opponents_only: a.opponents_only,
             }
         })
         .collect()
@@ -977,7 +978,18 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.return_self_cost {
         parts.push("Return this to hand".into());
     }
-    if parts.is_empty() { "0".into() } else { parts.join(", ") }
+    // Discard-this-as-cost (Elemental Masterpiece) — the from-hand
+    // "Discard this card:" cost line.
+    if ability.discard_self_cost {
+        parts.push("Discard this".into());
+    }
+    let mut label = if parts.is_empty() { "0".into() } else { parts.join(", ") };
+    // Opponent-only escape clauses (Detention Vortex) — flag who may activate
+    // so the tooltip doesn't read as a self-usable ability.
+    if ability.opponents_only {
+        label.push_str(" (opponents only)");
+    }
+    label
 }
 
 /// Short noun for the common `SelectionRequirement` shapes used in cost

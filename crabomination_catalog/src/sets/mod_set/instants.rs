@@ -134,6 +134,7 @@ pub fn spell_pierce() -> CardDefinition {
                     .and(SelectionRequirement::Noncreature),
             ),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -154,6 +155,7 @@ pub fn mana_leak() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(3)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -442,6 +444,7 @@ pub fn daze() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
+            exile: false,
         },
         alternative_cost: Some(AlternativeCost {
             return_to_hand: Some((SelectionRequirement::HasLandType(LandType::Island), 1)),
@@ -887,6 +890,7 @@ pub fn lose_focus() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
+            exile: false,
         },
         triggered_abilities: vec![],
         ..Default::default()
@@ -1637,6 +1641,7 @@ pub fn convolute() -> CardDefinition {
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(4)]),
+            exile: false,
         },
         ..Default::default()
     }

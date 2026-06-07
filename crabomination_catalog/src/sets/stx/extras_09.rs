@@ -1919,6 +1919,7 @@ pub fn prismari_conflagration() -> CardDefinition {
             Effect::CounterUnlessPaid {
                 what: target_filtered(SelectionRequirement::IsSpellOnStack),
                 mana_cost: cost(&[generic(3)]),
+                exile: false,
             },
         ]),
         activated_abilities: no_abilities(),

@@ -61,6 +61,12 @@ and the rules-coverage audit in `TODO.md`.
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant (+ teams);
   singleplayer vs. bot, networked TCP multiplayer, draft + cube, Learn/Lessons
   sideboard, full-state serde snapshots (save/restore + replay foundation).
+- **Ability/trigger riders:** once-per-turn triggers (`EventSpec::once_per_turn`,
+  CR 603.3d), opponents-only activations (`ActivatedAbility.opponents_only`, CR
+  602.5), discard-self activation cost (`discard_self_cost`), counter-to-exile
+  (`CounterUnlessPaid.exile`), `Predicate::PlayerSacrificedThisResolution`,
+  slot-parameterized `WhenTargetDiesThisTurn`, `Effect::DoublePower`,
+  `Effect::ExileReturnNextEndStep` (blink-return-EOT), `Value::CountMatching`.
 - **Client:** 3D board, game-log panel, targeting + decision UI, attack-all +
   per-attacker picking, priority-aware Pass/Respond, counter tooltips, card-zoom
   hover preview, animations, keyboard cursor (incl. WUBRG hotkeys), commander-

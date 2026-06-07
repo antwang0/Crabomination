@@ -37,6 +37,16 @@ impl GameState {
         match v {
             Value::Const(n) => *n,
             Value::CountOf(s) => self.resolve_selector(s, ctx).len() as i32,
+            Value::CountMatching { sel, filter } => self
+                .resolve_selector(sel, ctx)
+                .into_iter()
+                .filter(|e| match e {
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => {
+                        self.evaluate_requirement_static(filter, &Target::Permanent(*cid), ctx.controller, ctx.source)
+                    }
+                    EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
+                })
+                .count() as i32,
             // CR-spec: "the power of X" returns the total across all
             // entities X resolves to. Single-entity selectors (Target,
             // This, TriggerSource) return that entity's power; fan-out
@@ -343,6 +353,9 @@ impl GameState {
             Predicate::ValueAtMost(a, b) => self.evaluate_value(a, ctx) <= self.evaluate_value(b, ctx),
             Predicate::ValueEquals(a, b) => self.evaluate_value(a, ctx) == self.evaluate_value(b, ctx),
             Predicate::ValueIsOdd(v) => self.evaluate_value(v, ctx).rem_euclid(2) == 1,
+            Predicate::PlayerSacrificedThisResolution(pref) => self
+                .resolve_player(pref, ctx)
+                .is_some_and(|p| self.players_sacrificed_this_resolution.contains(&p)),
             Predicate::IsTurnOf(pref) => self.resolve_player(pref, ctx) == Some(self.active_player_idx),
             Predicate::CurrentStepIs(step) => self.step == *step,
             Predicate::EntityMatches { what, filter } => self

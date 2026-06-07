@@ -237,6 +237,7 @@ impl Effect {
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
+            | Effect::ExileReturnNextEndStep { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
@@ -247,6 +248,9 @@ impl Effect {
             | Effect::CounterUnless { what, .. } => sel_has_target(what),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
+            }
+            Effect::DoublePower { what, times, .. } => {
+                sel_has_target(what) || value_has_target(times)
             }
             Effect::SetBasePT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
@@ -434,6 +438,7 @@ impl Effect {
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
+            | Effect::ExileReturnNextEndStep { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
@@ -453,7 +458,9 @@ impl Effect {
             // CreateTokenCopyOf — the `source` is the targeted permanent to
             // copy (Esika's Chariot "copy target token you control").
             Effect::CreateTokenCopyOf { source, .. } => sel_filter(source),
-            Effect::PumpPT { what, .. } | Effect::SetBasePT { what, .. } => {
+            Effect::PumpPT { what, .. }
+            | Effect::SetBasePT { what, .. }
+            | Effect::DoublePower { what, .. } => {
                 sel_filter(what).or_else(|| implicit_creature_if_bare_target(what))
             }
             Effect::BecomeCreature { what, .. } => sel_filter(what),
@@ -1106,7 +1113,9 @@ impl Effect {
                 Effect::Tap { what } | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }
-                Effect::PumpPT { what, .. } | Effect::SetBasePT { what, .. } => {
+                Effect::PumpPT { what, .. }
+                | Effect::SetBasePT { what, .. }
+                | Effect::DoublePower { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_creature_for_slot(what, slot))
                 }
                 Effect::BecomeCreature { what, .. } => sel_find(what, slot),

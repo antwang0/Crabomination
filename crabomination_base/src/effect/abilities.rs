@@ -607,6 +607,21 @@ pub struct ActivatedAbility {
     /// Defaults to false via `#[serde(default)]`.
     #[serde(default)]
     pub return_self_cost: bool,
+    /// CR 602.5 — "Only your opponents may activate this ability." When true,
+    /// the source permanent's controller is barred from activating it; only an
+    /// opponent (a player not on the controller's team) may. Powers Detention
+    /// Vortex's `{3}: Destroy this Aura` escape clause. Defaults to false.
+    #[serde(default)]
+    pub opponents_only: bool,
+    /// True if activating this ability discards the source from the activator's
+    /// hand as part of its cost (CR 602.5b "Discard this card:" cost lines).
+    /// Pairs with `from_hand: true`. The discard (hand → graveyard, firing a
+    /// `CardDiscarded` event) happens after mana/life payments succeed but
+    /// before the effect resolves, mirroring `exile_self_cost`. Powers
+    /// Elemental Masterpiece's `{U/R}{U/R}, Discard this card: Create a
+    /// Treasure`. Defaults to false.
+    #[serde(default)]
+    pub discard_self_cost: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

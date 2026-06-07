@@ -369,6 +369,12 @@ pub struct GameState {
     /// between independent resolutions.
     #[serde(skip)]
     pub(crate) permanents_destroyed_this_resolution: u32,
+    /// Transient: seats that sacrificed at least one permanent during the
+    /// current resolution. Read by `Predicate::PlayerSacrificedThisResolution`
+    /// so a follow-up step can gate on "if you sacrificed a permanent this way"
+    /// (Deadly Brew). Reset between independent resolutions.
+    #[serde(skip)]
+    pub(crate) players_sacrificed_this_resolution: std::collections::HashSet<usize>,
     /// Transient: the card name chosen by an `Effect::NameCard` within the
     /// current resolution. Read by `SelectionRequirement::NamedBySource` so a
     /// reveal-until-the-named-card chain (Spoils of the Vault) can match even
@@ -597,6 +603,12 @@ pub struct GameState {
     /// turn. Cleared at cleanup. `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub(crate) plotted_this_turn: std::collections::HashSet<CardId>,
+    /// CR 603.3d — triggered abilities flagged `TriggeredAbility::once_per_turn`
+    /// ("this ability triggers only once each turn") that have already fired
+    /// this turn, keyed by (source card, trigger index). Cleared at cleanup.
+    /// `#[serde(default)]` for snapshot back-compat. Powers Dramatic Finale.
+    #[serde(default)]
+    pub(crate) triggered_once_per_turn_used: std::collections::HashSet<(CardId, usize)>,
     /// CR 724 — the monarch (if any). The monarch draws a card at the
     /// beginning of their end step, and a creature dealing combat damage to
     /// the monarch makes its controller the new monarch. `#[serde(default)]`
@@ -667,6 +679,7 @@ impl Clone for GameState {
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
+            players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
             named_card_this_resolution: self.named_card_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
             pending_cast_sacrifices: self.pending_cast_sacrifices.clone(),
@@ -697,6 +710,7 @@ impl Clone for GameState {
             foretold_this_turn: self.foretold_this_turn.clone(),
             plotted_cards: self.plotted_cards.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
+            triggered_once_per_turn_used: self.triggered_once_per_turn_used.clone(),
             monarch: self.monarch,
             day_night: self.day_night,
             previous_turn_active: self.previous_turn_active,
@@ -760,6 +774,7 @@ impl GameState {
             shuffle_resolving_spell_into_library: false,
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
+            players_sacrificed_this_resolution: std::collections::HashSet::new(),
             named_card_this_resolution: None,
             pending_cast_face: CastFace::Front,
             pending_cast_sacrifices: None,
@@ -790,6 +805,7 @@ impl GameState {
             foretold_this_turn: std::collections::HashSet::new(),
             plotted_cards: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
+            triggered_once_per_turn_used: std::collections::HashSet::new(),
             monarch: None,
             day_night: None,
             previous_turn_active: None,
@@ -3793,6 +3809,11 @@ impl GameState {
         // are skipped while a strip-abilities effect is in scope per CR
         // 113.10b.
         let computed = self.compute_battlefield();
+        // CR 603.3d — keys for `once_per_turn` triggers that fire in this
+        // batch; merged into the turn-scoped set after the battlefield walk
+        // (deferred so we don't mutate `self` mid-immutable-borrow).
+        let mut once_fired_this_batch: std::collections::HashSet<(CardId, usize)> =
+            std::collections::HashSet::new();
         for card in &self.battlefield {
             let stripped = computed
                 .iter()
@@ -3804,13 +3825,28 @@ impl GameState {
             }
             // Walk printed triggered abilities AND any transient
             // granted_triggers_eot for this permanent (Root Manipulation,
-            // Rabid Attack-style "creatures gain '…trigger…' EOT").
+            // Rabid Attack-style "creatures gain '…trigger…' EOT"). Printed
+            // triggers carry their definition index so `once_per_turn`
+            // (CR 603.3d) can be tracked per (source, index); granted
+            // triggers are never once-per-turn and use a sentinel index.
+            let n_printed = card.definition.triggered_abilities.len();
             let all_triggers = card
                 .definition
                 .triggered_abilities
                 .iter()
-                .chain(self.granted_triggers(card.id));
-            for ta in all_triggers {
+                .enumerate()
+                .chain(self.granted_triggers(card.id).iter().map(|t| (usize::MAX, t)));
+            for (trig_idx, ta) in all_triggers {
+                // CR 603.3d — "triggers only once each turn": skip if it has
+                // already fired this turn or earlier in this same batch.
+                let once_key = (card.id, trig_idx);
+                if ta.event.once_per_turn
+                    && trig_idx < n_printed
+                    && (self.triggered_once_per_turn_used.contains(&once_key)
+                        || once_fired_this_batch.contains(&once_key))
+                {
+                    continue;
+                }
                 // For batch-fanout-friendly event kinds (Attacks,
                 // CreatureDied, CardDrawn, CardDiscarded, CardLeftGraveyard,
                 // CounterAdded, BlockerDeclared, AttackerWentUnblocked,
@@ -3845,6 +3881,9 @@ impl GameState {
                         // (CR 702.130a) — fan out across the batch.
                         | crate::effect::EventKind::DealtDamage
                 );
+                // "Only once each turn" overrides fan-out: a single batch of
+                // simultaneous events mints one trigger, not one per event.
+                let fanout = fanout && !ta.event.once_per_turn;
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {
                         continue;
@@ -3862,12 +3901,18 @@ impl GameState {
                             event_amount: event_amount(ev),
                             triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         });
+                        if ta.event.once_per_turn && trig_idx < n_printed {
+                            once_fired_this_batch.insert(once_key);
+                        }
                         if !fanout {
                             break;
                         }
                     }
                 }
             }
+        }
+        for key in once_fired_this_batch.drain() {
+            self.triggered_once_per_turn_used.insert(key);
         }
         // CR 702.130a / 603.10a — Enrage on lethal damage. A creature that
         // dies from the same damage that would trigger its "whenever this is
@@ -5003,6 +5048,9 @@ impl GameState {
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == *card_id) {
                     let card = self.players[player].library.remove(pos);
                     self.place_card_in_dest(card, player, &to, &mut events);
+                    // Surface the found card so a downstream `Selector::LastMoved`
+                    // can inspect its type (Oriq Loremage's "if instant/sorcery").
+                    self.last_moved_cards.push(*card_id);
                 }
                 Ok(events)
             }
