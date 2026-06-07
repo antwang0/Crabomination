@@ -645,6 +645,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         propaganda,
         windborn_muse,
         baird_steward_of_argive,
+        // Life-total alt win-cons (CR 104.2a).
+        felidar_sovereign,
+        test_of_endurance,
+        // Seal enchantments (pre-paid removal).
+        seal_of_doom,
+        seal_of_primordium,
         prey_upon,
         hedron_archive,
         soul_warden,

@@ -24349,6 +24349,35 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn seal_of_doom_sacrifices_to_destroy_nonblack_creature() {
+    let mut g = two_player_game();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_doom());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // white 4/4
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("sac to destroy");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "nonblack creature destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == seal), "Seal sacrificed as cost");
+}
+
+#[test]
+fn felidar_sovereign_wins_at_forty_life() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::felidar_sovereign());
+    // Below 40: upkeep trigger's intervening-if fails, nothing happens.
+    g.players[0].life = 39;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.is_game_over(), "no win below 40 life");
+    // At 40: the intervening-if win-con fires.
+    g.players[0].life = 40;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.is_game_over(), "win at 40 life");
+}
+
+#[test]
 fn the_birth_of_meletis_chapters_tutor_wall_and_gain_life() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();

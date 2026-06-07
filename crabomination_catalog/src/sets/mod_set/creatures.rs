@@ -8393,3 +8393,89 @@ pub fn baird_steward_of_argive() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Felidar Sovereign — {4}{W}{W} 4/6 Vigilance, Lifelink. At your upkeep, if
+/// you have 40+ life, you win the game (CR 104.2a alt win-con).
+pub fn felidar_sovereign() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Felidar Sovereign",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(Value::LifeOf(PlayerRef::You), Value::Const(40)),
+                then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Test of Endurance — {2}{W}{W} Enchantment. At your upkeep, if you have 50+
+/// life, you win the game.
+pub fn test_of_endurance() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Test of Endurance",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(Value::LifeOf(PlayerRef::You), Value::Const(50)),
+                then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Doom — {2}{B} Enchantment. "Sacrifice this: Destroy target
+/// nonblack creature." A pre-paid Doom Blade on a permanent.
+pub fn seal_of_doom() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Seal of Doom",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(Color::Black)))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Primordium — {1}{G} Enchantment. "Sacrifice this: Destroy target
+/// artifact or enchantment."
+pub fn seal_of_primordium() -> CardDefinition {
+    CardDefinition {
+        name: "Seal of Primordium",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
