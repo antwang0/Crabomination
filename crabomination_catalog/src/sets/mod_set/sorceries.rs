@@ -1247,3 +1247,64 @@ pub fn grapple_with_the_past() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Selector for "each creature you control" — the team-pump target.
+fn each_your_creature() -> Selector {
+    Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    )
+}
+
+/// Overwhelming Stampede — {3}{G}{G} Sorcery. "Until end of turn, creatures you
+/// control gain trample and get +X/+X, where X is the greatest power among
+/// creatures you control." X is `Value::PowerOf(GreatestPowerYouControl)` — the
+/// power of the single greatest-power creature you control.
+pub fn overwhelming_stampede() -> CardDefinition {
+    let x = || Value::PowerOf(Box::new(Selector::GreatestPowerYouControl));
+    CardDefinition {
+        name: "Overwhelming Stampede",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: x(),
+                toughness: x(),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Triumph of the Hordes — {2}{G}{G} Sorcery. "Until end of turn, creatures you
+/// control get +1/+1 and gain trample and infect." The infect rider turns the
+/// alpha-strike into a poison kill (Infect is wired in combat damage).
+pub fn triumph_of_the_hordes() -> CardDefinition {
+    let grant = |kw: Keyword| Effect::GrantKeyword {
+        what: each_your_creature(),
+        keyword: kw,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Triumph of the Hordes",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            grant(Keyword::Trample),
+            grant(Keyword::Infect),
+        ]),
+        ..Default::default()
+    }
+}

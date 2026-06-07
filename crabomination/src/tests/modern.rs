@@ -34822,3 +34822,48 @@ fn veteran_swordsmith_buffs_other_soldiers() {
     let ac = g.computed_permanent(ally).unwrap();
     assert_eq!((ac.power, ac.toughness), (4, 1), "other Soldier gets +1/+0");
 }
+
+// ── Team-pump finishers (Overrun variants) ──────────────────────────────────
+
+/// Overwhelming Stampede: creatures you control get +X/+X (X = greatest power
+/// you control) and gain trample. X is evaluated once, so every creature gets
+/// the same bonus.
+#[test]
+fn overwhelming_stampede_pumps_by_greatest_power_and_grants_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let big = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw()); // 6/6
+    let spell = g.add_card_to_hand(0, catalog::overwhelming_stampede());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Overwhelming Stampede for {3}{G}{G}");
+    drain_stack(&mut g);
+    // X = 6 (greatest power among your creatures), added to each.
+    assert_eq!(g.battlefield_find(small).unwrap().power(), 8, "2 + 6");
+    assert_eq!(g.battlefield_find(big).unwrap().power(), 12, "6 + 6");
+    assert!(g.computed_permanent(small).unwrap().keywords.contains(&Keyword::Trample),
+        "the bear gains trample");
+}
+
+/// Triumph of the Hordes: +1/+1, trample, and infect to your team.
+#[test]
+fn triumph_of_the_hordes_grants_infect_and_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let spell = g.add_card_to_hand(0, catalog::triumph_of_the_hordes());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Triumph of the Hordes for {2}{G}{G}");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(bear).unwrap();
+    assert_eq!((s.power(), s.toughness()), (3, 3), "+1/+1");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Trample), "gains trample");
+    assert!(cp.keywords.contains(&Keyword::Infect), "gains infect");
+}

@@ -1993,6 +1993,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // team-pump finishers (Overrun variants)
+        overwhelming_stampede,
+        triumph_of_the_hordes,
         // allied-color batch (modern_decks)
         llanowar_tribe,
         sakura_tribe_scout,
