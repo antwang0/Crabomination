@@ -8,6 +8,27 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **OGW/BFZ cards skipped this batch (need a primitive).**
+  - **Oblivion Sower** — process-onto-battlefield (target opp exiles top 4,
+    then put any number of *their* land cards from exile onto the battlefield
+    under your control). Needs a "play lands from opponent's exile" move.
+  - **Processor Assault** — Process as a cast-time *additional cost* (not a
+    trigger); needs the additional-cost-process hook.
+  - **Thought-Knot Seer** — non-linked "you choose a nonland card from an
+    opponent's revealed hand and exile it" + a separate LTB "that player
+    draws". Needs an `ExileChosenFromHand` (non-linked) variant of
+    `DiscardChosen` and a leaves-the-battlefield draw rider.
+  - **Kozilek's Pathfinder** — "{C}: target creature can't block this creature
+    this turn" needs a per-pair block restriction (today only the blanket
+    `Keyword::CantBlock` exists).
+  - **Walker of the Wastes** — `PumpSelfByControlledPermanents` with a
+    `HasName("Wastes")` land filter; needs a Wastes land in the catalog first.
+  - **Eldrazi Displacer / Vile Redeemer / Cyclone Sire / Inverter of Truth /
+    Conduit of Ruin** — blink-with-tapped-return, per-creature-died token
+    scaling, awaken, whole-library-exile, and tutor+cost-reduction respectively.
+- ⏳ **Client crate can't be built/linted in the web sandbox** (missing the
+  `wayland-client` system library; `wayland-sys` build script panics). Engine,
+  catalog, base, and server crates all build + clippy-clean + test-green.
 - ⏳ **Test harness: `check_state_based_actions()` doesn't dispatch
   *another-creature-died* watcher triggers.** A creature killed via raw
   `damage = N; check_state_based_actions()` fires its own death (SelfSource)
