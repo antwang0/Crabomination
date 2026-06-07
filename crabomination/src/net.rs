@@ -1381,6 +1381,7 @@ pub enum GameEventWire {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    PermanentPhasedOut { card_id: CardId },
     Explored { card_id: CardId, controller: usize },
     BecameMonstrous { card_id: CardId },
     TokenCreated { card_id: CardId },
@@ -1525,6 +1526,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::PermanentUntapped { card_id } => {
                 GameEventWire::PermanentUntapped { card_id: *card_id }
+            }
+            GameEvent::PermanentPhasedOut { card_id } => {
+                GameEventWire::PermanentPhasedOut { card_id: *card_id }
             }
             GameEvent::Explored { card_id, controller } => {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
@@ -1700,6 +1704,7 @@ impl GameEventWire {
             } => format!("−{count} {counter_type:?} on {}", name(*card_id)),
             E::PermanentTapped { card_id } => format!("{} tapped", name(*card_id)),
             E::PermanentUntapped { card_id } => format!("{} untapped", name(*card_id)),
+            E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),

@@ -14811,6 +14811,54 @@ pub fn lonis_genetics_expert() -> CardDefinition {
     }
 }
 
+/// Tolarian Drake — {2}{U} 2/4 Drake. Flying, Phasing.
+///
+/// CR 702.26 — phases out/in before its controller's untap step
+/// (`GameState::do_phasing`). While phased out it's treated as though it
+/// doesn't exist; all state (counters, damage, attachments) is retained.
+pub fn tolarian_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Tolarian Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
+/// Vodalian Illusionist — {2}{U} 2/2 Merfolk Wizard.
+/// `{U}{U}, {T}: Target creature phases out.` (CR 702.26)
+pub fn vodalian_illusionist() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Vodalian Illusionist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[u(), u()]),
+            effect: Effect::PhaseOut {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bloodbraid Elf — {2}{R}{G} Creature 3/2. Haste. Cascade.
 ///
 /// Cascade (CR 702.85) is now a first-class engine mechanic: the

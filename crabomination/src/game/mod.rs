@@ -207,6 +207,13 @@ pub struct GameState {
     pub teams: Vec<crate::team::Team>,
     /// All permanents currently in play.
     pub battlefield: Vec<CardInstance>,
+    /// CR 702.26 — permanents that have phased out. They're treated as though
+    /// they don't exist (every battlefield query iterates `battlefield`, so a
+    /// phased-out permanent is invisible without per-site filtering), yet
+    /// retain all state (counters, attachments, damage). They phase back in
+    /// during their controller's untap step (`do_phasing`).
+    #[serde(default)]
+    pub phased_out: Vec<CardInstance>,
     /// Cards that have been exiled.
     pub exile: Vec<CardInstance>,
     /// The stack of spells and triggered abilities waiting to resolve (LIFO).
@@ -652,6 +659,7 @@ impl Clone for GameState {
             players: self.players.clone(),
             teams: self.teams.clone(),
             battlefield: self.battlefield.clone(),
+            phased_out: self.phased_out.clone(),
             exile: self.exile.clone(),
             stack: self.stack.clone(),
             step: self.step,
@@ -746,6 +754,7 @@ impl GameState {
             players,
             teams,
             battlefield: Vec::new(),
+            phased_out: Vec::new(),
             exile: Vec::new(),
             stack: Vec::new(),
             step: TurnStep::Untap,

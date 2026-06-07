@@ -1724,6 +1724,11 @@ pub enum Effect {
     /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
     ExileReturnNextEndStep { what: Selector },
     Tap     { what: Selector },
+    /// CR 702.26 — phase out every permanent the selector resolves to. The
+    /// permanent moves to `GameState.phased_out` (treated as nonexistent) and
+    /// phases back in during its controller's next untap step. Vodalian
+    /// Illusionist.
+    PhaseOut { what: Selector },
     /// Untap every permanent the selector resolves to. The optional
     /// `up_to` cap limits the count to "up to N" — used by Frantic
     /// Search ("untap up to three lands"), Cryptolith Rite-style

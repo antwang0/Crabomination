@@ -35008,3 +35008,57 @@ fn birthing_pod_sacrifices_then_tutors_one_higher() {
     assert!(g.battlefield.iter().any(|c| c.id == centaur),
         "an MV-3 creature (sacrificed + 1) is put onto the battlefield");
 }
+
+// ── Phasing (CR 702.26) ───────────────────────────────────────────────────
+
+/// Tolarian Drake phases out at its controller's untap step, vanishing from
+/// the battlefield, and phases back in the following untap step.
+#[test]
+fn tolarian_drake_phases_out_and_back_in_on_untap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::tolarian_drake());
+    g.active_player_idx = 0;
+    assert!(g.battlefield_find(id).is_some(), "starts phased in");
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "phased out — gone from battlefield");
+    assert!(g.phased_out.iter().any(|c| c.id == id), "tracked in phased_out");
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_some(), "phased back in");
+    assert!(g.phased_out.is_empty(), "side zone emptied");
+}
+
+/// Phasing is not a zone change — counters and damage are retained across a
+/// phase-out/phase-in cycle (CR 702.26e).
+#[test]
+fn phasing_retains_counters_across_cycle() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::tolarian_drake());
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.active_player_idx = 0;
+    g.do_phasing(); // out
+    g.do_phasing(); // in
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2, "counters survive phasing");
+}
+
+/// Vodalian Illusionist's activated ability phases a target creature out;
+/// it phases back in at its controller's next untap step.
+#[test]
+fn vodalian_illusionist_phases_target_out() {
+    let mut g = two_player_game();
+    let illu = g.add_card_to_battlefield(0, catalog::vodalian_illusionist());
+    g.clear_sickness(illu);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: illu, ability_index: 0,
+        target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("activatable for {U}{U}, T");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == victim), "tracked in phased_out");
+    // Its controller (player 1) untaps next: phases back in.
+    g.active_player_idx = 1;
+    g.do_phasing();
+    assert!(g.battlefield_find(victim).is_some(), "phased back in on owner's untap");
+}
