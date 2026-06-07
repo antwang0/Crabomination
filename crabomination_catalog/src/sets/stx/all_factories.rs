@@ -4243,6 +4243,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::geometric_nexus,
         super::culmination_of_studies,
         super::semesters_end,
+        super::weather_the_storm,
         super::disperse,
         super::make_your_move,
         super::exponential_growth,

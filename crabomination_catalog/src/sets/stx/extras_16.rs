@@ -458,6 +458,19 @@ pub fn semesters_end() -> CardDefinition {
     }
 }
 
+/// Weather the Storm — {1}{G} Instant (Mystical Archive). You gain 3 life.
+/// Storm — copy this for each spell cast before it this turn.
+pub fn weather_the_storm() -> CardDefinition {
+    CardDefinition {
+        name: "Weather the Storm",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Storm],
+        effect: gain_life(3),
+        ..Default::default()
+    }
+}
+
 /// Disperse — {1}{U} Instant (Mystical Archive). Return target nonland
 /// permanent to its owner's hand.
 pub fn disperse() -> CardDefinition {

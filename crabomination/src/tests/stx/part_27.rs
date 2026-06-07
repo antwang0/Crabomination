@@ -216,6 +216,23 @@ fn semesters_end_blinks_creature_and_returns_with_counter_at_end_step() {
 }
 
 #[test]
+fn weather_the_storm_copies_for_prior_spells() {
+    let mut g = two_player_game();
+    // Pretend two spells were already cast this turn.
+    g.spells_cast_this_turn = 2;
+    let id = g.add_card_to_hand(0, catalog::weather_the_storm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Original + 2 Storm copies = 3 × gain 3 = 9 life.
+    assert_eq!(g.players[0].life, life + 9, "Storm gains 3 life per copy + original");
+}
+
+#[test]
 fn disperse_bounces_a_nonland_permanent_to_owners_hand() {
     let mut g = two_player_game();
     let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
