@@ -166,6 +166,11 @@ pub enum Selector {
     /// (CR 701.21 — "choose a creature with the least toughness among
     /// creatures you control").
     LeastToughnessYouControl,
+    /// The single creature `ctx.controller` controls with the greatest power
+    /// (first in battlefield order on a tie). Empty when the controller has
+    /// no creatures. Powers Triumph of Gerrard's "target creature you control
+    /// with the greatest power" chapters (modeled non-targeted).
+    GreatestPowerYouControl,
     /// The permanent this one is attached to (for Auras/Equipment).
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.
@@ -279,6 +284,11 @@ pub enum Value {
     /// among all players").
     LowestLifeTotal,
     HandSizeOf(PlayerRef),
+    /// Life `who` has gained so far this turn (CR 119.3). Backed by
+    /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
+    /// "{T}: Add X mana of any one color, where X is the amount of life
+    /// you gained this turn."
+    LifeGainedThisTurn(PlayerRef),
     GraveyardSizeOf(PlayerRef),
     /// Maximum graveyard size across **every alive player** in the game.
     /// Reads `players[*].graveyard.len()` and returns the max. Backs
@@ -382,6 +392,10 @@ pub enum Value {
     /// Curator's "four or more card types among cards exiled with this
     /// creature" threshold.
     DistinctCardTypesExiledWith,
+    /// Number of distinct power values among creatures the controller
+    /// controls. Backs Golden Ratio's "draw a card for each different
+    /// power among creatures you control."
+    DistinctPowerYouControl,
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"
@@ -714,6 +728,14 @@ pub enum Predicate {
     /// lands than you, …"), Tithe, Knight of the White Orchid's ETB
     /// trigger, and Land Tax.
     OpponentControlsMoreLandsThanYou,
+    /// True if any opponent of `ctx.controller` has a strictly higher life
+    /// total. Linvala, the Preserver's first ETB ("if an opponent has more
+    /// life than you, you gain 5 life").
+    AnOpponentHasMoreLife,
+    /// True if any opponent of `ctx.controller` controls strictly more
+    /// creatures. Linvala, the Preserver's second ETB ("if an opponent
+    /// controls more creatures than you, create a 3/3 Angel").
+    AnOpponentControlsMoreCreatures,
     /// True when exactly one creature is attacking this combat — the
     /// CR 702.83a "attacks alone" condition that gates Exalted. Read
     /// from `GameState.attacking.len() == 1`. Outside a combat with
@@ -1410,6 +1432,13 @@ pub enum Effect {
     /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when
     /// able. Lathnu Hellion, Greenbelt Rampager.
     PayEnergyOrElse { amount: u32, otherwise: Box<Effect> },
+    /// "Sacrifice this unless you pay `mana_cost`" (CR 608-style ETB
+    /// tax). Pays `mana_cost` from the controller's floating pool if
+    /// affordable; otherwise resolves `otherwise` (typically
+    /// `SacrificeSource`). The mana sibling of `PayEnergyOrElse`. Used by
+    /// Archway Commons' "When this land enters, sacrifice it unless you
+    /// pay {1}."
+    PayManaOrElse { mana_cost: crate::mana::ManaCost, otherwise: Box<Effect> },
     /// CR 107.16 — exile the top card of the controller's library, then they
     /// may pay `energy` {E}; if they do, they may cast that card without
     /// paying its mana cost (the spell stays exiled if not cast). Amped
@@ -1450,6 +1479,19 @@ pub enum Effect {
     /// `size`.
     SetMaxHandSize { who: Selector, size: Value },
     Mill    { who: Selector, amount: Value },
+    /// Each player the selector resolves to exiles the top `amount` cards of
+    /// their own library (CR 702.115 Ingest, processed-card exile, etc.).
+    /// Mirrors `Mill` but routes to the exile zone instead of the graveyard.
+    ExileTopOfLibrary { who: Selector, amount: Value },
+    /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
+    /// an opponent owns from exile into that player's graveyard. If you do,
+    /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);
+    /// on yes the oldest `count` eligible exile cards (owned by an opponent of
+    /// the controller) move to their owners' graveyards and `then` runs. With
+    /// no eligible cards, or on decline, `then` is skipped (the "if you do"
+    /// rider). `then` reads the trigger's chosen target(s) via the shared
+    /// context — Wasteland Strangler's -3/-3, Mind Raker's discard, etc.
+    Process { count: u32, then: Box<Effect> },
     /// Each player the selector resolves to mills half the cards in their
     /// *own* library (rounded up when `rounded_up`, else down). Per-player —
     /// `Mill`'s global amount can't scale to each target's own library size.
@@ -1549,6 +1591,12 @@ pub enum Effect {
     /// (the value-maximizing default). Torsten, Founder of Benalia's
     /// "reveal seven, take creatures and/or lands."
     RevealTopTakeMatchingToHand { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
+    /// in hand moves to the graveyard and every card in the graveyard moves to
+    /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card
+    /// enters/leaves-graveyard triggers don't fire — a faithful-enough
+    /// approximation for the one card that does this.)
+    ExchangeHandAndGraveyard { who: PlayerRef },
     /// Each player in `who` exiles all but the bottom `keep` cards of their
     /// library (face down — face-down exile isn't modeled, so the cards are
     /// exiled plainly). Doomsday Excruciator's "each player exiles all but the
@@ -1637,6 +1685,9 @@ pub enum Effect {
     /// "Exile all cards from all graveyards." (Rest in Peace's ETB — a
     /// non-optional graveyard wipe across every player.)
     ExileAllGraveyards,
+    /// "Exile that player's graveyard" — graveyard hate scoped to a single
+    /// player (Go Blank). `who` resolves to the affected player.
+    ExilePlayerGraveyard { who: PlayerRef },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
     /// permanent (the ability's source). When that source leaves play the
@@ -2070,6 +2121,11 @@ pub enum Effect {
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
+    /// "`who` exiles `count` permanents they control of their choice" — the
+    /// exile analogue of Annihilator's forced sacrifice (Bane of Bala Ged).
+    /// The affected player chooses which permanents; a `wants_ui` player with
+    /// a genuine choice is prompted, bots/no-choice auto-pick the weakest.
+    PlayerExilesPermanents { who: PlayerRef, count: Value, filter: SelectionRequirement },
     /// Sacrifice this effect's source permanent (CR 701.16), firing proper
     /// death triggers. Used by end-of-turn self-sacrifice (Blitz, Ball
     /// Lightning) where `Effect::Move { This → Graveyard }` would skip the
@@ -2143,6 +2199,11 @@ pub enum Effect {
     /// Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
     RevealTopLandToBattlefieldElseHand { who: PlayerRef },
 
+    /// Reveal the top card of `who`'s library; if it's a permanent card with
+    /// mana value ≤ `max_mv`, put it onto the battlefield; otherwise put it
+    /// into their hand. Matter Reshaper's death trigger.
+    RevealTopPutPermanentMvElseHand { who: PlayerRef, max_mv: Value },
+
     /// Reveal the top `count` cards of the controller's library; an opponent
     /// chooses one of them, which goes to the controller's hand. Each
     /// remaining revealed card is exiled, gaining `counter` if `Some`.
@@ -2187,6 +2248,17 @@ pub enum Effect {
         count: Value,
         filter: SelectionRequirement,
         return_to: crate::card::ExileReturnZone,
+    },
+
+    /// "Target player reveals their hand; you choose [count] card(s) matching
+    /// [filter] and exile [them]." Same caster-picks-from-hand shape as
+    /// `DiscardChosen`, but the chosen cards are exiled permanently (not
+    /// linked to a source, unlike `ExileChosenUntilSourceLeaves`). Thought-Knot
+    /// Seer.
+    ExileChosenFromHand {
+        from: Selector,
+        count: Value,
+        filter: SelectionRequirement,
     },
 
     // ── Delayed triggers and pact costs ──────────────────────────────────────
@@ -2350,6 +2422,12 @@ pub enum Effect {
     /// then skips that creature in both directions. Maze of Ith.
     PreventAllCombatDamageInvolving { target: Selector },
 
+    /// "Target creature can't block `source` this turn." Records a
+    /// `(target, source)` pair in `GameState.cant_block_pairs`; the
+    /// declare-blockers validator rejects that specific block. Kozilek's
+    /// Pathfinder ({C}: target creature can't block this creature this turn).
+    CantBlockSourceThisTurn { target: Selector },
+
     /// "Prevent the next N damage that would be dealt to `target` this
     /// turn." (CR 615.7) Pushes a per-target prevention shield consumed
     /// by the non-combat damage path; the shield expires at cleanup.
@@ -2360,6 +2438,13 @@ pub enum Effect {
     /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
     /// "you don't lose / prevent all damage to you". Non-combat path.
     PreventAllDamageThisTurn { target: Selector },
+
+    /// "The next time a source would deal damage to `target` this turn,
+    /// prevent that damage; `target` gains life equal to the damage
+    /// prevented this way." (CR 615.1 prevention + life gain.) Pushes a
+    /// per-target prevention shield flagged `gain_life`; when it soaks
+    /// damage the protected player gains that much life. Reverse Damage.
+    PreventNextDamageAndGainLife { target: Selector, amount: Value },
 
     /// "Damage can't be prevented this turn." (CR 615.12) Sets a global
     /// flag that suppresses every prevention shield for the rest of the

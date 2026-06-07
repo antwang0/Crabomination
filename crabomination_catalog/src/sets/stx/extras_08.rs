@@ -69,6 +69,7 @@ pub fn silverquill_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -77,6 +78,7 @@ pub fn silverquill_lecturer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -139,6 +141,7 @@ pub fn quandrix_conjurer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -147,6 +150,7 @@ pub fn quandrix_conjurer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -200,6 +204,7 @@ pub fn witherbloom_concoction() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -208,6 +213,7 @@ pub fn witherbloom_concoction() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -264,6 +270,7 @@ pub fn prismari_sparkmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -272,6 +279,7 @@ pub fn prismari_sparkmage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -321,6 +329,7 @@ pub fn silverquill_ambassador() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -329,6 +338,7 @@ pub fn silverquill_ambassador() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -391,6 +401,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
             ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -416,6 +427,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -424,6 +436,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -488,6 +501,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
                         1,
                     )),
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -513,6 +527,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -521,6 +536,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -584,6 +600,7 @@ pub fn silverquill_skywriter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -592,6 +609,7 @@ pub fn silverquill_skywriter() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -650,6 +668,7 @@ pub fn quandrix_curriculum() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -658,6 +677,7 @@ pub fn quandrix_curriculum() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -709,6 +729,7 @@ pub fn lorehold_researcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -717,6 +738,7 @@ pub fn lorehold_researcher() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -770,6 +792,7 @@ pub fn prismari_magicraft() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -778,6 +801,7 @@ pub fn prismari_magicraft() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -834,6 +858,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
             ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -854,6 +879,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -862,6 +888,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -927,6 +954,7 @@ pub fn silverquill_drafter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -935,6 +963,7 @@ pub fn silverquill_drafter() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -986,6 +1015,7 @@ pub fn quandrix_schematist() -> CardDefinition {
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1005,6 +1035,7 @@ pub fn quandrix_schematist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1013,6 +1044,7 @@ pub fn quandrix_schematist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1074,6 +1106,7 @@ pub fn lorehold_resurrectionist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1082,6 +1115,7 @@ pub fn lorehold_resurrectionist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1130,6 +1164,7 @@ pub fn prismari_tinkerer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1138,6 +1173,7 @@ pub fn prismari_tinkerer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1190,6 +1226,7 @@ pub fn quandrix_forecaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1198,6 +1235,7 @@ pub fn quandrix_forecaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1248,6 +1286,7 @@ pub fn silverquill_bookbinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1256,6 +1295,7 @@ pub fn silverquill_bookbinder() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1293,6 +1333,7 @@ pub fn lorehold_crusader_knight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1301,6 +1342,7 @@ pub fn lorehold_crusader_knight() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1357,6 +1399,7 @@ pub fn witherbloom_conjurer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1365,6 +1408,7 @@ pub fn witherbloom_conjurer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1420,6 +1464,7 @@ pub fn prismari_conjurer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1428,6 +1473,7 @@ pub fn prismari_conjurer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1476,6 +1522,7 @@ pub fn quandrix_calligrapher() -> CardDefinition {
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1489,6 +1536,7 @@ pub fn quandrix_calligrapher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1497,6 +1545,7 @@ pub fn quandrix_calligrapher() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1543,6 +1592,7 @@ pub fn silverquill_penmaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1551,6 +1601,7 @@ pub fn silverquill_penmaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1606,6 +1657,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
             ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1626,6 +1678,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1634,6 +1687,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1679,6 +1733,7 @@ pub fn witherbloom_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1687,6 +1742,7 @@ pub fn witherbloom_tutor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1728,6 +1784,7 @@ pub fn prismari_cartographer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1736,6 +1793,7 @@ pub fn prismari_cartographer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1790,6 +1848,7 @@ pub fn quandrix_geologist() -> CardDefinition {
                 ]),
                             self_counter_cost_reduction: None, sac_other_filter: None,
                             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -1804,6 +1863,7 @@ pub fn quandrix_geologist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1812,6 +1872,7 @@ pub fn quandrix_geologist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1871,6 +1932,7 @@ pub fn silverquill_chastiser() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1879,6 +1941,7 @@ pub fn silverquill_chastiser() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1944,6 +2007,7 @@ pub fn witherbloom_pestmaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1952,6 +2016,7 @@ pub fn witherbloom_pestmaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2020,6 +2085,7 @@ pub fn lorehold_chronicler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2028,6 +2094,7 @@ pub fn lorehold_chronicler() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2073,6 +2140,7 @@ pub fn prismari_pyromentor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2081,6 +2149,7 @@ pub fn prismari_pyromentor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2134,6 +2203,7 @@ pub fn quandrix_equation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2142,6 +2212,7 @@ pub fn quandrix_equation() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2193,6 +2264,7 @@ pub fn silverquill_inquisitors_mark() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2201,6 +2273,7 @@ pub fn silverquill_inquisitors_mark() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2247,6 +2320,7 @@ pub fn witherbloom_mire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2255,6 +2329,7 @@ pub fn witherbloom_mire() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2330,6 +2405,7 @@ pub fn lorehold_memorial() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2338,6 +2414,7 @@ pub fn lorehold_memorial() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2389,6 +2466,7 @@ pub fn prismari_ember_trickster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2397,6 +2475,7 @@ pub fn prismari_ember_trickster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2460,6 +2539,7 @@ pub fn quandrix_aetherist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2468,6 +2548,7 @@ pub fn quandrix_aetherist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2520,6 +2601,7 @@ pub fn silverquill_sentinel() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2528,6 +2610,7 @@ pub fn silverquill_sentinel() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2591,6 +2674,7 @@ pub fn witherbloom_necrogale() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2599,6 +2683,7 @@ pub fn witherbloom_necrogale() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2662,6 +2747,7 @@ pub fn lorehold_echo() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2670,6 +2756,7 @@ pub fn lorehold_echo() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2727,6 +2814,7 @@ pub fn prismari_spellforger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2735,6 +2823,7 @@ pub fn prismari_spellforger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2787,6 +2876,7 @@ pub fn quandrix_multiplier() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2795,6 +2885,7 @@ pub fn quandrix_multiplier() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2846,6 +2937,7 @@ pub fn silverquill_scribefall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2854,6 +2946,7 @@ pub fn silverquill_scribefall() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2918,6 +3011,7 @@ pub fn witherbloom_wickering() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2926,6 +3020,7 @@ pub fn witherbloom_wickering() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2991,6 +3086,7 @@ pub fn lorehold_historian() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2999,6 +3095,7 @@ pub fn lorehold_historian() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3058,6 +3155,7 @@ pub fn prismari_spectacle() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3066,6 +3164,7 @@ pub fn prismari_spectacle() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3129,6 +3228,7 @@ pub fn quandrix_wavebreaker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3137,6 +3237,7 @@ pub fn quandrix_wavebreaker() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3202,6 +3303,7 @@ pub fn silverquill_anthemwright() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3210,6 +3312,7 @@ pub fn silverquill_anthemwright() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3258,6 +3361,7 @@ pub fn witherbloom_decay() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3266,6 +3370,7 @@ pub fn witherbloom_decay() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3323,6 +3428,7 @@ pub fn lorehold_reverberation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3331,6 +3437,7 @@ pub fn lorehold_reverberation() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3401,6 +3508,7 @@ pub fn prismari_eccentric() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3409,6 +3517,7 @@ pub fn prismari_eccentric() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3459,6 +3568,7 @@ pub fn quandrix_theorem_crafter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3467,6 +3577,7 @@ pub fn quandrix_theorem_crafter() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3525,6 +3636,7 @@ pub fn witherbloom_pestseed() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3533,6 +3645,7 @@ pub fn witherbloom_pestseed() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3574,6 +3687,7 @@ pub fn silverquill_editorialist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3582,6 +3696,7 @@ pub fn silverquill_editorialist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3628,6 +3743,7 @@ pub fn inkblot_recluse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3636,6 +3752,7 @@ pub fn inkblot_recluse() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3684,6 +3801,7 @@ pub fn quill_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3692,6 +3810,7 @@ pub fn quill_lecturer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3740,6 +3859,7 @@ pub fn inkstrike_bolt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3748,6 +3868,7 @@ pub fn inkstrike_bolt() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3790,6 +3911,7 @@ pub fn withering_spores() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3798,6 +3920,7 @@ pub fn withering_spores() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3846,6 +3969,7 @@ pub fn witherbloom_brewer() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -3859,6 +3983,7 @@ pub fn witherbloom_brewer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3867,6 +3992,7 @@ pub fn witherbloom_brewer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3914,6 +4040,7 @@ pub fn pestilent_brambletwig() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3922,5 +4049,6 @@ pub fn pestilent_brambletwig() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }

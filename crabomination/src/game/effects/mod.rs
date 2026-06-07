@@ -1003,6 +1003,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Process { count, then } => {
+                // Process N exile cards an opponent owns → their graveyards;
+                // run `then` only if at least one was processed.
+                use crate::decision::{Decision, DecisionAnswer};
+                let opponents = self.opponents_of(ctx.controller);
+                let eligible: Vec<CardId> = self
+                    .exile
+                    .iter()
+                    .filter(|c| opponents.contains(&c.owner))
+                    .map(|c| c.id)
+                    .take(*count as usize)
+                    .collect();
+                if eligible.is_empty() {
+                    return Ok(());
+                }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source,
+                    description: format!("Process up to {count} card(s) from exile?"),
+                });
+                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    return Ok(());
+                }
+                for id in eligible {
+                    if let Some(pos) = self.exile.iter().position(|c| c.id == id) {
+                        let card = self.exile.remove(pos);
+                        let owner = card.owner;
+                        self.players[owner].send_to_graveyard(card);
+                    }
+                }
+                self.run_effect(then, ctx, events)?;
+                Ok(())
+            }
+
             Effect::IfRevealFromHand { filter, then, else_ } => {
                 // Peek at the controller's hand for a card matching `filter`.
                 // If any match exists, run `then` (the implicit "yes, I
@@ -1479,6 +1513,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayManaOrElse { mana_cost, otherwise } => {
+                // Mana sibling of PayEnergyOrElse — pay from the floating
+                // pool when able (AutoDecider keeps the permanent),
+                // otherwise resolve the fallback (sacrifice / bounce).
+                let p = ctx.controller;
+                if self.players[p].mana_pool.pay(mana_cost).is_err() {
+                    self.run_effect(otherwise, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::ExileTopMayPayEnergyToCast { energy } => {
                 use crate::card::Zone;
                 use crate::decision::{Decision, DecisionAnswer};
@@ -1668,6 +1713,23 @@ impl GameState {
                             // target the milled card (Tablet of
                             // Discovery, Ark of Hunger's "you may play
                             // that card this turn" rider).
+                            self.last_moved_cards.push(cid);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileTopOfLibrary { who, amount } => {
+                // CR 702.115 Ingest etc. — like Mill but routes to exile.
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        for _ in 0..n {
+                            if self.players[p].library.is_empty() { break; }
+                            let card = self.players[p].library.remove(0);
+                            let cid = card.id;
+                            self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
                             self.last_moved_cards.push(cid);
                         }
                     }
@@ -2383,6 +2445,19 @@ impl GameState {
                 for p in 0..self.players.len() {
                     let cards: Vec<CardInstance> =
                         std::mem::take(&mut self.players[p].graveyard);
+                    for card in cards {
+                        let cid = card.id;
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: cid });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExilePlayerGraveyard { who } => {
+                // Go Blank — move one player's graveyard to exile.
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let cards: Vec<CardInstance> = std::mem::take(&mut self.players[p].graveyard);
                     for card in cards {
                         let cid = card.id;
                         self.exile.push(card);
@@ -3879,6 +3954,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayerExilesPermanents { who, count, filter } => {
+                // Exile analogue of Annihilator (Bane of Bala Ged). The
+                // affected player auto-picks the weakest N matching permanents;
+                // a human-defender chooser is a follow-up (tracked in TODO.md).
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let players: Vec<usize> = self.resolve_players(who, ctx);
+                for p in players {
+                    let candidates = self.sacrifice_candidates(p, filter, ctx.source);
+                    let ids = self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false);
+                    for id in ids {
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SacrificeSource => {
                 if let Some(id) = ctx.source
                     && let Some(c) = self.battlefield_find(id)
@@ -4225,6 +4319,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeHandAndGraveyard { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    let (hand, gy) = (
+                        std::mem::take(&mut self.players[p].hand),
+                        std::mem::take(&mut self.players[p].graveyard),
+                    );
+                    // Hand cards → graveyard; graveyard cards → hand.
+                    self.players[p].graveyard = hand;
+                    self.players[p].hand = gy;
+                }
+                Ok(())
+            }
+
             Effect::ShuffleLibrary { who } => {
                 use rand::seq::SliceRandom;
                 if let Some(p) = self.resolve_player(who, ctx) {
@@ -4427,6 +4534,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopPutPermanentMvElseHand { who, max_mv } => {
+                let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first() else { continue };
+                    let (cid, name, is_land, is_perm, mv) = (
+                        top.id, top.definition.name, top.definition.is_land(),
+                        top.definition.is_permanent(), top.definition.cost.cmc(),
+                    );
+                    events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+                    let dest = if is_perm && mv <= cap {
+                        ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false }
+                    } else {
+                        ZoneDest::Hand(PlayerRef::Seat(p))
+                    };
+                    self.move_card_to(cid, &dest, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::RevealTopLandToBattlefieldElseHand { who } => {
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
@@ -4513,6 +4639,40 @@ impl GameState {
                         source,
                         return_to: *return_to,
                     };
+                    if self.players[picker].wants_ui {
+                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
+            Effect::ExileChosenFromHand { from, count, filter } => {
+                // Same caster-picks-from-hand shape as DiscardChosen, but the
+                // chosen card is exiled permanently (Thought-Knot Seer).
+                use crate::decision::Decision;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let picker = ctx.controller;
+                for ent in self.resolve_selector(from, ctx) {
+                    let EntityRef::Player(target_player) = ent else { continue };
+                    let candidates: Vec<(crate::card::CardId, String)> = self
+                        .players[target_player]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, picker))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() { continue; }
+                    let decision = Decision::Discard {
+                        player: picker,
+                        count: n as u32,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::ExileChosenFromHandPending { target_player };
                     if self.players[picker].wants_ui {
                         self.suspend_signal = Some((decision, pending, Effect::Noop));
                         return Ok(());
@@ -5296,6 +5456,21 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CantBlockSourceThisTurn { target } => {
+                // Record (blocker, attacker=source) so the declare-blockers
+                // validator bars only this pairing (Kozilek's Pathfinder).
+                let Some(source) = ctx.source else { return Ok(()); };
+                for ent in self.resolve_selector(target, ctx) {
+                    if let EntityRef::Permanent(id) | EntityRef::Card(id) = ent {
+                        let pair = (id, source);
+                        if !self.cant_block_pairs.contains(&pair) {
+                            self.cant_block_pairs.push(pair);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::PreventNextDamage { target, amount } => {
                 // CR 615.7 — push a "prevent the next N damage to target"
                 // shield consumed by `apply_prevention_shields`.
@@ -5305,6 +5480,23 @@ impl GameState {
                         self.prevention_shields.push(crate::game::types::PreventionShield {
                             target: s,
                             remaining: Some(n),
+                            gain_life: false,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::PreventNextDamageAndGainLife { target, amount } => {
+                // CR 615.1 — prevent the next N damage to target; the
+                // protected player gains that much life (Reverse Damage).
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 {
+                    for s in self.prevention_targets(target, ctx) {
+                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                            target: s,
+                            remaining: Some(n),
+                            gain_life: true,
                         });
                     }
                 }
@@ -5317,6 +5509,7 @@ impl GameState {
                     self.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         remaining: None,
+                        gain_life: false,
                     });
                 }
                 Ok(())
@@ -5597,25 +5790,60 @@ impl GameState {
                     return Ok(()); // can't collect enough evidence
                 }
                 let src = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source: src,
-                    description: format!(
-                        "Collect evidence {need}? (exile cards from your graveyard \
-                         with total mana value {need} or greater)"
-                    ),
-                });
-                if !matches!(answer, DecisionAnswer::Bool(true)) {
-                    return Ok(());
-                }
-                let mut acc = 0u32;
-                let mut to_exile = Vec::new();
-                for (cid, mv) in gy {
-                    if acc >= need {
-                        break;
+                let to_exile: Vec<CardId> = if self.players[p].wants_ui {
+                    // A human picks exactly which cards to exile; the engine
+                    // validates the chosen set clears the MV threshold and
+                    // otherwise treats the answer as a decline.
+                    let mv: std::collections::HashMap<CardId, u32> =
+                        gy.iter().copied().collect();
+                    let candidates: Vec<(CardId, String)> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: src,
+                        prompt: format!(
+                            "Collect evidence {need}: exile cards from your \
+                             graveyard with total mana value {need}+"
+                        ),
+                        candidates,
+                        min: 0,
+                        max: mv.len() as u32,
+                    });
+                    let chosen: Vec<CardId> = match answer {
+                        DecisionAnswer::Cards(ids) => {
+                            ids.into_iter().filter(|id| mv.contains_key(id)).collect()
+                        }
+                        _ => vec![],
+                    };
+                    let picked: u32 = chosen.iter().map(|id| mv[id]).sum();
+                    if picked < need {
+                        return Ok(()); // declined or insufficient evidence
                     }
-                    acc += mv;
-                    to_exile.push(cid);
-                }
+                    chosen
+                } else {
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source: src,
+                        description: format!(
+                            "Collect evidence {need}? (exile cards from your graveyard \
+                             with total mana value {need} or greater)"
+                        ),
+                    });
+                    if !matches!(answer, DecisionAnswer::Bool(true)) {
+                        return Ok(());
+                    }
+                    let mut acc = 0u32;
+                    let mut auto = Vec::new();
+                    for (cid, mv) in gy {
+                        if acc >= need {
+                            break;
+                        }
+                        acc += mv;
+                        auto.push(cid);
+                    }
+                    auto
+                };
                 for cid in to_exile {
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                 }
@@ -5987,6 +6215,15 @@ impl GameState {
                 .iter()
                 .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
                 .min_by_key(|c| c.toughness())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
+            Selector::GreatestPowerYouControl => self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                .max_by_key(|c| c.power())
                 .map(|c| EntityRef::Permanent(c.id))
                 .into_iter()
                 .collect(),

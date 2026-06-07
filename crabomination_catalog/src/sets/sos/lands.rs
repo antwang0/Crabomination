@@ -41,6 +41,7 @@ fn school_land(
         exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+        ..Default::default()
     };
     CardDefinition {
         name,
@@ -168,6 +169,7 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
         exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+        ..Default::default()
     };
     CardDefinition {
         name: "Great Hall of the Biblioplex",
@@ -226,6 +228,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
         exile_other_filter: None,
         self_counter_cost_reduction: None, sac_other_filter: None,
         tap_other_filter: None, from_hand: false,
+        ..Default::default()
     };
     CardDefinition {
         name: "Skycoach Waypoint",

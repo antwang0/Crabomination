@@ -7,8 +7,8 @@
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
 use super::super::{
-    dual_land_with, etb_tap, etb_tap_then_surveil_one, fastland_etb_conditional_tap, painland,
-    shockland_pay_two_or_tap, tap_add, tap_add_colorless,
+    dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
+    fastland_etb_conditional_tap, painland, shockland_pay_two_or_tap, tap_add, tap_add_colorless,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType, Selector,
@@ -297,6 +297,7 @@ pub fn gemstone_mine() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -359,6 +360,7 @@ pub fn gemstone_caverns() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             // {T}, Remove a luck counter: Add one mana of any color.
             ActivatedAbility {
@@ -396,6 +398,7 @@ pub fn gemstone_caverns() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -462,6 +465,7 @@ pub fn cavern_of_souls() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -541,6 +545,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![etb_tap()],
@@ -628,6 +633,42 @@ pub fn creeping_tar_pit() -> CardDefinition {
         3,
         2,
         vec![Keyword::Unblockable],
+    )
+}
+
+/// Hissing Quagmire — BG manland. Enters tapped, taps for {B}/{G}.
+/// {1}{B}{G}: becomes a 2/2 black-green Elemental with deathtouch until end
+/// of turn (still a land).
+pub fn hissing_quagmire() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Hissing Quagmire",
+        LandType::Swamp,
+        LandType::Forest,
+        Color::Black,
+        Color::Green,
+        cost(&[generic(1), crate::mana::b(), crate::mana::g()]),
+        2,
+        2,
+        vec![Keyword::Deathtouch],
+    )
+}
+
+/// Needle Spires — RW manland. Enters tapped, taps for {R}/{W}.
+/// {2}{R}{W}: becomes a 2/1 red-white Elemental with double strike until end
+/// of turn (still a land).
+pub fn needle_spires() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Needle Spires",
+        LandType::Mountain,
+        LandType::Plains,
+        Color::Red,
+        Color::White,
+        cost(&[generic(2), crate::mana::r(), crate::mana::w()]),
+        2,
+        1,
+        vec![Keyword::DoubleStrike],
     )
 }
 
@@ -745,4 +786,35 @@ pub fn ghost_quarter() -> CardDefinition {
         ],
         ..Default::default()
     }
+}
+
+// ── Khans life-gain taplands ───────────────────────────────────────────────
+//
+// "~ enters tapped. When ~ enters, you gain 1 life. {T}: Add {C1} or {C2}."
+// `dual_land_with` supplies the two color mana abilities; the shared
+// `etb_tap_then_gain_one` trigger taps it and gains the life.
+
+pub fn tranquil_cove() -> CardDefinition {
+    dual_land_with("Tranquil Cove", LandType::Plains, LandType::Island,
+        Color::White, Color::Blue, vec![etb_tap_then_gain_one()])
+}
+
+pub fn dismal_backwater() -> CardDefinition {
+    dual_land_with("Dismal Backwater", LandType::Island, LandType::Swamp,
+        Color::Blue, Color::Black, vec![etb_tap_then_gain_one()])
+}
+
+pub fn bloodfell_caves() -> CardDefinition {
+    dual_land_with("Bloodfell Caves", LandType::Swamp, LandType::Mountain,
+        Color::Black, Color::Red, vec![etb_tap_then_gain_one()])
+}
+
+pub fn rugged_highlands() -> CardDefinition {
+    dual_land_with("Rugged Highlands", LandType::Mountain, LandType::Forest,
+        Color::Red, Color::Green, vec![etb_tap_then_gain_one()])
+}
+
+pub fn blossoming_sands() -> CardDefinition {
+    dual_land_with("Blossoming Sands", LandType::Forest, LandType::Plains,
+        Color::Green, Color::White, vec![etb_tap_then_gain_one()])
 }

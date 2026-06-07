@@ -1,6 +1,6 @@
 //! Limited Edition Alpha (LEA) — 1993
 
-pub use super::{no_abilities, tap_add};
+pub use super::{no_abilities, tap_add, tap_add_colorless};
 
 mod artifacts;
 mod creatures;

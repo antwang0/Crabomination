@@ -75,6 +75,7 @@ pub fn quandrix_surge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -83,6 +84,7 @@ pub fn quandrix_surge() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -128,6 +130,7 @@ pub fn magecraft_insight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -136,6 +139,7 @@ pub fn magecraft_insight() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -184,6 +188,7 @@ pub fn sparkmages_mantra() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -192,6 +197,7 @@ pub fn sparkmages_mantra() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -233,6 +239,7 @@ pub fn witherbloom_drainage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -241,6 +248,7 @@ pub fn witherbloom_drainage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -299,6 +307,8 @@ pub fn mizzium_mortars() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
+            emerge: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -307,6 +317,7 @@ pub fn mizzium_mortars() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -315,6 +326,7 @@ pub fn mizzium_mortars() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -366,6 +378,7 @@ pub fn electrolyze() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -374,6 +387,7 @@ pub fn electrolyze() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -430,6 +444,7 @@ pub fn show_of_aggression() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -438,6 +453,7 @@ pub fn show_of_aggression() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -501,6 +517,8 @@ pub fn past_in_flames() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
+            emerge: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -509,6 +527,7 @@ pub fn past_in_flames() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -517,6 +536,7 @@ pub fn past_in_flames() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -569,6 +589,7 @@ pub fn inspired_idea() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -577,6 +598,7 @@ pub fn inspired_idea() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -640,6 +662,8 @@ pub fn resurgent_belief() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
+            emerge: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -648,6 +672,7 @@ pub fn resurgent_belief() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -656,6 +681,7 @@ pub fn resurgent_belief() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -718,6 +744,7 @@ pub fn enthusiastic_study() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -726,6 +753,7 @@ pub fn enthusiastic_study() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -784,6 +812,7 @@ pub fn forked_bolt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -792,6 +821,7 @@ pub fn forked_bolt() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -835,6 +865,7 @@ pub fn storms_wrath() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -843,6 +874,7 @@ pub fn storms_wrath() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -890,6 +922,7 @@ pub fn cinderclasm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -898,6 +931,7 @@ pub fn cinderclasm() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -948,6 +982,7 @@ pub fn cathartic_pyre() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -956,6 +991,7 @@ pub fn cathartic_pyre() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -996,6 +1032,7 @@ pub fn stern_dismissal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1004,6 +1041,7 @@ pub fn stern_dismissal() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1046,6 +1084,7 @@ pub fn krosan_grip() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1054,6 +1093,7 @@ pub fn krosan_grip() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1127,6 +1167,7 @@ pub fn sublime_epiphany() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1135,6 +1176,7 @@ pub fn sublime_epiphany() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1206,6 +1248,7 @@ pub fn persist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1214,6 +1257,7 @@ pub fn persist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1259,6 +1303,7 @@ pub fn bone_to_ash() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1267,6 +1312,7 @@ pub fn bone_to_ash() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1323,6 +1369,7 @@ pub fn ingenious_mastery() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1331,6 +1378,7 @@ pub fn ingenious_mastery() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1388,6 +1436,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1396,6 +1445,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1441,6 +1491,7 @@ pub fn damnable_pact() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1449,6 +1500,7 @@ pub fn damnable_pact() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1495,6 +1547,7 @@ pub fn shore_up() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1503,6 +1556,7 @@ pub fn shore_up() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1550,6 +1604,7 @@ pub fn symbol_of_strength() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1558,6 +1613,7 @@ pub fn symbol_of_strength() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1608,6 +1664,7 @@ pub fn magmatic_sinkhole() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1616,6 +1673,7 @@ pub fn magmatic_sinkhole() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1680,6 +1738,7 @@ pub fn sevinnes_reclamation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1688,6 +1747,7 @@ pub fn sevinnes_reclamation() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1747,6 +1807,7 @@ pub fn light_of_promise() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1755,6 +1816,7 @@ pub fn light_of_promise() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1811,6 +1873,7 @@ pub fn skywarp_skaab() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1819,6 +1882,7 @@ pub fn skywarp_skaab() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1869,6 +1933,7 @@ pub fn anger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1877,6 +1942,7 @@ pub fn anger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1965,6 +2031,7 @@ pub fn triskaidekaphile() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1973,6 +2040,7 @@ pub fn triskaidekaphile() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2024,6 +2092,7 @@ pub fn excellent_education() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2032,6 +2101,7 @@ pub fn excellent_education() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2088,6 +2158,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2096,6 +2167,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2163,6 +2235,7 @@ pub fn wonder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2171,6 +2244,7 @@ pub fn wonder() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2216,6 +2290,7 @@ pub fn brawn() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2224,6 +2299,7 @@ pub fn brawn() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2270,6 +2346,7 @@ pub fn deep_analysis() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2278,6 +2355,7 @@ pub fn deep_analysis() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2332,6 +2410,7 @@ pub fn kasminas_transmutation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2340,6 +2419,7 @@ pub fn kasminas_transmutation() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2397,6 +2477,7 @@ pub fn crippling_fear() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2405,6 +2486,7 @@ pub fn crippling_fear() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2463,6 +2545,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2471,6 +2554,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2514,6 +2598,7 @@ pub fn valor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2522,6 +2607,7 @@ pub fn valor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2565,6 +2651,7 @@ pub fn pigment_storm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2573,6 +2660,7 @@ pub fn pigment_storm() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2621,6 +2709,7 @@ pub fn step_through() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2629,6 +2718,7 @@ pub fn step_through() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2680,6 +2770,7 @@ pub fn inkfathom_witch() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2688,6 +2779,7 @@ pub fn inkfathom_witch() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2756,6 +2848,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2764,6 +2857,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2808,6 +2902,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2827,6 +2922,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2835,6 +2931,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2889,6 +2986,7 @@ pub fn drannith_stinger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2897,6 +2995,7 @@ pub fn drannith_stinger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2946,6 +3045,7 @@ pub fn mage_mauler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2954,6 +3054,7 @@ pub fn mage_mauler() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3000,6 +3101,7 @@ pub fn heirloom_mirror() -> CardDefinition {
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             ActivatedAbility {
                 energy_cost: 0,
@@ -3020,6 +3122,7 @@ pub fn heirloom_mirror() -> CardDefinition {
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -3034,6 +3137,7 @@ pub fn heirloom_mirror() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3042,6 +3146,7 @@ pub fn heirloom_mirror() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3095,6 +3200,7 @@ pub fn quandrix_mascot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3103,6 +3209,7 @@ pub fn quandrix_mascot() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3157,6 +3264,7 @@ pub fn witherbloom_mascot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3165,6 +3273,7 @@ pub fn witherbloom_mascot() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3220,6 +3329,7 @@ pub fn spiteful_squad() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3228,6 +3338,7 @@ pub fn spiteful_squad() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3284,6 +3395,7 @@ pub fn master_symmetrist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3292,6 +3404,7 @@ pub fn master_symmetrist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3355,6 +3468,7 @@ pub fn stinging_cave_crawler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3363,6 +3477,7 @@ pub fn stinging_cave_crawler() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3410,6 +3525,7 @@ pub fn cogwork_archivist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3418,6 +3534,7 @@ pub fn cogwork_archivist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3473,6 +3590,7 @@ pub fn lorehold_mascot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3481,6 +3599,7 @@ pub fn lorehold_mascot() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3534,6 +3653,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3542,6 +3662,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3608,6 +3729,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![
             // Attack-trigger: pump the attacker +1/+1 EOT.
@@ -3644,6 +3766,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3652,6 +3775,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3699,6 +3823,7 @@ pub fn awesome_presentation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3707,6 +3832,7 @@ pub fn awesome_presentation() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3767,6 +3893,7 @@ pub fn rise_of_extus() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -3775,5 +3902,6 @@ pub fn rise_of_extus() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }

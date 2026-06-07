@@ -35,6 +35,7 @@ pub fn ornithopter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -43,6 +44,7 @@ pub fn ornithopter() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -78,6 +80,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -91,6 +94,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -99,6 +103,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -135,6 +140,7 @@ pub fn millstone() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -148,6 +154,7 @@ pub fn millstone() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -156,6 +163,7 @@ pub fn millstone() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -165,6 +173,48 @@ pub fn millstone() -> CardDefinition {
 /// Both abilities are wired: the first is a vanilla mana ability, the
 /// second uses the new `sac_cost` field on `ActivatedAbility` so paying
 /// the cost sacrifices Mind Stone before the Draw resolves.
+/// Hedron Crawler — {2} 0/1 Artifact Creature — Construct. {T}: Add {C}.
+pub fn hedron_crawler() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Hedron Crawler",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 0,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Springleaf Drum — {1} Artifact. "{T}, Tap an untapped creature you
+/// control: Add one mana of any color." A creature-tap mana rock.
+pub fn springleaf_drum() -> CardDefinition {
+    CardDefinition {
+        name: "Springleaf Drum",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            tap_other_filter: Some(SelectionRequirement::Creature),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 pub fn mind_stone() -> CardDefinition {
     use crate::card::Selector;
     CardDefinition {
@@ -196,6 +246,7 @@ pub fn mind_stone() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             ActivatedAbility {
                 energy_cost: 0,
@@ -215,6 +266,7 @@ pub fn mind_stone() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -229,6 +281,7 @@ pub fn mind_stone() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -237,6 +290,7 @@ pub fn mind_stone() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -282,6 +336,7 @@ pub fn aether_spellbomb() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             // {1}, Sacrifice this: Draw a card.
             ActivatedAbility {
@@ -299,6 +354,7 @@ pub fn aether_spellbomb() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -313,6 +369,7 @@ pub fn aether_spellbomb() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -321,6 +378,7 @@ pub fn aether_spellbomb() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -361,6 +419,7 @@ pub fn zuran_orb() -> CardDefinition {
             // Sacrifice a land as an activation cost.
             sac_other_filter: Some((SelectionRequirement::Land, 1)),
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -374,6 +433,7 @@ pub fn zuran_orb() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -382,6 +442,7 @@ pub fn zuran_orb() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -444,6 +505,7 @@ pub fn chromatic_star() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -466,6 +528,7 @@ pub fn chromatic_star() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -474,6 +537,7 @@ pub fn chromatic_star() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -522,6 +586,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             // {2}, {T}, Sac: Each player exiles their graveyard, you draw.
             ActivatedAbility {
@@ -549,6 +614,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -563,6 +629,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -571,6 +638,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -619,6 +687,7 @@ pub fn cankerbloom() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -632,6 +701,7 @@ pub fn cankerbloom() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -640,6 +710,7 @@ pub fn cankerbloom() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -683,6 +754,7 @@ pub fn fellwar_stone() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -696,6 +768,7 @@ pub fn fellwar_stone() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -704,6 +777,7 @@ pub fn fellwar_stone() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -757,6 +831,7 @@ pub fn monument_to_endurance() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -770,6 +845,7 @@ pub fn monument_to_endurance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -778,6 +854,7 @@ pub fn monument_to_endurance() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -832,7 +909,6 @@ pub fn throne_of_geth() -> CardDefinition {
 /// target." "{4}: Put a +1/+1 counter on this."
 pub fn walking_ballista() -> CardDefinition {
     use crate::card::CounterType;
-    use crate::effect::Predicate;
     use crate::mana::x;
     CardDefinition {
         name: "Walking Ballista",
@@ -841,23 +917,10 @@ pub fn walking_ballista() -> CardDefinition {
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         activated_abilities: vec![
             ActivatedAbility {
-                energy_cost: 0,
-                discard_cost: None,
-                condition: Some(Predicate::ValueAtLeast(
-                    Value::CountersOn {
-                        what: Box::new(Selector::This),
-                        kind: CounterType::PlusOnePlusOne,
-                    },
-                    Value::Const(1),
-                )),
-                effect: Effect::Seq(vec![
-                    Effect::RemoveCounter {
-                        what: Selector::This,
-                        kind: CounterType::PlusOnePlusOne,
-                        amount: Value::Const(1),
-                    },
-                    Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
-                ]),
+                // Counter is paid as a real cost (CR 602.5b) — can't be
+                // over-activated off the stack.
+                remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+                effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
                 ..Default::default()
             },
             ActivatedAbility {
@@ -881,7 +944,6 @@ pub fn walking_ballista() -> CardDefinition {
 /// target."
 pub fn triskelion() -> CardDefinition {
     use crate::card::CounterType;
-    use crate::effect::Predicate;
     CardDefinition {
         name: "Triskelion",
         cost: cost(&[generic(6)]),
@@ -890,23 +952,8 @@ pub fn triskelion() -> CardDefinition {
         toughness: 1,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            condition: Some(Predicate::ValueAtLeast(
-                Value::CountersOn {
-                    what: Box::new(Selector::This),
-                    kind: CounterType::PlusOnePlusOne,
-                },
-                Value::Const(1),
-            )),
-            effect: Effect::Seq(vec![
-                Effect::RemoveCounter {
-                    what: Selector::This,
-                    kind: CounterType::PlusOnePlusOne,
-                    amount: Value::Const(1),
-                },
-                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
-            ]),
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
             ..Default::default()
         }],
         ..Default::default()
@@ -1287,6 +1334,7 @@ fn affinity_body(name: &'static str, mv: u32, ct: crate::card::CreatureType, p: 
         power: p,
         toughness: t,
         affinity_filter: Some(SelectionRequirement::Artifact),
+        affinity_graveyard_filter: None,
         ..Default::default()
     }
 }

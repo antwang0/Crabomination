@@ -37,6 +37,16 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         all.push(f);
     }
     all.push(sets::decks::rofellos_llanowar_emissary as CardFactory);
+    // Khans life-gain taplands (sets::decks::lands) — not in any demo deck,
+    // so registered here for snapshot name→factory round-trip.
+    let gainlands: [CardFactory; 5] = [
+        sets::decks::tranquil_cove,
+        sets::decks::dismal_backwater,
+        sets::decks::bloodfell_caves,
+        sets::decks::rugged_highlands,
+        sets::decks::blossoming_sands,
+    ];
+    all.extend_from_slice(&gainlands);
     // STX (Strixhaven 2021) factory list — large but bounded; the
     // dedup pass below removes any factory the cube/sos pools already
     // exposed. Without this, mid-game snapshots involving STX
@@ -66,6 +76,9 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     // Kaldheim Boast creatures (sets::khm) — registered for snapshot
     // name→factory round-trip.
     all.extend_from_slice(sets::khm::all_khm_card_factories());
+    // OGW/Eldrazi (sets::ogw) — Devoid/Ingest drones + titans; registered so
+    // mid-game snapshots involving them round-trip through name→factory.
+    all.extend_from_slice(sets::ogw::all_ogw_card_factories());
     // Theros devotion payoffs / gods (sets::ths) — registered so mid-game
     // snapshots involving them round-trip through the name→factory lookup.
     let ths: [CardFactory; 36] = [
@@ -264,6 +277,21 @@ mod tests {
         for name in ["Time Walk", "Time Warp", "Temporal Manipulation",
                      "Capture of Jingzhou", "Nexus of Fate"] {
             let def = lookup_by_name(name).expect(name);
+            assert_eq!(def.name, name);
+        }
+    }
+
+    #[test]
+    fn lookup_resolves_new_ogw_alt_cost_cards() {
+        // Awaken / Surge / Emerge / Rally OGW additions must round-trip
+        // through name→factory so mid-game snapshots involving them reload.
+        for name in [
+            "Reckless Bushwhacker", "Tyrant of Valakut", "Wall of Resurgence",
+            "Cyclone Sire", "Boulder Salvo", "Kor Bladewhirl", "Tajuru Warcaller",
+            "Wretched Gryff", "Linvala, the Preserver", "Inverter of Truth",
+            "Munda's Vanguard", "Drana's Chosen", "Devour in Flames",
+        ] {
+            let def = lookup_by_name(name).unwrap_or_else(|| panic!("{name} should resolve"));
             assert_eq!(def.name, name);
         }
     }

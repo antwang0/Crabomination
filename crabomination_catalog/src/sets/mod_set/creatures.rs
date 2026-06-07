@@ -319,6 +319,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -460,6 +461,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -568,6 +570,7 @@ pub fn ranger_captain_of_eos() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -611,6 +614,7 @@ pub fn cathar_commando() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -658,6 +662,7 @@ pub fn haywire_mite() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -865,6 +870,7 @@ pub fn bloodtithe_harvester() -> CardDefinition {
                 1,
             )),
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![blood_etb, blood_attack],
         ..Default::default()
@@ -1028,6 +1034,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
                 1,
             )),
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1074,6 +1081,7 @@ pub fn grim_lavamancer() -> CardDefinition {
             exile_other_filter: Some((SelectionRequirement::Any, 2)),
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2667,6 +2675,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you gain life, put a +1/+1 counter on target
@@ -5379,6 +5388,7 @@ pub fn prodigal_pyromancer() -> CardDefinition {
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -5436,6 +5446,7 @@ pub fn spore_frog() -> CardDefinition {
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -6833,6 +6844,7 @@ pub fn viscera_seer() -> CardDefinition {
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             tap_other_filter: None,
             from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -7397,6 +7409,7 @@ fn tapper_1_1(name: &'static str, types: Vec<CreatureType>) -> CardDefinition {
             sac_other_filter: None,
             tap_other_filter: None,
             from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -8333,6 +8346,220 @@ pub fn dictate_of_the_twin_gods() -> CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "If a source would deal damage, it deals double instead.",
             effect: StaticEffect::DoubleDamageDealt,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Windborn Muse — {3}{W} 2/3 Spirit with Flying and Propaganda's attack tax
+/// (CR 508.1g — {2} per attacker to attack you).
+pub fn windborn_muse() -> CardDefinition {
+    CardDefinition {
+        name: "Windborn Muse",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures can't attack you unless their controller pays {2} for each.",
+            effect: StaticEffect::AttackTaxToController { amount: 2, protect_planeswalkers: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Baird, Steward of Argive — {2}{W}{W} Legendary 2/4 Human Soldier with
+/// Vigilance; creatures can't attack you or your planeswalkers unless their
+/// controller pays {1} for each (CR 508.1g).
+pub fn baird_steward_of_argive() -> CardDefinition {
+    CardDefinition {
+        name: "Baird, Steward of Argive",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures can't attack you or your planeswalkers unless their controller pays {1} for each.",
+            effect: StaticEffect::AttackTaxToController { amount: 1, protect_planeswalkers: true },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Felidar Sovereign — {4}{W}{W} 4/6 Vigilance, Lifelink. At your upkeep, if
+/// you have 40+ life, you win the game (CR 104.2a alt win-con).
+pub fn felidar_sovereign() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Felidar Sovereign",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat, CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(Value::LifeOf(PlayerRef::You), Value::Const(40)),
+                then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Test of Endurance — {2}{W}{W} Enchantment. At your upkeep, if you have 50+
+/// life, you win the game.
+pub fn test_of_endurance() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Test of Endurance",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(Value::LifeOf(PlayerRef::You), Value::Const(50)),
+                then: Box::new(Effect::WinGame { who: PlayerRef::You }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Doom — {2}{B} Enchantment. "Sacrifice this: Destroy target
+/// nonblack creature." A pre-paid Doom Blade on a permanent.
+pub fn seal_of_doom() -> CardDefinition {
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Seal of Doom",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(Color::Black)))),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Primordium — {1}{G} Enchantment. "Sacrifice this: Destroy target
+/// artifact or enchantment."
+pub fn seal_of_primordium() -> CardDefinition {
+    CardDefinition {
+        name: "Seal of Primordium",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dark Prophecy — {B}{B}{B} Enchantment. Whenever a creature you control
+/// dies, draw a card and lose 1 life.
+pub fn dark_prophecy() -> CardDefinition {
+    CardDefinition {
+        name: "Dark Prophecy",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Strength — {G} Enchantment. "Sacrifice this: Target creature gets
+/// +3/+3 until end of turn."
+pub fn seal_of_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Seal of Strength",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ajani's Welcome — {W} Enchantment. Whenever a creature enters under your
+/// control, you gain 1 life.
+pub fn ajanis_welcome() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Ajani's Welcome",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Impassioned Orator — {1}{W} 1/3 Human Cleric. Whenever another creature
+/// enters under your control, you gain 1 life.
+pub fn impassioned_orator() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Impassioned Orator",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Cleric], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
         }],
         ..Default::default()
     }

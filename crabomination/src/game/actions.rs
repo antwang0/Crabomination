@@ -238,18 +238,14 @@ pub(crate) fn cost_reduction_for_spell(
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
-    // Per-card hardcoded "Affinity-for-cards-in-your-graveyard" hook.
-    // The Dawning Archaic ("This spell costs {1} less to cast for each
-    // instant and sorcery card in your graveyard") was the only card
-    // needing this primitive at promotion time; rather than thread a
-    // new `affinity_graveyard_filter` field through every CardDefinition
-    // site, the discount is dispatched per-name. Future Affinity-for-gy
-    // cards can extend this match.
-    if card.definition.name == "The Dawning Archaic" {
+    // Card-intrinsic "Affinity-for-cards-in-your-graveyard" cost reduction:
+    // "{1} less for each [filter] card in your graveyard" (The Dawning
+    // Archaic, Tolarian Terror). Generic-only, clamped by the caller.
+    if let Some(filter) = &card.definition.affinity_graveyard_filter {
         let count = state.players[caster]
             .graveyard
             .iter()
-            .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
+            .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
@@ -885,6 +881,7 @@ impl GameState {
                 exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             });
             std::sync::Arc::make_mut(&mut card.definition).activated_abilities = kept;
         }
@@ -2333,6 +2330,13 @@ impl GameState {
                 matching >= *count as usize
             }
             A::Discard { count } => self.players[p].hand.len() >= *count as usize,
+            A::ReturnToHand { filter, count } => {
+                let matching = self.battlefield.iter().filter(|c| {
+                    c.controller == p
+                        && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+                }).count();
+                matching >= *count as usize
+            }
         })
     }
 
@@ -2459,6 +2463,32 @@ impl GameState {
                     }
                     for id in chosen_ids {
                         self.discard_card(p, id, &mut events);
+                    }
+                }
+                A::ReturnToHand { filter, count } => {
+                    // Auto-pick the lowest-impact matches (tapped first, then
+                    // lowest mana value) and bounce them to their owners' hands.
+                    let mut cands: Vec<&crate::card::CardInstance> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == p
+                                && self.evaluate_requirement_static(
+                                    filter, &Target::Permanent(c.id), p, None,
+                                )
+                        })
+                        .collect();
+                    cands.sort_by_key(|c| (!c.tapped, c.definition.cost.cmc()));
+                    let ids: Vec<CardId> =
+                        cands.iter().take(*count as usize).map(|c| c.id).collect();
+                    for id in ids {
+                        let ctx = EffectContext::for_spell(p, None, 0, 0);
+                        self.move_card_to(
+                            id,
+                            &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                            &ctx,
+                            &mut events,
+                        );
                     }
                 }
             }
@@ -3745,6 +3775,34 @@ impl GameState {
             Vec::new()
         };
 
+        // CR 702.119 — Emerge: pick the creature to sacrifice (auto: highest
+        // MV for max cost reduction) and record its MV. Rejected up front if
+        // the caster controls no matching creature. Sacrificed after payment.
+        let (emerge_sac, emerge_reduction): (Option<CardId>, u32) =
+            if let Some(filter) = &alt.emerge {
+                let best = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == p
+                            && c.definition.is_creature()
+                            && self.evaluate_requirement_static(
+                                filter,
+                                &Target::Permanent(c.id),
+                                p,
+                                None,
+                            )
+                    })
+                    .max_by_key(|c| c.definition.cost.cmc())
+                    .map(|c| (c.id, c.definition.cost.cmc()));
+                match best {
+                    Some((cid, mv)) => (Some(cid), mv),
+                    None => return Err(GameError::SelectionRequirementViolated),
+                }
+            } else {
+                (None, 0)
+            };
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
@@ -3778,6 +3836,11 @@ impl GameState {
         }
         if alt.blitz {
             card.blitzed = true;
+        }
+        if alt.marks_kicked {
+            // CR 702.108 — Surge: stamp the spell kicked so "if its surge
+            // cost was paid" ETB riders fire via `SpellWasKicked`.
+            card.kicked = true;
         }
 
         // Timing: sorcery-speed unless instant-speed (or the alt cost grants
@@ -3838,7 +3901,7 @@ impl GameState {
         // spell` returns the same delta in each. The alt cost is often
         // {0} for pitch spells (Force of Negation, Mystical Dispute), in
         // which case the reduction simply no-ops (clamps at zero).
-        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref()) + emerge_reduction;
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
@@ -3932,6 +3995,16 @@ impl GameState {
                 self.players[p].cards_left_graveyard_this_turn =
                     self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
             }
+        }
+
+        // CR 702.119 — Emerge: sacrifice the emerge creature now that the
+        // (reduced) mana cost is paid.
+        if let Some(sac_cid) = emerge_sac
+            && self.battlefield_find(sac_cid).is_some()
+        {
+            auto_events.push(GameEvent::PermanentSacrificed { card_id: sac_cid, who: p });
+            let mut die_evs = self.remove_to_graveyard_with_triggers(sac_cid);
+            auto_events.append(&mut die_evs);
         }
 
         // Sacrifice additional cost: sacrifice the picked permanents now
@@ -5162,6 +5235,20 @@ impl GameState {
             }
         }
 
+        // CR 602.5c — a permanent whose *computed* keyword set carries
+        // `CantActivateAbilities` (Detention Vortex's Aura grant, etc.) can't
+        // activate its non-mana abilities. Battlefield sources only.
+        if !is_mana_ability(&ability.effect) && !source_in_gy && !source_in_hand {
+            let locked = self
+                .compute_battlefield()
+                .iter()
+                .find(|c| c.id == card_id)
+                .is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities));
+            if locked {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
         // Once-per-turn: reject if this ability index has already been
         // used since the most recent turn-cleanup. The ability is recorded
         // as "used" *after* successful activation below so failed mana
@@ -5461,6 +5548,21 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight remove-counter-cost gate (CR 602.5b "Remove a [kind]
+        // counter from this:"). The source must carry `count` counters of
+        // the named kind; removed after payment so the ability can't be
+        // over-activated off the stack. Walking Ballista, Triskelion,
+        // Hangarback Walker.
+        if let Some((kind, count)) = ability.remove_counter_cost.as_ref() {
+            let have = self
+                .battlefield_find(card_id)
+                .map(|c| c.counter_count(*kind))
+                .unwrap_or(0);
+            if have < *count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -5648,6 +5750,22 @@ impl GameState {
             events.append(&mut die_evs);
         }
 
+        // Return-self-as-cost: with tap/mana/life paid, bounce the source
+        // back to its owner's hand (CR 602.5b). Applied before the effect
+        // resolves, mirroring `sac_cost`. The mana ability / spell-copy then
+        // runs with the source already in hand (Grinning Ignus, Rootha).
+        if ability.return_self_cost
+            && let Some(owner) = self.battlefield_find(card_id).map(|c| c.owner)
+        {
+            let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
+            self.move_card_to(
+                card_id,
+                &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(owner)),
+                &ctx,
+                &mut events,
+            );
+        }
+
         // Sacrifice-another-from-bf-as-cost: with tap/mana/life paid,
         // sacrifice each cost-picked battlefield permanent (already
         // validated to exist via the pre-flight `sac_other_picks`
@@ -5679,6 +5797,16 @@ impl GameState {
             events.push(GameEvent::PermanentSacrificed { card_id: other_cid, who: sac_who });
             let mut die_evs = self.remove_to_graveyard_with_triggers(other_cid);
             events.append(&mut die_evs);
+        }
+
+        // Remove-counter-as-cost (CR 602.5b): with tap/mana/life paid, strip
+        // the cost-picked counters off the source (validated by the pre-flight
+        // gate). Walking Ballista's `Remove a +1/+1 counter from this: deal 1
+        // damage` runs here before the ping resolves.
+        if let Some((kind, count)) = ability.remove_counter_cost
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            c.remove_counters(kind, count);
         }
 
         // Discard-as-cost (CR 602.5b): with tap/mana/life paid, discard each

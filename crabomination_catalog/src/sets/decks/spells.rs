@@ -112,6 +112,7 @@ pub fn serum_powder() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         opening_hand: Some(OpeningHandEffect::MulliganHelper),
@@ -375,6 +376,8 @@ pub fn force_of_negation() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }
@@ -609,6 +612,8 @@ pub fn mystical_dispute() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }

@@ -41,6 +41,7 @@ fn fetch_ability(type_a: LandType, type_b: LandType) -> ActivatedAbility {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+        ..Default::default()
     }
 }
 

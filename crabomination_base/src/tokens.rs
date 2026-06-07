@@ -114,6 +114,7 @@ pub fn food_token() -> TokenDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false, discard_cost: None,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -151,6 +152,7 @@ pub fn treasure_token() -> TokenDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false, discard_cost: None,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -179,6 +181,7 @@ pub fn goldspan_treasure_token() -> TokenDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false, discard_cost: None,
+            ..Default::default()
         }],
         ..treasure_token()
     }
@@ -226,6 +229,7 @@ pub fn blood_token() -> TokenDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false, discard_cost: None,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -263,6 +267,65 @@ pub fn stx_pest_token() -> TokenDefinition {
             },
         }],
         static_abilities: vec![],
+    }
+}
+
+/// 1/1 colorless Eldrazi Scion creature token with "Sacrifice this: Add
+/// {C}." (CR — Battle for Zendikar Eldrazi). Sacrifices for one colorless.
+pub fn eldrazi_scion_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Eldrazi Scion".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Scion],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            sac_cost: true,
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+    }
+}
+
+/// 0/1 colorless Eldrazi Spawn creature token with "Sacrifice this: Add
+/// {C}." The weaker sibling of the Scion token (no power, same sac-for-mana).
+pub fn eldrazi_spawn_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Eldrazi Spawn".into(),
+        power: 0,
+        toughness: 1,
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        ..eldrazi_scion_token()
+    }
+}
+
+/// 10/10 colorless Eldrazi creature token (Desolation Twin's cast trigger).
+pub fn eldrazi_10_10_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Eldrazi".into(),
+        power: 10,
+        toughness: 10,
+        activated_abilities: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        ..eldrazi_scion_token()
     }
 }
 
@@ -412,6 +475,7 @@ pub fn clue_token() -> TokenDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false, discard_cost: None,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

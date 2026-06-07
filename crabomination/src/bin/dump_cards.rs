@@ -86,6 +86,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Saddle(_) => "Saddle",
         Keyword::Casualty(_) => "Casualty",
         Keyword::Soulbond => "Soulbond",
+        Keyword::Devoid => "Devoid",
         Keyword::Annihilator(_) => "Annihilator",
         Keyword::Flanking => "Flanking",
         Keyword::Bushido(_) => "Bushido",
@@ -117,14 +118,15 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         // keyword, so it's filtered the same way as Unblockable.)
         Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
-        | Keyword::CantAttack | Keyword::MustBeBlocked | Keyword::AllMustBlock
+        | Keyword::CantAttack | Keyword::CantActivateAbilities
+        | Keyword::MustBeBlocked | Keyword::AllMustBlock
         | Keyword::MustAttack | Keyword::MustBlock
         | Keyword::CanAttackOnlyIfDefenderControls(_)
         | Keyword::CanAttackOnlyIfYouControl(_)
         | Keyword::CantAttackOrBlockUnlessEvenCounters
         | Keyword::AttacksAlone | Keyword::DealsNoCombatDamage
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
-        | Keyword::CantBeBlockedByMoreThanOne
+        | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
         Keyword::Unleash => "Unleash",
         Keyword::Ninjutsu(_) => "Ninjutsu",

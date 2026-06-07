@@ -102,6 +102,20 @@ pub fn forest() -> CardDefinition {
     }
 }
 
+/// Wastes — basic land with no land subtype; {T}: Add {C}.
+pub fn wastes() -> CardDefinition {
+    CardDefinition {
+        name: "Wastes",
+        cost: ManaCost::default(),
+        supertypes: vec![Supertype::Basic],
+        card_types: vec![CardType::Land],
+        power: 0,
+        toughness: 0,
+        activated_abilities: vec![super::tap_add_colorless()],
+        ..Default::default()
+    }
+}
+
 fn dual(name: &'static str, a: LandType, b: LandType, ca: Color, cb: Color) -> CardDefinition {
     CardDefinition {
         name,

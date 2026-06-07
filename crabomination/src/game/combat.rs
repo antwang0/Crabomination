@@ -116,22 +116,43 @@ impl GameState {
             }
         }
 
-        // CR 508.1 attack tax (Propaganda / Ghostly Prison) — sum the
-        // per-creature tax for each attacker's defending player and pay it up
-        // front from the active player's mana (auto-tapping lands). Computed
-        // and paid *before* any attacker is tapped so a failed payment leaves
-        // the declaration untouched (try_pay_with_auto_tap snapshots/rolls
-        // back). Rejecting here makes `would_accept` report the over-budget
-        // declaration as illegal for free.
-        let total_tax: u32 = attacks
-            .iter()
-            .filter_map(|atk| self.defender_for(atk.target))
-            .map(|d| self.attack_tax_for_defender(d))
-            .sum();
+        // CR 508.1g — attack tax (Ghostly Prison / Propaganda). Sum {amount}
+        // for each attacker hitting a player who controls an
+        // `AttackTaxToController` static (copies stack), then auto-pay it from
+        // the active player's mana pool. Reject the whole declaration if the
+        // pool can't cover it (a wants_ui interactive pay prompt is a TODO).
+        let mut total_tax = 0u32;
+        for atk in &attacks {
+            // The defending player whose statics apply, and whether the attack
+            // is aimed at a planeswalker (so `protect_planeswalkers` gates it).
+            let (defender, at_planeswalker) = match atk.target {
+                crate::game::types::AttackTarget::Player(d) => (Some(d), false),
+                crate::game::types::AttackTarget::Planeswalker(pw) => {
+                    (self.battlefield_find(pw).map(|c| c.controller), true)
+                }
+            };
+            let Some(d) = defender else { continue };
+            for c in &self.battlefield {
+                if c.controller != d {
+                    continue;
+                }
+                for sa in &c.definition.static_abilities {
+                    if let crate::effect::StaticEffect::AttackTaxToController {
+                        amount,
+                        protect_planeswalkers,
+                    } = &sa.effect
+                        && (!at_planeswalker || *protect_planeswalkers)
+                    {
+                        total_tax += amount;
+                    }
+                }
+            }
+        }
         if total_tax > 0 {
-            let cost = crate::mana::ManaCost::new(vec![crate::mana::ManaSymbol::Generic(total_tax)]);
-            self.try_pay_with_auto_tap(p, &cost)
-                .map_err(|_| GameError::CannotPayAttackTax { amount: total_tax })?;
+            if self.players[p].mana_pool.total() < total_tax {
+                return Err(GameError::CannotAttack(attacks[0].attacker));
+            }
+            self.players[p].mana_pool.spend_generic(total_tax);
         }
 
         for atk in attacks {
@@ -433,6 +454,12 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+            // Per-pair "can't block this creature this turn" (Kozilek's
+            // Pathfinder): the blocker is barred only from this attacker.
+            if self.cant_block_pairs.contains(&(blocker_id, attacker_id)) {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
             // "Can't block unless it has an even number of counters on it"
             // (Sab-Sunen). Zero is even; reject an odd total counter count.
             if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
@@ -480,6 +507,23 @@ impl GameState {
                     .count();
                 if blocker_count == 1 {
                     return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
+                }
+            }
+        }
+
+        // "Can't be blocked except by N or more creatures" (Pathrazer of
+        // Ulamog). Generalized Menace: 0 or >= N blockers, never 1..N-1.
+        for atk in &self.attacking {
+            for kw in kws_of(atk.attacker) {
+                if let Keyword::CantBeBlockedExceptByN(n) = kw {
+                    let blocker_count = assignments
+                        .iter()
+                        .filter(|(_, aid)| *aid == atk.attacker)
+                        .count()
+                        + self.block_map.values().filter(|&&aid| aid == atk.attacker).count();
+                    if blocker_count > 0 && (blocker_count as u32) < *n {
+                        return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
+                    }
                 }
             }
         }
@@ -1532,7 +1576,7 @@ impl GameState {
                             self.set_monarch(ctrl, events);
                         }
                 }
-                self.fire_combat_damage_to_player_triggers(atk.id, p);
+                self.fire_combat_damage_to_player_triggers(atk.id, p, amount);
             }
             AttackTarget::Planeswalker(pw_id) => {
                 if let Some(pw) = self.battlefield_find_mut(pw_id) {
@@ -1570,7 +1614,12 @@ impl GameState {
     /// Confidence and friends. The trigger source is bound to the
     /// graveyard card itself so a `Move(SelfSource → Hand)` body
     /// returns the right card.
-    fn fire_combat_damage_to_player_triggers(&mut self, source: CardId, damaged_player: usize) {
+    fn fire_combat_damage_to_player_triggers(
+        &mut self,
+        source: CardId,
+        damaged_player: usize,
+        damage_amount: u32,
+    ) {
         let attacker_controller = self
             .battlefield
             .iter()
@@ -1697,7 +1746,10 @@ impl GameState {
                 converged_value: 0,
                 trigger_source: None,
                 mana_spent: 0,
-                event_amount: 0,
+                // CR 119.3 — the damage dealt, so `Value::TriggerEventAmount`
+                // riders (Visions of Brutality's "controller loses that much
+                // life") scale by the hit.
+                event_amount: damage_amount,
                 intervening_if: None,
             });
         }

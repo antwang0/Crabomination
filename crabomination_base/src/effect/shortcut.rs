@@ -111,6 +111,72 @@ pub fn blitz(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, blitz: true, ..Default::default() }
 }
 
+/// Surge (CR 702.108) alternative cost: cast for `mana_cost` if you or a
+/// teammate cast another spell this turn. `with_rider` stamps the spell
+/// "kicked" so "if its surge cost was paid" ETB riders fire.
+pub fn surge(mana_cost: crate::mana::ManaCost, with_rider: bool) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        condition: Some(Predicate::SpellsCastThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(1),
+        }),
+        marks_kicked: with_rider,
+        ..Default::default()
+    }
+}
+
+/// The "animate a land" rider shared by Awaken (CR 702.113) and
+/// Wall of Resurgence / Cyclone Sire: put `counters` +1/+1 counters on the
+/// land in target slot `slot` and it becomes a 0/0 Elemental creature with
+/// haste that's still a land.
+pub fn animate_land(slot: u8, counters: i32) -> Effect {
+    use crate::card::CreatureType;
+    let land = SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou);
+    Effect::Seq(vec![
+        Effect::AddCounter {
+            what: Selector::TargetFiltered { slot, filter: land },
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(counters),
+        },
+        Effect::BecomeCreature {
+            what: Selector::Target(slot),
+            power: Value::Const(0),
+            toughness: Value::Const(0),
+            creature_types: vec![CreatureType::Elemental],
+            keywords: vec![Keyword::Haste],
+            duration: Duration::Permanent,
+        },
+    ])
+}
+
+/// Awaken N—`mana_cost` (CR 702.113) alternative cost: cast for `mana_cost`;
+/// the spell resolves its `base_effect` and additionally animates the land in
+/// target slot `land_slot` with N +1/+1 counters. `base_effect` keeps its own
+/// target slots (0..land_slot); the land occupies `land_slot`.
+pub fn awaken(
+    n: i32,
+    mana_cost: crate::mana::ManaCost,
+    land_slot: u8,
+    base_effect: Effect,
+) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        effect_override: Some(Effect::Seq(vec![base_effect, animate_land(land_slot, n)])),
+        ..Default::default()
+    }
+}
+
+/// Emerge (CR 702.119) alternative cost: cast for `mana_cost` by sacrificing a
+/// creature you control, reducing the cost generically by that creature's MV.
+pub fn emerge(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost {
+        mana_cost,
+        emerge: Some(SelectionRequirement::Creature),
+        ..Default::default()
+    }
+}
+
 /// Spectacle (CR 702.111) alternative cost: cast for `mana_cost` rather
 /// than the printed cost if an opponent lost life this turn.
 pub fn spectacle(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
@@ -229,6 +295,16 @@ pub fn provoke() -> TriggeredAbility {
 pub fn on_dies(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect,
+    }
+}
+
+/// "When you cast this spell, `effect`." A cast trigger resolving above
+/// the spell on the stack (CR 601.2 / the Eldrazi titans). Targeted bodies
+/// pick their target via `target_filtered` as the trigger goes on the stack.
+pub fn on_cast(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
         effect,
     }
 }
@@ -542,6 +618,22 @@ pub fn magecraft(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// "Whenever you cast a colorless spell, `effect`." (Kozilek's Sentinel.)
+/// `SelectionRequirement::Colorless` reads cost pips, so genuinely colorless
+/// (generic-cost) spells match; Devoid spells with colored pips slip through
+/// (the known Devoid/colorless-filter gap tracked in TODO.md).
+pub fn cast_colorless(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+            Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Colorless,
+            },
+        ),
+        effect,
+    }
+}
+
 /// Cascade (CR 702.85). Wires the standard "when you cast this spell"
 /// (`SpellCast` / `SelfSource`) trigger whose body is
 /// [`Effect::Cascade`]. `mv` is the cascading spell's printed mana
@@ -650,6 +742,33 @@ pub fn etb_pump_each_with_type(creature_type: crate::card::CreatureType) -> Trig
             amount: Value::Const(1),
         }),
     })
+}
+
+/// Predicate matching "it's your turn and the current step is a main phase"
+/// — the resolution-time test for Addendum (CR 702.124): a spell cast during
+/// your main phase resolves during that same step, so this is exact.
+pub fn cast_during_your_main() -> Predicate {
+    use crate::turn_step::TurnStep;
+    Predicate::All(vec![
+        Predicate::IsTurnOf(PlayerRef::You),
+        Predicate::Any(vec![
+            Predicate::CurrentStepIs(TurnStep::PreCombatMain),
+            Predicate::CurrentStepIs(TurnStep::PostCombatMain),
+        ]),
+    ])
+}
+
+/// Addendum (CR 702.124): run `base`, then — if the spell was cast during the
+/// caster's main phase — also run `bonus`.
+pub fn addendum(base: Effect, bonus: Effect) -> Effect {
+    Effect::Seq(vec![
+        base,
+        Effect::If {
+            cond: cast_during_your_main(),
+            then: Box::new(bonus),
+            else_: Box::new(Effect::Noop),
+        },
+    ])
 }
 
 /// Predicate matching "the just-cast spell is a noncreature spell".
@@ -1945,6 +2064,21 @@ pub fn poisonous(n: u32) -> TriggeredAbility {
         effect: Effect::AddPoison {
             who: Selector::Player(PlayerRef::Target(0)),
             amount: Value::Const(n as i32),
+        },
+    }
+}
+
+/// Ingest (CR 702.115): "Whenever this creature deals combat damage to a
+/// player, that player exiles the top card of their library." A
+/// `DealsCombatDamageToPlayer / SelfSource` trigger; the damaged player is
+/// bound to target slot 0 by `fire_combat_damage_to_player_triggers`.
+pub fn ingest() -> TriggeredAbility {
+    use crate::card::{EventKind, EventScope, EventSpec};
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::ExileTopOfLibrary {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(1),
         },
     }
 }

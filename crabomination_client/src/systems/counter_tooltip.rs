@@ -408,6 +408,35 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("(blocking #{})", att.0));
     }
 
+    // Designation badges surfaced over the wire (CR 701.60 Suspect,
+    // CR 701.39 Goad, CR 701.27 Monstrosity). Each is a sticky game-state
+    // flag the player needs at a glance — a suspected creature has menace
+    // and can't block, a goaded creature must attack a player other than
+    // its controller, and a monstrous creature has already paid its
+    // one-shot monstrosity cost. Push (claude/modern_decks).
+    if p.suspected {
+        lines.push(String::from("(suspected — has menace, can't block)"));
+    }
+    if p.goaded {
+        lines.push(String::from("(goaded — must attack)"));
+    }
+    if p.monstrous {
+        lines.push(String::from("(monstrous)"));
+    }
+
+    // CR 714 — Saga chapter progress. The current chapter is the Lore counter
+    // count; `saga_final_chapter` is the highest chapter number (sacrificed
+    // after it resolves).
+    if let Some(final_ch) = p.saga_final_chapter {
+        let lore = p
+            .counters
+            .iter()
+            .find(|(k, _)| *k == CounterType::Lore)
+            .map(|(_, n)| *n)
+            .unwrap_or(0);
+        lines.push(format!("(saga — chapter {lore} / {final_ch})"));
+    }
+
     // Marked damage: every creature with non-zero damage is one toughness-
     // threshold away from death. Surface "marked: N damage" plus a
     // (lethal? Y/N) shorthand so the player sees at a glance how close
@@ -479,6 +508,10 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::Shadow => "Can only block or be blocked by creatures with shadow.",
         K::Horsemanship => "Can only be blocked by creatures with horsemanship.",
         K::Unblockable => "Can't be blocked.",
+        K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature.",
+        K::CantBeBlockedExceptByN(_) => "Can't be blocked except by that many or more creatures.",
+        K::CantBeBlockedExceptBy(_) => "Can only be blocked by creatures matching the named quality.",
+        K::CantBeBlockedBy(_) => "Can't be blocked by creatures matching the named quality.",
         K::Changeling => "Is every creature type.",
         K::Flash => "You may cast it any time you could cast an instant.",
         K::Flanking => "Creatures without flanking blocking it get -1/-1 until end of turn.",
@@ -574,6 +607,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // `{:?}` debug shape — give them printed-Oracle phrasing.
         K::CantBlock => "Can't block".into(),
         K::CantAttack => "Can't attack".into(),
+        K::CantActivateAbilities => "Activated abilities can't be activated".into(),
         K::AttacksAlone => "Attacks only alone".into(),
         K::DealsNoCombatDamage => "Deals no combat damage".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
@@ -619,6 +653,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBeBlockedExceptBy(_) => "Can't be blocked except by certain creatures".into(),
         K::CantBeBlockedBy(_) => "Can't be blocked by certain creatures".into(),
         K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature".into(),
+        K::CantBeBlockedExceptByN(n) => format!("Can't be blocked except by {n} or more creatures"),
         K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
         K::Suspend(n, cost) => format!("Suspend {n}—{}", cost.summary()),
         // Cost/count-bearing keywords that otherwise fell through to the raw
@@ -638,6 +673,13 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::MustBlock => "Blocks each combat if able".into(),
         K::MustAttack => "Attacks each combat if able".into(),
         K::CantBeCopied => "Can't be copied".into(),
+        // Player-facing keywords that previously fell through to the raw
+        // `{:?}` debug shape.
+        K::Devoid => "Devoid (colorless)".into(),
+        K::Landcycling(cost, lt) => format!("{lt:?}cycling {}", cost.summary()),
+        K::CantBeCounteredIfXAtLeast(n) => {
+            format!("Can't be countered if X is {n} or more")
+        }
         _ => format!("{kw:?}"),
     }
 }
@@ -926,6 +968,18 @@ mod tests {
     }
 
     #[test]
+    fn suspect_goad_monstrous_badges_surface_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.suspected = true;
+        p.goaded = true;
+        p.monstrous = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("suspected"), "got: {body}");
+        assert!(body.contains("goaded"), "got: {body}");
+        assert!(body.contains("monstrous"), "got: {body}");
+    }
+
+    #[test]
     fn combat_status_hidden_when_idle() {
         let p = make_permanent_view(0, 2);
         let body = build_tooltip_body(&p);
@@ -998,7 +1052,8 @@ mod tests {
         use crabomination::card::Keyword;
         for kw in [Keyword::Prowess, Keyword::Fear, Keyword::Skulk,
                    Keyword::Shadow, Keyword::Unblockable, Keyword::Changeling,
-                   Keyword::Flash, Keyword::Intimidate, Keyword::Horsemanship] {
+                   Keyword::Flash, Keyword::Intimidate, Keyword::Horsemanship,
+                   Keyword::CantBeBlockedByMoreThanOne, Keyword::CantBeBlockedExceptByN(2)] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");
         }

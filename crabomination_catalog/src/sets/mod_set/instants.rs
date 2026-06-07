@@ -625,6 +625,8 @@ pub fn pyrokinesis() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }
@@ -1534,6 +1536,25 @@ pub fn mending_hands() -> CardDefinition {
     }
 }
 
+/// Reverse Damage — {1}{W}{W} Instant. "The next time a source of your
+/// choice would deal damage to you this turn, prevent that damage. You
+/// gain life equal to the damage prevented this way." (CR 615.1.) Modeled
+/// as a `gain_life` prevention shield on the caster; the source-of-your-
+/// choice restriction collapses (any source's next hit is soaked, up to a
+/// high cap that stands in for "that damage").
+pub fn reverse_damage() -> CardDefinition {
+    CardDefinition {
+        name: "Reverse Damage",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventNextDamageAndGainLife {
+            target: Selector::You,
+            amount: Value::Const(99),
+        },
+        ..Default::default()
+    }
+}
+
 /// Moment's Peace — {1}{G} Instant. "Prevent all combat damage that would be
 /// dealt this turn. Flashback {2}{G}." A fog you can recast from the graveyard.
 pub fn moments_peace() -> CardDefinition {
@@ -1638,6 +1659,68 @@ pub fn frost_breath() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![tap_and_stun(0), tap_and_stun(1)]),
+        ..Default::default()
+    }
+}
+
+/// Costly Plunder — {1}{B} Instant. Sacrifice an artifact or creature; draw
+/// two cards.
+pub fn costly_plunder() -> CardDefinition {
+    CardDefinition {
+        name: "Costly Plunder",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pressure Point — {1}{W} Instant. Tap target creature; draw a card.
+pub fn pressure_point() -> CardDefinition {
+    CardDefinition {
+        name: "Pressure Point",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Reclaim — {G} Instant. Put target card from your graveyard on top of your
+/// library.
+pub fn reclaim() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Reclaim",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Any),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: LibraryPosition::Top },
+        },
+        ..Default::default()
+    }
+}
+
+/// Catalog — {2}{U} Instant. Draw two cards. Discard a card.
+pub fn catalog_draw() -> CardDefinition {
+    CardDefinition {
+        name: "Catalog",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]),
         ..Default::default()
     }
 }

@@ -43,12 +43,12 @@ pub enum CreatureType {
     Knight, Soldier, Wizard, Cleric, Rogue, Warrior, Beast, Bird, Soltari,
     Elemental, Djinn, Horror, Specter, Cat, Insect, Spider, Wurm,
     Bear, Ape, Rat, Fungus, Treefolk, Giant, Ogre, Shaman, Druid,
-    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout,
+    Monk, Archer, Berserker, Barbarian, Artificer, Pirate, Scout, Mongoose,
     Advisor, Assassin, Faerie, Skeleton, Spirit, Wall, Illusion,
     Hydra, Sphinx, Phoenix, Minotaur, Centaur, Cyclops, Satyr, Nymph,
     Kithkin, Viashino, Eldrazi, Sliver, Shapeshifter, Troll,
     Imp, Nightmare, Shade, Minion, Thrull, Carrier, Devil, Wraith,
-    Drake, Griffin, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
+    Drake, Griffin, Hippogriff, Pegasus, Unicorn, Horse, Hound, Wolf, Werewolf, Fox, Dog,
     Jackal,
     Serpent, Fish, Octopus, Squid, Jellyfish, Crab, Turtle, Frog, Crocodile,
     Dinosaur, Lizard, Snake, Scorpion, Bat, Squirrel, Ox, Boar, Goat,
@@ -109,12 +109,22 @@ pub enum CreatureType {
     Army,
     // Edge-of-Eternities Drone artifact-creature token (Pinnacle Emissary).
     Drone,
+    // Battle for Zendikar Eldrazi Scion token subtype.
+    Scion,
+    // Battle for Zendikar / OGW Eldrazi Processor (process-matters).
+    Processor,
+    // Yeti (Mountain Yeti, Zhalfirin Yeti).
+    Yeti,
+    // Ranger (Murasa Ranger).
+    Ranger,
     // Artifact creature subtype (Bottle Gnomes).
     Gnome,
     // Artifact creature subtype (Court Homunculus, Fblthp).
     Homunculus,
     // Amonkhet Naga (Ramunap Excavator).
     Naga,
+    // Strixhaven artifact-creature subtype (Biblioplex Assistant).
+    Gargoyle,
 }
 
 /// Land subtypes (basic land types + others).
@@ -157,6 +167,8 @@ pub enum PlaneswalkerSubtype {
     Saheeli, Tamiyo, Dihada, Urza,
     // modern_decks: Narset, Parter of Veils.
     Narset,
+    // STX: Kasmina, Enigma Sage.
+    Kasmina,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -432,6 +444,11 @@ pub enum Keyword {
     Prowess,
     Ward(WardCost),
     Changeling,
+    /// CR 702.114 — Devoid is a characteristic-defining ability: the object
+    /// is colorless regardless of the colored pips in its mana cost. Honored
+    /// in `colors_from_card` (the layer-5 color base), so protection-from-
+    /// color and "colorless permanent" payoffs treat it as colorless.
+    Devoid,
     Storm,
     /// CR 702.69 — "When you cast this spell, copy it for each permanent put
     /// into a graveyard from the battlefield this turn." A self-cast copy
@@ -453,6 +470,12 @@ pub enum Keyword {
     /// Silence). Enforced from the *computed* keyword set in
     /// `declare_attackers`, so layer-granted variants are honored.
     CantAttack,
+    /// CR 602.5c — "[This permanent]'s activated abilities can't be
+    /// activated." A static restriction on the bearer (or an Aura grant —
+    /// Detention Vortex, Stupor-style locks). Enforced from the *computed*
+    /// keyword set in `activate_ability`; mana abilities are unaffected
+    /// (they aren't "activated" through the normal permission gate).
+    CantActivateAbilities,
     /// CR 702.98 — Unleash. A marker keyword; the "may enter with a +1/+1
     /// counter" half rides a `shortcut::unleash()` ETB trigger, and the
     /// "can't block while it has a +1/+1 counter" half is injected as a
@@ -576,6 +599,11 @@ pub enum Keyword {
     /// (Charging Rhino, Spectral Force). At most one blocker may be assigned
     /// to it. Enforced in `declare_blockers` (the inverse of Menace).
     CantBeBlockedByMoreThanOne,
+    /// "This creature can't be blocked except by N or more creatures"
+    /// (Pathrazer of Ulamog — N=3). Generalizes Menace (the N=2 case): the
+    /// attacker must be blocked by `0` or `>= N` creatures. Enforced in
+    /// `declare_blockers`.
+    CantBeBlockedExceptByN(u32),
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each
@@ -992,6 +1020,16 @@ pub struct CardDefinition {
     /// SBA pruning step.
     #[serde(default)]
     pub max_counters_of_kind: Option<(CounterType, u32)>,
+    /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
+    /// A combined chapter ("I, II — …") is listed once per number with the
+    /// same effect. Non-empty marks the card a Saga: it enters with one lore
+    /// counter (firing chapter 1), gains one more at the start of each of its
+    /// controller's precombat main phases (firing that chapter), and is
+    /// sacrificed by SBA once its lore counters reach the final (highest)
+    /// chapter number and no chapter ability of its is still on the stack.
+    /// Defaults to empty via `#[serde(default)]`.
+    #[serde(default)]
+    pub saga_chapters: Vec<(u32, crate::effect::Effect)>,
     /// CR 701.x — "Exile this spell" rider for instants and sorceries that
     /// route to exile instead of their owner's graveyard after resolution.
     /// Used by Strixhaven's "Then exile this spell" wording (Awaken the
@@ -1022,6 +1060,13 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub affinity_filter: Option<SelectionRequirement>,
+    /// "This spell costs {1} less to cast for each [filter] card in your
+    /// graveyard" — the graveyard-counting sibling of `affinity_filter`.
+    /// Generic-only, clamped by the caller. Powers Tolarian Terror /
+    /// The Dawning Archaic (instant-or-sorcery), Murktide-class delve-flavor
+    /// reductions, etc. Defaults to `None` for snapshot back-compat.
+    #[serde(default)]
+    pub affinity_graveyard_filter: Option<SelectionRequirement>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
@@ -1190,6 +1235,15 @@ pub enum AdditionalCastCost {
     },
     /// "As an additional cost, discard N card(s)."
     Discard { count: u32 },
+    /// "As an additional cost to cast this spell, return N permanent(s) you
+    /// control matching `filter` to their owner's hand." Devour in Flames
+    /// ("return a land you control"). Auto-picker bounces the lowest-impact
+    /// matches (tapped first, then lowest mana value).
+    ReturnToHand {
+        filter: SelectionRequirement,
+        #[serde(default = "one_u32")]
+        count: u32,
+    },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.
@@ -1288,6 +1342,10 @@ pub enum DynamicPt {
     /// Power = base_p − controller's life total, toughness = base_t − life.
     /// Death's Shadow (13/13 that "gets −X/−X where X is your life total").
     BaseMinusControllerLife { base_p: i32, base_t: i32 },
+    /// Power = number of colorless creatures the controller controls,
+    /// toughness = `base_t`. Vile Aggregate (*/5). "Colorless" is read as
+    /// Devoid-or-no-colored-pips, covering every printed colorless creature.
+    ColorlessCreaturesControlled { base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the
@@ -1379,6 +1437,20 @@ pub struct AlternativeCost {
     /// enforces on noninstant spells.
     #[serde(default)]
     pub flash: bool,
+    /// True when paying this alternative cost stamps the resolving spell as
+    /// "kicked" (`CardInstance.kicked`), so "if its [surge/...] cost was paid"
+    /// ETB riders fire via `Predicate::SpellWasKicked`. Reuses the kicker
+    /// pipeline for Surge (CR 702.108) — Reckless Bushwhacker, Tyrant of
+    /// Valakut.
+    #[serde(default)]
+    pub marks_kicked: bool,
+    /// CR 702.119 — Emerge. When `Some(filter)`, this alternative cost
+    /// requires sacrificing a creature you control matching `filter`, and the
+    /// `mana_cost` (the emerge cost) is reduced generically by that creature's
+    /// mana value. The auto-picker sacrifices the highest-MV match (max
+    /// reduction). Elder Deep-Fiend, Wretched Gryff, Distended Mindbender.
+    #[serde(default)]
+    pub emerge: Option<SelectionRequirement>,
 }
 
 impl CardDefinition {

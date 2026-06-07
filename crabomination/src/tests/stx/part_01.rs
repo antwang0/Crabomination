@@ -2488,6 +2488,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2496,6 +2497,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
 
     let mut g = two_player_game();
@@ -2580,6 +2582,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2588,6 +2591,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
 
     let mut g = two_player_game();

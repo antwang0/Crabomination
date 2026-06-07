@@ -32,7 +32,8 @@ and the rules-coverage audit in `TODO.md`.
   Offspring/Plot/Saddle/Blitz/Spectacle/Escalate/Buyback/Bestow/Foretell/
   Suspend/Flashback/Madness/Escape/Adventure/Cascade/Storm/Convoke/Delve);
   plus Phasing-adjacent Fading/Vanishing, Cumulative Upkeep, Echo, Dredge,
-  Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift, Unleash.
+  Retrace, Morph/Megamorph, Crew/Reconfigure, Changeling, Soulshift, Unleash,
+  Devoid (CDA colorless), Ingest.
 - **Costs/mana:** colored/generic/colorless/hybrid/mono-hybrid/Phyrexian/snow/X;
   Convoke/Delve generic reduction; Commander tax; alternative (pitch) costs;
   energy-gated mana abilities; X-cost activated abilities.
@@ -54,7 +55,9 @@ and the rules-coverage audit in `TODO.md`.
 - **Misc primitives:** per-card board-bounce to each owner
   (`PlayerRef::OwnerOfMoved`; Aetherize/Evacuation), set-all-life-to-lowest
   (`Value::LowestLifeTotal`; Repay in Kind), step-gated activated abilities
-  (`Predicate::CurrentStepIs`; Mirror Universe/Magus of the Mirror upkeep gate).
+  (`Predicate::CurrentStepIs`; Mirror Universe/Magus of the Mirror upkeep gate),
+  sacrifice-unless-pay-mana (`Effect::PayManaOrElse`; Archway Commons),
+  single-player graveyard exile (`Effect::ExilePlayerGraveyard`; Go Blank).
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant (+ teams);
   singleplayer vs. bot, networked TCP multiplayer, draft + cube, Learn/Lessons
   sideboard, full-state serde snapshots (save/restore + replay foundation).
@@ -171,7 +174,12 @@ not how Magic works" moments.
 
 - ⏳ **Battle card type** (CR 110.4) + defense counters +
   `AttackTarget::Battle` (noted in `TODO.md`).
-- ⏳ **Sagas** (lore counters, chapter abilities, DFC sagas).
+- 🟡 **Sagas** (CR 714). `CardDefinition.saga_chapters: Vec<(u32, Effect)>` +
+  `GameState::saga_advance`: enters with one lore counter (chapter I fires),
+  gains one each precombat main (turn-based action), and is sacrificed by SBA
+  once lore counters reach the final chapter and no chapter ability is still on
+  the stack. Ships History of Benalia, The Eldest Reborn. Remaining ⏳: DFC
+  sagas (transforming back face) and read-ahead/chapter-choice variants.
 - ✅ **Split cards** (CR 709) + **Fuse** (CR 702.102). The left half lives on
   the main `CardDefinition` (cast via the normal path); `CardDefinition.split:
   Some(SplitCard{ right, fuse })` carries the right half + Fuse flag. Cast the
@@ -332,10 +340,10 @@ feature; sweep card-batch by card-batch.
   CantBlock, CR 701.60; Barbed Servitor, Repeat Offender, Reasonable Doubt,
   Person of Interest), ✅ Discover (`Effect::Discover { n }` — CR 701.57,
   cascade-style exile-until-MV≤N then cast-free-or-to-hand; Geological
-  Appraiser, Trumpeting Carnosaur), 🟡 Collect Evidence
-  (`Effect::CollectEvidence { amount, then }` — CR 701.59, auto-picks the
-  cheapest graveyard cards summing ≥ N then runs the reflexive payoff; Sample
-  Collector, Izoni. Player which-cards picker ⏳).
+  Appraiser, Trumpeting Carnosaur), ✅ Collect Evidence
+  (`Effect::CollectEvidence { amount, then }` — CR 701.59; `wants_ui` controller
+  picks the exiled cards via a sum-validated `ChooseCards`, bots auto-pick the
+  cheapest set; Sample Collector, Izoni).
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
   per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,
@@ -343,7 +351,9 @@ feature; sweep card-batch by card-batch.
   (`shortcut::spectacle` / `AlternativeCost.condition` —
   `Predicate::PlayerLostLifeThisTurn` + `Player.lost_life_this_turn`, CR
   702.111: cast for the spectacle cost if an opponent lost life this turn;
-  Skewer the Critics, Light Up the Stage), ⏳ Addendum,
+  Skewer the Critics, Light Up the Stage), ✅ Addendum
+  (`shortcut::addendum` / `cast_during_your_main` — CR 702.124; resolution-time
+  main-phase gate; Sphinx's Insight, Precognitive Perception),
   ⏳ Conspire, ⏳ Demonstrate.
 - **Resource systems:** ✅ Energy ({E}) — `Player.energy` pool +
   `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`

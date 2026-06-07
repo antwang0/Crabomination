@@ -57,6 +57,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -65,6 +66,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -110,6 +112,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -118,6 +121,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -160,6 +164,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -168,6 +173,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -211,6 +217,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -219,6 +226,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -318,3 +326,5 @@ mod part_22;
 mod part_23;
 mod part_24;
 mod part_25;
+mod part_26;
+mod part_27;

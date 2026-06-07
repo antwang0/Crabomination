@@ -138,6 +138,7 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
+            Effect::Process { then, .. } => then.requires_target(),
             Effect::CollectEvidence { amount, then } => {
                 value_has_target(amount) || then.requires_target()
             }
@@ -169,7 +170,10 @@ impl Effect {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
             Effect::Draw { who, amount }
-            | Effect::Mill { who, amount } => sel_has_target(who) || value_has_target(amount),
+            | Effect::Mill { who, amount }
+            | Effect::ExileTopOfLibrary { who, amount } => {
+                sel_has_target(who) || value_has_target(amount)
+            }
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
             Effect::DiscardAnyNumber { who } => sel_has_target(who),
             Effect::SetNoMaxHandSize { who } => sel_has_target(who),
@@ -200,6 +204,7 @@ impl Effect {
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),
             Effect::ShuffleGraveyardIntoLibrary { who } => player_has_target(who),
+            Effect::ExchangeHandAndGraveyard { who } => player_has_target(who),
             Effect::ShuffleLibrary { who } => player_has_target(who),
             Effect::AddMana { who, pool } => {
                 player_has_target(who) || match pool {
@@ -293,6 +298,7 @@ impl Effect {
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Cascade { .. } => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
+            Effect::PlayerExilesPermanents { count, .. } => value_has_target(count),
             Effect::SacrificeGreatestMV { who, count, .. } => {
                 sel_has_target(who) || value_has_target(count)
             }
@@ -308,6 +314,7 @@ impl Effect {
             Effect::RevealTopAndDrawIf { who, .. }
             | Effect::RevealTopCard { who }
             | Effect::RevealTopLandToBattlefieldElseHand { who }
+            | Effect::RevealTopPutPermanentMvElseHand { who, .. }
             | Effect::RevealTopPutPermanentOntoBattlefield { who } => {
                 player_has_target(who)
             }
@@ -327,6 +334,7 @@ impl Effect {
             Effect::PayLifeLookTake { .. } => false,
             Effect::ExileAnyNumberFromGraveyards { .. } => false,
             Effect::ExileAllGraveyards => false,
+            Effect::ExilePlayerGraveyard { who } => player_has_target(who),
             Effect::AddFirstSpellTax { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
@@ -340,7 +348,8 @@ impl Effect {
                     || value_has_target(cap)
             }
             Effect::DiscardChosen { from, count, .. }
-            | Effect::ExileChosenUntilSourceLeaves { from, count, .. } => {
+            | Effect::ExileChosenUntilSourceLeaves { from, count, .. }
+            | Effect::ExileChosenFromHand { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
@@ -360,7 +369,9 @@ impl Effect {
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
             Effect::PreventAllCombatDamageInvolving { target } => sel_has_target(target),
-            Effect::PreventNextDamage { target, amount } => {
+            Effect::CantBlockSourceThisTurn { target } => sel_has_target(target),
+            Effect::PreventNextDamage { target, amount }
+            | Effect::PreventNextDamageAndGainLife { target, amount } => {
                 sel_has_target(target) || value_has_target(amount)
             }
             Effect::PreventAllDamageThisTurn { target } => sel_has_target(target),
@@ -375,6 +386,7 @@ impl Effect {
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } => then.requires_target(),
             Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
+            Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
         }
     }
@@ -457,7 +469,8 @@ impl Effect {
             | Effect::SetNoMaxHandSize { who }
             | Effect::SetMaxHandSize { who, .. }
             | Effect::Draw { who, .. }
-            | Effect::Mill { who, .. } => sel_filter(who),
+            | Effect::Mill { who, .. }
+            | Effect::ExileTopOfLibrary { who, .. } => sel_filter(who),
             Effect::Drain { to, .. } => sel_filter(to),
             Effect::AddPoison { who, .. } => sel_filter(who),
             // Edict-class effects: "target player sacrifices a permanent."
@@ -498,6 +511,7 @@ impl Effect {
             // a target (e.g. "you may sacrifice [target permanent]").
             Effect::MayDo { body, .. } => body.primary_target_filter(),
             Effect::MayPay { body, .. } => body.primary_target_filter(),
+            Effect::Process { then, .. } => then.primary_target_filter(),
             Effect::IfRevealFromHand { then, else_, .. } => then
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
@@ -556,7 +570,10 @@ impl Effect {
             Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
                 body.prefers_friendly_target()
             }
-            Effect::ForEach { body, .. } => body.prefers_friendly_target(),
+            Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => {
+                body.prefers_friendly_target()
+            }
+            Effect::Process { then, .. } => then.prefers_friendly_target(),
             // Reanimate-style spells move target → caster's hand or battlefield.
             // Without this, `auto_target_for_effect` picks an opp's battlefield
             // creature first, and Disentomb / Raise Dead happily steal it.
@@ -598,7 +615,9 @@ impl Effect {
             }
             Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
-            | Effect::ForEach { body, .. } => body.prefers_graveyard_target(),
+            | Effect::ForEach { body, .. }
+            | Effect::MayDo { body, .. } => body.prefers_graveyard_target(),
+            Effect::Process { then, .. } => then.prefers_graveyard_target(),
             _ => false,
         }
     }
@@ -741,6 +760,10 @@ impl Effect {
                 Value::Const(n) => format!("mill {n}"),
                 _ => "mill".into(),
             },
+            Effect::ExileTopOfLibrary { amount, .. } => match amount {
+                Value::Const(n) => format!("exile top {n} of library"),
+                _ => "exile top of library".into(),
+            },
             Effect::Discard { amount, .. } => match amount {
                 Value::Const(1) => "discard a card".into(),
                 Value::Const(n) => format!("discard {n} cards"),
@@ -779,6 +802,7 @@ impl Effect {
             | Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.effect_short_text(),
+            Effect::Process { then, .. } => then.effect_short_text(),
             _ => String::new(),
         }
     }
@@ -807,6 +831,7 @@ impl Effect {
             | Effect::SetMaxHandSize { .. }
             | Effect::Draw { .. }
             | Effect::Mill { .. }
+            | Effect::ExileTopOfLibrary { .. }
             | Effect::MillHalf { .. }
             | Effect::DiscardHalf { .. }
             | Effect::SacrificeHalf { .. }
@@ -874,6 +899,8 @@ impl Effect {
             Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
+            Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => body.accepts_player_target(),
+            Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
             Effect::FlipCoin { on_heads, on_tails, .. } => {
@@ -1042,6 +1069,7 @@ impl Effect {
                     if slot < *max_targets { Some(filter) } else { None }
                 }
                 Effect::PreventNextDamage { target, .. }
+                | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target }
                 | Effect::PreventAllCombatDamageInvolving { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {
@@ -1054,7 +1082,9 @@ impl Effect {
                 | Effect::SacrificeHalf { who, .. } => sel_find(who, slot),
                 Effect::SetLifeTotal { who, .. } => sel_find(who, slot),
                 Effect::Drain { from, to, .. } => sel_find(from, slot).or_else(|| sel_find(to, slot)),
-                Effect::Draw { who, .. } | Effect::Mill { who, .. } => sel_find(who, slot),
+                Effect::Draw { who, .. }
+                | Effect::Mill { who, .. }
+                | Effect::ExileTopOfLibrary { who, .. } => sel_find(who, slot),
                 Effect::Discard { who, .. } => sel_find(who, slot),
                 Effect::DiscardAnyNumber { who } => sel_find(who, slot),
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),

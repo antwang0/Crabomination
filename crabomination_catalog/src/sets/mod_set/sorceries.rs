@@ -6,7 +6,7 @@ use crate::card::{
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
 use crate::game::effects::treasure_token;
-use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
+use crate::mana::{ManaCost, b, cost, g, generic, r, u, w, x};
 
 /// Anger of the Gods — {1}{R}{R} Sorcery. Deals 3 damage to each creature.
 /// If a creature would die this turn, exile it instead.
@@ -178,6 +178,8 @@ pub fn vandalblast() -> CardDefinition {
             dash: false,
             blitz: false,
             flash: false,
+            marks_kicked: false,
+            emerge: None,
         }),
         ..Default::default()
     }
@@ -765,6 +767,32 @@ pub fn arc_trail() -> CardDefinition {
     }
 }
 
+/// Cone of Flame — {3}{R}{R} Sorcery. 1/2/3 damage to three distinct any
+/// targets (slots 0/1/2). Extends the Arc Trail per-slot-fixed-damage shape
+/// to three slots.
+pub fn cone_of_flame() -> CardDefinition {
+    CardDefinition {
+        name: "Cone of Flame",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                amount: Value::Const(2),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 2, filter: SelectionRequirement::Any },
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Prey Upon — {G} Sorcery. "Target creature you control fights target
 /// creature you don't control." Both slots fight via `Effect::Fight`.
 pub fn prey_upon() -> CardDefinition {
@@ -942,6 +970,279 @@ pub fn renegade_tactics() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Ancient Craving — {3}{B} Sorcery. You draw three cards and you lose 3 life.
+pub fn ancient_craving() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Craving",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Zombify — {3}{B} Sorcery. Return target creature card from your graveyard
+/// to the battlefield.
+pub fn zombify() -> CardDefinition {
+    CardDefinition {
+        name: "Zombify",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Lead the Stampede — {2}{G} Sorcery. Look at the top five cards of your
+/// library; put all creature cards among them into your hand and the rest on
+/// the bottom in a random order.
+pub fn lead_the_stampede() -> CardDefinition {
+    CardDefinition {
+        name: "Lead the Stampede",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RevealTopTakeMatchingToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            filter: SelectionRequirement::Creature,
+        },
+        ..Default::default()
+    }
+}
+
+/// Commune with Nature — {G} Sorcery. Look at the top five cards of your
+/// library. You may put a creature card from among them into your hand. Put
+/// the rest on the bottom in a random order.
+pub fn commune_with_nature() -> CardDefinition {
+    CardDefinition {
+        name: "Commune with Nature",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(5),
+            rest_to_graveyard: false,
+            pick_filter: Some(SelectionRequirement::Creature),
+            take: None,
+        },
+        ..Default::default()
+    }
+}
+
+/// Fireball — {X}{R} Sorcery. Deals X damage to any target. (The "divide
+/// among additional targets for {1} more each" rider is not modeled; the
+/// common single-target line is faithful.)
+pub fn fireball() -> CardDefinition {
+    CardDefinition {
+        name: "Fireball",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Disintegrate — {X}{R} Sorcery. Deals X damage to any target. If a creature
+/// dealt damage this way would die this turn, exile it instead.
+pub fn disintegrate() -> CardDefinition {
+    CardDefinition {
+        name: "Disintegrate",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: target_filtered(SelectionRequirement::Any) },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flame Sweep — {2}{R} Sorcery. Deals 2 damage to each creature without
+/// flying.
+pub fn flame_sweep() -> CardDefinition {
+    CardDefinition {
+        name: "Flame Sweep",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::HasKeyword(crate::card::Keyword::Flying),
+                ))),
+            ),
+            body: Box::new(Effect::DealDamage { to: Selector::TriggerSource, amount: Value::Const(2) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Tidings — {4}{U} Sorcery. Draw four cards.
+pub fn tidings() -> CardDefinition {
+    CardDefinition {
+        name: "Tidings",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Mind Spring — {X}{U}{U} Sorcery. Draw X cards.
+pub fn mind_spring() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Spring",
+        cost: cost(&[x(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        ..Default::default()
+    }
+}
+
+/// Foresee — {2}{U} Sorcery. Scry 4, then draw two cards.
+pub fn foresee() -> CardDefinition {
+    CardDefinition {
+        name: "Foresee",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(4) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Final Judgment — {4}{W}{W} Sorcery. Exile all creatures.
+pub fn final_judgment() -> CardDefinition {
+    CardDefinition {
+        name: "Final Judgment",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile { what: Selector::EachPermanent(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Planar Cleansing — {3}{W}{W} Sorcery. Destroy all nonland permanents.
+pub fn planar_cleansing() -> CardDefinition {
+    CardDefinition {
+        name: "Planar Cleansing",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DestroyNoRegen {
+            what: Selector::EachPermanent(SelectionRequirement::Not(Box::new(
+                SelectionRequirement::Land,
+            ))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Akroma's Vengeance — {4}{W}{W} Sorcery. Destroy all artifacts, creatures,
+/// and enchantments. Cycling {3}.
+pub fn akromas_vengeance() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Akroma's Vengeance",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
+        effect: Effect::DestroyNoRegen {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Enchantment),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Fumigate — {3}{W}{W} Sorcery. Destroy all creatures. You gain 1 life for
+/// each creature destroyed this way.
+pub fn fumigate() -> CardDefinition {
+    CardDefinition {
+        name: "Fumigate",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            // Gain first so the count reflects the creatures about to die.
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::count(Selector::EachPermanent(SelectionRequirement::Creature)),
+            },
+            Effect::DestroyNoRegen { what: Selector::EachPermanent(SelectionRequirement::Creature) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Terminus — {4}{W} Sorcery. Put all creatures on the bottom of their
+/// owners' libraries.
+pub fn terminus() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Terminus",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOfMoved,
+                pos: LibraryPosition::Bottom,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Gerrard's Wisdom — {3}{W} Sorcery. You gain 2 life for each card in your
+/// hand.
+pub fn gerrards_wisdom() -> CardDefinition {
+    CardDefinition {
+        name: "Gerrard's Wisdom",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(
+                Box::new(Value::HandSizeOf(PlayerRef::You)),
+                Box::new(Value::Const(2)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Grapple with the Past — {1}{G} Sorcery. Mill three cards, then return a
+/// creature or land card from your graveyard to your hand.
+pub fn grapple_with_the_past() -> CardDefinition {
+    CardDefinition {
+        name: "Grapple with the Past",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Land),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
         ]),
         ..Default::default()
     }

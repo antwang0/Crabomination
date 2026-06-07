@@ -535,6 +535,9 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
         | Effect::MayPay { body, .. }
         | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
         Effect::Seq(v) => v.iter().find_map(|e| find_maydo_body(e, desc)),
+        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+            v.iter().find_map(|e| find_maydo_body(e, desc))
+        }
         Effect::If { then, else_, .. } => {
             find_maydo_body(then, desc).or_else(|| find_maydo_body(else_, desc))
         }
@@ -567,10 +570,22 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
         Effect::PayLifeLookTake { who } => matches!(who, PlayerRef::You),
         Effect::Seq(v) => v.iter().any(effect_imposes_self_cost),
+        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+            v.iter().any(effect_imposes_self_cost)
+        }
         Effect::If { then, else_, .. } => {
             effect_imposes_self_cost(then) || effect_imposes_self_cost(else_)
         }
         Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => effect_imposes_self_cost(body),
+        // Mana/energy "pay or else" wrap a fallback (usually SacrificeSource);
+        // the bot reads the fallback to decide whether declining is costly.
+        Effect::PayManaOrElse { otherwise, .. } | Effect::PayEnergyOrElse { otherwise, .. } => {
+            effect_imposes_self_cost(otherwise)
+        }
+        // "You may sacrifice/exile this" riders are a clear self-cost.
+        Effect::SacrificeSource => true,
+        Effect::Exile { what } => hits_self(what),
+        Effect::PayOrLoseGame { .. } => true,
         _ => false,
     }
 }
@@ -1752,7 +1767,7 @@ fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
 /// main_phase_action uses; the simpler signature is kept for
 /// existing callers that don't have a `GameState` handy.
 pub fn can_afford(def: &CardDefinition, pool: &ManaPool) -> bool {
-    can_afford_with_extra(def, pool, 0)
+    can_afford_with_extra(def, pool, 0, 0)
 }
 
 /// State-aware affordability check: queries the engine for any
@@ -1768,7 +1783,13 @@ pub fn can_afford_in_state(
     card: &crate::card::CardInstance,
 ) -> bool {
     let extra = state.extra_cost_for_card_in_hand(seat, card.id);
-    can_afford_with_extra(&card.definition, &state.players[seat].mana_pool, extra)
+    // Fold in generic cost *reductions* (Affinity, CostReduction statics,
+    // graveyard-affinity) the same way the real cast path does — otherwise the
+    // bot overestimates the cost of e.g. Tolarian Terror with a full graveyard
+    // and never casts it. Target-dependent reductions are skipped (no target
+    // chosen yet), so this stays conservative.
+    let reduction = crate::game::actions::cost_reduction_for_spell(state, seat, card, None);
+    can_afford_with_extra(&card.definition, &state.players[seat].mana_pool, extra, reduction)
 }
 
 /// For an X-cost spell (or a spell whose effect reads
@@ -1904,12 +1925,20 @@ fn mode_branch(eff: &Effect, mode: Option<usize>) -> &Effect {
     }
 }
 
-fn can_afford_with_extra(def: &CardDefinition, pool: &ManaPool, extra_generic: u32) -> bool {
+fn can_afford_with_extra(
+    def: &CardDefinition,
+    pool: &ManaPool,
+    extra_generic: u32,
+    reduction: u32,
+) -> bool {
     let mut cost = if def.cost.has_x() {
         def.cost.with_x_value(0)
     } else {
         def.cost.clone()
     };
+    if reduction > 0 {
+        cost.reduce_generic(reduction);
+    }
     if extra_generic > 0 {
         cost.symbols.push(crate::mana::ManaSymbol::Generic(extra_generic));
     }
@@ -1993,6 +2022,17 @@ mod tests {
         );
         assert!(optional_trigger_beneficial(&g, id, "you may"),
             "a pure-upside 'you may draw' is taken by the bot");
+    }
+
+    #[test]
+    fn bot_declines_optional_trigger_that_sacrifices_itself() {
+        let mut g = two_player_game();
+        let id = g.add_card_to_battlefield(
+            0,
+            body_card("Downside", Effect::SacrificeSource),
+        );
+        assert!(!optional_trigger_beneficial(&g, id, "you may"),
+            "a 'you may sacrifice this' rider is a self-cost the bot declines");
     }
 
     /// A planeswalker whose highest-loyalty ability needs a target that
@@ -2920,6 +2960,22 @@ mod tests {
         }
     }
 
+    /// The bot's affordability check folds in generic cost reductions:
+    /// Tolarian Terror ({6}{U}) is castable on {3}{U} with three instants/
+    /// sorceries in the graveyard.
+    #[test]
+    fn bot_affordability_honors_graveyard_affinity() {
+        let mut g = two_player_game();
+        let terror = g.add_card_to_hand(0, catalog::tolarian_terror());
+        let card = g.players[0].hand.iter().find(|c| c.id == terror).unwrap().clone();
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(3); // {3}{U} only
+        assert!(!can_afford_in_state(&g, 0, &card), "no discount yet → unaffordable");
+        for _ in 0..3 { g.add_card_to_graveyard(0, catalog::lightning_bolt()); }
+        let card = g.players[0].hand.iter().find(|c| c.id == terror).unwrap().clone();
+        assert!(can_afford_in_state(&g, 0, &card), "−{{3}} discount → now affordable");
+    }
+
     /// Regression for the second deadlock observed at
     /// `debug/deadlock-t15-1777411082-269586900.json`. Setup mirrors
     /// the captured cube state: P0 owns a Swamp whose `controller` has
@@ -3203,5 +3259,45 @@ mod monarch_tests {
             }
             other => panic!("expected DeclareAttackers, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod self_cost_tests {
+    use super::*;
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+
+    #[test]
+    fn self_cost_seen_through_modal_and_pay_or_else() {
+        // A self-cost mode nested inside ChooseMode is recognized.
+        let modal = Effect::ChooseMode(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]);
+        assert!(effect_imposes_self_cost(&modal), "lose-life mode is a self cost");
+
+        // PayManaOrElse → SacrificeSource fallback is a self cost.
+        let tax = Effect::PayManaOrElse {
+            mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
+            otherwise: Box::new(Effect::SacrificeSource),
+        };
+        assert!(effect_imposes_self_cost(&tax), "sac-unless-pay fallback is a self cost");
+
+        // A purely beneficial modal is not flagged.
+        let upside = Effect::ChooseMode(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]);
+        assert!(!effect_imposes_self_cost(&upside));
+
+        // find_maydo_body reaches into a mode by its prompt.
+        let nested = Effect::ChooseMode(vec![Effect::MayDo {
+            description: "Pay the price.".into(),
+            body: Box::new(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+            }),
+        }]);
+        assert!(find_maydo_body(&nested, "Pay the price.").is_some());
     }
 }

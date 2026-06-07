@@ -97,6 +97,18 @@ impl GameState {
                 .sum(),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
+            Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),
+            Value::DistinctPowerYouControl => {
+                let mut powers: Vec<i32> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.power())
+                    .collect();
+                powers.sort_unstable();
+                powers.dedup();
+                powers.len() as i32
+            }
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
             Value::MaxGraveyardSize => self
                 .players
@@ -694,6 +706,29 @@ impl GameState {
                 }
                 max_opp_lands > your_lands
             }
+            Predicate::AnOpponentHasMoreLife => {
+                let you = ctx.controller;
+                let your_life = self.players[you].life;
+                self.players.iter().enumerate().any(|(i, p)| {
+                    i != you && !p.eliminated && !self.same_team(i, you) && p.life > your_life
+                })
+            }
+            Predicate::AnOpponentControlsMoreCreatures => {
+                let you = ctx.controller;
+                let count_creatures = |seat: usize, g: &Self| {
+                    g.battlefield
+                        .iter()
+                        .filter(|c| c.controller == seat && c.definition.is_creature())
+                        .count()
+                };
+                let your_creatures = count_creatures(you, self);
+                (0..self.players.len()).any(|i| {
+                    i != you
+                        && !self.players[i].eliminated
+                        && !self.same_team(i, you)
+                        && count_creatures(i, self) > your_creatures
+                })
+            }
             Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::AttackingWithAtLeast(n) => self.attacking.len() as u32 >= *n,
             Predicate::RevoltActive { who } => self
@@ -918,7 +953,9 @@ impl GameState {
                         }
                     }
                     R::Multicolored => card.definition.cost.distinct_colors() >= 2,
-                    R::Colorless => card.definition.cost.distinct_colors() == 0,
+                    // CR 702.114 — Devoid CDA: colorless despite colored pips.
+                    R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+                        || card.definition.cost.distinct_colors() == 0,
                     R::Monocolored => card.definition.cost.distinct_colors() == 1,
                     R::HasXInCost => card.definition.cost.has_x(),
                     // OtherThanSource: enforce "different from the source"
@@ -1071,7 +1108,9 @@ impl GameState {
                         }
                     }
             R::Multicolored => card.definition.cost.distinct_colors() >= 2,
-            R::Colorless => card.definition.cost.distinct_colors() == 0,
+            // CR 702.114 — Devoid CDA: colorless despite colored pips.
+            R::Colorless => card.definition.keywords.contains(&crate::card::Keyword::Devoid)
+                || card.definition.cost.distinct_colors() == 0,
             R::Monocolored => card.definition.cost.distinct_colors() == 1,
             R::HasXInCost => card.definition.cost.has_x(),
             // OtherThanSource is `applies_to`-pipeline-only — see the

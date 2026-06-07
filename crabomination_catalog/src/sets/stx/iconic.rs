@@ -1578,6 +1578,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![on_attack(
             Effect::MayDo {

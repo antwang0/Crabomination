@@ -63,6 +63,9 @@ mod tests_akh;
 #[cfg(test)]
 #[path = "../tests/mkm.rs"]
 mod tests_mkm;
+#[cfg(test)]
+#[path = "../tests/ogw.rs"]
+mod tests_ogw;
 pub mod types;
 
 #[cfg(test)]
@@ -474,6 +477,12 @@ pub struct GameState {
     /// in this set. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_creatures: Vec<CardId>,
+    /// Per-pair "can't block" restrictions for the turn: `(blocker, attacker)`
+    /// — the blocker can't block that specific attacker (Kozilek's Pathfinder's
+    /// "{C}: Target creature can't block this creature this turn"). Cleared at
+    /// cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) cant_block_pairs: Vec<(CardId, CardId)>,
     /// Active prevention shields (CR 615.1) around players/permanents.
     /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
     /// consulted by the non-combat damage path (`deal_damage_to_from`) and
@@ -673,6 +682,7 @@ impl Clone for GameState {
             mana_production_doublers: self.mana_production_doublers,
             additional_combat_phases: self.additional_combat_phases,
             combat_damage_prevented_creatures: self.combat_damage_prevented_creatures.clone(),
+            cant_block_pairs: self.cant_block_pairs.clone(),
             prevention_shields: self.prevention_shields.clone(),
             damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             replacement_effects: self.replacement_effects.clone(),
@@ -765,6 +775,7 @@ impl GameState {
             mana_production_doublers: 0,
             additional_combat_phases: 0,
             combat_damage_prevented_creatures: Vec::new(),
+            cant_block_pairs: Vec::new(),
             prevention_shields: Vec::new(),
             damage_cant_be_prevented_this_turn: false,
             replacement_effects: Vec::new(),
@@ -2183,6 +2194,14 @@ impl GameState {
                     let life = self.players[card.controller].life;
                     (base_p - life, base_t - life)
                 }
+                crate::card::DynamicPt::ColorlessCreaturesControlled { base_t } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && c.definition.is_creature()
+                            && is_colorless_by_cost(&c.definition)
+                    }).count() as i32;
+                    (n, base_t)
+                }
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.id.0 as u64,
@@ -2262,6 +2281,7 @@ impl GameState {
                         exclude_source: false,
                         color: None,
                         token: None,
+                        colorless: false,
                     },
                     layer: Layer::L7PowerTough,
                     sublayer: Some(PtSublayer::Modify),
@@ -2278,6 +2298,7 @@ impl GameState {
                             exclude_source: false,
                             color: None,
                             token: None,
+                        colorless: false,
                         },
                         layer: Layer::L6Ability,
                         sublayer: None,
@@ -2307,6 +2328,7 @@ impl GameState {
                             exclude_source: false,
                             color: None,
                             token: None,
+                        colorless: false,
                         },
                         layer: Layer::L7PowerTough,
                         sublayer: Some(PtSublayer::Modify),
@@ -2380,6 +2402,7 @@ impl GameState {
                                 exclude_source: false,
                                 color: None,
                                 token: None,
+                        colorless: false,
                             },
                             layer: Layer::L6Ability,
                             sublayer: None,
@@ -2625,6 +2648,14 @@ impl GameState {
         id
     }
 
+    /// Put a card into the exile zone owned by `player_idx` (convenience for
+    /// tests — e.g. seeding an opponent-owned card to be processed).
+    pub fn add_card_to_exile(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
+        let id = self.next_id();
+        self.exile.push(CardInstance::new(id, def, player_idx));
+        id
+    }
+
     /// Clear summoning sickness from a permanent (convenience for tests).
     pub fn clear_sickness(&mut self, id: CardId) {
         if let Some(c) = self.battlefield_find_mut(id) {
@@ -2703,23 +2734,6 @@ impl GameState {
         }
     }
 
-    /// CR 508.1 attack tax — the generic mana an attacker's controller must
-    /// pay *per creature* attacking `defender` (Propaganda / Ghostly Prison).
-    /// Sums `StaticEffect::AttackTaxToController { amount }` across every
-    /// untapped permanent `defender` controls, so stacked taxes are additive.
-    /// Returns 0 when `defender` controls no such permanent.
-    pub fn attack_tax_for_defender(&self, defender: usize) -> u32 {
-        use crate::effect::StaticEffect;
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == defender && !c.tapped)
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .filter_map(|sa| match &sa.effect {
-                StaticEffect::AttackTaxToController { amount } => Some(*amount),
-                _ => None,
-            })
-            .sum()
-    }
 
     /// True if `blocker_id` can legally block at least one current attacker.
     pub fn can_block_any_attacker(&self, blocker_id: CardId) -> bool {
@@ -4276,7 +4290,16 @@ impl GameState {
                 });
                 return;
             }
-            let auto = self.auto_target_for_effect(&pending.effect, pending.controller);
+            // Prefer a non-source target: an "another target creature" trigger
+            // (OtherThanSource) must not auto-pick its own source, and even a
+            // plain "target creature" trigger reads better picking a different
+            // permanent (a self-target trigger uses `Selector::This`, not a
+            // target slot). Falls back to the source if it's the only legal pick.
+            let auto = self.auto_target_for_effect_avoiding(
+                &pending.effect,
+                pending.controller,
+                Some(pending.source),
+            );
             self.push_pending_trigger(pending, auto);
         }
     }
@@ -5160,6 +5183,22 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::ExileChosenFromHandPending { target_player } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::with_capacity(card_ids.len());
+                for cid in card_ids {
+                    if let Some(pos) =
+                        self.players[target_player].hand.iter().position(|c| c.id == *cid)
+                    {
+                        let card = self.players[target_player].hand.remove(pos);
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: *cid });
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::ChooseCreatureTypePending { target_id } => {
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
@@ -5742,8 +5781,29 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
         "Death's Shadow" => Some(DynamicPt::BaseMinusControllerLife {
             base_p: 13, base_t: 13,
         }),
+        "Vile Aggregate" => Some(DynamicPt::ColorlessCreaturesControlled { base_t: 5 }),
         _ => None,
     }
+}
+
+/// True if a card definition is colorless from its printed characteristics:
+/// it has Devoid (CR 702.114) or its mana cost carries no colored pips.
+/// Used by the `ColorlessCreaturesControlled` dynamic-P/T formula; avoids the
+/// layer-pass circularity of reading computed colors during the same recompute.
+fn is_colorless_by_cost(def: &crate::card::CardDefinition) -> bool {
+    use crate::mana::ManaSymbol;
+    if def.keywords.contains(&crate::card::Keyword::Devoid) {
+        return true;
+    }
+    !def.cost.symbols.iter().any(|s| {
+        matches!(
+            s,
+            ManaSymbol::Colored(_)
+                | ManaSymbol::Hybrid(_, _)
+                | ManaSymbol::Phyrexian(_)
+                | ManaSymbol::MonoHybrid(_, _)
+        )
+    })
 }
 
 /// Compute-time conditional self-pump table: cards whose printed Oracle
@@ -6008,6 +6068,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // LifeGainBecomesLoss — consulted dynamically by adjust_life via
             // life_gain_becomes_loss_now (Tainted Remedy); no layer effect.
             | StaticEffect::LifeGainBecomesLoss { .. }
+            // AttackTaxToController — consulted in declare_attackers; no layer.
+            | StaticEffect::AttackTaxToController { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
             // layer effect.
             | StaticEffect::CapDrawsPerTurn { .. }
@@ -6064,11 +6126,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // ExileCardsBoundForGraveyard (Rest in Peace / Leyline of the
             // Void) — consulted at graveyard-placement time via
             // `graveyard_exiled_for`; no layer effect.
-            | StaticEffect::ExileCardsBoundForGraveyard { .. }
-            // AttackTaxToController (Propaganda / Ghostly Prison) — consulted
-            // by `declare_attackers` via `attack_tax_for_defender`; no layer
-            // effect.
-            | StaticEffect::AttackTaxToController { .. } => vec![],
+            | StaticEffect::ExileCardsBoundForGraveyard { .. } => vec![],
         })
         .collect()
 }
@@ -6107,8 +6165,8 @@ fn simple_walker_can_handle(req: &SelectionRequirement) -> bool {
         R::And(a, b) => simple_walker_can_handle(a) && simple_walker_can_handle(b),
         R::ControlledByYou | R::ControlledByOpponent | R::Creature | R::Artifact
         | R::Enchantment | R::Planeswalker | R::Land | R::HasCardType(_)
-        | R::HasCreatureType(_) | R::WithCounter(_) | R::HasColor(_) | R::IsToken
-        | R::NotToken | R::OtherThanSource | R::Any | R::Permanent => true,
+        | R::HasCreatureType(_) | R::WithCounter(_) | R::HasColor(_) | R::Colorless
+        | R::IsToken | R::NotToken | R::OtherThanSource | R::Any | R::Permanent => true,
         _ => false,
     }
 }
@@ -6136,6 +6194,7 @@ fn affected_from_requirement(
     let mut creature_type: Option<crate::card::CreatureType> = None;
     let mut counter_filter: Option<crate::card::CounterType> = None;
     let mut color_filter: Option<crate::mana::Color> = None;
+    let mut colorless_filter = false;
     let mut token_filter: Option<bool> = None;
     // CR-driven "other" exclusion (push XXXV). `SelectionRequirement::
     // OtherThanSource` flips this to true; the resulting AffectedPermanents
@@ -6165,6 +6224,7 @@ fn affected_from_requirement(
             R::HasCreatureType(ct) => creature_type = Some(*ct),
             R::WithCounter(ct) => counter_filter = Some(*ct),
             R::HasColor(c) => color_filter = Some(*c),
+            R::Colorless => colorless_filter = true,
             R::IsToken => token_filter = Some(true),
             R::NotToken => token_filter = Some(false),
             R::OtherThanSource => other_than_source = true,
@@ -6204,6 +6264,7 @@ fn affected_from_requirement(
         exclude_source: other_than_source,
         color: color_filter,
         token: token_filter,
+        colorless: colorless_filter,
     })
 }
 

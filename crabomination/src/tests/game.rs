@@ -151,6 +151,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             max_counters_of_kind: None,
             exile_on_resolve: false,
             affinity_filter: None,
+            affinity_graveyard_filter: None,
             equipped_bonus: None,
             soulbond_bonus: None,
             additional_cast_cost: vec![],
@@ -159,6 +160,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             adventure: None,
             plot_cost: None,
             split: None,
+            saga_chapters: vec![],
         }
     }
 
@@ -768,6 +770,7 @@ fn prevention_shield_stops_combat_damage_to_player() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         remaining: None,
+        gain_life: false,
     });
     g.step = TurnStep::DeclareAttackers;
     g.perform_action(GameAction::DeclareAttackers(vec![Attack {
@@ -841,12 +844,30 @@ fn skullcrack_damage_cant_be_prevented() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Player(1),
         remaining: None,
+        gain_life: false,
     });
     let sk = g.add_card_to_hand(0, catalog::skullcrack());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
     cast_at(&mut g, sk, Target::Player(1));
     assert_eq!(g.players[1].life, 2, "shield ignored — 3 damage went through");
+}
+
+/// CR 615.1 — Reverse Damage prevents the next damage to its caster and
+/// the caster gains life equal to the amount prevented.
+#[test]
+fn reverse_damage_prevents_and_gains_life() {
+    let mut g = two_player_game();
+    let rd = g.add_card_to_hand(0, catalog::reverse_damage());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, rd); // shield on self
+    let before = g.players[0].life;
+    // Player 0 takes 3 burn damage to the face → prevented, +3 life.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(0));
+    assert_eq!(g.players[0].life, before + 3, "3 prevented, 3 life gained");
 }
 
 #[test]
@@ -888,6 +909,7 @@ fn prevention_shield_stops_creature_combat_damage() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Permanent(blocker_id),
         remaining: None, // prevent all damage to the blocker this turn
+        gain_life: false,
     });
 
     g.step = TurnStep::DeclareAttackers;
@@ -4338,6 +4360,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
         exile_other_filter: None,
         self_counter_cost_reduction: None, sac_other_filter: None,
         tap_other_filter: None, from_hand: false,
+        ..Default::default()
     };
     // Sentinel non-mana ability: tap + sacrifice the land. The body is
     // Noop — what matters is that it's not a mana ability so the
@@ -4358,6 +4381,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
         exile_other_filter: None,
         self_counter_cost_reduction: None, sac_other_filter: None,
         tap_other_filter: None, from_hand: false,
+        ..Default::default()
     };
     let fancy_land = CardDefinition {
         name: "Fancy Test Land",
@@ -5313,6 +5337,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -5321,6 +5346,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {

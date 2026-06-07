@@ -151,6 +151,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -159,6 +160,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -679,6 +681,7 @@ fn impractical_joke_damage_cant_be_prevented() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Permanent(bear),
         remaining: None,
+        gain_life: false,
     });
     let id = g.add_card_to_hand(0, catalog::impractical_joke());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -702,6 +705,7 @@ fn prevention_shield_stops_noncombat_damage() {
     g.prevention_shields.push(PreventionShield {
         target: PreventionTarget::Permanent(bear),
         remaining: None,
+        gain_life: false,
     });
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -1974,6 +1978,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1982,6 +1987,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2470,6 +2476,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -2478,6 +2485,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 

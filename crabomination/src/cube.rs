@@ -187,7 +187,7 @@ fn sample_with_cap<R: Rng>(
 /// each color's pool with every other color paired in.
 pub fn all_cube_cards() -> Vec<CardFactory> {
     use std::collections::HashSet;
-    let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest];
+    let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest, wastes];
     all.extend(colorless_pool());
     let colors = [
         Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
@@ -215,6 +215,8 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // allied-color batch (modern_decks)
+        bontus_monument,
         // ── modern_decks: cube staples ──
         scrapheap_scrounger,
         chromatic_sphere,
@@ -429,8 +431,16 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
-        // pillowfort tax enchantment (attack tax)
-        ghostly_prison,
+        // allied-color batch (modern_decks)
+        ministrant_of_obligation,
+        dragons_eye_sentry,
+        kor_sanctifiers,
+        tireless_missionaries,
+        sandsteppe_outcast,
+        blade_instructor,
+        akromas_devoted,
+        ronom_unicorn,
+        veteran_swordsmith,
         // landcycling (modern_decks)
         daru_lancer,
         // classic batch (modern_decks)
@@ -448,7 +458,6 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         giver_of_runes,
         avacyns_pilgrim,
         // Lifegain + targeted removal.
-        congregate,
         smite_the_monstrous,
         reprisal,
         // Pinger + linked-exile hatebear.
@@ -640,6 +649,55 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         flame_javelin,
         pongify,
         arc_trail,
+        cone_of_flame,
+        // Sagas (CR 714) — lore-counter chapter abilities.
+        history_of_benalia,
+        the_eldest_reborn,
+        triumph_of_gerrard,
+        the_birth_of_meletis,
+        // Attack-tax statics (CR 508.1g).
+        ghostly_prison,
+        propaganda,
+        windborn_muse,
+        baird_steward_of_argive,
+        // Life-total alt win-cons (CR 104.2a).
+        felidar_sovereign,
+        test_of_endurance,
+        // Seal enchantments (pre-paid removal).
+        seal_of_doom,
+        seal_of_primordium,
+        // Black card-draw / death payoffs.
+        ancient_craving,
+        dark_prophecy,
+        costly_plunder,
+        pressure_point,
+        seal_of_strength,
+        // Lifegain matters + reanimation.
+        ajanis_welcome,
+        impassioned_orator,
+        zombify,
+        // Green card selection / recursion.
+        lead_the_stampede,
+        commune_with_nature,
+        reclaim,
+        // Red X-burn / sweeper.
+        fireball,
+        disintegrate,
+        flame_sweep,
+        // Blue card draw.
+        tidings,
+        mind_spring,
+        foresee,
+        catalog_draw,
+        // White board wipes.
+        final_judgment,
+        planar_cleansing,
+        akromas_vengeance,
+        // White lifegain + reset.
+        fumigate,
+        terminus,
+        gerrards_wisdom,
+        grapple_with_the_past,
         prey_upon,
         hedron_archive,
         soul_warden,
@@ -850,8 +908,14 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
-        // pillowfort tax enchantment (attack tax)
-        propaganda,
+        // allied-color batch (modern_decks)
+        tolarian_terror,
+        vodalian_arcanist,
+        sphinxs_insight,
+        precognitive_perception,
+        cloudreader_sphinx,
+        mistral_singer,
+        air_servant,
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
         snapping_drake,
@@ -1148,6 +1212,14 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        festering_mummy,
+        reassembling_skeleton,
+        dread_wanderer,
+        mausoleum_turnkey,
+        marauding_blight_priest,
+        vampire_cutthroat,
+        crippling_blight,
         // ── modern_decks: aggro / aristocrat supplement ──
         walking_corpse,
         highborn_ghoul,
@@ -1514,6 +1586,14 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        goblin_motivator,
+        goblin_gang_leader,
+        frenzied_goblin,
+        onakke_ogre,
+        goblin_fireslinger,
+        hijack,
+        goblin_roughrider,
         // ── modern_decks: aggro / firebreathing supplement ──
         kird_ape,
         sedge_troll,
@@ -1911,6 +1991,14 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        llanowar_tribe,
+        sakura_tribe_scout,
+        greenweaver_druid,
+        citanul_woodreaders,
+        wickerbough_elder,
+        nimble_mongoose,
+        aerial_predation,
         // landcycling (modern_decks)
         wirewood_guardian,
         // classic batch (modern_decks)

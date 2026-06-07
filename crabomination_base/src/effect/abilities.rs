@@ -120,6 +120,16 @@ pub enum StaticEffect {
     /// instead."). Consulted in `adjust_life` for positive deltas before the
     /// gain applies; the redirected loss is itself final (not re-replaced).
     LifeGainBecomesLoss { target: PlayerStaticTarget },
+    /// CR 508.1g — creatures can't attack the source's controller (and, when
+    /// `protect_planeswalkers`, a planeswalker they control) unless the
+    /// attacking player pays `amount` generic mana for each such attacker.
+    /// Checked in `declare_attackers`, which sums the tax across every
+    /// attacker hitting a protected player/walker and auto-pays it from the
+    /// active player's mana pool (rejecting the declaration if it can't be
+    /// covered). Ghostly Prison / Propaganda / Windborn Muse
+    /// (`protect_planeswalkers: false`), Baird (true); copies stack. A
+    /// wants_ui interactive pay prompt is a TODO.
+    AttackTaxToController { amount: u32, protect_planeswalkers: bool },
     /// CR 121.2b — Targeted players can't draw more than `max` cards each
     /// turn. While active, an `Effect::Draw` that would push a player past
     /// `max` (counting `Player.cards_drawn_this_turn`) is truncated. Models
@@ -387,16 +397,6 @@ pub enum StaticEffect {
     /// otherwise it applies to every player's graveyard (Rest in Peace).
     /// Consulted at every graveyard-placement site via `graveyard_exiled_for`.
     ExileCardsBoundForGraveyard { opponents_only: bool },
-    /// CR 508.1 attack tax — "Creatures can't attack the controller of this
-    /// permanent unless their controller pays {amount} for each of those
-    /// creatures." Propaganda ({amount} = 2), Ghostly Prison, Windborn Muse,
-    /// Norn's Annex (life variant aside). Consulted in `declare_attackers`:
-    /// each attacker whose defending player controls one or more permanents
-    /// with this static incurs the summed `amount` per such permanent, paid
-    /// up front from the attacking player's mana (auto-tapping lands). If the
-    /// total can't be paid the whole declaration is rejected. Not a
-    /// characteristic, so no continuous-layer effect.
-    AttackTaxToController { amount: u32 },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -582,6 +582,28 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub discard_cost: Option<(SelectionRequirement, u32)>,
+    /// Optional cost: remove `count` counters of the given type from the
+    /// source permanent (CR 602.5b "Remove a [kind] counter from this:"
+    /// cost lines). Modeled as a real cost — not an effect — so the ability
+    /// can't be over-activated off the stack (each activation must pay from
+    /// the counters present when it's announced). Powers Walking Ballista,
+    /// Triskelion, Hangarback Walker (`Remove a +1/+1 counter from this:`).
+    /// Applied after tap/mana/life payments but before the effect resolves.
+    /// Rejected with `GameError::SelectionRequirementViolated` when the
+    /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// True if activating this ability returns the source permanent to its
+    /// owner's hand as part of the cost (CR 602.5b "Return this … to its
+    /// owner's hand:" cost lines). The bounce happens after tap/mana/life
+    /// payments succeed but before the effect resolves, mirroring
+    /// `sac_cost`. Powers Grinning Ignus (`{R}, Return this to its owner's
+    /// hand: Add {C}{C}{R}.`) and Rootha, Mercurial Artist (`{2}, Return
+    /// Rootha to its owner's hand: Copy target instant or sorcery spell`).
+    ///
+    /// Defaults to false via `#[serde(default)]`.
+    #[serde(default)]
+    pub return_self_cost: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

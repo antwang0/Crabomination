@@ -175,6 +175,18 @@ pub fn etb_tap_then_surveil_one() -> TriggeredAbility {
     }
 }
 
+/// Triggered ability: when this permanent enters, tap it AND gain 1 life
+/// (the Khans "life-gain tapland" cycle — Tranquil Cove et al.).
+pub fn etb_tap_then_gain_one() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: Selector::This },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        ]),
+    }
+}
+
 /// Fastland ETB trigger: "ETB tapped unless you control two or fewer other
 /// lands." Counted against the post-ETB battlefield (which already contains
 /// this land), so the threshold is "≥ 4 lands you control".

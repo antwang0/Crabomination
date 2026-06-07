@@ -754,6 +754,10 @@ pub enum PendingEffectState {
         source: CardId,
         return_to: crate::card::ExileReturnZone,
     },
+    /// Suspended on an `ExileChosenFromHand` decision (Thought-Knot Seer). The
+    /// caster picks cards from `target_player`'s hand; the apply step exiles
+    /// them permanently.
+    ExileChosenFromHandPending { target_player: usize },
     /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.
@@ -801,6 +805,10 @@ pub struct PreventionShield {
     /// `None` = prevent all damage to the target this turn; `Some(n)` =
     /// prevent the next `n` damage, then the shield expires (CR 615.7).
     pub remaining: Option<u32>,
+    /// CR 615.1 — when set and `target` is a player, that player gains
+    /// life equal to the damage this shield prevents (Reverse Damage).
+    #[serde(default)]
+    pub gain_life: bool,
 }
 
 /// CR 731 — the game's day/night designation. The game starts as neither
@@ -1076,8 +1084,6 @@ pub enum GameError {
     CannotBlock(CardId),
     #[error("Creature {0:?} cannot attack (Defender / can't-attack restriction)")]
     CannotAttack(CardId),
-    #[error("Can't pay the {amount} attack tax (Propaganda / Ghostly Prison)")]
-    CannotPayAttackTax { amount: u32 },
     #[error("Attacker {0:?} has Menace and must be blocked by two or more creatures")]
     MenaceRequiresTwoBlockers(CardId),
     #[error("Attacker {0:?} can't be blocked by more than one creature")]

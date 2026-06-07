@@ -32,7 +32,7 @@ use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
 use crabomination::net::LobbyFormat;
 use crabomination::server::{
-    run_match, serve_lobbies, tcp_seat, ConnId, MatchOutcome, RandomBot, SeatOccupant,
+    run_match, serve_lobbies, tcp_seat, ConnId, LossReason, MatchOutcome, RandomBot, SeatOccupant,
 };
 
 /// Format-builder enum that captures the environment configuration once at
@@ -212,6 +212,13 @@ struct MatchStats {
     /// Saturates positive; clamped at zero when winner life is below
     /// the negative of the opp's. Push (claude/modern_decks batch 202).
     cumulative_win_life_delta: i64,
+    /// Σ of (win-life-delta)² across sampled wins, for the population
+    /// standard deviation (σ = √(E[x²] − E[x]²)). Paired with the average,
+    /// σ distinguishes a consistent "win-by-5" meta from a bimodal
+    /// "blowout-or-squeaker" split the average alone hides. Deltas are
+    /// clamped ≥ 0, so the squared sum is non-negative; `u128` headroom
+    /// keeps it from overflowing over a long run.
+    cumulative_win_life_delta_squared: u128,
     /// Number of matches counted in `cumulative_win_life_delta`. Lets
     /// the formatter compute the average without dividing by `wins`
     /// directly (a winner with no available life data — e.g. a forced
@@ -238,6 +245,16 @@ struct MatchStats {
     /// `Some(Some(seat))` outcomes with available life data. Push
     /// (claude/modern_decks).
     deckout_wins: u64,
+    /// Subset of `deckout_wins` where at least one losing seat was
+    /// eliminated specifically by poison (CR 104.3c). Classified from the
+    /// outcome's precise `loss_reasons`, not the life-total heuristic, so
+    /// poison ladders show a distinct signal from pure deck-out grinds.
+    poison_wins: u64,
+    /// Subset of `deckout_wins` where at least one losing seat decked out
+    /// (drew from an empty library, CR 104.3a). The dredge/mill shells push
+    /// this bucket; reading it next to `poison_wins` splits the umbrella
+    /// non-damage win count into its two main alternate paths.
+    deck_wins: u64,
     /// Running sum of squared final turn counts (`Σ turns²`). Paired with
     /// `total_turns` (`Σ turns`) and the match count it yields the
     /// population standard deviation of game length via
@@ -254,6 +271,12 @@ struct MatchStats {
     /// reports duration σ next to the turn-count σ. Milliseconds keep the
     /// squares well within `u128` even for very long sessions.
     total_duration_squared_ms: u128,
+    /// Matches that completed without a declared outcome (`observe_winner`
+    /// got `None` — channel disconnect, watchdog kill, or a stuck loop). The
+    /// `wins + draws + inconclusive ≤ total_matches` identity makes this the
+    /// explicit count of the "stuck" delta operators previously had to derive
+    /// by subtraction; a rising `inconclusive_pct` flags a hang regression.
+    inconclusive: u64,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -360,8 +383,16 @@ impl MatchStats {
                 let idx = seat.min(SEAT_BUCKET_COUNT - 1);
                 self.seat_wins[idx] = self.seat_wins[idx].saturating_add(1);
             }
-            None => {}
+            None => self.inconclusive = self.inconclusive.saturating_add(1),
         }
+    }
+    /// Percentage of completed matches that produced no declared outcome
+    /// (stuck / disconnected). Surfaced next to `decisive_pct` so a hang
+    /// regression is visible directly rather than by subtraction.
+    fn inconclusive_pct(&self) -> u64 {
+        let total = self.total_matches();
+        if total == 0 { return 0; }
+        self.inconclusive.saturating_mul(100) / total
     }
     /// Accumulate the win-by-life delta for one match. `final_life`
     /// is the per-seat life array; `winner` is the winning seat. The
@@ -381,18 +412,47 @@ impl MatchStats {
         let delta = (winner_life - max_opp).max(0) as i64;
         self.cumulative_win_life_delta =
             self.cumulative_win_life_delta.saturating_add(delta);
+        self.cumulative_win_life_delta_squared = self
+            .cumulative_win_life_delta_squared
+            .saturating_add((delta as u128) * (delta as u128));
         self.win_life_samples = self.win_life_samples.saturating_add(1);
     }
     /// Classify one clean win as a damage win or an "alternate" win
-    /// (deckout / poison / mill / win-the-game). `final_life` is the
-    /// per-seat life array; `winner` is the winning seat. If every
-    /// losing seat ended with life > 0, the winner closed via something
-    /// other than lethal face damage, so bump `deckout_wins`. Skipped
-    /// silently when life data is unavailable for the losing seats.
+    /// (deckout / poison / mill / win-the-game). Prefers the outcome's
+    /// precise per-seat `loss_reasons`; if any losing seat died to
+    /// something other than lethal face damage, the win is "alternate"
+    /// (`deckout_wins`), and poison / deck-out losses additionally bump
+    /// the `poison_wins` / `deck_wins` sub-buckets. Falls back to the
+    /// life-total heuristic when reason data is unavailable.
     /// Push (claude/modern_decks).
-    fn observe_win_kind(&mut self, winner: usize, final_life: &[i32]) {
-        // Gather every non-winner seat's life. With no opponents in the
-        // array we can't classify the win, so bail.
+    fn observe_win_kind(
+        &mut self,
+        winner: usize,
+        final_life: &[i32],
+        loss_reasons: &[Option<LossReason>],
+    ) {
+        // Precise path: classify from the per-seat loss reasons.
+        let reasons: Vec<LossReason> = loss_reasons
+            .iter()
+            .enumerate()
+            .filter(|&(i, _)| i != winner)
+            .filter_map(|(_, r)| *r)
+            .collect();
+        if !reasons.is_empty() {
+            let any_alternate = reasons.iter().any(|r| *r != LossReason::LifeDepleted);
+            if any_alternate {
+                self.deckout_wins = self.deckout_wins.saturating_add(1);
+            }
+            if reasons.contains(&LossReason::Poison) {
+                self.poison_wins = self.poison_wins.saturating_add(1);
+            }
+            if reasons.contains(&LossReason::Decked) {
+                self.deck_wins = self.deck_wins.saturating_add(1);
+            }
+            return;
+        }
+        // Fallback: no reason data → infer from life totals (every losing
+        // seat above 0 means the win wasn't lethal face damage).
         let mut losers = final_life
             .iter()
             .enumerate()
@@ -414,6 +474,19 @@ impl MatchStats {
         } else {
             self.cumulative_win_life_delta / (self.win_life_samples as i64)
         }
+    }
+    /// Population standard deviation of the win-by-life delta (σ = √(E[x²] −
+    /// E[x]²)). Returns 0.0 with no samples. A tight σ next to the average
+    /// means a consistent win margin; a large σ flags a "blowout-or-squeaker"
+    /// split the average hides.
+    fn win_life_delta_stddev(&self) -> f32 {
+        if self.win_life_samples == 0 {
+            return 0.0;
+        }
+        let n = self.win_life_samples as f64;
+        let mean = self.cumulative_win_life_delta as f64 / n;
+        let mean_sq = self.cumulative_win_life_delta_squared as f64 / n;
+        (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
     /// Percent of *resolved* matches (wins + draws) that ended decisively
     /// (i.e. had a winner). Returns 0 when nothing has resolved yet. A
@@ -438,6 +511,16 @@ impl MatchStats {
         } else {
             self.deckout_wins.saturating_mul(100) / self.wins
         }
+    }
+    /// Percent of wins in which a losing seat died to poison (CR 104.3c).
+    /// A sub-split of `deckout_pct`; 0 when no wins recorded.
+    fn poison_pct(&self) -> u64 {
+        if self.wins == 0 { 0 } else { self.poison_wins.saturating_mul(100) / self.wins }
+    }
+    /// Percent of wins in which a losing seat decked out (CR 104.3a).
+    /// A sub-split of `deckout_pct`; 0 when no wins recorded.
+    fn deck_pct(&self) -> u64 {
+        if self.wins == 0 { 0 } else { self.deck_wins.saturating_mul(100) / self.wins }
     }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator
@@ -682,10 +765,23 @@ fn format_match_stats(s: &MatchStats) -> String {
         // win has been seen so the common all-damage case stays tight.
         if s.deckout_wins > 0 {
             out.push_str(&format!(" alt_wins={} ({}%)", s.deckout_wins, s.deckout_pct()));
+            // Split the alternate-win share into its two main paths when seen.
+            if s.poison_wins > 0 {
+                out.push_str(&format!(" poison={} ({}%)", s.poison_wins, s.poison_pct()));
+            }
+            if s.deck_wins > 0 {
+                out.push_str(&format!(" deck={} ({}%)", s.deck_wins, s.deck_pct()));
+            }
         }
-        let unresolved = n.saturating_sub(s.wins + s.draws);
-        if unresolved > 0 {
-            out.push_str(&format!(" unresolved={unresolved}"));
+        // Stuck/disconnected matches: prefer the explicit `inconclusive`
+        // counter (and its percentage) over the subtraction fallback so a
+        // hang regression reads directly off the summary line.
+        if s.inconclusive > 0 {
+            out.push_str(&format!(
+                " unresolved={} ({}%)",
+                s.inconclusive,
+                s.inconclusive_pct()
+            ));
         }
         // Per-seat win histogram: " seat_wins=12/8/0/0" (only render
         // up to the highest non-zero seat so 1v1 doesn't surface
@@ -704,7 +800,11 @@ fn format_match_stats(s: &MatchStats) -> String {
         // (12+) means the winner cruised; near-zero values mean games
         // ended in a race. Push (claude/modern_decks batch 202).
         if s.win_life_samples > 0 {
-            out.push_str(&format!(" avg_win_life_lead={}", s.avg_win_life_delta()));
+            out.push_str(&format!(
+                " avg_win_life_lead={} (σ={:.1})",
+                s.avg_win_life_delta(),
+                s.win_life_delta_stddev()
+            ));
         }
     }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
@@ -1070,7 +1170,7 @@ fn run_lobby_server(listener: &TcpListener, slots: &SlotManager) -> ! {
                 s.observe_winner(outcome.winner);
                 if let Some(Some(w)) = outcome.winner {
                     s.observe_win_life_delta(w, &outcome.final_life_totals);
-                    s.observe_win_kind(w, &outcome.final_life_totals);
+                    s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
                 }
                 *s
             };
@@ -1136,7 +1236,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         s.observe_winner(outcome.winner);
         if let Some(Some(w)) = outcome.winner {
             s.observe_win_life_delta(w, &outcome.final_life_totals);
-            s.observe_win_kind(w, &outcome.final_life_totals);
+            s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
         }
         *s
     };
@@ -1189,7 +1289,7 @@ fn run_pair_match(
         s.observe_winner(outcome.winner);
         if let Some(Some(w)) = outcome.winner {
             s.observe_win_life_delta(w, &outcome.final_life_totals);
-            s.observe_win_kind(w, &outcome.final_life_totals);
+            s.observe_win_kind(w, &outcome.final_life_totals, &outcome.loss_reasons);
         }
         *s
     };
@@ -1540,13 +1640,26 @@ mod tests {
         s.observe_winner(Some(Some(0))); // seat 0 wins
         s.observe_winner(Some(None));     // draw
         s.observe_winner(Some(Some(1))); // seat 1 wins
-        s.observe_winner(None);           // unresolved — silently dropped
+        s.observe_winner(None);           // unresolved — counted as inconclusive
         assert_eq!(s.wins, 2);
         assert_eq!(s.draws, 1);
+        assert_eq!(s.inconclusive, 1);
         assert_eq!(s.seat_wins[0], 1);
         assert_eq!(s.seat_wins[1], 1);
         // 2 decisive of 3 resolved → 66%. Unresolved is excluded.
         assert_eq!(s.decisive_pct(), 66);
+    }
+
+    #[test]
+    fn inconclusive_pct_is_share_of_all_matches() {
+        // 1 stuck match out of 4 total → 25%.
+        let mut s = MatchStats { bot_matches: 4, ..Default::default() };
+        s.observe_winner(Some(Some(0)));
+        s.observe_winner(Some(Some(1)));
+        s.observe_winner(Some(None));
+        s.observe_winner(None); // inconclusive
+        assert_eq!(s.inconclusive, 1);
+        assert_eq!(s.inconclusive_pct(), 25);
     }
 
     #[test]
@@ -1578,27 +1691,44 @@ mod tests {
     fn observe_win_kind_counts_alternate_wins() {
         let mut s = MatchStats::default();
         // Loser still alive (life 7) → alternate win (deckout/poison/etc.).
-        s.observe_win_kind(0, &[3, 7]);
+        s.observe_win_kind(0, &[3, 7], &[]);
         assert_eq!(s.deckout_wins, 1, "loser alive → alternate win counted");
         // Loser dead to face damage (life 0) → NOT an alternate win.
-        s.observe_win_kind(0, &[5, 0]);
+        s.observe_win_kind(0, &[5, 0], &[]);
         assert_eq!(s.deckout_wins, 1, "damage win must not count");
         // Loser at negative life → damage win, still no bump.
-        s.observe_win_kind(1, &[-3, 9]);
+        s.observe_win_kind(1, &[-3, 9], &[]);
         assert_eq!(s.deckout_wins, 1);
         // Another alternate win → bumps to 2.
-        s.observe_win_kind(1, &[2, 4]);
+        s.observe_win_kind(1, &[2, 4], &[]);
         assert_eq!(s.deckout_wins, 2);
+    }
+
+    #[test]
+    fn observe_win_kind_classifies_from_loss_reasons() {
+        let mut s = MatchStats::default();
+        // Seat 0 wins; seat 1 decked out → alternate + deck bucket.
+        s.observe_win_kind(0, &[5, 9], &[None, Some(LossReason::Decked)]);
+        assert_eq!(s.deckout_wins, 1);
+        assert_eq!(s.deck_wins, 1);
+        assert_eq!(s.poison_wins, 0);
+        // Seat 1 wins; seat 0 poisoned out → alternate + poison bucket.
+        s.observe_win_kind(1, &[3, 8], &[Some(LossReason::Poison), None]);
+        assert_eq!(s.deckout_wins, 2);
+        assert_eq!(s.poison_wins, 1);
+        // Precise life-depletion loss is NOT an alternate win.
+        s.observe_win_kind(0, &[6, -1], &[None, Some(LossReason::LifeDepleted)]);
+        assert_eq!(s.deckout_wins, 2, "life-damage loss stays out of alt bucket");
     }
 
     #[test]
     fn observe_win_kind_ignores_missing_loser_data() {
         let mut s = MatchStats::default();
         // Single-element array: no opponent seat to classify against.
-        s.observe_win_kind(0, &[10]);
+        s.observe_win_kind(0, &[10], &[]);
         assert_eq!(s.deckout_wins, 0, "no loser data → no classification");
         // Empty array likewise.
-        s.observe_win_kind(0, &[]);
+        s.observe_win_kind(0, &[], &[]);
         assert_eq!(s.deckout_wins, 0);
     }
 
@@ -1615,6 +1745,14 @@ mod tests {
         assert_eq!(s.win_life_samples, 3);
         // Average = (8 + 1 + 4) / 3 = 4.
         assert_eq!(s.avg_win_life_delta(), 4);
+        // σ = √(E[x²] − E[x]²) = √(81/3 − (13/3)²) = √(74/9) ≈ 2.867.
+        assert!((s.win_life_delta_stddev() - (74f32 / 9.0).sqrt()).abs() < 1e-3);
+    }
+
+    #[test]
+    fn win_life_delta_stddev_zero_without_samples() {
+        let s = MatchStats::default();
+        assert_eq!(s.win_life_delta_stddev(), 0.0);
     }
 
     #[test]
@@ -1694,10 +1832,10 @@ mod tests {
         s.record_bot(Duration::from_secs(60), Format::Demo);
         s.record_bot(Duration::from_secs(70), Format::Demo);
         s.observe_winner(Some(Some(0)));
-        // The second match had no observed winner.
+        s.observe_winner(None); // second match ended with no declared outcome
         let line = format_match_stats(&s);
         assert!(line.contains("wins=1"), "got: {line}");
-        assert!(line.contains("unresolved=1"), "got: {line}");
+        assert!(line.contains("unresolved=1 (50%)"), "got: {line}");
     }
 
     #[test]

@@ -28,6 +28,9 @@ mod extras_10;
 mod extras_11;
 mod extras_12;
 mod extras_13;
+mod extras_14;
+mod extras_15;
+mod extras_16;
 mod iconic;
 mod legends;
 mod lessons;
@@ -68,6 +71,12 @@ pub use extras_11::*;
 pub use extras_12::*;
 #[allow(ambiguous_glob_reexports)]
 pub use extras_13::*;
+#[allow(ambiguous_glob_reexports)]
+pub use extras_14::*;
+#[allow(ambiguous_glob_reexports)]
+pub use extras_15::*;
+#[allow(ambiguous_glob_reexports)]
+pub use extras_16::*;
 pub use iconic::*;
 pub use legends::*;
 pub use lessons::*;

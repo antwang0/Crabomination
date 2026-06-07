@@ -910,8 +910,8 @@ fn wall_of_frost_stuns_the_creature_it_blocks() {
 // ── CR 508.1 attack tax (Propaganda / Ghostly Prison) ───────────────────────
 // `StaticEffect::AttackTaxToController` — the defending player's pillowfort
 // charges the attacker's controller a generic mana tax per attacking creature,
-// paid (auto-tapping) at declare-attackers. Mana empties on step changes, so
-// each test funds the pool *after* advancing to DeclareAttackers.
+// paid at declare-attackers from floating mana. Mana empties on step changes,
+// so each test funds the pool *after* advancing to DeclareAttackers.
 
 #[test]
 fn propaganda_tax_paid_lets_attacker_through() {
@@ -1000,5 +1000,42 @@ fn propaganda_tax_scales_per_attacker() {
         Attack { attacker: a2, target: AttackTarget::Player(1) },
     ])).expect("two attackers, {4} tax paid");
     assert_eq!(g.attacking().len(), 2);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+#[test]
+fn cr_508_1g_ghostly_prison_taxes_attackers() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    // No mana floating: the attack is rejected (can't pay the {2} tax).
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).is_err(), "attack rejected without paying the tax");
+    // Pay {2}: the attack goes through and the mana is consumed.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack legal once tax is payable");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the tax was spent");
+}
+
+#[test]
+fn cr_508_1g_windborn_muse_does_not_tax_planeswalker_attacks() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    // Player 1 has Windborn Muse (player-only tax) and a planeswalker.
+    g.add_card_to_battlefield(1, catalog::windborn_muse());
+    let pw = g.add_card_to_battlefield(1, catalog::teferi_time_raveler());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    // Attacking the planeswalker is free (Windborn Muse protects only the player).
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Planeswalker(pw),
+    }])).expect("planeswalker attack is untaxed");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }

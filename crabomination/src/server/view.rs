@@ -398,6 +398,17 @@ fn known_card(card: &CardInstance) -> KnownCard {
         card_types: card.definition.card_types.clone(),
         needs_target: card.definition.effect.requires_target(),
         has_alternative_cost: card.definition.alternative_cost.is_some(),
+        alt_cost_needs_pitch: card
+            .definition
+            .alternative_cost
+            .as_ref()
+            .is_some_and(|a| a.exile_filter.is_some()),
+        alt_cost_label: card
+            .definition
+            .alternative_cost
+            .as_ref()
+            .map(|a| format_mana_cost_for_label(&a.mana_cost))
+            .unwrap_or_default(),
         back_face_name: card
             .definition
             .back_face
@@ -415,6 +426,12 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .unwrap_or_default(),
         modal_descriptions,
         modal_needs_target,
+        saga_final_chapter: card
+            .definition
+            .saga_chapters
+            .iter()
+            .map(|(n, _)| *n)
+            .max(),
     }
 }
 
@@ -563,6 +580,12 @@ fn project_permanent(
         soulbond_partner: card
             .soulbond_partner
             .filter(|p| battlefield.iter().any(|o| o.id == *p)),
+        saga_final_chapter: card
+            .definition
+            .saga_chapters
+            .iter()
+            .map(|(n, _)| *n)
+            .max(),
     }
 }
 
@@ -873,6 +896,11 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.tap_cost {
         parts.push("{T}".into());
     }
+    // {E} (energy) cost — Aether Hub's `{T}, Pay {E}`, Servant of the Conduit.
+    // Rendered as one `{E}` per energy so the tooltip mirrors card text.
+    if ability.energy_cost > 0 {
+        parts.push("{E}".repeat(ability.energy_cost as usize));
+    }
     // Sacrifice-cost activations (Lotus Petal, Wasteland, Mind Stone's draw
     // ability, Tormod's Crypt, …) carry a `sac_cost: true` flag — render it
     // explicitly so the UI shows the sacrifice rider rather than a label
@@ -923,6 +951,32 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some(req) = ability.tap_other_filter.as_ref() {
         parts.push(format!("Tap a {}", requirement_noun(req)));
     }
+    // Discard-as-cost (Fauna Shaman, Survival of the Fittest) — `discard_cost`.
+    if let Some((req, n)) = ability.discard_cost.as_ref() {
+        let noun = requirement_noun(req);
+        if *n == 1 {
+            parts.push(format!("Discard a {noun}"));
+        } else {
+            parts.push(format!("Discard {n} {noun}s"));
+        }
+    }
+    // Remove-counter-as-cost (Walking Ballista, Triskelion, Hangarback Walker)
+    // — `remove_counter_cost`. The counter kind is rendered with a short label.
+    if let Some((kind, n)) = ability.remove_counter_cost.as_ref() {
+        let label = counter_kind_label(kind);
+        let sep = if label.is_empty() { "" } else { " " };
+        if *n == 1 {
+            parts.push(format!("Remove a{sep}{label} counter"));
+        } else {
+            parts.push(format!("Remove {n}{sep}{label} counters"));
+        }
+    }
+    // Return-self-as-cost (Grinning Ignus, Rootha) — "Return this to hand"
+    // so the tooltip shows the bounce rider rather than looking free for
+    // mana alone.
+    if ability.return_self_cost {
+        parts.push("Return this to hand".into());
+    }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }
 
@@ -941,6 +995,19 @@ fn requirement_noun(req: &crate::card::SelectionRequirement) -> &'static str {
         // ControlledByYou → "creature").
         R::And(a, _) => requirement_noun(a),
         _ => "permanent",
+    }
+}
+
+/// Short label for a counter kind used in "Remove a [label] counter" cost
+/// riders. Falls back to a generic "counter" wording for rarer kinds.
+fn counter_kind_label(kind: &crate::card::CounterType) -> &'static str {
+    use crate::card::CounterType as C;
+    match kind {
+        C::PlusOnePlusOne => "+1/+1",
+        C::MinusOneMinusOne => "-1/-1",
+        C::Charge => "charge",
+        C::Loyalty => "loyalty",
+        _ => "",
     }
 }
 
@@ -1013,12 +1080,19 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::SacrificeAnyNumber { .. } => "Sacrifice any number",
         Effect::PayLifeLookTake { .. } => "Pay life, dig, take one",
         Effect::DiscardChosen { .. } => "Discard chosen",
+        Effect::ExileChosenFromHand { .. } => "Exile chosen from hand",
         Effect::PayOrLoseGame { .. } => "Pay or lose",
         Effect::DelayUntil { .. } => "Delayed trigger",
         Effect::Tap { .. } => "Tap",
         Effect::Untap { .. } => "Untap",
         Effect::PumpPT { .. } => "Pump",
         Effect::SetBasePT { .. } => "Set base P/T",
+        Effect::Process { then, .. } => {
+            // Surface the rider's label — the "process from exile" step
+            // resolves through the decision panel.
+            let inner = ability_effect_label(then);
+            if inner == "Activate" { "Process" } else { inner }
+        }
         Effect::GrantKeyword { .. } => "Grant keyword",
         Effect::AddPoison { .. } => "Add poison",
         Effect::RevealUntilFind { .. } => "Reveal until find",
@@ -1053,10 +1127,12 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::WinGame { .. } => "Win the game",
         Effect::PreventAllCombatDamageThisTurn => "Prevent combat damage",
         Effect::PreventAllCombatDamageInvolving { .. } => "Prevent combat damage to/from target",
+        Effect::CantBlockSourceThisTurn { .. } => "Target can't block this",
         Effect::SkipTurns { .. } => "Skip turns",
         Effect::SetLifeTotal { .. } => "Set life total",
         Effect::ExchangeLifeTotals { .. } => "Exchange life totals",
         Effect::PreventNextDamage { .. } => "Prevent damage",
+        Effect::PreventNextDamageAndGainLife { .. } => "Prevent damage, gain life",
         Effect::PreventAllDamageThisTurn { .. } => "Prevent all damage",
         Effect::DamageCantBePreventedThisTurn => "Damage can't be prevented",
         Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
@@ -1258,10 +1334,12 @@ mod tests {
         state.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Player(0),
             remaining: None,
+            gain_life: false,
         });
         state.prevention_shields.push(PreventionShield {
             target: PreventionTarget::Permanent(bear),
             remaining: Some(2),
+            gain_life: false,
         });
         state.damage_cant_be_prevented_this_turn = true;
         let v = project(&state, 0);
@@ -1687,6 +1765,7 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{W}"), "{label} should contain {{W}}");
@@ -1712,6 +1791,7 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         assert_eq!(ability_cost_label(&ab_x), "{X}",
             "X-cost ability renders as {{X}}");
@@ -1741,6 +1821,7 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{1}"), "{label} must include the {{1}} cost");
@@ -1764,10 +1845,38 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),
             "{label} = `{{T}}, Sac`-style for Lotus Petal");
+    }
+
+    /// Energy, discard, and remove-counter costs must surface in the tooltip
+    /// so abilities like Aether Hub, Fauna Shaman, and Walking Ballista don't
+    /// look free for their mana/tap alone.
+    #[test]
+    fn ability_cost_label_renders_energy_discard_and_counter_riders() {
+        use crate::card::{CounterType, SelectionRequirement as R};
+        use crate::effect::ActivatedAbility;
+        use crate::mana::{cost, generic};
+        // Aether Hub: {T}, Pay {E}: Add any color.
+        let hub = ActivatedAbility { tap_cost: true, energy_cost: 1, ..Default::default() };
+        assert!(ability_cost_label(&hub).contains("{E}"), "energy cost shown");
+        // Fauna Shaman: {G}, {T}, Discard a creature card.
+        let shaman = ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            discard_cost: Some((R::Creature, 1)),
+            ..Default::default()
+        };
+        assert!(ability_cost_label(&shaman).contains("Discard a creature"), "discard cost shown");
+        // Walking Ballista: Remove a +1/+1 counter.
+        let ballista = ActivatedAbility {
+            remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
+            ..Default::default()
+        };
+        assert_eq!(ability_cost_label(&ballista), "Remove a +1/+1 counter");
     }
 
     /// `sac_other_filter` / `tap_other_filter` additional costs must show
@@ -1808,6 +1917,22 @@ mod tests {
             ..Default::default()
         };
         assert!(ability_cost_label(&sac_two).contains("Sacrifice 2 artifacts"));
+    }
+
+    /// `return_self_cost` activations (Grinning Ignus, Rootha) must show the
+    /// bounce rider so the tooltip doesn't look free for tap+mana alone.
+    #[test]
+    fn ability_cost_label_renders_return_self_rider() {
+        use crate::effect::ActivatedAbility;
+        use crate::mana::{cost, r};
+        let ignus = ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            return_self_cost: true,
+            ..Default::default()
+        };
+        let label = ability_cost_label(&ignus);
+        assert!(label.contains("{R}"), "got: {label}");
+        assert!(label.contains("Return this to hand"), "bounce rider shown: {label}");
     }
 
     /// `AbilityView.once_per_turn_used` must reflect the engine's
@@ -2091,5 +2216,23 @@ mod tests {
         });
         let view = project(&state, 0);
         assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);
+    }
+
+    #[test]
+    fn known_card_distinguishes_pitch_from_plain_alt_cost() {
+        // Pyrokinesis exiles a red card (pitch) → needs_pitch = true.
+        let pitch = crate::card::CardInstance::new(
+            crate::card::CardId(1), catalog::pyrokinesis(), 0);
+        let k = known_card(&pitch);
+        assert!(k.has_alternative_cost);
+        assert!(k.alt_cost_needs_pitch, "Pyrokinesis pitches a card");
+
+        // Boulder Salvo's Surge is a plain alt cost (no exile) with a label.
+        let surge = crate::card::CardInstance::new(
+            crate::card::CardId(2), catalog::boulder_salvo(), 0);
+        let k2 = known_card(&surge);
+        assert!(k2.has_alternative_cost);
+        assert!(!k2.alt_cost_needs_pitch, "Surge needs no pitch");
+        assert_eq!(k2.alt_cost_label, "{1}{R}", "surge cost label rendered");
     }
 }

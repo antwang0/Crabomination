@@ -556,6 +556,18 @@ pub struct KnownCard {
     /// "Cast for alt cost" menu entry.
     #[serde(default)]
     pub has_alternative_cost: bool,
+    /// True when the alternative cost requires exiling a card from hand
+    /// (a pitch cost — Force of Will/Negation). When `false`, the alt cost
+    /// is a plain alternative (Surge/Awaken/Emerge/Spectacle/Overload) and
+    /// the client can offer a single "Cast for alt cost" button submitting
+    /// `pitch_card: None`. Defaults to `false`.
+    #[serde(default)]
+    pub alt_cost_needs_pitch: bool,
+    /// Pre-rendered alternative-cost mana label (e.g. "{1}{R}"). Empty
+    /// string when `has_alternative_cost == false`. Used by the client's
+    /// alt-cast modal header. Defaults to "".
+    #[serde(default)]
+    pub alt_cost_label: String,
     /// MDFC back-face name, if any (e.g. Blightstep Pathway → "Searstep
     /// Pathway"). Drives the client's right-click flip on hand cards: when
     /// `Some`, right-click toggles the card's hand visual to the back face
@@ -598,6 +610,12 @@ pub struct KnownCard {
     /// mode pick or to fire the cast immediately.
     #[serde(default)]
     pub modal_needs_target: Vec<bool>,
+    /// CR 714 — for a Saga, its final (highest) chapter number, so the client
+    /// can render "Chapter N / final" alongside the lore-counter chip. `None`
+    /// for non-Saga cards. The current chapter is the card's Lore counter
+    /// count (already surfaced via the generic counter display).
+    #[serde(default)]
+    pub saga_final_chapter: Option<u32>,
 }
 
 /// One activated ability as projected for the client.
@@ -935,6 +953,11 @@ pub struct PermanentView {
     /// (unpaired) case. Populated by `project_permanent`.
     #[serde(default)]
     pub soulbond_partner: Option<CardId>,
+    /// CR 714 — for a Saga, its final (highest) chapter number. With the Lore
+    /// counter count (in `counters`) the client renders "Chapter N / final".
+    /// `None` for non-Sagas. Populated by `project_permanent`.
+    #[serde(default)]
+    pub saga_final_chapter: Option<u32>,
 }
 
 impl PermanentView {

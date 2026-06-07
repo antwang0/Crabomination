@@ -1489,6 +1489,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1497,6 +1498,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
 
     let mut g = two_player_game();
@@ -1544,6 +1546,7 @@ fn set_life_total_higher_emits_life_gained() {
         enters_as_copy: None,
         max_counters_of_kind: None,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1552,6 +1555,7 @@ fn set_life_total_higher_emits_life_gained() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
 
     let mut g = two_player_game();
@@ -1610,6 +1614,7 @@ fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        affinity_graveyard_filter: None,
         equipped_bonus: None,
         soulbond_bonus: None,
         additional_cast_cost: vec![],
@@ -1618,6 +1623,7 @@ fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
 
     let mut g = two_player_game();

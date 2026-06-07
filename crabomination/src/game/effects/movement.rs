@@ -36,28 +36,35 @@ impl GameState {
         };
         let mut remaining = amount;
         let mut prevented = 0u32;
+        // CR 615.1 — life gained by `gain_life` shields that soak damage.
+        let mut life_gain = 0u32;
         for shield in self.prevention_shields.iter_mut().filter(|s| s.target == key) {
             if remaining == 0 {
                 break;
             }
-            match shield.remaining {
-                None => {
-                    // Prevent-all: soak everything, shield stays for the turn.
-                    prevented += remaining;
-                    remaining = 0;
-                }
+            let soak = match shield.remaining {
+                // Prevent-all: soak everything, shield stays for the turn.
+                None => std::mem::take(&mut remaining),
                 Some(ref mut n) => {
                     let soak = remaining.min(*n);
-                    prevented += soak;
                     remaining -= soak;
                     *n -= soak;
+                    soak
                 }
+            };
+            prevented += soak;
+            if shield.gain_life {
+                life_gain += soak;
             }
         }
         // Drop spent "next N" shields (those reduced to 0).
         self.prevention_shields.retain(|s| s.remaining != Some(0));
         if prevented > 0 {
             events.push(GameEvent::DamagePrevented { amount: prevented, to_player, to_card });
+        }
+        if life_gain > 0 && let Some(p) = to_player {
+            self.adjust_life(p, life_gain as i32);
+            events.push(GameEvent::LifeGained { player: p, amount: life_gain });
         }
         remaining
     }
