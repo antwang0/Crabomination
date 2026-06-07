@@ -1805,6 +1805,59 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Sustainer of the Realm — {2}{W}{W} 2/3 Angel. Flying; whenever it blocks, it
+/// gets +0/+2 until end of turn.
+pub fn sustainer_of_the_realm() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        name: "Sustainer of the Realm",
+        cost: cost(&[crate::mana::generic(2), crate::mana::w(), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(0),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Containment Membrane — {2}{U} Aura. Enchanted creature doesn't untap during
+/// its controller's untap step. (Surge is dropped — no Surge primitive yet.)
+pub fn containment_membrane() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, SelectionRequirement, StaticAbility, StaticEffect};
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Containment Membrane",
+        cost: cost(&[crate::mana::generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature doesn't untap during its controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::AttachedTo(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Expedition Envoy — {W} 2/1 Human Scout Ally (vanilla).
 pub fn expedition_envoy() -> CardDefinition {
     CardDefinition {

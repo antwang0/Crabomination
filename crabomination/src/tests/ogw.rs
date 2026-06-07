@@ -2016,3 +2016,59 @@ fn shoulder_to_shoulder_supports_and_draws() {
     assert_eq!(g.battlefield_find(b).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
     assert_eq!(g.players[0].hand.len(), hand_before, "drew 1 after casting (net same: -1 spell +1 draw)");
 }
+
+/// Sustainer of the Realm gets +0/+2 when it blocks.
+#[test]
+fn sustainer_of_the_realm_pumps_on_block() {
+    let mut g = two_player_game();
+    let blocker = g.add_card_to_battlefield(1, catalog::sustainer_of_the_realm()); // 2/3
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).expect("block");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(blocker).unwrap().toughness, 5, "2/3 → 2/5 on block");
+}
+
+/// Containment Membrane keeps the enchanted creature from untapping.
+#[test]
+fn containment_membrane_prevents_untap() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(creature).unwrap().tapped = true;
+    let aura = g.add_card_to_hand(0, catalog::containment_membrane());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("enchant");
+    drain_stack(&mut g);
+    // Run P1's untap step directly; the enchanted creature must stay tapped.
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(g.battlefield_find(creature).unwrap().tapped, "stays tapped through untap");
+}
+
+/// Coastal Discovery draws two; Comparative Analysis draws two for a target player.
+#[test]
+fn coastal_and_comparative_draw_two() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::forest()); }
+    let cd = g.add_card_to_hand(0, catalog::coastal_discovery());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: cd, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Coastal Discovery");
+    drain_stack(&mut g);
+    // -1 (spell) +2 (draw) = net +1.
+    assert_eq!(g.players[0].hand.len(), before + 1, "drew two");
+}

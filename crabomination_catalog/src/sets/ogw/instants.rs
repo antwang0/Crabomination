@@ -21,6 +21,31 @@ pub fn murderous_compulsion() -> CardDefinition {
     }
 }
 
+/// Coastal Discovery — {3}{U} Sorcery. Draw two cards. (Awaken 4 dropped.)
+pub fn coastal_discovery() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Coastal Discovery",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Comparative Analysis — {3}{U} Instant. Target player draws two cards. (Surge
+/// is dropped — no Surge primitive yet.)
+pub fn comparative_analysis() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Comparative Analysis",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw { who: Selector::Target(0), amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
 /// Shoulder to Shoulder — {2}{W} Sorcery. Support 2, then draw a card.
 pub fn shoulder_to_shoulder() -> CardDefinition {
     use crate::effect::Selector;
