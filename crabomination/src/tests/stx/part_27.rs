@@ -102,6 +102,30 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn make_your_move_hits_big_creature_and_artifact_but_not_small_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::gnarled_professor()); // 5/4
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone()); // artifact
+    // Small creature isn't a legal target.
+    let id = g.add_card_to_hand(0, catalog::make_your_move());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(small)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "power-2 creature is not a legal target");
+    // Big creature is.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("power-5 creature is legal");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "destroys the 5/4");
+    assert!(g.battlefield_find(rock).is_some(), "artifact untouched this cast");
+}
+
+#[test]
 fn sticky_fingers_grants_menace_and_mints_treasure_on_combat_damage() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

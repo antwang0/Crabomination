@@ -296,6 +296,25 @@ pub fn golden_ratio() -> CardDefinition {
     }
 }
 
+/// Make Your Move — {2}{W} Instant. Destroy target artifact, enchantment, or
+/// creature with power 4 or greater.
+pub fn make_your_move() -> CardDefinition {
+    CardDefinition {
+        name: "Make Your Move",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Creature
+                        .and(SelectionRequirement::PowerAtLeast(4))),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Exponential Growth — {X}{X}{G}{G} Sorcery. Until end of turn, double target
 /// creature's power X times.
 pub fn exponential_growth() -> CardDefinition {
