@@ -212,6 +212,13 @@ struct MatchStats {
     /// Saturates positive; clamped at zero when winner life is below
     /// the negative of the opp's. Push (claude/modern_decks batch 202).
     cumulative_win_life_delta: i64,
+    /// Σ of (win-life-delta)² across sampled wins, for the population
+    /// standard deviation (σ = √(E[x²] − E[x]²)). Paired with the average,
+    /// σ distinguishes a consistent "win-by-5" meta from a bimodal
+    /// "blowout-or-squeaker" split the average alone hides. Deltas are
+    /// clamped ≥ 0, so the squared sum is non-negative; `u128` headroom
+    /// keeps it from overflowing over a long run.
+    cumulative_win_life_delta_squared: u128,
     /// Number of matches counted in `cumulative_win_life_delta`. Lets
     /// the formatter compute the average without dividing by `wins`
     /// directly (a winner with no available life data — e.g. a forced
@@ -405,6 +412,9 @@ impl MatchStats {
         let delta = (winner_life - max_opp).max(0) as i64;
         self.cumulative_win_life_delta =
             self.cumulative_win_life_delta.saturating_add(delta);
+        self.cumulative_win_life_delta_squared = self
+            .cumulative_win_life_delta_squared
+            .saturating_add((delta as u128) * (delta as u128));
         self.win_life_samples = self.win_life_samples.saturating_add(1);
     }
     /// Classify one clean win as a damage win or an "alternate" win
@@ -464,6 +474,19 @@ impl MatchStats {
         } else {
             self.cumulative_win_life_delta / (self.win_life_samples as i64)
         }
+    }
+    /// Population standard deviation of the win-by-life delta (σ = √(E[x²] −
+    /// E[x]²)). Returns 0.0 with no samples. A tight σ next to the average
+    /// means a consistent win margin; a large σ flags a "blowout-or-squeaker"
+    /// split the average hides.
+    fn win_life_delta_stddev(&self) -> f32 {
+        if self.win_life_samples == 0 {
+            return 0.0;
+        }
+        let n = self.win_life_samples as f64;
+        let mean = self.cumulative_win_life_delta as f64 / n;
+        let mean_sq = self.cumulative_win_life_delta_squared as f64 / n;
+        (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
     /// Percent of *resolved* matches (wins + draws) that ended decisively
     /// (i.e. had a winner). Returns 0 when nothing has resolved yet. A
@@ -777,7 +800,11 @@ fn format_match_stats(s: &MatchStats) -> String {
         // (12+) means the winner cruised; near-zero values mean games
         // ended in a race. Push (claude/modern_decks batch 202).
         if s.win_life_samples > 0 {
-            out.push_str(&format!(" avg_win_life_lead={}", s.avg_win_life_delta()));
+            out.push_str(&format!(
+                " avg_win_life_lead={} (σ={:.1})",
+                s.avg_win_life_delta(),
+                s.win_life_delta_stddev()
+            ));
         }
     }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
@@ -1718,6 +1745,14 @@ mod tests {
         assert_eq!(s.win_life_samples, 3);
         // Average = (8 + 1 + 4) / 3 = 4.
         assert_eq!(s.avg_win_life_delta(), 4);
+        // σ = √(E[x²] − E[x]²) = √(81/3 − (13/3)²) = √(74/9) ≈ 2.867.
+        assert!((s.win_life_delta_stddev() - (74f32 / 9.0).sqrt()).abs() < 1e-3);
+    }
+
+    #[test]
+    fn win_life_delta_stddev_zero_without_samples() {
+        let s = MatchStats::default();
+        assert_eq!(s.win_life_delta_stddev(), 0.0);
     }
 
     #[test]

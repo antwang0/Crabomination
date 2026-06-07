@@ -27,6 +27,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - ⏳ **Client crate can't be built/linted in the web sandbox** (missing the
   `wayland-client` system library; `wayland-sys` build script panics). Engine,
   catalog, base, and server crates all build + clippy-clean + test-green.
+  Client edits are kept mechanical (mirror existing arms) and rustfmt-checked
+  only. Pending sandbox-side verification: `keyword_label` now phrases Devoid /
+  Landcycling / CantBeCounteredIfXAtLeast instead of raw `{:?}`.
 - ⏳ **Test harness: `check_state_based_actions()` doesn't dispatch
   *another-creature-died* watcher triggers.** A creature killed via raw
   `damage = N; check_state_based_actions()` fires its own death (SelfSource)
@@ -713,7 +716,7 @@ picking an item up.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror). Remaining: redistribute-life-totals; broad life-gain replacement (119.10).
 - 🟡 **CR 121 — Drawing a Card** — choose-to-draw (121.3); draw-count replacement (121.2a); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2). `StaticEffect::PreventUntap` honors `Selector::This` (self-referential — Basalt/Grim Monolith) and now `Selector::AttachedTo(This)` (aura-anchored "enchanted creature doesn't untap" — Claustrophobia/Dehydration).
-- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.)
+- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.

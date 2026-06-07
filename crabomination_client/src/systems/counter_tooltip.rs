@@ -655,6 +655,13 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::MustBlock => "Blocks each combat if able".into(),
         K::MustAttack => "Attacks each combat if able".into(),
         K::CantBeCopied => "Can't be copied".into(),
+        // Player-facing keywords that previously fell through to the raw
+        // `{:?}` debug shape.
+        K::Devoid => "Devoid (colorless)".into(),
+        K::Landcycling(cost, lt) => format!("{lt:?}cycling {}", cost.summary()),
+        K::CantBeCounteredIfXAtLeast(n) => {
+            format!("Can't be countered if X is {n} or more")
+        }
         _ => format!("{kw:?}"),
     }
 }
