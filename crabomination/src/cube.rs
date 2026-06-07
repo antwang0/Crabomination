@@ -448,6 +448,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // modal sweeper + attacker exile
         austere_command,
         settle_the_wreckage,
+        // protective instants (simplified)
+        teferis_protection,
+        comeuppance,
         // allied-color batch (modern_decks)
         ministrant_of_obligation,
         dragons_eye_sentry,

@@ -35379,3 +35379,37 @@ fn austere_command_mode_destroys_big_creatures() {
     assert!(g.battlefield_find(big).is_none(), "MV-6 creature destroyed");
     assert!(g.battlefield_find(small).is_some(), "MV-2 creature survives");
 }
+
+#[test]
+fn teferis_protection_prevents_damage_and_grants_indestructible() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let tp = g.add_card_to_hand(0, catalog::teferis_protection());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tp, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Teferi's Protection");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Indestructible),
+        "your permanents gain indestructible");
+    let life = g.players[0].life;
+    opponent_casts_bolt(&mut g);
+    assert_eq!(g.players[0].life, life, "damage to you is prevented");
+}
+
+#[test]
+fn comeuppance_prevents_damage_to_you() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_hand(0, catalog::comeuppance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: c, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Comeuppance");
+    drain_stack(&mut g);
+    let life = g.players[0].life;
+    opponent_casts_bolt(&mut g);
+    assert_eq!(g.players[0].life, life, "damage to you is prevented");
+}

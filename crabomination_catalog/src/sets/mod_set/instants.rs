@@ -1730,6 +1730,46 @@ pub fn catalog_draw() -> CardDefinition {
     }
 }
 
+/// Teferi's Protection — {2}{W} Instant. "Until your next turn: your life total
+/// can't change; you have protection from everything; phase out all permanents
+/// you control." Phasing and the life-lock aren't modeled; approximated as a
+/// damage-immune turn (prevent all damage to you) plus your permanents gaining
+/// indestructible until end of turn.
+pub fn teferis_protection() -> CardDefinition {
+    CardDefinition {
+        name: "Teferi's Protection",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PreventAllCombatDamageThisTurn,
+            Effect::PreventAllDamageThisTurn { target: Selector::You },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Comeuppance — {2}{W} Instant. "The next time a source of an opponent's choice
+/// would deal damage to you or a permanent you control this turn, prevent it;
+/// that source's controller takes that much." The redirection is not modeled;
+/// approximated as preventing all damage to you this turn.
+pub fn comeuppance() -> CardDefinition {
+    CardDefinition {
+        name: "Comeuppance",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PreventAllCombatDamageThisTurn,
+            Effect::PreventAllDamageThisTurn { target: Selector::You },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Fact or Fiction — {3}{U} Instant. "Reveal the top five cards of your library.
 /// An opponent separates them into two piles; put one pile into your hand and
 /// the rest into your graveyard." Simplified to "draw two cards" (the
