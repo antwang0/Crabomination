@@ -4224,5 +4224,6 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::secret_rendezvous,
         super::fuming_effigy,
         super::kelpie_guide,
+        super::explosive_welcome,
     ]
 }

@@ -646,3 +646,20 @@ fn kelpie_guide_untaps_and_taps() {
     });
     assert!(res.is_err(), "tap ability gated on eight or more lands");
 }
+
+#[test]
+fn explosive_welcome_hits_two_targets_and_adds_mana() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::explosive_welcome());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
+    }).expect("two-target instant");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both bears die");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "adds three red mana");
+}

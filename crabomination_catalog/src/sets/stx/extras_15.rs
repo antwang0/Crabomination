@@ -8,9 +8,9 @@ use crate::card::{
     EquipBonus, EventKind, EventScope, EventSpec, Keyword, Predicate, Selector,
     SelectionRequirement, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{each_opponent, etb, target, target_filtered};
+use crate::effect::shortcut::{add_mana, each_opponent, etb, target, target_filtered};
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect};
-use crate::mana::{b, cost, generic, r, u, w};
+use crate::mana::{b, cost, generic, r, u, w, Color};
 
 // ── Equipment ───────────────────────────────────────────────────────────────
 
@@ -289,6 +289,25 @@ pub fn kelpie_guide() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Explosive Welcome — {7}{R} Instant. Deals 5 damage to any target and 3
+/// damage to any other target. Add {R}{R}{R}.
+pub fn explosive_welcome() -> CardDefinition {
+    CardDefinition {
+        name: "Explosive Welcome",
+        cost: cost(&[generic(7), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target(), amount: Value::Const(5) },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                amount: Value::Const(3),
+            },
+            add_mana(vec![Color::Red, Color::Red, Color::Red]),
+        ]),
         ..Default::default()
     }
 }
