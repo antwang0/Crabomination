@@ -493,6 +493,146 @@ fn breaker_of_armies_has_all_must_block() {
     assert!(catalog::breaker_of_armies().keywords.contains(&crate::card::Keyword::AllMustBlock));
 }
 
+// ── Eldrazi titans & colossi ────────────────────────────────────────────────
+
+/// Ulamog's cast trigger destroys a target permanent; the titan resolves
+/// onto the battlefield with Indestructible + Annihilator 4.
+#[test]
+fn ulamog_cast_destroys_target_permanent() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ulamog_the_infinite_gyre());
+    g.players[0].mana_pool.add_colorless(11);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "Ulamog's cast trigger destroys the bear");
+    let u = g.battlefield_find(id).expect("Ulamog resolves");
+    assert!(u.definition.keywords.contains(&Keyword::Indestructible));
+    assert!(u.definition.keywords.contains(&Keyword::Annihilator(4)));
+}
+
+/// Kozilek's cast trigger draws four cards.
+#[test]
+fn kozilek_cast_draws_four() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::kozilek_butcher_of_truth());
+    let before = g.players[0].hand.len();
+    g.players[0].mana_pool.add_colorless(10);
+    crate::game::cast(&mut g, id);
+    // -1 for Kozilek leaving hand, +4 drawn.
+    assert_eq!(g.players[0].hand.len(), before - 1 + 4, "Kozilek draws four on cast");
+}
+
+/// Ulamog/Kozilek shuffle their owner's graveyard back into the library when
+/// they die.
+#[test]
+fn kozilek_dies_shuffles_graveyard_into_library() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    let id = g.add_card_to_battlefield(0, catalog::kozilek_butcher_of_truth());
+    let lib_before = g.players[0].library.len();
+    g.battlefield_find_mut(id).unwrap().damage = 99;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
+    // 2 old cards + Kozilek itself returned to library.
+    assert_eq!(g.players[0].library.len(), lib_before + 3);
+}
+
+/// Pathrazer can't be blocked by fewer than three creatures.
+#[test]
+fn pathrazer_requires_three_blockers() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::pathrazer_of_ulamog());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b3 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Annihilator 3 fires on attack; give the defender 3 lands as cheaper
+    // fodder so the auto-picker sacrifices those and the bears survive.
+    for _ in 0..3 { g.add_card_to_battlefield(1, catalog::plains()); }
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)])).is_err(),
+        "two blockers is illegal");
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk), (b3, atk)]))
+        .expect("three blockers is legal");
+}
+
+/// Ulamog's Crusher attacks each combat if able, with Annihilator 2.
+#[test]
+fn ulamogs_crusher_annihilator_sacrifices_two() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::ulamogs_crusher());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.clear_sickness(atk);
+    let opp_perms = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.controller == 1).count();
+    assert_eq!(after, opp_perms - 2, "Annihilator 2 sacrifices two of the defender's permanents");
+    assert!(catalog::ulamogs_crusher().keywords.contains(&crate::card::Keyword::MustAttack));
+}
+
+/// Artisan of Kozilek's cast trigger reanimates a creature from the graveyard.
+#[test]
+fn artisan_cast_reanimates_from_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::artisan_of_kozilek());
+    g.players[0].mana_pool.add_colorless(9);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "the bear is reanimated");
+}
+
+/// Desolation Twin's cast trigger mints a 10/10 Eldrazi token.
+#[test]
+fn desolation_twin_cast_makes_ten_ten() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::desolation_twin());
+    g.players[0].mana_pool.add_colorless(10);
+    crate::game::cast(&mut g, id);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Eldrazi"
+        && c.id != id).expect("10/10 token minted");
+    assert_eq!((token.power(), token.toughness()), (10, 10));
+}
+
+/// Bane of Bala Ged's attack trigger makes the defender exile two permanents.
+#[test]
+fn bane_of_bala_ged_attack_exiles_two_permanents() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::bane_of_bala_ged());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    let exile_before = g.exile.len();
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
+}
+
+/// Hand of Emrakul is a 7/7 with Annihilator 1.
+#[test]
+fn hand_of_emrakul_is_annihilator_one() {
+    let def = catalog::hand_of_emrakul();
+    assert_eq!((def.power, def.toughness), (7, 7));
+    assert!(def.keywords.contains(&crate::card::Keyword::Annihilator(1)));
+}
+
 /// Reality Hemorrhage is a Devoid burn instant dealing 2.
 #[test]
 fn reality_hemorrhage_deals_two_and_is_colorless() {

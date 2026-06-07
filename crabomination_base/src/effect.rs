@@ -2074,6 +2074,11 @@ pub enum Effect {
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
+    /// "`who` exiles `count` permanents they control of their choice" — the
+    /// exile analogue of Annihilator's forced sacrifice (Bane of Bala Ged).
+    /// The affected player chooses which permanents; a `wants_ui` player with
+    /// a genuine choice is prompted, bots/no-choice auto-pick the weakest.
+    PlayerExilesPermanents { who: PlayerRef, count: Value, filter: SelectionRequirement },
     /// Sacrifice this effect's source permanent (CR 701.16), firing proper
     /// death triggers. Used by end-of-turn self-sacrifice (Blitz, Ball
     /// Lightning) where `Effect::Move { This → Graveyard }` would skip the

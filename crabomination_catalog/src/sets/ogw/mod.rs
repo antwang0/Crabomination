@@ -7,3 +7,56 @@ mod instants;
 
 pub use creatures::*;
 pub use instants::*;
+
+/// Every OGW/Eldrazi factory, for the snapshot name→factory registry and the
+/// client art prefetch.
+pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
+    &[
+        stormchaser_mage,
+        mist_intruder,
+        breaker_of_armies,
+        eldrazi_devastator,
+        warden_of_geometries,
+        cultivator_drone,
+        salvage_drone,
+        skitterskin,
+        mindmelter,
+        deepfathom_skulker,
+        culling_drone,
+        benthic_infiltrator,
+        maw_of_kozilek,
+        voracious_null,
+        vile_aggregate,
+        dread_drone,
+        slaughter_drone,
+        kozileks_channeler,
+        scion_summoner,
+        brood_monitor,
+        eldrazi_skyspawner,
+        incubator_drone,
+        eyeless_watcher,
+        blisterpod,
+        catacomb_sifter,
+        ulamog_the_infinite_gyre,
+        kozilek_butcher_of_truth,
+        pathrazer_of_ulamog,
+        ulamogs_crusher,
+        artisan_of_kozilek,
+        desolation_twin,
+        hand_of_emrakul,
+        bane_of_bala_ged,
+        sludge_crawler,
+        murderous_compulsion,
+        sweep_away,
+        warping_wail,
+        tar_snare,
+        witness_the_end,
+        oblivion_strike,
+        complete_disregard,
+        spatial_contortion,
+        unnatural_endurance,
+        call_the_scions,
+        reality_hemorrhage,
+        touch_of_the_void,
+    ]
+}

@@ -466,6 +466,23 @@ impl GameState {
             }
         }
 
+        // "Can't be blocked except by N or more creatures" (Pathrazer of
+        // Ulamog). Generalized Menace: 0 or >= N blockers, never 1..N-1.
+        for atk in &self.attacking {
+            for kw in kws_of(atk.attacker) {
+                if let Keyword::CantBeBlockedExceptByN(n) = kw {
+                    let blocker_count = assignments
+                        .iter()
+                        .filter(|(_, aid)| *aid == atk.attacker)
+                        .count()
+                        + self.block_map.values().filter(|&&aid| aid == atk.attacker).count();
+                    if blocker_count > 0 && (blocker_count as u32) < *n {
+                        return Err(GameError::MenaceRequiresTwoBlockers(atk.attacker));
+                    }
+                }
+            }
+        }
+
         // CR 509.1g — "can't be blocked by more than one creature" (Charging
         // Rhino). At most one blocker may be assigned (the inverse of Menace).
         for atk in &self.attacking {

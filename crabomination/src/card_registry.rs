@@ -66,6 +66,9 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     // Kaldheim Boast creatures (sets::khm) — registered for snapshot
     // name→factory round-trip.
     all.extend_from_slice(sets::khm::all_khm_card_factories());
+    // OGW/Eldrazi (sets::ogw) — Devoid/Ingest drones + titans; registered so
+    // mid-game snapshots involving them round-trip through name→factory.
+    all.extend_from_slice(sets::ogw::all_ogw_card_factories());
     // Theros devotion payoffs / gods (sets::ths) — registered so mid-game
     // snapshots involving them round-trip through the name→factory lookup.
     let ths: [CardFactory; 36] = [

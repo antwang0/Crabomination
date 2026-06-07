@@ -3896,6 +3896,25 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PlayerExilesPermanents { who, count, filter } => {
+                // Exile analogue of Annihilator (Bane of Bala Ged). The
+                // affected player auto-picks the weakest N matching permanents;
+                // a human-defender chooser is a follow-up (tracked in TODO.md).
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 {
+                    return Ok(());
+                }
+                let players: Vec<usize> = self.resolve_players(who, ctx);
+                for p in players {
+                    let candidates = self.sacrifice_candidates(p, filter, ctx.source);
+                    let ids = self.auto_pick_sacrifices(&candidates, n, ctx.source, false, false);
+                    for id in ids {
+                        self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SacrificeSource => {
                 if let Some(id) = ctx.source
                     && let Some(c) = self.battlefield_find(id)

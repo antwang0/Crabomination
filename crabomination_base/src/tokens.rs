@@ -310,6 +310,21 @@ pub fn eldrazi_spawn_token() -> TokenDefinition {
     }
 }
 
+/// 10/10 colorless Eldrazi creature token (Desolation Twin's cast trigger).
+pub fn eldrazi_10_10_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Eldrazi".into(),
+        power: 10,
+        toughness: 10,
+        activated_abilities: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        ..eldrazi_scion_token()
+    }
+}
+
 /// 1/1 white-and-black Inkling creature token with flying. Used by several
 /// SOS Silverquill / White cards.
 pub fn inkling_token() -> TokenDefinition {

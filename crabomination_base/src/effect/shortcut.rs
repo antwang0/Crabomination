@@ -233,6 +233,16 @@ pub fn on_dies(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// "When you cast this spell, `effect`." A cast trigger resolving above
+/// the spell on the stack (CR 601.2 / the Eldrazi titans). Targeted bodies
+/// pick their target via `target_filtered` as the trigger goes on the stack.
+pub fn on_cast(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+        effect,
+    }
+}
+
 /// On-other-dies shortcut: "Whenever another creature you control
 /// dies, `effect`." Wraps the `CreatureDied / AnotherOfYours` event
 /// scope, which excludes the source's own death. Used by Pest

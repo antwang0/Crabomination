@@ -583,6 +583,11 @@ pub enum Keyword {
     /// (Charging Rhino, Spectral Force). At most one blocker may be assigned
     /// to it. Enforced in `declare_blockers` (the inverse of Menace).
     CantBeBlockedByMoreThanOne,
+    /// "This creature can't be blocked except by N or more creatures"
+    /// (Pathrazer of Ulamog — N=3). Generalizes Menace (the N=2 case): the
+    /// attacker must be blocked by `0` or `>= N` creatures. Enforced in
+    /// `declare_blockers`.
+    CantBeBlockedExceptByN(u32),
     /// CR 702.95 — Soulbond. A marker keyword; when this or another creature
     /// enters while either is unpaired, its controller may pair them. The
     /// pairing rides `CardInstance.soulbond_partner`, and the bonus each

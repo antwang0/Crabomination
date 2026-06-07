@@ -1,9 +1,10 @@
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::effect::shortcut::{
-    dies_mint_token, etb_mint_token, ingest, on_dies, prowess_trigger, target_filtered,
+    dies_mint_token, etb_mint_token, ingest, on_attack, on_cast, on_dies, prowess_trigger,
+    target_filtered,
 };
 use crate::mana::{b, cost, g, generic, r, u};
-use crabomination_base::tokens::{eldrazi_scion_token, eldrazi_spawn_token};
+use crabomination_base::tokens::{eldrazi_10_10_token, eldrazi_scion_token, eldrazi_spawn_token};
 
 /// Eldrazi Drone body shared by the Scion-making creatures below.
 fn drone(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> CardDefinition {
@@ -413,6 +414,124 @@ pub fn catacomb_sifter() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb_mint_token(eldrazi_scion_token(), 1), scry_on_death],
         ..drone("Catacomb Sifter", cost(&[generic(1), b(), g()]), 2, 3)
+    }
+}
+
+// ── Eldrazi titans & colossi (cast triggers + Annihilator) ──────────────────
+
+/// Colorless Eldrazi body shared by the big titans/colossi below.
+fn colossus(name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Eldrazi], ..Default::default() },
+        power: p,
+        toughness: t,
+        ..Default::default()
+    }
+}
+
+/// Ulamog, the Infinite Gyre — {11} 10/10 Legendary. Cast → destroy target
+/// permanent; Indestructible; Annihilator 4; dies → shuffle graveyard into
+/// library.
+pub fn ulamog_the_infinite_gyre() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::PlayerRef;
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        keywords: vec![Keyword::Indestructible, Keyword::Annihilator(4)],
+        triggered_abilities: vec![
+            on_cast(Effect::Destroy { what: target_filtered(SelectionRequirement::Permanent) }),
+            on_dies(Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You }),
+        ],
+        ..colossus("Ulamog, the Infinite Gyre", cost(&[generic(11)]), 10, 10)
+    }
+}
+
+/// Kozilek, Butcher of Truth — {10} 12/12 Legendary. Cast → draw four cards;
+/// Annihilator 4; dies → shuffle graveyard into library.
+pub fn kozilek_butcher_of_truth() -> CardDefinition {
+    use crate::effect::{PlayerRef, Selector, Value};
+    CardDefinition {
+        supertypes: vec![crate::card::Supertype::Legendary],
+        keywords: vec![Keyword::Annihilator(4)],
+        triggered_abilities: vec![
+            on_cast(Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::Const(4) }),
+            on_dies(Effect::ShuffleGraveyardIntoLibrary { who: PlayerRef::You }),
+        ],
+        ..colossus("Kozilek, Butcher of Truth", cost(&[generic(10)]), 12, 12)
+    }
+}
+
+/// Pathrazer of Ulamog — {11} 9/9. Annihilator 3; can't be blocked except by
+/// three or more creatures.
+pub fn pathrazer_of_ulamog() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Annihilator(3), Keyword::CantBeBlockedExceptByN(3)],
+        ..colossus("Pathrazer of Ulamog", cost(&[generic(11)]), 9, 9)
+    }
+}
+
+/// Ulamog's Crusher — {8} 8/8. Annihilator 2; attacks each combat if able.
+pub fn ulamogs_crusher() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Annihilator(2), Keyword::MustAttack],
+        ..colossus("Ulamog's Crusher", cost(&[generic(8)]), 8, 8)
+    }
+}
+
+/// Artisan of Kozilek — {9} 10/9. Cast → return target creature card from your
+/// graveyard to the battlefield; Annihilator 2. (The target's "from your
+/// graveyard" zone gate is dropped — same approximation as Disentomb.)
+pub fn artisan_of_kozilek() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{PlayerRef, ZoneDest};
+    CardDefinition {
+        keywords: vec![Keyword::Annihilator(2)],
+        triggered_abilities: vec![on_cast(Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        })],
+        ..colossus("Artisan of Kozilek", cost(&[generic(9)]), 10, 9)
+    }
+}
+
+/// Desolation Twin — {10} 10/10. Cast → create a 10/10 colorless Eldrazi token.
+pub fn desolation_twin() -> CardDefinition {
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        triggered_abilities: vec![on_cast(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: eldrazi_10_10_token(),
+        })],
+        ..colossus("Desolation Twin", cost(&[generic(10)]), 10, 10)
+    }
+}
+
+/// Hand of Emrakul — {9} 7/7. Annihilator 1. (Its "sacrifice four Eldrazi
+/// Spawn rather than pay this spell's mana cost" alt-cost is dropped — no
+/// sacrifice-N-of-a-type alternative-cost primitive yet.)
+pub fn hand_of_emrakul() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Annihilator(1)],
+        ..colossus("Hand of Emrakul", cost(&[generic(9)]), 7, 7)
+    }
+}
+
+/// Bane of Bala Ged — {7} 7/5. Whenever it attacks, defending player exiles
+/// two permanents they control (the affected player chooses).
+pub fn bane_of_bala_ged() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        triggered_abilities: vec![on_attack(Effect::PlayerExilesPermanents {
+            who: PlayerRef::DefendingPlayer,
+            count: Value::Const(2),
+            filter: SelectionRequirement::Permanent,
+        })],
+        ..colossus("Bane of Bala Ged", cost(&[generic(7)]), 7, 5)
     }
 }
 

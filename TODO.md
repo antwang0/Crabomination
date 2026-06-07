@@ -666,7 +666,7 @@ picking an item up.
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror). Remaining: redistribute-life-totals; broad life-gain replacement (119.10).
 - 🟡 **CR 121 — Drawing a Card** — choose-to-draw (121.3); draw-count replacement (121.2a); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2). `StaticEffect::PreventUntap` honors `Selector::This` (self-referential — Basalt/Grim Monolith) and now `Selector::AttachedTo(This)` (aura-anchored "enchanted creature doesn't untap" — Claustrophobia/Dehydration).
-- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e).
+- 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.)
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.
@@ -717,9 +717,11 @@ picking an item up.
     `Modification::SetPowerToughness` fed directly by a `Value` would drop the
     per-card name table entirely (e.g. Walker of the Wastes = lands named
     Wastes you control).
-  - **"Defending player exiles N permanents they control"** (opponent-chosen)
-    — Bane of Bala Ged's attack trigger. No opponent-driven exile-N primitive
-    yet (sacrifice/exile pickers are self-only today).
+  - ✅ **"Defending player exiles N permanents they control"** (opponent-chosen)
+    — `Effect::PlayerExilesPermanents { who, count, filter }`; the exile
+    analogue of Annihilator's forced sac. Ships Bane of Bala Ged. The affected
+    player auto-picks the weakest N; a human-defender chooser (a UI suspend
+    like the Sacrifice path) is the remaining follow-up.
   - **Computed-color-aware `Colorless` filter.** `SelectionRequirement::Colorless`
     reads cost pips, so Devoid creatures (colored pips, colorless object) slip
     through colorless-matters filters/anthems (Ruination Guide, Dominator
