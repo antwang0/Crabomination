@@ -565,7 +565,10 @@ impl Effect {
             Effect::DelayUntil { body, .. } | Effect::Repeat { body, .. } => {
                 body.prefers_friendly_target()
             }
-            Effect::ForEach { body, .. } => body.prefers_friendly_target(),
+            Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => {
+                body.prefers_friendly_target()
+            }
+            Effect::Process { then, .. } => then.prefers_friendly_target(),
             // Reanimate-style spells move target → caster's hand or battlefield.
             // Without this, `auto_target_for_effect` picks an opp's battlefield
             // creature first, and Disentomb / Raise Dead happily steal it.
@@ -607,7 +610,9 @@ impl Effect {
             }
             Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
-            | Effect::ForEach { body, .. } => body.prefers_graveyard_target(),
+            | Effect::ForEach { body, .. }
+            | Effect::MayDo { body, .. } => body.prefers_graveyard_target(),
+            Effect::Process { then, .. } => then.prefers_graveyard_target(),
             _ => false,
         }
     }
@@ -889,6 +894,8 @@ impl Effect {
             Effect::DelayUntil { body, .. }
             | Effect::Repeat { body, .. }
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
+            Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => body.accepts_player_target(),
+            Effect::Process { then, .. } => then.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
             Effect::FlipCoin { on_heads, on_tails, .. } => {

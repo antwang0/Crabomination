@@ -297,6 +297,19 @@ pub fn vile_aggregate() -> CardDefinition {
     }
 }
 
+/// Murk Strider — {3}{U} 3/2 Eldrazi Processor. Devoid. ETB: process one → if
+/// you do, return target creature to its owner's hand.
+pub fn murk_strider() -> CardDefinition {
+    use crate::effect::shortcut::{etb, return_target_to_hand};
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Process {
+            count: 1,
+            then: Box::new(return_target_to_hand()),
+        })],
+        ..processor("Murk Strider", cost(&[generic(3), u()]), 3, 2)
+    }
+}
+
 /// Eldrazi Aggressor — {2}{R} 2/3 Eldrazi Drone. Devoid; has haste as long as
 /// you control another colorless creature.
 pub fn eldrazi_aggressor() -> CardDefinition {
@@ -353,6 +366,104 @@ pub fn reaver_drone() -> CardDefinition {
             },
         }],
         ..drone("Reaver Drone", cost(&[b()]), 2, 1)
+    }
+}
+
+/// Eldrazi Displacer — {2}{W} 3/3 Eldrazi. Devoid; {2}{C}: exile another
+/// target creature, then return it to the battlefield tapped under its
+/// owner's control.
+pub fn eldrazi_displacer() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement};
+    use crate::effect::{PlayerRef, Selector, ZoneDest};
+    CardDefinition {
+        name: "Eldrazi Displacer",
+        cost: cost(&[generic(2), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), crate::mana::colorless(1)]),
+            effect: Effect::Seq(vec![
+                Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                },
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        tapped: true,
+                    },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cliffhaven Vampire — {2}{W}{B} 2/4 Vampire Warrior Ally. Flying; whenever
+/// you gain life, each opponent loses 1 life.
+pub fn cliffhaven_vampire() -> CardDefinition {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef, Selector, Value};
+    CardDefinition {
+        name: "Cliffhaven Vampire",
+        cost: cost(&[generic(2), crate::mana::w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kor Scythemaster — {2}{W} 3/1 Kor Soldier Ally. Has first strike while
+/// attacking.
+pub fn kor_scythemaster() -> CardDefinition {
+    use crate::card::{CreatureType, SelectionRequirement, StaticAbility};
+    use crate::effect::{Predicate, Selector, StaticEffect};
+    CardDefinition {
+        name: "Kor Scythemaster",
+        cost: cost(&[generic(2), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Soldier, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Has first strike as long as it's attacking.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::IsAttacking,
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![Keyword::FirstStrike],
+            },
+        }],
+        ..Default::default()
     }
 }
 

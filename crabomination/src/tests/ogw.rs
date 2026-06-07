@@ -1250,3 +1250,67 @@ fn loam_larva_tutors_basic_to_top() {
     let top = g.players[0].library.last().expect("nonempty library");
     assert!(top.definition.is_land(), "a basic land is on top after the tutor");
 }
+
+/// Eldrazi Displacer blinks a creature, returning it tapped under its owner.
+#[test]
+fn eldrazi_displacer_blinks_creature_tapped() {
+    let mut g = two_player_game();
+    let disp = g.add_card_to_battlefield(0, catalog::eldrazi_displacer());
+    g.clear_sickness(disp);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: disp, ability_index: 0,
+        target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("blink");
+    drain_stack(&mut g);
+    // The creature is blinked back tapped, under its owner's control.
+    let back = g.battlefield_find(victim).expect("returned to the battlefield");
+    assert_eq!(back.controller, 1, "returns under its owner's control");
+    assert!(back.tapped, "returns tapped");
+}
+
+/// Cliffhaven Vampire drains each opponent when its controller gains life.
+#[test]
+fn cliffhaven_vampire_drains_on_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cliffhaven_vampire());
+    let before = g.players[1].life;
+    g.adjust_life(0, 4);
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 4 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "each opponent loses 1 (not scaled)");
+}
+
+/// Kor Scythemaster only has first strike while attacking.
+#[test]
+fn kor_scythemaster_first_strike_while_attacking() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let kor = g.add_card_to_battlefield(0, catalog::kor_scythemaster());
+    g.clear_sickness(kor);
+    assert!(!g.computed_permanent(kor).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "no first strike at rest");
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: kor, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    assert!(g.computed_permanent(kor).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "first strike while attacking");
+}
+
+/// Murk Strider processes on ETB; if it does, bounces a target creature.
+#[test]
+fn murk_strider_processes_then_bounces() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let exiled = g.add_card_to_exile(1, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let ms = g.add_card_to_battlefield(0, catalog::murk_strider());
+    g.fire_self_etb_triggers(ms, 0);
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == exiled), "processed a card");
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "target creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "back in owner's hand");
+}
