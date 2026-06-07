@@ -640,6 +640,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         the_eldest_reborn,
         triumph_of_gerrard,
         the_birth_of_meletis,
+        // Attack-tax statics (CR 508.1g).
+        ghostly_prison,
+        propaganda,
         prey_upon,
         hedron_archive,
         soul_warden,

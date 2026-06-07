@@ -906,3 +906,23 @@ fn wall_of_frost_stuns_the_creature_it_blocks() {
     let a = g.battlefield_find(atk).expect("attacker survives the 0/7 wall");
     assert_eq!(a.counter_count(CounterType::Stun), 1, "blocked creature got a Stun counter");
 }
+
+#[test]
+fn cr_508_1g_ghostly_prison_taxes_attackers() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    // No mana floating: the attack is rejected (can't pay the {2} tax).
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).is_err(), "attack rejected without paying the tax");
+    // Pay {2}: the attack goes through and the mana is consumed.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack legal once tax is payable");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the tax was spent");
+}

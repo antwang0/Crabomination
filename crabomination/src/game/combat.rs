@@ -116,6 +116,32 @@ impl GameState {
             }
         }
 
+        // CR 508.1g — attack tax (Ghostly Prison / Propaganda). Sum {amount}
+        // for each attacker hitting a player who controls an
+        // `AttackTaxToController` static (copies stack), then auto-pay it from
+        // the active player's mana pool. Reject the whole declaration if the
+        // pool can't cover it (a wants_ui interactive pay prompt is a TODO).
+        let mut total_tax = 0u32;
+        for atk in &attacks {
+            let crate::game::types::AttackTarget::Player(d) = atk.target else { continue };
+            for c in &self.battlefield {
+                if c.controller != d {
+                    continue;
+                }
+                for sa in &c.definition.static_abilities {
+                    if let crate::effect::StaticEffect::AttackTaxToController { amount } = &sa.effect {
+                        total_tax += amount;
+                    }
+                }
+            }
+        }
+        if total_tax > 0 {
+            if self.players[p].mana_pool.total() < total_tax {
+                return Err(GameError::CannotAttack(attacks[0].attacker));
+            }
+            self.players[p].mana_pool.spend_generic(total_tax);
+        }
+
         for atk in attacks {
             let id = atk.attacker;
             // "Can't attack unless defending player controls a [filter]"

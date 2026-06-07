@@ -6067,6 +6067,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // LifeGainBecomesLoss — consulted dynamically by adjust_life via
             // life_gain_becomes_loss_now (Tainted Remedy); no layer effect.
             | StaticEffect::LifeGainBecomesLoss { .. }
+            // AttackTaxToController — consulted in declare_attackers; no layer.
+            | StaticEffect::AttackTaxToController { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
             // layer effect.
             | StaticEffect::CapDrawsPerTurn { .. }
