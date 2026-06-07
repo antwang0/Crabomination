@@ -15215,31 +15215,22 @@ pub fn fracture() -> CardDefinition {
 
 // ── Humiliate ──────────────────────────────────────────────────────────────
 
-/// Humiliate — {1}{W}{B} Sorcery. Opponent discards a nonland; you
-/// drain 1 (gain 1 life, opp loses 1 life). Approximation of "Reveal
-/// hand, you choose, opp discards" — collapsed to auto-pick a nonland.
+/// Humiliate — {W}{B} Sorcery. "Target opponent reveals their hand. You choose
+/// a nonland card from it. That player discards it. You gain 2 life." (The
+/// caster auto-picks the discarded card.)
 pub fn humiliate() -> CardDefinition {
     CardDefinition {
         name: "Humiliate",
-        cost: cost(&[generic(1), w(), b()]),
+        cost: cost(&[w(), b()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::DiscardChosen {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(1),
-            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

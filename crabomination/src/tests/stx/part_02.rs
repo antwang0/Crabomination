@@ -3314,26 +3314,24 @@ fn elemental_summoning_mints_a_four_four_elemental() {
 // ── Humiliate (modern_decks push) ───────────────────────────────────────
 
 #[test]
-fn humiliate_strips_opp_nonland_and_drains_one() {
+fn humiliate_strips_opp_nonland_and_gains_two_life() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     let id = g.add_card_to_hand(0, catalog::humiliate());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
 
     let life_p0_before = g.players[0].life;
     let life_p1_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Humiliate castable");
+    }).expect("Humiliate castable for {W}{B}");
     drain_stack(&mut g);
 
-    let bolt_in_hand = g.players[1].hand.iter().any(|c| c.id == bolt);
-    assert!(!bolt_in_hand, "Bolt discarded from opp's hand");
-    assert_eq!(g.players[0].life, life_p0_before + 1, "you gain 1 life");
-    assert_eq!(g.players[1].life, life_p1_before - 1, "opp loses 1 life");
+    assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "Bolt discarded from opp's hand");
+    assert_eq!(g.players[0].life, life_p0_before + 2, "you gain 2 life");
+    assert_eq!(g.players[1].life, life_p1_before, "opponent's life is unchanged");
 }
 
 // ── Elite Spellbinder (modern_decks push) ───────────────────────────────
