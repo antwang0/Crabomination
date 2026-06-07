@@ -102,6 +102,39 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn burn_down_the_house_mode0_sweeps_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::gnarled_professor()); // 5/4
+    let id = g.add_card_to_hand(0, catalog::burn_down_the_house());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(),
+        "5 damage to each creature kills both");
+}
+
+#[test]
+fn burn_down_the_house_mode1_makes_three_hasty_devils() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::burn_down_the_house());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let devils: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Devil))
+        .collect();
+    assert_eq!(devils.len(), 3, "three Devil tokens");
+    assert!(devils.iter().all(|c| c.has_keyword(&Keyword::Haste)), "devils have haste");
+}
+
+#[test]
 fn geometric_nexus_charges_on_spell_cast_then_mints_a_scaled_fractal() {
     use crate::card::CounterType;
     let mut g = two_player_game();

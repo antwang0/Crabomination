@@ -296,6 +296,59 @@ pub fn golden_ratio() -> CardDefinition {
     }
 }
 
+/// 1/1 red Devil token with "When this token dies, it deals 1 damage to any
+/// target." (Burn Down the House / Mayhem devils.)
+fn devil_1_1_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Devil".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Devil], ..Default::default() },
+        triggered_abilities: vec![on_dies(Effect::DealDamage {
+            to: target(),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Burn Down the House — {3}{R}{R} Sorcery. Choose one — deal 5 damage to each
+/// creature and planeswalker; or create three 1/1 red Devil tokens (death-ping)
+/// with haste until end of turn.
+pub fn burn_down_the_house() -> CardDefinition {
+    CardDefinition {
+        name: "Burn Down the House",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(5),
+                }),
+            },
+            Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                    definition: devil_1_1_token(),
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedTokens,
+                    keyword: Keyword::Haste,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Geometric Nexus — {2} Artifact. Whenever a player casts an instant or
 /// sorcery spell, put charge counters on this equal to that spell's mana value.
 /// `{6}, {T}, Remove all charge counters: Create a 0/0 G/U Fractal with X +1/+1
