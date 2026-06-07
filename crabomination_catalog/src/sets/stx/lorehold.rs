@@ -146,6 +146,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
             exile_other_filter: Some((SelectionRequirement::Any, 1)),
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -603,6 +604,7 @@ pub fn lorehold_excavation() -> CardDefinition {
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -2587,6 +2589,7 @@ pub fn lorehold_phoenix() -> CardDefinition {
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -3290,6 +3293,7 @@ pub fn spirit_conduit() -> CardDefinition {
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -4788,6 +4792,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             ActivatedAbility {
                 energy_cost: 0,
@@ -4808,6 +4813,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             ActivatedAbility {
                 energy_cost: 0,
@@ -4835,6 +4841,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -5595,6 +5602,7 @@ pub fn lorehold_pyromaster() -> CardDefinition {
             },
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -14636,6 +14644,7 @@ pub fn lorehold_stoneglyph_b129() -> CardDefinition {
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

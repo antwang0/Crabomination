@@ -617,6 +617,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -923,6 +924,7 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2564,6 +2566,7 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
             ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
@@ -4641,6 +4644,7 @@ pub fn witherbloom_mireguide() -> CardDefinition {
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             ActivatedAbility {
                 energy_cost: 0,
@@ -4661,6 +4665,7 @@ pub fn witherbloom_mireguide() -> CardDefinition {
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -5580,6 +5585,7 @@ pub fn witherbloom_pestwarden() -> CardDefinition {
             },
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
@@ -9591,6 +9597,7 @@ pub fn pest_conservator() -> CardDefinition {
                     amount: Value::Const(1),
                 },
             ]),
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -17068,6 +17075,7 @@ pub fn witherbloom_cauldronist_b143() -> CardDefinition {
                 1,
             )),
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -20749,6 +20757,7 @@ pub fn witherbloom_sapling_b155() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

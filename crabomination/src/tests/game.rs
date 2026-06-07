@@ -4358,6 +4358,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
         exile_other_filter: None,
         self_counter_cost_reduction: None, sac_other_filter: None,
         tap_other_filter: None, from_hand: false,
+        ..Default::default()
     };
     // Sentinel non-mana ability: tap + sacrifice the land. The body is
     // Noop — what matters is that it's not a mana ability so the
@@ -4378,6 +4379,7 @@ fn damping_sphere_preserves_non_mana_activated_abilities() {
         exile_other_filter: None,
         self_counter_cost_reduction: None, sac_other_filter: None,
         tap_other_filter: None, from_hand: false,
+        ..Default::default()
     };
     let fancy_land = CardDefinition {
         name: "Fancy Test Land",

@@ -43,6 +43,7 @@ fn pay_energy_counter(amount: u32) -> ActivatedAbility {
         sac_other_filter: None,
         tap_other_filter: None,
         from_hand: false,
+        ..Default::default()
     }
 }
 
@@ -280,6 +281,7 @@ pub fn dynavolt_tower() -> CardDefinition {
             sac_other_filter: None,
             tap_other_filter: None,
             from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -438,6 +440,7 @@ pub fn woodweavers_puzzleknot() -> CardDefinition {
             sac_other_filter: None,
             tap_other_filter: None,
             from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -474,6 +477,7 @@ pub fn glassblowers_puzzleknot() -> CardDefinition {
             sac_other_filter: None,
             tap_other_filter: None,
             from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }

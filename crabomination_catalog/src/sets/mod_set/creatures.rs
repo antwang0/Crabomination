@@ -319,6 +319,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -460,6 +461,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -568,6 +570,7 @@ pub fn ranger_captain_of_eos() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -611,6 +614,7 @@ pub fn cathar_commando() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -658,6 +662,7 @@ pub fn haywire_mite() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -865,6 +870,7 @@ pub fn bloodtithe_harvester() -> CardDefinition {
                 1,
             )),
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![blood_etb, blood_attack],
         ..Default::default()
@@ -1028,6 +1034,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
                 1,
             )),
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1074,6 +1081,7 @@ pub fn grim_lavamancer() -> CardDefinition {
             exile_other_filter: Some((SelectionRequirement::Any, 2)),
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2667,6 +2675,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you gain life, put a +1/+1 counter on target
@@ -5379,6 +5388,7 @@ pub fn prodigal_pyromancer() -> CardDefinition {
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -5436,6 +5446,7 @@ pub fn spore_frog() -> CardDefinition {
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -6833,6 +6844,7 @@ pub fn viscera_seer() -> CardDefinition {
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
             tap_other_filter: None,
             from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -7397,6 +7409,7 @@ fn tapper_1_1(name: &'static str, types: Vec<CreatureType>) -> CardDefinition {
             sac_other_filter: None,
             tap_other_filter: None,
             from_hand: false,
+            ..Default::default()
         }],
         ..Default::default()
     }

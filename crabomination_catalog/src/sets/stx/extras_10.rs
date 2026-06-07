@@ -556,6 +556,7 @@ pub fn strixhaven_mage_hunter() -> CardDefinition {
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1111,6 +1112,7 @@ pub fn quandrix_counterstudent() -> CardDefinition {
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
                     tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1728,6 +1730,7 @@ pub fn strixhaven_banner() -> CardDefinition {
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
             // {2}, {T}, Sacrifice this artifact: Draw a card.
             ActivatedAbility {
@@ -1749,6 +1752,7 @@ pub fn strixhaven_banner() -> CardDefinition {
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],
@@ -1912,6 +1916,7 @@ pub fn strixhaven_pupil() -> CardDefinition {
             ]),
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2147,6 +2152,7 @@ pub fn strixhaven_crucible() -> CardDefinition {
             },
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

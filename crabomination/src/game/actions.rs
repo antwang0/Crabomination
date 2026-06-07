@@ -885,6 +885,7 @@ impl GameState {
                 exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
+                ..Default::default()
             });
             std::sync::Arc::make_mut(&mut card.definition).activated_abilities = kept;
         }
@@ -5537,6 +5538,21 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight remove-counter-cost gate (CR 602.5b "Remove a [kind]
+        // counter from this:"). The source must carry `count` counters of
+        // the named kind; removed after payment so the ability can't be
+        // over-activated off the stack. Walking Ballista, Triskelion,
+        // Hangarback Walker.
+        if let Some((kind, count)) = ability.remove_counter_cost.as_ref() {
+            let have = self
+                .battlefield_find(card_id)
+                .map(|c| c.counter_count(*kind))
+                .unwrap_or(0);
+            if have < *count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -5755,6 +5771,16 @@ impl GameState {
             events.push(GameEvent::PermanentSacrificed { card_id: other_cid, who: sac_who });
             let mut die_evs = self.remove_to_graveyard_with_triggers(other_cid);
             events.append(&mut die_evs);
+        }
+
+        // Remove-counter-as-cost (CR 602.5b): with tap/mana/life paid, strip
+        // the cost-picked counters off the source (validated by the pre-flight
+        // gate). Walking Ballista's `Remove a +1/+1 counter from this: deal 1
+        // damage` runs here before the ping resolves.
+        if let Some((kind, count)) = ability.remove_counter_cost {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+                c.remove_counters(kind, count);
+            }
         }
 
         // Discard-as-cost (CR 602.5b): with tap/mana/life paid, discard each

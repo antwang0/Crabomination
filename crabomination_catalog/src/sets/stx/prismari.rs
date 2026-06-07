@@ -16835,6 +16835,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
                 self_counter_cost_reduction: None,
+                ..Default::default()
             },
             ActivatedAbility {
                 energy_cost: 0,
@@ -16856,6 +16857,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 sac_other_filter: None,
                 tap_other_filter: None, from_hand: false,
                 self_counter_cost_reduction: None,
+                ..Default::default()
             },
         ],
         triggered_abilities: vec![],

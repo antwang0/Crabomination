@@ -572,6 +572,17 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub discard_cost: Option<(SelectionRequirement, u32)>,
+    /// Optional cost: remove `count` counters of the given type from the
+    /// source permanent (CR 602.5b "Remove a [kind] counter from this:"
+    /// cost lines). Modeled as a real cost — not an effect — so the ability
+    /// can't be over-activated off the stack (each activation must pay from
+    /// the counters present when it's announced). Powers Walking Ballista,
+    /// Triskelion, Hangarback Walker (`Remove a +1/+1 counter from this:`).
+    /// Applied after tap/mana/life payments but before the effect resolves.
+    /// Rejected with `GameError::SelectionRequirementViolated` when the
+    /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

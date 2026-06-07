@@ -24457,6 +24457,31 @@ fn walking_ballista_enters_with_x_counters_and_pings() {
 }
 
 #[test]
+fn walking_ballista_counter_is_a_real_cost_not_overactivatable() {
+    // CR 602.5b: the +1/+1 counter is paid when the ability is announced,
+    // so a 1-counter Ballista can only announce one ping — not three off
+    // the stack (the old in-effect RemoveCounter bug).
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::walking_ballista());
+    g.players[0].mana_pool.add_colorless(2); // X=1 → one counter
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
+    }).expect("castable for X=1");
+    drain_stack(&mut g);
+    // First ping spends the only counter.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("first ping");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 0, "counter paid as cost immediately");
+    // Second activation must fail — no counter left to pay the cost.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).is_err(), "can't activate without a counter to remove");
+}
+
+#[test]
 fn triskelion_enters_with_three_counters() {
     use crate::card::CounterType;
     let mut g = two_player_game();

@@ -835,16 +835,13 @@ picking an item up.
   Servant of the Conduit are now faithful. The affordance/bot paths gate via
   `would_accept`, so unpayable energy abilities are auto-excluded.
 
-- 🟡 **`ActivatedAbility` `..Default::default()` sweep.** `ActivatedAbility`
-  now derives `Default`, and the land/shortcut helpers use
-  `..Default::default()`. ~377 older struct literals (kld, decks/modern, …)
-  still spell out every field (e.g. `energy_cost: 0`); a mechanical sweep
-  would let a new field be added cheaply. **Blocks `remove_counter_cost`**:
-  Walking Ballista / Triskelion / Hangarback need a "remove a +1/+1 counter
-  from this" activation cost — modeling it in the effect (not the cost) lets
-  you over-activate off the stack, so it must be a real cost field, which
-  can't be added until this sweep lands. Do the sweep, then add
-  `remove_counter_cost: Option<(CounterType, u32)>` mirroring `sac_other_filter`.
+- ✅ **`ActivatedAbility` `..Default::default()` sweep + `remove_counter_cost`.**
+  Swept the ~220 remaining full-field literals to `..Default::default()` and
+  added `remove_counter_cost: Option<(CounterType, u32)>` (CR 602.5b "Remove a
+  [kind] counter from this:") as a real cost paid in `activate_ability` before
+  the effect goes on stack. Walking Ballista / Triskelion now pay the counter
+  as a cost (can't be over-activated off the stack); test
+  `walking_ballista_counter_is_a_real_cost_not_overactivatable`.
 
 - ⏳ **Future batch — focus on engine-feature-unlocking cards**: priority
   candidates are Helix Pinnacle (keyword counter), Walking Ballista

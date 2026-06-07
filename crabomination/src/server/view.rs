@@ -1635,6 +1635,7 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{W}"), "{label} should contain {{W}}");
@@ -1660,6 +1661,7 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         assert_eq!(ability_cost_label(&ab_x), "{X}",
             "X-cost ability renders as {{X}}");
@@ -1689,6 +1691,7 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{1}"), "{label} must include the {{1}} cost");
@@ -1712,6 +1715,7 @@ mod tests {
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None, from_hand: false,
+            ..Default::default()
         };
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),
