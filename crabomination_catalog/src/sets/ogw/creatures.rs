@@ -535,6 +535,90 @@ pub fn bane_of_bala_ged() -> CardDefinition {
     }
 }
 
+/// Kozilek's Shrieker — {2}{B} 3/2 Eldrazi Drone. Devoid; {C}: +1/+0 and gains
+/// menace until end of turn.
+pub fn kozileks_shrieker() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[crate::mana::colorless(1)]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..drone("Kozilek's Shrieker", cost(&[generic(2), b()]), 3, 2)
+    }
+}
+
+/// Sifter of Skulls — {3}{B} 4/3 Eldrazi. Devoid; whenever another nontoken
+/// creature you control dies, create a 1/1 Eldrazi Scion.
+pub fn sifter_of_skulls() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{PlayerRef, Predicate, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: eldrazi_scion_token(),
+            },
+        }],
+        ..colossus("Sifter of Skulls", cost(&[generic(3), b()]), 4, 3)
+    }
+}
+
+/// Pawn of Ulamog — {1}{B}{B} 2/2 Vampire Shaman. Whenever this or another
+/// nontoken creature you control dies, create a 0/1 Eldrazi Spawn. (The "may"
+/// collapses to always.)
+pub fn pawn_of_ulamog() -> CardDefinition {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{PlayerRef, Predicate, Selector, Value};
+    CardDefinition {
+        name: "Pawn of Ulamog",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::NotToken,
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: eldrazi_spawn_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vestige of Emrakul — {3}{R} 3/4 Eldrazi Drone. Devoid, Trample.
 pub fn vestige_of_emrakul() -> CardDefinition {
     CardDefinition {

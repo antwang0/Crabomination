@@ -625,6 +625,50 @@ fn bane_of_bala_ged_attack_exiles_two_permanents() {
     assert_eq!(g.exile.len(), exile_before + 2, "defender exiles two permanents on attack");
 }
 
+/// Kozilek's Shrieker pumps +1/+0 and gains menace for {C}.
+#[test]
+fn kozileks_shrieker_pumps_and_gains_menace() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::kozileks_shrieker());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 2));
+    assert!(cp.keywords.contains(&Keyword::Menace));
+}
+
+/// Sifter of Skulls mints a Scion when another nontoken creature dies, but not
+/// when a token dies.
+#[test]
+fn sifter_of_skulls_mints_on_nontoken_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sifter_of_skulls());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Kill the bear with a damage spell so CreatureDied fires through the
+    // normal path (raw damage + SBA doesn't dispatch the death trigger here).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    crate::game::cast_at(&mut g, bolt, Target::Permanent(bear));
+    assert_eq!(scion_count(&g), 1, "another nontoken creature dying mints a Scion");
+}
+
+/// Pawn of Ulamog mints an Eldrazi Spawn when it itself dies.
+#[test]
+fn pawn_of_ulamog_mints_on_own_death() {
+    let mut g = two_player_game();
+    let pawn = g.add_card_to_battlefield(0, catalog::pawn_of_ulamog());
+    let spawn_before = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
+    g.battlefield_find_mut(pawn).unwrap().damage = 99;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let spawn_after = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
+    assert_eq!(spawn_after, spawn_before + 1, "Pawn's own death mints an Eldrazi Spawn");
+}
+
 /// Vestige of Emrakul is a Devoid 3/4 trampler.
 #[test]
 fn vestige_of_emrakul_is_devoid_trampler() {
