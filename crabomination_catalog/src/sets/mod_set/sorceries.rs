@@ -1308,3 +1308,30 @@ pub fn triumph_of_the_hordes() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Jeska's Will — {3}{R} Sorcery. Choose one — Add {R}{R}{R}; or exile the top
+/// three cards of your library, you may play them this turn. (Printed: the
+/// ritual scales with an opponent's hand size and you may choose both with a
+/// commander; both are simplified — fixed {R}{R}{R}, single mode.)
+pub fn jeskas_will() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    use crate::effect::ManaPayload;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Jeska's Will",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Red, Value::Const(3)),
+            },
+            Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                duration: MayPlayDuration::EndOfThisTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}

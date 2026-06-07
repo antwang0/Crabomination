@@ -275,6 +275,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         mana_vault,
         chromatic_lantern,
         field_of_ruin,
+        aetherflux_reservoir,
         ornithopter,
         ornithopter_of_paradise,
         mind_stone,
@@ -1601,6 +1602,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         smoke,
         // cast-trigger ritual god
         birgi_god_of_storytelling,
+        // modal ritual / impulse
+        jeskas_will,
         // allied-color batch (modern_decks)
         goblin_motivator,
         goblin_gang_leader,

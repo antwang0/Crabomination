@@ -35168,3 +35168,43 @@ fn return_to_dust_exiles_artifact() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == relic), "artifact exiled");
 }
+
+/// Aetherflux Reservoir gains life per spell cast and can pay 50 life to deal 50.
+#[test]
+fn aetherflux_reservoir_gains_life_then_burns() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aetherflux_reservoir());
+    let life0 = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a spell");
+    drain_stack(&mut g);
+    // First (and only) spell this turn → gain 1 life.
+    assert_eq!(g.players[0].life, life0 + 1, "gained 1 life for the first spell");
+    // Pay 50 life: deal 50 to the opponent.
+    g.players[0].life = 60;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: g.battlefield.iter().find(|c| c.definition.name == "Aetherflux Reservoir").unwrap().id,
+        ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("pay 50 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 10, "paid 50 life");
+    assert!(g.players[1].life <= 0, "opponent took 50 (lethal)");
+}
+
+/// Jeska's Will mode 0 makes {R}{R}{R}.
+#[test]
+fn jeskas_will_ritual_mode() {
+    let mut g = two_player_game();
+    let will = g.add_card_to_hand(0, catalog::jeskas_will());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: will, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Jeska's Will, ritual mode");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "added {{R}}{{R}}{{R}}");
+}

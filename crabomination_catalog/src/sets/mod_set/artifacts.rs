@@ -1664,3 +1664,28 @@ pub fn chromatic_lantern() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aetherflux Reservoir — {4} Artifact. "Whenever you cast a spell, you gain 1
+/// life for each spell you've cast this turn." "Pay 50 life: Aetherflux
+/// Reservoir deals 50 damage to any target." Lifegain uses `Value::Sum([Storm-
+/// Count, 1])` (storm = spells cast before this one, +1 for this spell).
+pub fn aetherflux_reservoir() -> CardDefinition {
+    CardDefinition {
+        name: "Aetherflux Reservoir",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Sum(vec![Value::StormCount, Value::Const(1)]),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            life_cost: 50,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(50) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
