@@ -924,7 +924,8 @@ impl GameState {
                             && card.keyword_counters.values().all(|&n| n == 0)
                     }
                     R::HasSupertype(st) => card.definition.supertypes.contains(st),
-                    R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
+                    R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
+                        || card.has_keyword(&crate::card::Keyword::Changeling),
                     R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
                     R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
                     R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
@@ -1103,7 +1104,8 @@ impl GameState {
                 card.definition.is_creature() && card.power() + card.toughness() <= *n
             }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
-            R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
+            R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct)
+                        || card.has_keyword(&crate::card::Keyword::Changeling),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),
             R::HasArtifactSubtype(a) => card.definition.subtypes.artifact_subtypes.contains(a),
             R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),

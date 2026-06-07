@@ -35312,3 +35312,34 @@ fn skyscribing_forecast_each_player_draws_one() {
     assert_eq!(g.players[1].hand.len(), h1 + 1, "opponent drew one from Forecast");
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "Skyscribing stays in hand");
 }
+
+/// Changeling (CR 702.73) is honored by the general type-filter eval: an
+/// Avian Changeling satisfies `HasCreatureType` for a type it doesn't print.
+#[test]
+fn changeling_satisfies_arbitrary_creature_type_filter() {
+    use crate::card::{CreatureType, SelectionRequirement};
+    let mut g = two_player_game();
+    let avian = g.add_card_to_battlefield(0, catalog::avian_changeling());
+    // It prints only Shapeshifter, but Changeling makes it every type.
+    assert!(g.evaluate_requirement(
+        &SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+        &Target::Permanent(avian), 0,
+    ), "Changeling counts as a Goblin");
+    assert!(g.evaluate_requirement(
+        &SelectionRequirement::HasCreatureType(CreatureType::Elf),
+        &Target::Permanent(avian), 0,
+    ), "Changeling counts as an Elf");
+}
+
+/// Game-Trail Changeling is a 4/4 trampling Changeling.
+#[test]
+fn game_trail_changeling_is_a_changeling_trampler() {
+    use crate::card::{CreatureType, SelectionRequirement};
+    let mut g = two_player_game();
+    let gt = g.add_card_to_battlefield(0, catalog::game_trail_changeling());
+    assert!(g.battlefield_find(gt).unwrap().has_keyword(&crate::card::Keyword::Trample));
+    assert!(g.evaluate_requirement(
+        &SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+        &Target::Permanent(gt), 0,
+    ), "Changeling counts as a Dragon");
+}

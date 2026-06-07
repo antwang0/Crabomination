@@ -15,14 +15,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   arrays cleanly — today `do_phasing` only runs in the untap step so this can't
   arise yet, but `Effect::PhaseOut` could be cast in combat); "when this phases
   in" triggers (rare). The side-zone model (`GameState.phased_out`) is the hook.
-- ⏳ **Changeling (CR 702.73) not honored in general type-filter eval.** The
-  block-restriction path (`game/mod.rs` `R::HasCreatureType`) treats a
-  `Keyword::Changeling` permanent as every creature type, but the general
-  `evaluate_requirement` (`effects/eval.rs` ×2) checks only the literal printed
-  subtypes — so a tribal lord/anthem won't pump a Changeling, and "sacrifice a
-  Goblin" won't see one. Route those sites through a shared
-  `card_has_creature_type(inst, ct)` that ORs in Changeling. (Surfaced adding
-  the Lorwyn changelings this run.)
+- ✅ **Changeling (CR 702.73) honored in general type-filter eval** (this run).
+  Both `effects/eval.rs` `R::HasCreatureType` sites now OR in
+  `has_keyword(Changeling)`, matching the block-restriction path — a Changeling
+  satisfies any creature-type filter (tribal lords/anthems, "sacrifice a
+  Goblin", type-targeted removal). Avian / Game-Trail Changeling tested.
 - ℹ️ **Client can't be built in the web sandbox** — `wayland-sys`'s build
   script needs the system `wayland-client` lib, which isn't installed here, so
   `cargo build/clippy -p crabomination_client` fails before compiling our code.

@@ -14869,6 +14869,40 @@ pub fn changeling_hero() -> CardDefinition {
     }
 }
 
+/// Avian Changeling — {2}{W} 2/2 Shapeshifter. Changeling, Flying.
+pub fn avian_changeling() -> CardDefinition {
+    CardDefinition {
+        name: "Avian Changeling",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Changeling, Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Game-Trail Changeling — {3}{G}{G} 4/4 Shapeshifter. Changeling, Trample.
+pub fn game_trail_changeling() -> CardDefinition {
+    CardDefinition {
+        name: "Game-Trail Changeling",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Changeling, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
 /// Changeling Titan — {4}{G} 7/7 Shapeshifter. Changeling, Trample.
 /// Champion a creature (CR 702.77 — see `changeling_hero`).
 pub fn changeling_titan() -> CardDefinition {
