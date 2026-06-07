@@ -14869,6 +14869,99 @@ pub fn changeling_hero() -> CardDefinition {
     }
 }
 
+/// Changeling Titan — {4}{G} 7/7 Shapeshifter. Changeling, Trample.
+/// Champion a creature (CR 702.77 — see `changeling_hero`).
+pub fn changeling_titan() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Changeling Titan",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Changeling, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Changeling Berserker — {3}{R} 5/3 Shapeshifter. Changeling, Haste.
+/// Champion a creature (CR 702.77 — see `changeling_hero`).
+pub fn changeling_berserker() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Changeling Berserker",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Changeling, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skyscribing — {X}{U}{U} Sorcery. "Each player draws X cards."
+/// Forecast — {2}{U}, Reveal from hand: each player draws a card. (CR 702.56)
+pub fn skyscribing() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Skyscribing",
+        cost: cost(&[x(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::XFromCost,
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            from_hand: true,
+            once_per_turn: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vodalian Illusionist — {2}{U} 2/2 Merfolk Wizard.
 /// `{U}{U}, {T}: Target creature phases out.` (CR 702.26)
 pub fn vodalian_illusionist() -> CardDefinition {
