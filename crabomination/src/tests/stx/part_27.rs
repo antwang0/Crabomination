@@ -3,7 +3,7 @@
 //! Exercises `ActivatedAbility.return_self_cost`, `Value::LifeGainedThisTurn`,
 //! and `Value::DistinctPowerYouControl`.
 
-use crate::card::{CardType, CreatureType, Keyword};
+use crate::card::{CreatureType, Keyword};
 use crate::catalog;
 use crate::game::types::Target;
 use crate::game::{drain_stack, two_player_game};

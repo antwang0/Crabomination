@@ -800,6 +800,7 @@ mod tests {
             chosen_color: None,
             attachments: vec![],
             soulbond_partner: None,
+            saga_final_chapter: None,
         }
     }
 
