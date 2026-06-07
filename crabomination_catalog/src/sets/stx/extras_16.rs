@@ -297,9 +297,10 @@ pub fn golden_ratio() -> CardDefinition {
 }
 
 /// Elemental Masterpiece — {5}{U}{R} Sorcery. Create two 4/4 blue-and-red
-/// Elemental creature tokens. (The discard-this-from-hand-for-a-Treasure
-/// activated ability is dropped — no from-hand discard-cost mana rider yet.)
+/// Elemental creature tokens. `{U/R}{U/R}, Discard this card: Create a Treasure
+/// token.`
 pub fn elemental_masterpiece() -> CardDefinition {
+    use crate::card::ActivatedAbility;
     let elemental_4_4 = TokenDefinition {
         name: "Elemental".into(),
         power: 4,
@@ -318,6 +319,17 @@ pub fn elemental_masterpiece() -> CardDefinition {
             count: Value::Const(2),
             definition: elemental_4_4,
         },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+            from_hand: true,
+            discard_self_cost: true,
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

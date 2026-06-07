@@ -610,6 +610,15 @@ pub struct ActivatedAbility {
     /// Vortex's `{3}: Destroy this Aura` escape clause. Defaults to false.
     #[serde(default)]
     pub opponents_only: bool,
+    /// True if activating this ability discards the source from the activator's
+    /// hand as part of its cost (CR 602.5b "Discard this card:" cost lines).
+    /// Pairs with `from_hand: true`. The discard (hand → graveyard, firing a
+    /// `CardDiscarded` event) happens after mana/life payments succeed but
+    /// before the effect resolves, mirroring `exile_self_cost`. Powers
+    /// Elemental Masterpiece's `{U/R}{U/R}, Discard this card: Create a
+    /// Treasure`. Defaults to false.
+    #[serde(default)]
+    pub discard_self_cost: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -255,6 +255,19 @@ fn elemental_masterpiece_makes_two_elementals() {
 }
 
 #[test]
+fn elemental_masterpiece_discard_from_hand_makes_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::elemental_masterpiece());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("{U/R}{U/R}, Discard this card: make a Treasure");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "discarded as cost");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"), "made a Treasure");
+}
+
+#[test]
 fn harness_infinity_swaps_hand_and_graveyard() {
     let mut g = two_player_game();
     g.players[0].hand.clear();

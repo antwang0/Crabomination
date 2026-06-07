@@ -5900,6 +5900,15 @@ impl GameState {
             }
         }
 
+        // Discard-self-as-cost (hand activations): the "Discard this card:"
+        // cost line of Elemental Masterpiece. Routes hand → graveyard via the
+        // shared discard path (CardDiscarded event, madness, etc.) after mana
+        // payments succeed but before the effect resolves.
+        if ability.discard_self_cost && source_in_hand {
+            let owner = source_owner.unwrap();
+            self.discard_card(owner, card_id, &mut events);
+        }
+
         // Mana abilities resolve immediately (no stack, no priority reset).
         let is_mana_ab = is_mana_ability(&ability.effect);
 

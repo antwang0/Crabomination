@@ -20,8 +20,6 @@ A handful of 🟡 partials remain (riders dropped, core wired):
   rider on a successful counter is dropped (no `CounterUnlessPaid` exile flag).
 - 🟡 **Retriever Phoenix** — ETB Learn; the graveyard "learn → return this
   instead" recursion replacement is dropped.
-- 🟡 **Elemental Masterpiece** — two 4/4s; the discard-from-hand-for-Treasure
-  ability is dropped (no from-hand discard-cost mana rider).
 - 🟡 **Kasmina, Enigma Sage** — +2 Scry, -8 tutor-to-hand wired; the -X Fractal
   is approximated as a fixed -2 (two counters; no variable-X loyalty path yet)
   and the "other PWs gain Kasmina's abilities" static is dropped.
