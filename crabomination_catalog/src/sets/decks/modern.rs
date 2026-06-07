@@ -9532,9 +9532,9 @@ pub fn selfless_spirit() -> CardDefinition {
     }
 }
 
-/// Reality Smasher — {4}{C} Creature — Eldrazi, 5/5, Trample, Haste, Ward
-/// {2} (the printed "counter unless pay {2} when targeted by a spell" is
-/// modeled as Ward {2}).
+/// Reality Smasher — {4}{C} Creature — Eldrazi, 5/5, Trample, Haste, Ward —
+/// discard a card (the printed "counter unless its controller discards a card
+/// when targeted"; Ward also covers opponent abilities).
 pub fn reality_smasher() -> CardDefinition {
     use crate::card::WardCost;
     CardDefinition {

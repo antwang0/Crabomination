@@ -356,6 +356,24 @@ pub fn reaver_drone() -> CardDefinition {
     }
 }
 
+/// Stormrider Spirit — {4}{U} 3/3 Spirit. Flash, Flying.
+pub fn stormrider_spirit() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Stormrider Spirit",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        ..Default::default()
+    }
+}
+
 /// Eldrazi Mimic — {2} 2/1 Eldrazi. Whenever another colorless creature you
 /// control enters, you may set this creature's base P/T to that creature's
 /// until end of turn.

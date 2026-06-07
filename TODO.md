@@ -681,6 +681,9 @@ picking an item up.
 - ✅ **CR 114 — Emblems** (`Player.emblems` + `Effect::CreateEmblem`; supersedes the old ⏳ audit row — see FEATURE_ROADMAP Tier 3).
 - ✅ **CR 702.114 — Devoid** — `Keyword::Devoid` CDA honored in `colors_from_card` (color base returns empty); colorless despite colored pips. Mist Intruder, Sludge Crawler, Reality Hemorrhage, Touch of the Void.
 - ✅ **CR 702.115 — Ingest** — `shortcut::ingest()` combat-damage trigger + `Effect::ExileTopOfLibrary { who, amount }` (Mill routed to exile). Mist Intruder, Sludge Crawler.
+- ✅ **CR 701.x — Process** (BFZ/OGW) — `Effect::Process { count, then }`: move N exile cards an opponent owns to their graveyards, run `then` only if any were processed ("if you do" rider, reading the trigger's target). Wasteland Strangler, Mind Raker, Blight Herder. Still ⏳: process-onto-battlefield (Oblivion Sower) and process-as-additional-cost (Processor Assault).
+- ✅ **CR 208.2 / 613.7b — Set base P/T** — `Effect::SetBasePT` (layer-7b) now reads `Value::PowerOf/ToughnessOf(TriggerSource)` for "becomes that creature's P/T until end of turn." Eldrazi Mimic.
+- ✅ **CR 702.21 — Ward (discard)** — the `WardCost::Discard(n)` payment menu is exercised by Reality Smasher (corrected from a placeholder Ward {2}).
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.

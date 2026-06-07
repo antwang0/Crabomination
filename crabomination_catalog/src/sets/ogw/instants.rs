@@ -247,3 +247,59 @@ pub fn natural_state() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Make a Stand — {2}{W} Instant. Creatures you control get +1/+0 and gain
+/// indestructible until end of turn.
+pub fn make_a_stand() -> CardDefinition {
+    use crate::effect::shortcut::each_your_creature;
+    use crate::effect::{Duration, Selector};
+    CardDefinition {
+        name: "Make a Stand",
+        cost: cost(&[generic(2), crate::mana::w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: each_your_creature(),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            Effect::GrantKeyword {
+                what: each_your_creature(),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flaying Tendrils — {1}{B}{B} Devoid Sorcery. All creatures get -2/-2 until
+/// end of turn; if a creature would die this turn, exile it instead.
+pub fn flaying_tendrils() -> CardDefinition {
+    use crate::effect::{Duration, Selector};
+    CardDefinition {
+        name: "Flaying Tendrils",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Devoid],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::EachPermanent(SelectionRequirement::Creature),
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(-2),
+                    toughness: Value::Const(-2),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}

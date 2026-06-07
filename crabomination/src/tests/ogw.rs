@@ -1153,3 +1153,43 @@ fn eldrazi_mimic_copies_base_pt_of_entering_colorless() {
     let cp = g.computed_permanent(mimic).unwrap();
     assert_eq!((cp.power, cp.toughness), (8, 9), "Mimic becomes 8/9 to match");
 }
+
+/// Stormrider Spirit is a 3/3 with Flash and Flying.
+#[test]
+fn stormrider_spirit_has_flash_and_flying() {
+    use crate::card::Keyword;
+    let def = catalog::stormrider_spirit();
+    assert_eq!((def.power, def.toughness), (3, 3));
+    assert!(def.keywords.contains(&Keyword::Flash) && def.keywords.contains(&Keyword::Flying));
+}
+
+/// Make a Stand pumps your team +1/+0 and grants indestructible.
+#[test]
+fn make_a_stand_pumps_and_protects() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // opponent's untouched
+    let id = g.add_card_to_hand(0, catalog::make_a_stand());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    crate::game::cast(&mut g, id);
+    let cp = g.computed_permanent(mine).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "your creature is +1/+0");
+    assert!(cp.keywords.contains(&Keyword::Indestructible), "and indestructible");
+}
+
+/// Flaying Tendrils sweeps for -2/-2 and exiles the dead instead of bin.
+#[test]
+fn flaying_tendrils_sweeps_and_exiles() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 → dies
+    let id = g.add_card_to_hand(0, catalog::flaying_tendrils());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    crate::game::cast(&mut g, id);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "2/2 died to -2/-2");
+    assert!(g.exile.iter().any(|c| c.id == victim), "exiled instead of graveyard");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == victim), "not in graveyard");
+}
