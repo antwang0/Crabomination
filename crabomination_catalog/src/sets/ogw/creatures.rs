@@ -1805,6 +1805,46 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Kor Castigator — {1}{W} 3/1 Kor Wizard Ally. Can't be blocked by Eldrazi Scions.
+pub fn kor_castigator() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Kor Castigator",
+        cost: cost(&[crate::mana::generic(1), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Wizard, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::CantBeBlockedBy(Box::new(
+            SelectionRequirement::HasCreatureType(CreatureType::Scion),
+        ))],
+        ..Default::default()
+    }
+}
+
+/// Bearer of Silence — {1}{B} 2/1 Eldrazi. Devoid, Flying, can't block. When
+/// you cast it, you may pay {1}{C}; if you do, target opponent sacrifices a creature.
+pub fn bearer_of_silence() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::{PlayerRef, Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid, Keyword::Flying, Keyword::CantBlock],
+        triggered_abilities: vec![on_cast(Effect::MayPay {
+            description: "Pay {1}{C}: target opponent sacrifices a creature".into(),
+            mana_cost: cost(&[crate::mana::generic(1), crate::mana::colorless(1)]),
+            body: Box::new(Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            }),
+        })],
+        ..drone("Bearer of Silence", cost(&[crate::mana::generic(1), b()]), 2, 1)
+    }
+}
+
 /// Visions of Brutality — {1}{B} Devoid Aura. Enchanted creature can't block,
 /// and whenever it deals combat damage, its controller loses that much life.
 pub fn visions_of_brutality() -> CardDefinition {

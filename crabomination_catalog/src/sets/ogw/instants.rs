@@ -21,6 +21,32 @@ pub fn murderous_compulsion() -> CardDefinition {
     }
 }
 
+/// Mutant's Prey — {G} Instant. Target creature you control with a +1/+1
+/// counter on it fights target creature an opponent controls.
+pub fn mutants_prey() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Mutant's Prey",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Fight {
+            attacker: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+            },
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+        },
+        ..Default::default()
+    }
+}
+
 /// Corpse Churn — {1}{B} Instant. Mill three, then you may return a creature
 /// card from your graveyard to your hand.
 pub fn corpse_churn() -> CardDefinition {

@@ -1792,3 +1792,51 @@ fn visions_of_brutality_cant_block_and_bleeds() {
     assert_eq!(g.players[0].life, own_life - 2,
         "controller loses life equal to the 2 combat damage dealt");
 }
+
+/// Kor Castigator can't be blocked by Eldrazi Scions.
+#[test]
+fn kor_castigator_evades_scions() {
+    use crate::card::Keyword;
+    let def = catalog::kor_castigator();
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::CantBeBlockedBy(_))));
+    assert_eq!((def.power, def.toughness), (3, 1));
+}
+
+/// Mutant's Prey fights an opponent's creature using a counter-bearing attacker.
+#[test]
+fn mutants_prey_fights() {
+    use crate::card::CounterType;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(mine).unwrap()
+        .counters.insert(CounterType::PlusOnePlusOne, 1); // 3/3
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let prey = g.add_card_to_hand(0, catalog::mutants_prey());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: prey, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Mutant's Prey");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "opp 2/2 dies to 3 damage");
+    assert!(g.battlefield.iter().any(|c| c.id == mine), "our 3/3 survives 2 damage");
+}
+
+/// Bearer of Silence's cast trigger makes an opponent sacrifice when {1}{C} is paid.
+#[test]
+fn bearer_of_silence_sacrifices_on_cast() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let chump = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bearer = g.add_card_to_hand(0, catalog::bearer_of_silence());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: bearer, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bearer of Silence");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == chump),
+        "opponent sacrifices their only creature");
+}
