@@ -2799,36 +2799,31 @@ fn daemogoth_woe_eater_attack_optional_sac_can_be_accepted() {
 // ── Honor Troll ────────────────────────────────────────────────────────────
 
 #[test]
-fn honor_troll_base_state_no_lifegain_is_one_four() {
+fn honor_troll_lifegain_bonus_adds_one() {
+    // CR 119.10 — Honor Troll: each life gain is +1.
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::honor_troll());
-    // No life gained — should be base 1/4 with only Trample.
-    let computed = g.computed_permanent(id)
-        .expect("Honor Troll on battlefield");
-    assert_eq!(computed.power, 1, "Base power without lifegain");
-    assert_eq!(computed.toughness, 4, "Base toughness without lifegain");
-    assert!(computed.keywords.contains(&Keyword::Trample),
-        "Trample is always on");
-    assert!(!computed.keywords.contains(&Keyword::Lifelink),
-        "Lifelink should NOT be active without lifegain");
+    g.add_card_to_battlefield(0, catalog::honor_troll());
+    let before = g.players[0].life;
+    g.adjust_life(0, 3); // gain 3 → 4 with the bonus
+    assert_eq!(g.players[0].life, before + 4, "gained 3 + 1 bonus");
+    // The bonus only applies to genuine gains, not to losses.
+    g.adjust_life(0, -2);
+    assert_eq!(g.players[0].life, before + 4 - 2, "loss is unaffected by the bonus");
 }
 
 #[test]
-fn honor_troll_with_lifegain_is_three_four_lifelink() {
-    // Gating on `life_gained_this_turn > 0`: +2/+0 + Lifelink.
+fn honor_troll_gets_plus_two_one_at_25_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::honor_troll());
-    // Manually bump the tally — a real lifegain effect would set this.
-    g.players[0].life_gained_this_turn = 1;
-
-    let computed = g.computed_permanent(id)
-        .expect("Honor Troll on battlefield");
-    assert_eq!(computed.power, 3, "Should be 1 + 2 = 3 power with lifegain");
-    assert_eq!(computed.toughness, 4, "Toughness unchanged at 4");
-    assert!(computed.keywords.contains(&Keyword::Trample),
-        "Trample is always on");
-    assert!(computed.keywords.contains(&Keyword::Lifelink),
-        "Lifelink should be active when life_gained_this_turn > 0");
+    // Below 25 life → base 2/3.
+    g.players[0].life = 20;
+    let lo = g.computed_permanent(id).unwrap();
+    assert_eq!((lo.power, lo.toughness), (2, 3), "base while under 25 life");
+    // At 25+ life → +2/+1 → 4/4.
+    g.players[0].life = 25;
+    let hi = g.computed_permanent(id).unwrap();
+    assert_eq!((hi.power, hi.toughness), (4, 4), "+2/+1 at 25+ life");
+    assert!(hi.keywords.contains(&Keyword::Vigilance));
 }
 
 // ── Quandrix Cultivator ────────────────────────────────────────────────────

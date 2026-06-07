@@ -120,6 +120,13 @@ pub enum StaticEffect {
     /// instead."). Consulted in `adjust_life` for positive deltas before the
     /// gain applies; the redirected loss is itself final (not re-replaced).
     LifeGainBecomesLoss { target: PlayerStaticTarget },
+    /// CR 614 — life-gain bonus replacement: while active, when a targeted
+    /// player *would* gain life, they gain that much plus `amount` instead
+    /// (Honor Troll: "If you would gain life, you gain that much life plus 1
+    /// instead."). Consulted in `adjust_life` for positive deltas. Per
+    /// CR 119.10 a gain of 0 isn't a gain, so the bonus only applies on a
+    /// genuine positive delta.
+    LifeGainBonus { target: PlayerStaticTarget, amount: i32 },
     /// CR 508.1g — creatures can't attack the source's controller (and, when
     /// `protect_planeswalkers`, a planeswalker they control) unless the
     /// attacking player pays `amount` generic mana for each such attacker.

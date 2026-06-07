@@ -1062,6 +1062,15 @@ impl GameState {
         if delta > 0 && self.player_cannot_gain_life_now(seat) {
             return self.effective_life(seat);
         }
+        // CR 119.10 — a genuine life *gain* is increased by any active
+        // "you gain that much plus N" replacement (Honor Troll). Folded in
+        // before the gain applies so the bonus counts toward
+        // `life_gained_this_turn` and any downstream lifegain triggers.
+        let delta = if delta > 0 {
+            delta.saturating_add(self.life_gain_bonus_now(seat))
+        } else {
+            delta
+        };
         // CR 119.8: symmetric drop for negative deltas (lose-life).
         if delta < 0 && self.player_cannot_lose_life_now(seat) {
             return self.effective_life(seat);
@@ -1795,6 +1804,30 @@ impl GameState {
                 }
             })
         })
+    }
+
+    /// CR 119.10 / 614 — total life-gain bonus currently applied to `seat`
+    /// by `StaticEffect::LifeGainBonus` statics (Honor Troll's "+1 to each
+    /// gain"). Bonuses from multiple sources stack additively.
+    pub fn life_gain_bonus_now(&self, seat: usize) -> i32 {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        self.battlefield
+            .iter()
+            .flat_map(|src| {
+                src.definition.static_abilities.iter().filter_map(move |sa| {
+                    if let StaticEffect::LifeGainBonus { target, amount } = &sa.effect {
+                        let hits = match target {
+                            PlayerStaticTarget::Controller => src.controller == seat,
+                            PlayerStaticTarget::EachOpponent => src.controller != seat,
+                            PlayerStaticTarget::EachPlayer => true,
+                        };
+                        hits.then_some(*amount)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .sum()
     }
 
     /// CR 121.2b — the smallest per-turn draw cap currently imposed on
@@ -6173,6 +6206,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // MayReturnFromGraveyardInsteadOfLearn — consulted at the top of
             // `Effect::Learn` (Retriever Phoenix); no layer effect.
             | StaticEffect::MayReturnFromGraveyardInsteadOfLearn
+            // LifeGainBonus — consulted in `adjust_life` via
+            // `life_gain_bonus_now` (Honor Troll); no layer effect.
+            | StaticEffect::LifeGainBonus { .. }
             // ManaProductionDoubled — consulted at mana-ability resolution
             // via `mana_production_doublers_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled

@@ -1045,50 +1045,44 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
 
 // ── Honor Troll ────────────────────────────────────────────────────────────
 
-/// Honor Troll — {1}{B}{G}, 1/4 Troll Warrior. "Trample. As long as
-/// you've gained life this turn, this creature has +2/+0 and lifelink."
-///
-/// Compute-time injection in `GameState::compute_battlefield` (same
-/// pattern as Cruel Somnophage / Tarmogoyf): when controller has gained
-/// ≥1 life this turn, layers 6 and 7b add Lifelink and +2/+0. The gate
-/// re-evaluates every recompute and resets at untap.
+/// Honor Troll — {2}{G} 2/3 Troll Druid with vigilance. "If you would gain
+/// life, you gain that much life plus 1 instead. This creature gets +2/+1 as
+/// long as you have 25 or more life."
 pub fn honor_troll() -> CardDefinition {
+    use crate::effect::PlayerStaticTarget;
     CardDefinition {
         name: "Honor Troll",
-        cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Troll, CreatureType::Warrior],
+            creature_types: vec![CreatureType::Troll, CreatureType::Druid],
             ..Default::default()
         },
-        power: 1,
-        toughness: 4,
-        keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "If you would gain life, you gain that much plus 1 instead.",
+                effect: StaticEffect::LifeGainBonus {
+                    target: PlayerStaticTarget::Controller,
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Gets +2/+1 as long as you have 25 or more life.",
+                effect: StaticEffect::PumpSelfIf {
+                    condition: Predicate::ValueAtLeast(
+                        Value::LifeOf(PlayerRef::You),
+                        Value::Const(25),
+                    ),
+                    power: 2,
+                    toughness: 1,
+                    keywords: vec![],
+                },
+            },
+        ],
+        ..Default::default()
     }
 }
 
