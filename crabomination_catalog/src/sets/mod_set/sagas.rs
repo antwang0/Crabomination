@@ -6,7 +6,7 @@
 //! chapter resolves.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EnchantmentSubtype, Keyword,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, EnchantmentSubtype, Keyword,
     SelectionRequirement, Selector, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{mint_token, target_filtered};
@@ -20,8 +20,8 @@ fn saga_subtypes() -> Subtypes {
     }
 }
 
-/// History of Benalia — {1}{W} Saga. I, II — create a 2/2 white Knight with
-/// vigilance. III — Knights you control get +2/+1 until end of turn.
+/// History of Benalia — {1}{W}{W} Saga. I, II — create a 2/2 white Knight
+/// with vigilance. III — Knights you control get +2/+1 until end of turn.
 pub fn history_of_benalia() -> CardDefinition {
     let knight = TokenDefinition {
         name: "Knight".into(),
@@ -39,7 +39,7 @@ pub fn history_of_benalia() -> CardDefinition {
     let mint = mint_token(knight, 1);
     CardDefinition {
         name: "History of Benalia",
-        cost: cost(&[generic(1), w()]),
+        cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Enchantment],
         subtypes: saga_subtypes(),
         saga_chapters: vec![
@@ -59,6 +59,79 @@ pub fn history_of_benalia() -> CardDefinition {
             ),
         ],
         ..Default::default()
+    }
+}
+
+/// The Birth of Meletis — {1}{W} Saga. I — search for a basic Plains to hand.
+/// II — create a 0/4 colorless Wall artifact creature with defender. III —
+/// gain 2 life.
+pub fn the_birth_of_meletis() -> CardDefinition {
+    use crate::card::{LandType, Supertype};
+    let wall = TokenDefinition {
+        name: "Wall".into(),
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Birth of Meletis",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga_subtypes(),
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::HasLandType(LandType::Plains)
+                        .and(SelectionRequirement::HasSupertype(Supertype::Basic)),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ),
+            (2, mint_token(wall, 1)),
+            (3, Effect::GainLife { who: Selector::You, amount: Value::Const(2) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Triumph of Gerrard — {1}{W} Saga. I, II — +1/+1 counter on the creature
+/// you control with the greatest power. III — that creature gains flying,
+/// first strike, and lifelink until end of turn.
+pub fn triumph_of_gerrard() -> CardDefinition {
+    let grant = |kw: Keyword| Effect::GrantKeyword {
+        what: Selector::GreatestPowerYouControl,
+        keyword: kw,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Triumph of Gerrard",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga_subtypes(),
+        saga_chapters: vec![
+            (1, plus_one_greatest()),
+            (2, plus_one_greatest()),
+            (
+                3,
+                Effect::Seq(vec![
+                    grant(Keyword::Flying),
+                    grant(Keyword::FirstStrike),
+                    grant(Keyword::Lifelink),
+                ]),
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+fn plus_one_greatest() -> Effect {
+    Effect::AddCounter {
+        what: Selector::GreatestPowerYouControl,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::Const(1),
     }
 }
 

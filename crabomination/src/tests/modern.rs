@@ -24325,11 +24325,11 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
     use crate::card::CounterType;
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::history_of_benalia());
-    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable for {1}{W}");
+    }).expect("castable for {1}{W}{W}");
     drain_stack(&mut g);
     // Chapter I fired on ETB: 1 lore counter, 1 Knight.
     let saga = g.battlefield.iter().find(|c| c.id == id).unwrap();
@@ -24346,6 +24346,59 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
     assert!(!g.battlefield.iter().any(|c| c.id == id), "saga sacrificed after final chapter");
     let knight = g.battlefield.iter().find(|c| c.definition.name == "Knight").unwrap();
     assert_eq!(knight.power(), 4, "Knights got +2/+1 from chapter III");
+}
+
+#[test]
+fn the_birth_of_meletis_chapters_tutor_wall_and_gain_life() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed a basic Plains in the library so chapter I can find it.
+    let plains = g.add_card_to_library(0, catalog::plains());
+    // Pick the Plains when chapter I's search prompts.
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Search(Some(plains))]));
+    let id = g.add_card_to_hand(0, catalog::the_birth_of_meletis());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Chapter I: a Plains is now in hand.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Plains"), "tutored a Plains");
+    // Chapter II: a 0/4 Wall token.
+    g.saga_advance(id);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Wall"), "made a Wall");
+    // Chapter III: gain 2 life.
+    let life = g.players[0].life;
+    g.saga_advance(id);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 2 life");
+}
+
+#[test]
+fn triumph_of_gerrard_pumps_then_buffs_greatest_power() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4, greatest power
+    let _small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::triumph_of_gerrard());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {1}{W}");
+    drain_stack(&mut g);
+    // Chapter I put a +1/+1 counter on the greatest-power creature (Serra).
+    assert_eq!(g.battlefield.iter().find(|c| c.id == big).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 1);
+    // Chapter III: grants flying/first strike/lifelink to the greatest.
+    g.saga_advance(id); // II
+    drain_stack(&mut g);
+    g.saga_advance(id); // III
+    drain_stack(&mut g);
+    let serra = g.battlefield.iter().find(|c| c.id == big).unwrap();
+    assert!(serra.has_keyword(&crate::card::Keyword::Lifelink), "chapter III grants lifelink");
 }
 
 #[test]

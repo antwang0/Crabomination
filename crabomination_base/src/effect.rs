@@ -166,6 +166,11 @@ pub enum Selector {
     /// (CR 701.21 — "choose a creature with the least toughness among
     /// creatures you control").
     LeastToughnessYouControl,
+    /// The single creature `ctx.controller` controls with the greatest power
+    /// (first in battlefield order on a tie). Empty when the controller has
+    /// no creatures. Powers Triumph of Gerrard's "target creature you control
+    /// with the greatest power" chapters (modeled non-targeted).
+    GreatestPowerYouControl,
     /// The permanent this one is attached to (for Auras/Equipment).
     AttachedTo(Box<Selector>),
     /// All permanents attached to `anchor`.

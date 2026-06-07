@@ -6147,6 +6147,15 @@ impl GameState {
                 .into_iter()
                 .collect(),
 
+            Selector::GreatestPowerYouControl => self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                .max_by_key(|c| c.power())
+                .map(|c| EntityRef::Permanent(c.id))
+                .into_iter()
+                .collect(),
+
             Selector::AttachedTo(inner) => self
                 .resolve_selector(inner, ctx)
                 .into_iter()
