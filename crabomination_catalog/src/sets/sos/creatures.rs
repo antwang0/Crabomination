@@ -4541,6 +4541,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
         loyalty_abilities: vec![
             // +2: You gain 3 life.
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 2,
                 effect: Effect::GainLife {
                     who: Selector::You,
@@ -4549,6 +4550,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
             },
             // 0: You draw a card and lose 1 life.
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 0,
                 effect: Effect::Seq(vec![
                     Effect::Draw {
@@ -4563,6 +4565,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
             },
             // -3: Destroy target creature.
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Destroy {
                     what: target_filtered(SelectionRequirement::Creature),
@@ -4571,6 +4574,7 @@ pub fn professor_dellian_fel() -> CardDefinition {
             // -6: You get an emblem with "Whenever you gain life, each
             // opponent loses that much life."
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -6,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
@@ -4625,6 +4629,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
         loyalty_abilities: vec![
             // +1: Surveil 2.
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Surveil {
                     who: PlayerRef::You,
@@ -4635,6 +4640,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
             // of the printed "any number of target players each discard
             // a card" — no multi-target prompt for instants/sorceries).
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -1,
                 effect: Effect::Discard {
                     who: Selector::Player(PlayerRef::EachOpponent),
@@ -4645,6 +4651,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
             // -2: Return target creature card with MV ≤ 3 from your
             // graveyard to the battlefield.
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::Move {
                     what: target_filtered(
@@ -4664,6 +4671,7 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
             // the opp's `skip_turns` counter accumulates the heads-count,
             // which the turn-advance logic decrements.
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::FlipCoin {
                     count: Value::Const(5),

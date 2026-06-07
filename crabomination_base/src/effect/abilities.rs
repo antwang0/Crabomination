@@ -375,6 +375,10 @@ pub enum StaticEffect {
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
     /// becomes a legal land play (still bound by the one-land-per-turn cap).
     MayPlayLandsFromGraveyard,
+    /// "As long as this card is in your graveyard, if you would learn, you may
+    /// instead return this card to the battlefield." Consulted at the top of
+    /// `Effect::Learn`; no layer effect. — Retriever Phoenix.
+    MayReturnFromGraveyardInsteadOfLearn,
     /// CR 701.10f — "If you tap a permanent for mana, it produces twice as
     /// much of that mana instead." Mana Reflection. Each instance the
     /// controller of the resolving mana ability has on the battlefield
@@ -624,8 +628,13 @@ pub struct ActivatedAbility {
     pub discard_self_cost: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LoyaltyAbility {
     pub loyalty_cost: i32,
     pub effect: Effect,
+    /// Variable `-X` loyalty ability (CR 606.5): the player picks X (0..=current
+    /// loyalty) on activation, loyalty drops by X, and the body reads X via
+    /// `Value::XFromCost`. `loyalty_cost` is ignored when set. — Kasmina.
+    #[serde(default)]
+    pub x_cost: bool,
 }

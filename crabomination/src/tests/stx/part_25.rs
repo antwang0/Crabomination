@@ -1033,6 +1033,7 @@ fn professor_onyx_plus_one_drains_two() {
     let p0 = g.players[0].life;
     let p1 = g.players[1].life;
     g.perform_action(GameAction::ActivateLoyaltyAbility {
+            x_value: None,
         card_id: onyx, ability_index: 0, target: None,
     })
     .expect("Onyx +1 activatable");

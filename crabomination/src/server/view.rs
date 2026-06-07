@@ -777,6 +777,7 @@ fn project_loyalty_abilities(card: &CardInstance) -> Vec<crate::net::LoyaltyAbil
         .map(|(i, a)| crate::net::LoyaltyAbilityView {
             index: i,
             loyalty_cost: a.loyalty_cost,
+            x_cost: a.x_cost,
             effect_label: ability_effect_label(&a.effect).to_string(),
             needs_target: a.effect.requires_target(),
         })

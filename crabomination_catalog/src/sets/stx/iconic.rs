@@ -1473,6 +1473,7 @@ pub fn professor_onyx() -> CardDefinition {
         base_loyalty: 5,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Drain {
                     from: Selector::Player(PlayerRef::EachOpponent),
@@ -1481,6 +1482,7 @@ pub fn professor_onyx() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::EachOpponent),
@@ -1489,6 +1491,7 @@ pub fn professor_onyx() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -8,
                 effect: Effect::LoseLife {
                     who: Selector::Player(PlayerRef::EachOpponent),

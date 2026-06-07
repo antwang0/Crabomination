@@ -3006,7 +3006,8 @@ impl GameState {
                 card_id,
                 ability_index,
                 target,
-            } => self.activate_loyalty_ability(card_id, ability_index, target),
+                x_value,
+            } => self.activate_loyalty_ability(card_id, ability_index, target, x_value),
             GameAction::DeclareAttackers(ids) => self.declare_attackers(ids),
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
@@ -4388,6 +4389,7 @@ impl GameState {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         if !self.can_cast_sorcery_speed(p) {
@@ -4431,10 +4433,18 @@ impl GameState {
             }
         }
 
-        // Apply loyalty cost.
+        // Apply loyalty cost. CR 606.5: a `-X` ability lets the player pick X
+        // (0..=current loyalty); the cost paid is X loyalty and the body reads
+        // X via `Value::XFromCost`. Fixed-cost abilities ignore `x_value`.
         let current_loyalty =
             self.battlefield[pos].counter_count(crate::card::CounterType::Loyalty) as i32;
-        let new_loyalty = current_loyalty + ability.loyalty_cost;
+        let x = if ability.x_cost {
+            x_value.unwrap_or(0).min(current_loyalty.max(0) as u32)
+        } else {
+            0
+        };
+        let loyalty_change = if ability.x_cost { -(x as i32) } else { ability.loyalty_cost };
+        let new_loyalty = current_loyalty + loyalty_change;
         if new_loyalty < 0 {
             return Err(GameError::NotEnoughLoyalty(card_id));
         }
@@ -4442,8 +4452,6 @@ impl GameState {
             .counters
             .insert(crate::card::CounterType::Loyalty, new_loyalty as u32);
         self.battlefield[pos].used_loyalty_ability_this_turn = true;
-
-        let loyalty_change = ability.loyalty_cost;
         let mut events = vec![
             GameEvent::LoyaltyAbilityActivated {
                 planeswalker: card_id,
@@ -4462,7 +4470,7 @@ impl GameState {
             effect: Box::new(ability.effect),
             target,
             mode: None,
-            x_value: 0,
+            x_value: x,
             converged_value: 0,
         trigger_source: None,
             mana_spent: 0,
@@ -6162,6 +6170,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // MayPlayLandsFromGraveyard — consulted by the land-play paths
             // via `player_may_play_lands_from_graveyard`; no layer effect.
             | StaticEffect::MayPlayLandsFromGraveyard
+            // MayReturnFromGraveyardInsteadOfLearn — consulted at the top of
+            // `Effect::Learn` (Retriever Phoenix); no layer effect.
+            | StaticEffect::MayReturnFromGraveyardInsteadOfLearn
             // ManaProductionDoubled — consulted at mana-ability resolution
             // via `mana_production_doublers_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled

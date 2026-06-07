@@ -8154,6 +8154,7 @@ pub fn karn_scion_of_urza() -> CardDefinition {
         base_loyalty: 5,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::RevealTopOpponentChoosesToHand {
                     count: Value::Const(2),
@@ -8161,12 +8162,14 @@ pub fn karn_scion_of_urza() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -1,
                 effect: Effect::ReturnFromExileWithCounter {
                     counter: CounterType::Silver,
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::CreateToken {
                     who: PlayerRef::You,
@@ -8233,6 +8236,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
         }],
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 0,
                 effect: Effect::Seq(vec![
                     Effect::Untap {
@@ -8257,6 +8261,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
                 ]),
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Search {
                     who: PlayerRef::You,
@@ -8266,6 +8271,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
@@ -11887,6 +11893,7 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
         base_loyalty: 6,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::Draw {
@@ -11900,6 +11907,7 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
                 ]),
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -1,
                 effect: Effect::Seq(vec![
                     Effect::DealDamage {
@@ -11916,6 +11924,7 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
                 ]),
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -9,
                 effect: Effect::Drain {
                     from: Selector::Player(PlayerRef::EachOpponent),
@@ -11987,6 +11996,7 @@ pub fn saheeli_rai() -> CardDefinition {
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::Scry {
@@ -12000,6 +12010,7 @@ pub fn saheeli_rai() -> CardDefinition {
                 ]),
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -2,
                 effect: copy_friendly(),
             },
@@ -12010,6 +12021,7 @@ pub fn saheeli_rai() -> CardDefinition {
             // `LastCreatedTokens` so both copies are hasty). The step-trigger
             // path auto-targets the copy source correctly.
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
@@ -12078,6 +12090,7 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 2,
                 effect: Effect::Mill {
                     who: target_filtered(SelectionRequirement::Player),
@@ -12085,6 +12098,7 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -1,
                 effect: Effect::Exile {
                     what: target_filtered(
@@ -12094,6 +12108,7 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -10,
                 effect: Effect::WinGame { who: PlayerRef::You },
             },
@@ -12184,6 +12199,7 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::Move {
                     what: target_filtered(SelectionRequirement::Any),
@@ -12191,6 +12207,7 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Search {
                     who: PlayerRef::You,
@@ -12199,6 +12216,7 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::Draw {
                     who: Selector::You,
@@ -12278,6 +12296,7 @@ pub fn geyadrone_dihada() -> CardDefinition {
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Seq(vec![
                     Effect::LoseLife {
@@ -12299,6 +12318,7 @@ pub fn geyadrone_dihada() -> CardDefinition {
                 ]),
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Seq(vec![
                     Effect::GainControl {
@@ -12321,6 +12341,7 @@ pub fn geyadrone_dihada() -> CardDefinition {
                 ]),
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::LoseHalfLife {
                     who: Selector::Player(PlayerRef::EachOpponent),
@@ -12455,6 +12476,7 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 2,
                 effect: Effect::GainLife {
                     who: Selector::You,
@@ -12462,6 +12484,7 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::ResetCreature {
                     what: target_filtered(
@@ -12474,6 +12497,7 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -5,
                 effect: Effect::GainControl {
                     what: target_filtered(SelectionRequirement::Permanent),
@@ -18133,6 +18157,7 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Surveil {
                     who: PlayerRef::You,
@@ -18140,6 +18165,7 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Exile {
                     what: target_filtered(SelectionRequirement::Creature),
@@ -18148,6 +18174,7 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
             // -6: You get an emblem with "At the beginning of your
             // upkeep, draw a card."
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -6,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
@@ -23811,6 +23838,7 @@ pub fn narset_parter_of_veils() -> CardDefinition {
             },
         }],
         loyalty_abilities: vec![LoyaltyAbility {
+            x_cost: false,
             loyalty_cost: -2,
             effect: Effect::LookPickToHand {
                 who: PlayerRef::You,
@@ -23842,6 +23870,7 @@ pub fn liliana_of_the_veil() -> CardDefinition {
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Discard {
                     who: Selector::Player(PlayerRef::EachPlayer),
@@ -23850,6 +23879,7 @@ pub fn liliana_of_the_veil() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::Sacrifice {
                     who: Selector::Player(PlayerRef::Target(0)),
@@ -23858,6 +23888,7 @@ pub fn liliana_of_the_veil() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -6,
                 effect: Effect::SacrificeHalf {
                     who: Selector::Player(PlayerRef::Target(0)),
@@ -23899,6 +23930,7 @@ pub fn liliana_the_last_hope() -> CardDefinition {
         base_loyalty: 3,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::PumpPT {
                     what: target_filtered(SelectionRequirement::Creature),
@@ -23908,6 +23940,7 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -2,
                 effect: Effect::Seq(vec![
                     Effect::Mill { who: Selector::You, amount: Value::Const(2) },
@@ -23918,6 +23951,7 @@ pub fn liliana_the_last_hope() -> CardDefinition {
                 ]),
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -7,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
@@ -23960,10 +23994,12 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Move {
                     what: target_filtered(SelectionRequirement::Nonland),
@@ -23974,6 +24010,7 @@ pub fn teferi_hero_of_dominaria() -> CardDefinition {
                 },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -8,
                 effect: Effect::CreateEmblem {
                     who: PlayerRef::You,

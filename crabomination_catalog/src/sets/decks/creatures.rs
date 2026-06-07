@@ -733,10 +733,12 @@ pub fn teferi_time_raveler() -> CardDefinition {
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: 1,
                 effect: Effect::GrantSorceriesAsFlash { who: PlayerRef::You },
             },
             LoyaltyAbility {
+                x_cost: false,
                 loyalty_cost: -3,
                 effect: Effect::Seq(vec![
                     Effect::Move {
