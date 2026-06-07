@@ -311,6 +311,36 @@ pub fn elemental_masterpiece() -> CardDefinition {
     }
 }
 
+/// Detention Vortex — {W} Aura. Enchant nonland permanent. The enchanted
+/// permanent can't attack or block, and its activated abilities can't be
+/// activated (CR 602.5c). (The opponent-only `{3}: Destroy this Aura` escape
+/// clause is dropped — no "only your opponents may activate" path yet.)
+pub fn detention_vortex() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Detention Vortex",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![
+                Keyword::CantAttack,
+                Keyword::CantBlock,
+                Keyword::CantActivateAbilities,
+            ],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 // ── Creatures ────────────────────────────────────────────────────────────────
 
 /// Gnarled Professor — {2}{G}{G} 5/4 Treefolk Druid with trample. ETB: Learn.

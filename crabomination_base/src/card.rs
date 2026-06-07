@@ -468,6 +468,12 @@ pub enum Keyword {
     /// Silence). Enforced from the *computed* keyword set in
     /// `declare_attackers`, so layer-granted variants are honored.
     CantAttack,
+    /// CR 602.5c — "[This permanent]'s activated abilities can't be
+    /// activated." A static restriction on the bearer (or an Aura grant —
+    /// Detention Vortex, Stupor-style locks). Enforced from the *computed*
+    /// keyword set in `activate_ability`; mana abilities are unaffected
+    /// (they aren't "activated" through the normal permission gate).
+    CantActivateAbilities,
     /// CR 702.98 — Unleash. A marker keyword; the "may enter with a +1/+1
     /// counter" half rides a `shortcut::unleash()` ETB trigger, and the
     /// "can't block while it has a +1/+1 counter" half is injected as a

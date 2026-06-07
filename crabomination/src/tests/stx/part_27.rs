@@ -251,6 +251,33 @@ fn elemental_masterpiece_makes_two_elementals() {
     assert_eq!(elementals, 2, "two 4/4 Elementals");
 }
 
+#[test]
+fn detention_vortex_locks_activated_abilities() {
+    // CR 602.5c — Detention Vortex shuts off the enchanted permanent's
+    // activated abilities (and attack/block).
+    let mut g = two_player_game();
+    let prowler = g.add_card_to_battlefield(0, catalog::oriq_loremage()); // has a {T} ability
+    g.clear_sickness(prowler);
+    // Sanity: the ability works before the aura.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: prowler, ability_index: 0, target: None, x_value: None,
+    }).expect("ability works pre-lock");
+    drain_stack(&mut g);
+    g.battlefield_find_mut(prowler).unwrap().tapped = false;
+    // Now enchant it.
+    let aura = g.add_card_to_hand(0, catalog::detention_vortex());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(prowler)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("aura castable");
+    drain_stack(&mut g);
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: prowler, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(err.is_err(), "activated abilities are locked while enchanted");
+}
+
 // ── Creatures ────────────────────────────────────────────────────────────────
 
 #[test]

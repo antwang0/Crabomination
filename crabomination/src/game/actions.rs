@@ -5235,6 +5235,20 @@ impl GameState {
             }
         }
 
+        // CR 602.5c — a permanent whose *computed* keyword set carries
+        // `CantActivateAbilities` (Detention Vortex's Aura grant, etc.) can't
+        // activate its non-mana abilities. Battlefield sources only.
+        if !is_mana_ability(&ability.effect) && !source_in_gy && !source_in_hand {
+            let locked = self
+                .compute_battlefield()
+                .iter()
+                .find(|c| c.id == card_id)
+                .is_some_and(|c| c.keywords.contains(&Keyword::CantActivateAbilities));
+            if locked {
+                return Err(GameError::AbilitySuppressedByNamedCard);
+            }
+        }
+
         // Once-per-turn: reject if this ability index has already been
         // used since the most recent turn-cleanup. The ability is recorded
         // as "used" *after* successful activation below so failed mana
