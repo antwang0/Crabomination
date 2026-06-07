@@ -5855,18 +5855,17 @@ fn cr_704_5c_empty_library_draw_eliminates_player() {
 
 #[test]
 fn ward_counters_spell_when_caster_cannot_pay() {
-    // Sedgemoor Witch has Ward(1). Opponent tries to Lightning Bolt it
-    // with only {R} — just enough for bolt cost but not Ward. The Ward
-    // trigger should counter the bolt (CR 702.21a).
+    // Sedgemoor Witch has Ward—Pay 3 life. An opponent at 2 life can't pay it
+    // (CR 119.4), so the Ward trigger counters their Bolt (CR 702.21a).
     let mut g = two_player_game();
     let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
     g.clear_sickness(witch);
 
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
+    g.players[1].life = 2; // too little to pay the 3-life Ward
     g.step = TurnStep::PreCombatMain;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    // Only {R} for the bolt — nothing left for Ward {1}.
     g.players[1].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
@@ -5877,8 +5876,6 @@ fn ward_counters_spell_when_caster_cannot_pay() {
     }).expect("Bolt cast OK — Ward is triggered, not a cast restriction");
     drain_stack(&mut g);
 
-    // Witch should survive because Ward countered the bolt (P1 had no
-    // remaining mana to pay the {1} Ward cost after casting the bolt).
     assert!(g.battlefield.iter().any(|c| c.id == witch),
         "Sedgemoor Witch should survive — Ward should counter the Bolt");
 }
