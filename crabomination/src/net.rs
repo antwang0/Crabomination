@@ -612,6 +612,12 @@ pub struct AbilityView {
     /// snapshots (Resonating Lute flips when hand-size crosses 7).
     #[serde(default)]
     pub gate_blocked: bool,
+    /// True if this ability is flagged `opponents_only` (CR 602.5 — "Only
+    /// your opponents may activate this ability"). The controller's own
+    /// client greys it out; an opponent's client surfaces it as activatable.
+    /// Defaults to `false` for older clients. Detention Vortex.
+    #[serde(default)]
+    pub opponents_only: bool,
 }
 
 /// A planeswalker's loyalty ability as visible to the client. Mirrors
