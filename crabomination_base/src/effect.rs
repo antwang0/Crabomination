@@ -284,6 +284,11 @@ pub enum Value {
     /// among all players").
     LowestLifeTotal,
     HandSizeOf(PlayerRef),
+    /// Life `who` has gained so far this turn (CR 119.3). Backed by
+    /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
+    /// "{T}: Add X mana of any one color, where X is the amount of life
+    /// you gained this turn."
+    LifeGainedThisTurn(PlayerRef),
     GraveyardSizeOf(PlayerRef),
     /// Maximum graveyard size across **every alive player** in the game.
     /// Reads `players[*].graveyard.len()` and returns the max. Backs
@@ -387,6 +392,10 @@ pub enum Value {
     /// Curator's "four or more card types among cards exiled with this
     /// creature" threshold.
     DistinctCardTypesExiledWith,
+    /// Number of distinct power values among creatures the controller
+    /// controls. Backs Golden Ratio's "draw a card for each different
+    /// power among creatures you control."
+    DistinctPowerYouControl,
     /// Number of cards `who` has drawn on the current turn. Powers
     /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
     /// counters where X is the number of cards you've drawn this turn"

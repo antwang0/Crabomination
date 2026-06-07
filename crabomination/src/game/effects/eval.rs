@@ -97,6 +97,18 @@ impl GameState {
                 .sum(),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
+            Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),
+            Value::DistinctPowerYouControl => {
+                let mut powers: Vec<i32> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctx.controller && c.definition.is_creature())
+                    .map(|c| c.power())
+                    .collect();
+                powers.sort_unstable();
+                powers.dedup();
+                powers.len() as i32
+            }
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
             Value::MaxGraveyardSize => self
                 .players

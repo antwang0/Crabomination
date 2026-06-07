@@ -5736,6 +5736,22 @@ impl GameState {
             events.append(&mut die_evs);
         }
 
+        // Return-self-as-cost: with tap/mana/life paid, bounce the source
+        // back to its owner's hand (CR 602.5b). Applied before the effect
+        // resolves, mirroring `sac_cost`. The mana ability / spell-copy then
+        // runs with the source already in hand (Grinning Ignus, Rootha).
+        if ability.return_self_cost
+            && let Some(owner) = self.battlefield_find(card_id).map(|c| c.owner)
+        {
+            let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
+            self.move_card_to(
+                card_id,
+                &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Seat(owner)),
+                &ctx,
+                &mut events,
+            );
+        }
+
         // Sacrifice-another-from-bf-as-cost: with tap/mana/life paid,
         // sacrifice each cost-picked battlefield permanent (already
         // validated to exist via the pre-flight `sac_other_picks`

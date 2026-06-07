@@ -593,6 +593,17 @@ pub struct ActivatedAbility {
     /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
+    /// True if activating this ability returns the source permanent to its
+    /// owner's hand as part of the cost (CR 602.5b "Return this … to its
+    /// owner's hand:" cost lines). The bounce happens after tap/mana/life
+    /// payments succeed but before the effect resolves, mirroring
+    /// `sac_cost`. Powers Grinning Ignus (`{R}, Return this to its owner's
+    /// hand: Add {C}{C}{R}.`) and Rootha, Mercurial Artist (`{2}, Return
+    /// Rootha to its owner's hand: Copy target instant or sorcery spell`).
+    ///
+    /// Defaults to false via `#[serde(default)]`.
+    #[serde(default)]
+    pub return_self_cost: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
