@@ -8,6 +8,21 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Discovered this run (allied-color card batch):**
+  - **Evoke keyword** — `AlternativeCost.evoke_sacrifice` exists but no
+    `shortcut::evoke`; blocks Inner-Flame Acolyte and the Lorwyn evoke cycle.
+  - **Multikicker + kick-count `Value`** — Wolfbriar Elemental ("a 2/2 Wolf for
+    each time it was kicked") needs a multikicker count surfaced as a `Value`.
+  - **"Draw your second card each turn" trigger** — Faerie Vandal, Mad Ratter,
+    Wavebreak Hippocamp ("first spell during each opponent's turn") want
+    per-turn draw/cast-ordinal trigger events.
+  - **Search-by-name / search-an-Aura filters** — Squadron Hawk (up to 3 by
+    name), Heliod's Pilgrim (an Aura card). `Effect::Search` has no name-match
+    or Aura-subtype filter yet.
+  - **"Other [type] creatures get +X/+Y" anthem** — `StaticEffect::PumpPT`
+    lacks an exclude-self option, so Veteran Swordsmith-style "other Soldiers"
+    lords self-buff. Needs an `exclude_source` flag or `Not(This)` selector.
+
 - ⏳ **Discovered this run (sagas / attack-tax / pillowfort batch):**
   - **Attack-tax interactive pay** — `AttackTaxToController` auto-pays from the
     active player's floating mana; a wants_ui player needs a real "pay {N}?"
