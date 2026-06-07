@@ -12,6 +12,7 @@ mod artifacts;
 mod creatures;
 mod instants;
 mod lands;
+mod sagas;
 mod sorceries;
 mod spells;
 
@@ -19,5 +20,6 @@ pub use artifacts::*;
 pub use creatures::*;
 pub use instants::*;
 pub use lands::*;
+pub use sagas::*;
 pub use sorceries::*;
 pub use spells::*;

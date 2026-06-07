@@ -635,6 +635,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         pongify,
         arc_trail,
         cone_of_flame,
+        // Sagas (CR 714) — lore-counter chapter abilities.
+        history_of_benalia,
+        the_eldest_reborn,
         prey_upon,
         hedron_archive,
         soul_warden,

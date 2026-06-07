@@ -730,7 +730,10 @@ picking an item up.
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.
 - 🟡 **CR 603.10 — Last-Known Information** — full LKI for mid-resolution stack sources (e.g. lifelink 702.15c). (CR 603.6d "leaves the battlefield" self-source triggers now also fire on the lethal-damage SBA path, not just the destroy/sacrifice path — Thought-Knot Seer's LTB draw.)
-- 🟡 **CR 704 — State-Based Actions** — Battle / Saga / Role / Dungeon / Speed SBAs; multi-SBA "collapse into one replacement" (704.7); strict spell-copy-off-stack identity (704.5e).
+- 🟡 **CR 704 — State-Based Actions** — Saga SBA ✅ (`saga_chapters` reach
+  final chapter → sacrifice, unless a chapter ability is still on the stack);
+  Battle / Role / Dungeon / Speed SBAs remain; multi-SBA "collapse into one
+  replacement" (704.7); strict spell-copy-off-stack identity (704.5e).
 - 🟡 **CR 613 — Interaction of Continuous Effects** — no dependency analyzer (613.8); CDA-first pre-pass (613.3); Aura re-stamp on enchant (613.7e).
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror). Remaining: redistribute-life-totals; broad life-gain replacement (119.10).
@@ -1795,9 +1798,10 @@ satisfies a `{S}` pip.
 - Emblems are not modelled.
 
 ### Saga Lore Counters
-Sagas need: ETB with 1 lore counter, trigger each chapter, advance at upkeep,
-sacrifice when the last chapter triggers.  No `SagaLore` counter type or
-upkeep-advance primitive exists.
+✅ Non-DFC Sagas ship via `CardDefinition.saga_chapters` + `saga_advance`
+(ETB chapter I, +1 lore each precombat main, final-chapter sacrifice SBA).
+History of Benalia, The Eldest Reborn. Remaining ⏳: DFC/transforming sagas
+(The Everflowing Well saga-land) and read-ahead chapter-choice variants.
 
 ### Vehicle / Crew
 `CardType::Artifact` exists but there is no `CrewN` keyword or "becomes a

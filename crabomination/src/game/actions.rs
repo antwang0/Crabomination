@@ -5777,10 +5777,10 @@ impl GameState {
         // the cost-picked counters off the source (validated by the pre-flight
         // gate). Walking Ballista's `Remove a +1/+1 counter from this: deal 1
         // damage` runs here before the ping resolves.
-        if let Some((kind, count)) = ability.remove_counter_cost {
-            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
-                c.remove_counters(kind, count);
-            }
+        if let Some((kind, count)) = ability.remove_counter_cost
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            c.remove_counters(kind, count);
         }
 
         // Discard-as-cost (CR 602.5b): with tap/mana/life paid, discard each

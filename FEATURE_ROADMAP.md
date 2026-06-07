@@ -172,7 +172,12 @@ not how Magic works" moments.
 
 - ⏳ **Battle card type** (CR 110.4) + defense counters +
   `AttackTarget::Battle` (noted in `TODO.md`).
-- ⏳ **Sagas** (lore counters, chapter abilities, DFC sagas).
+- 🟡 **Sagas** (CR 714). `CardDefinition.saga_chapters: Vec<(u32, Effect)>` +
+  `GameState::saga_advance`: enters with one lore counter (chapter I fires),
+  gains one each precombat main (turn-based action), and is sacrificed by SBA
+  once lore counters reach the final chapter and no chapter ability is still on
+  the stack. Ships History of Benalia, The Eldest Reborn. Remaining ⏳: DFC
+  sagas (transforming back face) and read-ahead/chapter-choice variants.
 - ✅ **Split cards** (CR 709) + **Fuse** (CR 702.102). The left half lives on
   the main `CardDefinition` (cast via the normal path); `CardDefinition.split:
   Some(SplitCard{ right, fuse })` carries the right half + Fuse flag. Cast the

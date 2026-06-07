@@ -192,6 +192,21 @@ impl GameState {
                 // players receive priority (and thus before step triggers).
                 let mut rad = self.do_rad_counters();
                 events.append(&mut rad);
+                // CR 714.2b — as the active player's precombat main phase
+                // begins, put a lore counter on each Saga they control,
+                // firing that chapter's ability.
+                let sagas: Vec<CardId> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.controller == self.active_player_idx
+                            && !c.definition.saga_chapters.is_empty()
+                    })
+                    .map(|c| c.id)
+                    .collect();
+                for id in sagas {
+                    self.saga_advance(id);
+                }
                 self.fire_step_triggers(TurnStep::PreCombatMain);
                 self.give_priority_to_active();
             }
@@ -407,6 +422,42 @@ impl GameState {
                 event_amount: 0,
                 mode,
                 intervening_if,
+            });
+        }
+        self.drain_trigger_queue(queue);
+    }
+
+    /// CR 714 — put a lore counter on a Saga and fire the chapter ability/ies
+    /// for the new lore-counter total. Called on ETB (chapter I) and as a
+    /// turn-based action at the start of the controller's precombat main.
+    pub(crate) fn saga_advance(&mut self, card_id: CardId) {
+        let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) else {
+            return;
+        };
+        if card.definition.saga_chapters.is_empty() {
+            return;
+        }
+        card.add_counters(crate::card::CounterType::Lore, 1);
+        let chapter = card.counter_count(crate::card::CounterType::Lore);
+        let controller = card.controller;
+        let effects: Vec<Effect> = card
+            .definition
+            .saga_chapters
+            .iter()
+            .filter(|(n, _)| *n == chapter)
+            .map(|(_, e)| e.clone())
+            .collect();
+        let mut queue: Vec<PendingTriggerPush> = Vec::new();
+        for effect in effects {
+            let mode = self.pick_trigger_mode(&effect, card_id);
+            queue.push(PendingTriggerPush {
+                source: card_id,
+                controller,
+                effect,
+                subject: None,
+                event_amount: 0,
+                mode,
+                intervening_if: None,
             });
         }
         self.drain_trigger_queue(queue);
@@ -728,6 +779,16 @@ impl GameState {
                                 intervening_if: None,
                             });
                         }
+                    }
+
+                    // CR 714.2b — a Saga enters with its first lore counter;
+                    // chapter I fires off the same lore-counter placement.
+                    let is_saga = self
+                        .battlefield
+                        .iter()
+                        .any(|c| c.id == card_id && !c.definition.saga_chapters.is_empty());
+                    if is_saga {
+                        self.saga_advance(card_id);
                     }
 
                     // AnotherOfYours creature-ETB triggers are dispatched
@@ -1434,6 +1495,38 @@ impl GameState {
             if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
                 self.died_card_snapshots.insert(id, c.clone());
             }
+            self.remove_from_battlefield_to_graveyard(id);
+        }
+
+        // Saga rule (CR 714.4 / 704.5x): a Saga whose lore counters have
+        // reached its final chapter number is sacrificed — unless one of its
+        // chapter abilities is still a trigger on the stack (so the last
+        // chapter resolves before the Saga leaves).
+        let saga_victims: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                let Some(final_ch) = c.definition.saga_chapters.iter().map(|(n, _)| *n).max() else {
+                    return false;
+                };
+                if c.counter_count(crate::card::CounterType::Lore) < final_ch {
+                    return false;
+                }
+                // Still the source of a chapter ability on the stack?
+                !self.stack.iter().any(|item| {
+                    matches!(item, StackItem::Trigger { source, .. } if *source == c.id)
+                })
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in saga_victims {
+            if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+                self.died_card_snapshots.insert(id, c.clone());
+            }
+            events.push(GameEvent::PermanentSacrificed {
+                card_id: id,
+                who: self.battlefield.iter().find(|c| c.id == id).map(|c| c.controller).unwrap_or(0),
+            });
             self.remove_from_battlefield_to_graveyard(id);
         }
 

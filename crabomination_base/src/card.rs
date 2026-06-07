@@ -1010,6 +1010,16 @@ pub struct CardDefinition {
     /// SBA pruning step.
     #[serde(default)]
     pub max_counters_of_kind: Option<(CounterType, u32)>,
+    /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
+    /// A combined chapter ("I, II — …") is listed once per number with the
+    /// same effect. Non-empty marks the card a Saga: it enters with one lore
+    /// counter (firing chapter 1), gains one more at the start of each of its
+    /// controller's precombat main phases (firing that chapter), and is
+    /// sacrificed by SBA once its lore counters reach the final (highest)
+    /// chapter number and no chapter ability of its is still on the stack.
+    /// Defaults to empty via `#[serde(default)]`.
+    #[serde(default)]
+    pub saga_chapters: Vec<(u32, crate::effect::Effect)>,
     /// CR 701.x — "Exile this spell" rider for instants and sorceries that
     /// route to exile instead of their owner's graveyard after resolution.
     /// Used by Strixhaven's "Then exile this spell" wording (Awaken the

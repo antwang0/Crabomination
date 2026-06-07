@@ -24321,6 +24321,49 @@ fn arc_trail_splits_two_and_one_damage() {
 }
 
 #[test]
+fn history_of_benalia_saga_chapters_and_sacrifice() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::history_of_benalia());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {1}{W}");
+    drain_stack(&mut g);
+    // Chapter I fired on ETB: 1 lore counter, 1 Knight.
+    let saga = g.battlefield.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(saga.counter_count(CounterType::Lore), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Knight").count(), 1);
+    // Chapter II (next precombat main): a second Knight.
+    g.saga_advance(id);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Knight").count(), 2);
+    // Chapter III: +2/+1 to Knights, then the Saga is sacrificed by SBA.
+    g.saga_advance(id);
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "saga sacrificed after final chapter");
+    let knight = g.battlefield.iter().find(|c| c.definition.name == "Knight").unwrap();
+    assert_eq!(knight.power(), 4, "Knights got +2/+1 from chapter III");
+}
+
+#[test]
+fn the_eldest_reborn_chapter_one_forces_opponent_sacrifice() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::the_eldest_reborn());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {4}{B}");
+    drain_stack(&mut g);
+    // Chapter I: opponent's only creature is sacrificed.
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "opponent sacrificed its creature");
+}
+
+#[test]
 fn cone_of_flame_splits_one_two_three_across_three_targets() {
     let mut g = two_player_game();
     let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4

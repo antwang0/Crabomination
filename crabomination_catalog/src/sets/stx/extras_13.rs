@@ -67,6 +67,7 @@ pub fn quandrix_coursemage_b122() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -118,6 +119,7 @@ pub fn quandrix_expansion_b122() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -194,6 +196,7 @@ pub fn pest_marrowfeast_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -238,6 +241,7 @@ pub fn witherbloom_vinegrowth_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -297,6 +301,7 @@ pub fn witherbloom_crypttender_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -344,6 +349,7 @@ pub fn pest_mawlord_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -400,6 +406,7 @@ pub fn witherbloom_bonesplitter_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -460,6 +467,7 @@ pub fn witherbloom_tombrooter_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -515,6 +523,7 @@ pub fn witherbloom_beetlecaller_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -559,6 +568,7 @@ pub fn witherbloom_saproot_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -599,6 +609,7 @@ pub fn pest_hivekeeper_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -643,6 +654,7 @@ pub fn inkling_crusader_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -690,6 +702,7 @@ pub fn silverquill_adjudicator_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -734,6 +747,7 @@ pub fn silverquill_sermonizer_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -776,6 +790,7 @@ pub fn inkling_pamphletter_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -821,6 +836,7 @@ pub fn lorehold_vanguard_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -869,6 +885,7 @@ pub fn lorehold_spiritsong_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -916,6 +933,7 @@ pub fn lorehold_skirmisher_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -970,6 +988,7 @@ pub fn prismari_tutor_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1019,6 +1038,7 @@ pub fn prismari_sparkshow_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1075,6 +1095,7 @@ pub fn quandrix_surveyor_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1131,6 +1152,7 @@ pub fn fractal_pondlord_b123() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1184,6 +1206,7 @@ pub fn lorehold_pyromancer_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1226,6 +1249,7 @@ pub fn lorehold_skydefender_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1269,6 +1293,7 @@ pub fn lorehold_champion_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1316,6 +1341,7 @@ pub fn lorehold_cremate_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1361,6 +1387,7 @@ pub fn prismari_stormbreaker_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1405,6 +1432,7 @@ pub fn prismari_burnmage_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1453,6 +1481,7 @@ pub fn prismari_tempest_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1512,6 +1541,7 @@ pub fn quandrix_forester_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1571,6 +1601,7 @@ pub fn quandrix_mathematician_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1626,6 +1657,7 @@ pub fn fractal_coursemate_b124() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1685,6 +1717,7 @@ pub fn strixhaven_cycle_decree_b145() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1736,6 +1769,7 @@ pub fn strixhaven_cycle_glyph_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1785,6 +1819,7 @@ pub fn strixhaven_stasis_glyph_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1834,6 +1869,7 @@ pub fn back_to_basics() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2027,6 +2063,7 @@ pub fn blustersquall() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2100,6 +2137,7 @@ pub fn electrickery() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2192,6 +2230,7 @@ pub fn teleportal() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2268,5 +2307,6 @@ pub fn street_spasm() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }

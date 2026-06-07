@@ -95,6 +95,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -168,6 +169,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -225,6 +227,7 @@ pub fn pillardrop_rescuer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -318,6 +321,7 @@ pub fn sparring_regimen() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -385,6 +389,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -485,6 +490,7 @@ pub fn reconstruct_history() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -627,6 +633,7 @@ pub fn lorehold_excavation() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -686,6 +693,7 @@ pub fn lorehold_acolyte() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -753,6 +761,7 @@ pub fn lorehold_warrior_priest() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -810,6 +819,7 @@ pub fn lorehold_ember_priest() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -865,6 +875,7 @@ pub fn lorehold_skirmish() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -918,6 +929,7 @@ pub fn lorehold_pyrosage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -973,6 +985,7 @@ pub fn lorehold_loremaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1021,6 +1034,7 @@ pub fn lorehold_aerospirit() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1076,6 +1090,7 @@ pub fn lorehold_ember_forge() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1144,6 +1159,7 @@ pub fn lorehold_spiritcaller() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1199,6 +1215,7 @@ pub fn lorehold_pyrebrand() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1259,6 +1276,7 @@ pub fn lorehold_reclamation() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1315,6 +1333,7 @@ pub fn lorehold_reverberator() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1367,6 +1386,7 @@ pub fn lorehold_pyrescribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1416,6 +1436,7 @@ pub fn lorehold_echoist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1472,6 +1493,7 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1529,6 +1551,7 @@ pub fn lorehold_recollect() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1594,6 +1617,7 @@ pub fn lorehold_anthemist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1644,6 +1668,7 @@ pub fn lorehold_bonepriest() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1705,6 +1730,7 @@ pub fn lorehold_battlescroll() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1775,6 +1801,7 @@ pub fn lorehold_tomescholar() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1826,6 +1853,7 @@ pub fn lorehold_ember_brand() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1877,6 +1905,7 @@ pub fn lorehold_spectrescribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1935,6 +1964,7 @@ pub fn lorehold_sparkstrike() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -1987,6 +2017,7 @@ pub fn lorehold_bonereader() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2045,6 +2076,7 @@ pub fn lorehold_spiritarcher() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2106,6 +2138,7 @@ pub fn lorehold_echoflame() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2180,6 +2213,7 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2255,6 +2289,7 @@ pub fn lorehold_emberscribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2309,6 +2344,7 @@ pub fn lorehold_reliquary() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2362,6 +2398,7 @@ pub fn lorehold_ringleader() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2416,6 +2453,7 @@ pub fn lorehold_strikevanguard() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2477,6 +2515,7 @@ pub fn lorehold_ember_recall() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2541,6 +2580,7 @@ pub fn lorehold_warband() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2611,6 +2651,7 @@ pub fn lorehold_phoenix() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2668,6 +2709,7 @@ pub fn lorehold_battlechronicler() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2729,6 +2771,7 @@ pub fn lorehold_searing_wisdom() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2776,6 +2819,7 @@ pub fn lorehold_saint() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2834,6 +2878,7 @@ pub fn lorehold_volley() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2907,6 +2952,7 @@ pub fn lorehold_spirit_caller() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -2964,6 +3010,7 @@ pub fn lorehold_recital() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3030,6 +3077,7 @@ pub fn lorehold_pyrostriker() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3083,6 +3131,7 @@ pub fn lorehold_soulshaper() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3134,6 +3183,7 @@ pub fn lorehold_ironhand() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3194,6 +3244,7 @@ pub fn lorehold_revival() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3244,6 +3295,7 @@ pub fn lorehold_sparkflare() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3315,6 +3367,7 @@ pub fn spirit_conduit() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3374,6 +3427,7 @@ pub fn lorehold_spirit_anthem() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3428,6 +3482,7 @@ pub fn lorehold_spellrunner() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3493,6 +3548,7 @@ pub fn lorehold_battlecaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3549,6 +3605,7 @@ pub fn lorehold_pyresurge() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3607,6 +3664,7 @@ pub fn spirit_sparkguard() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3665,6 +3723,7 @@ pub fn lorehold_outburst() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3716,6 +3775,7 @@ pub fn lorehold_pyresinger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3767,6 +3827,7 @@ pub fn lorehold_soulchanter() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3822,6 +3883,7 @@ pub fn lorehold_flameherald() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3875,6 +3937,7 @@ pub fn lorehold_embercouncil() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3942,6 +4005,7 @@ pub fn lorehold_cinderpriest() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -3988,6 +4052,7 @@ pub fn lorehold_sparkscholar() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4031,6 +4096,7 @@ pub fn lorehold_ironscribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4085,6 +4151,7 @@ pub fn lorehold_spiritflame() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4140,6 +4207,7 @@ pub fn lorehold_sparkknight() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4188,6 +4256,7 @@ pub fn lorehold_stoneweaver() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4239,6 +4308,7 @@ pub fn lorehold_pyrescroll() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4300,6 +4370,7 @@ pub fn lorehold_battle_witness() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4348,6 +4419,7 @@ pub fn lorehold_battlescholar() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4390,6 +4462,7 @@ pub fn lorehold_pyrokineticist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4442,6 +4515,7 @@ pub fn lorehold_wargleam() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4490,6 +4564,7 @@ pub fn lorehold_stoneglyph() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4531,6 +4606,7 @@ pub fn lorehold_reverend() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4589,6 +4665,7 @@ pub fn lorehold_recountmage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4646,6 +4723,7 @@ pub fn lorehold_inscribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4710,6 +4788,7 @@ pub fn lorehold_reenactor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4752,6 +4831,7 @@ pub fn lorehold_ardent_pyromage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4864,6 +4944,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4921,6 +5002,7 @@ pub fn lorehold_spirit_sentinel() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -4972,6 +5054,7 @@ pub fn lorehold_pyrotechnician() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5025,6 +5108,7 @@ pub fn lorehold_spectrebrand() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5066,6 +5150,7 @@ pub fn lorehold_charwarden() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5107,6 +5192,7 @@ pub fn lorehold_lightcleric() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5154,6 +5240,7 @@ pub fn lorehold_grave_crusader() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5204,6 +5291,7 @@ pub fn lorehold_pyrescholar() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5256,6 +5344,7 @@ pub fn lorehold_vow() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5308,6 +5397,7 @@ pub fn lorehold_spectrecaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5349,6 +5439,7 @@ pub fn lorehold_forgemaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5403,6 +5494,7 @@ pub fn lorehold_skirmlord() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5462,6 +5554,7 @@ pub fn lorehold_memoirist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5506,6 +5599,7 @@ pub fn lorehold_ardent_acolyte() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5559,6 +5653,7 @@ pub fn lorehold_bequeathing() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5624,6 +5719,7 @@ pub fn lorehold_pyromaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5679,6 +5775,7 @@ pub fn lorehold_spirit_hymn() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5722,6 +5819,7 @@ pub fn lorehold_spirit_sage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5764,6 +5862,7 @@ pub fn lorehold_pyrechronicler() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5806,6 +5905,7 @@ pub fn lorehold_mass_ritual() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5851,6 +5951,7 @@ pub fn lorehold_soulburst() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5892,6 +5993,7 @@ pub fn lorehold_ancestor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5934,6 +6036,7 @@ pub fn lorehold_pyrescribe_adept() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -5984,6 +6087,7 @@ pub fn lorehold_burnscribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6046,6 +6150,7 @@ pub fn lorehold_spirit_legion() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6105,6 +6210,7 @@ pub fn lorehold_zealot() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6146,6 +6252,7 @@ pub fn lorehold_pyreheart() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6201,6 +6308,7 @@ pub fn spirit_phalanx() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6249,6 +6357,7 @@ pub fn lorehold_warhost() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6299,6 +6408,7 @@ pub fn lorehold_devotion() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6352,6 +6462,7 @@ pub fn lorehold_pyremender() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6392,6 +6503,7 @@ pub fn spirit_vanguard() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6433,6 +6545,7 @@ pub fn lorehold_ember_sage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6481,6 +6594,7 @@ pub fn lorehold_ghostmaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6531,6 +6645,7 @@ pub fn lorehold_b37_spiritflame() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6571,6 +6686,7 @@ pub fn lorehold_b37_beacon() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6628,6 +6744,7 @@ pub fn lorehold_sermonizer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6679,6 +6796,7 @@ pub fn lorehold_b35_lightning() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6722,6 +6840,7 @@ pub fn lorehold_ember_priest_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6762,6 +6881,7 @@ pub fn lorehold_skydefender() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6814,6 +6934,7 @@ pub fn lorehold_archivist_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6862,6 +6983,7 @@ pub fn lorehold_spiritrider() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6902,6 +7024,7 @@ pub fn lorehold_wargeist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -6954,6 +7077,7 @@ pub fn lorehold_hellraiser() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7001,6 +7125,7 @@ pub fn lorehold_annalist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7052,6 +7177,7 @@ pub fn lorehold_bonfire() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7118,6 +7244,7 @@ pub fn lorehold_spiritsage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7158,6 +7285,7 @@ pub fn lorehold_pyrokin() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7198,6 +7326,7 @@ pub fn spirit_outrider() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7238,6 +7367,7 @@ pub fn spirit_warbearer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7282,6 +7412,7 @@ pub fn lorehold_ember_reader() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7336,6 +7467,7 @@ pub fn spirit_cantor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7396,6 +7528,7 @@ pub fn lorehold_wraithcaller() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7447,6 +7580,7 @@ pub fn lorehold_ballad() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7488,6 +7622,7 @@ pub fn lorehold_ironwill() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7536,6 +7671,7 @@ pub fn spirit_pyremage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7578,6 +7714,7 @@ pub fn lorehold_emberkeeper() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7622,6 +7759,7 @@ pub fn lorehold_warden_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7663,6 +7801,7 @@ pub fn spirit_ironguard() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7715,6 +7854,7 @@ pub fn lorehold_recital_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7759,6 +7899,7 @@ pub fn lorehold_stoneguard() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7800,6 +7941,7 @@ pub fn spirit_vanguard_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7853,6 +7995,7 @@ pub fn lorehold_pyresummon() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7895,6 +8038,7 @@ pub fn lorehold_saberspirit() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7937,6 +8081,7 @@ pub fn spirit_bookburner() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -7985,6 +8130,7 @@ pub fn lorehold_knight_champion() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8032,6 +8178,7 @@ pub fn lorehold_pyrelancer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8076,6 +8223,7 @@ pub fn lorehold_emberhand_priest() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8120,6 +8268,7 @@ pub fn lorehold_ironbacked_archivist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8168,6 +8317,7 @@ pub fn lorehold_lightspeaker() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8213,6 +8363,7 @@ pub fn lorehold_warpriest() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8255,6 +8406,7 @@ pub fn lorehold_emberscholar() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8304,6 +8456,7 @@ pub fn lorehold_relicbearer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8345,6 +8498,7 @@ pub fn lorehold_ember_sentinel() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8388,6 +8542,7 @@ pub fn lorehold_spiritbinder() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8430,6 +8585,7 @@ pub fn lorehold_sparkflinger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8474,6 +8630,7 @@ pub fn lorehold_battle_cry() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8525,6 +8682,7 @@ pub fn lorehold_battle_memorial() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8576,6 +8734,7 @@ pub fn lorehold_veteran() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8617,6 +8776,7 @@ pub fn lorehold_scrollwarden() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8670,6 +8830,7 @@ pub fn lorehold_flameherald_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8712,6 +8873,7 @@ pub fn spirit_bardguard() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8754,6 +8916,7 @@ pub fn lorehold_sparkwarden() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8802,6 +8965,7 @@ pub fn lorehold_spiritscribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8843,6 +9007,7 @@ pub fn lorehold_phoenix_soldier() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8886,6 +9051,7 @@ pub fn spirit_spellsmith() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8933,6 +9099,7 @@ pub fn lorehold_glimmercaller() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -8984,6 +9151,7 @@ pub fn lorehold_refrain() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9037,6 +9205,7 @@ pub fn spirit_banner_bearer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9091,6 +9260,7 @@ pub fn lorehold_battle_drum() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9133,6 +9303,7 @@ pub fn spirit_spearmaiden() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9177,6 +9348,7 @@ pub fn lorehold_lavabolt() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9220,6 +9392,7 @@ pub fn lorehold_skyrunner() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9270,6 +9443,7 @@ pub fn lorehold_stoneward() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9322,6 +9496,7 @@ pub fn lorehold_pyremender_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9374,6 +9549,7 @@ pub fn lorehold_pyreward() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9416,6 +9592,7 @@ pub fn spirit_honor_guard() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9470,6 +9647,7 @@ pub fn lorehold_smiteseer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9512,6 +9690,7 @@ pub fn lorehold_embersmith() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9552,6 +9731,7 @@ pub fn spirit_mentor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9596,6 +9776,7 @@ pub fn lorehold_wargist() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9637,6 +9818,7 @@ pub fn lorehold_sparkstrike_b50() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9678,6 +9860,7 @@ pub fn spirit_battlemaster() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9725,6 +9908,7 @@ pub fn lorehold_memoriam() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9765,6 +9949,7 @@ pub fn spirit_berserker() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9817,6 +10002,7 @@ pub fn lorehold_memorialist_b50() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9868,6 +10054,7 @@ pub fn lorehold_echocaller() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9918,6 +10105,7 @@ pub fn lorehold_sparkshock() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -9967,6 +10155,7 @@ pub fn lorehold_skystorm() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10007,6 +10196,7 @@ pub fn lorehold_reverence() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10047,6 +10237,7 @@ pub fn lorehold_pyromentor() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10099,6 +10290,7 @@ pub fn lorehold_spirit_veteran() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10145,6 +10337,7 @@ pub fn lorehold_embermend() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10195,6 +10388,7 @@ pub fn lorehold_spiritchron() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10241,6 +10435,7 @@ pub fn lorehold_sparklock() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10283,6 +10478,7 @@ pub fn lorehold_emberscribe_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10323,6 +10519,7 @@ pub fn lorehold_spirit_redeemer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10373,6 +10570,7 @@ pub fn lorehold_emberlock() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10424,6 +10622,7 @@ pub fn lorehold_skyblaze() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10464,6 +10663,7 @@ pub fn spirit_blazekin() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10507,6 +10707,7 @@ pub fn lorehold_invoker() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10561,6 +10762,7 @@ pub fn spirit_sparkmage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10602,6 +10804,7 @@ pub fn lorehold_chronicler_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10652,6 +10855,7 @@ pub fn lorehold_relicwarden() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10708,6 +10912,7 @@ pub fn lorehold_pyrescribe_elder() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10753,6 +10958,7 @@ pub fn lorehold_skirmish_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10798,6 +11004,7 @@ pub fn lorehold_sparkflame() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10838,6 +11045,7 @@ pub fn lorehold_spiritcaller_b55() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10891,6 +11099,7 @@ pub fn spirit_banneret() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10943,6 +11152,7 @@ pub fn lorehold_forge_cleric() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -10988,6 +11198,7 @@ pub fn lorehold_pyrescholar_b56() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11041,6 +11252,7 @@ pub fn lorehold_summit() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11086,6 +11298,7 @@ pub fn spirit_scribe() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11137,6 +11350,7 @@ pub fn lorehold_ember_strike() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11180,6 +11394,7 @@ pub fn lorehold_battlepriest() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11224,6 +11439,7 @@ pub fn lorehold_bonereader_b57() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11268,6 +11484,7 @@ pub fn lorehold_sparkscholar_b57() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11320,6 +11537,7 @@ pub fn lorehold_reverence_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11363,6 +11581,7 @@ pub fn lorehold_skybattler() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11409,6 +11628,7 @@ pub fn lorehold_bonechanter() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11464,6 +11684,7 @@ pub fn lorehold_sparkdancer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11513,6 +11734,7 @@ pub fn lorehold_reliquarian() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11556,6 +11778,7 @@ pub fn lorehold_skyignite() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11597,6 +11820,7 @@ pub fn lorehold_pyrelearner() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11649,6 +11873,7 @@ pub fn lorehold_spiritbinder_b59() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11691,6 +11916,7 @@ pub fn lorehold_emberscribe_b59() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11733,6 +11959,7 @@ pub fn lorehold_chronicler_b60() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11774,6 +12001,7 @@ pub fn lorehold_sparkmage_b60() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11821,6 +12049,7 @@ pub fn lorehold_battle_sage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11873,6 +12102,7 @@ pub fn lorehold_relicseer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11917,6 +12147,7 @@ pub fn lorehold_emberspeaker() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -11973,6 +12204,7 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12019,6 +12251,7 @@ pub fn spirit_bannerer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12059,6 +12292,7 @@ pub fn lorehold_scholar_b61() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12100,6 +12334,7 @@ pub fn lorehold_warpoet() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12144,6 +12379,7 @@ pub fn lorehold_brimstoner() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12199,6 +12435,7 @@ pub fn spirit_reliquarian() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12242,6 +12479,7 @@ pub fn spirit_sparkblade() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12282,6 +12520,7 @@ pub fn lorehold_spiritchron_b63() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12333,6 +12572,7 @@ pub fn lorehold_embertongue() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12373,6 +12613,7 @@ pub fn lorehold_sparkstoneflinger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12422,6 +12663,7 @@ pub fn lorehold_memorialcaller() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12464,6 +12706,7 @@ pub fn lorehold_sparkscholar_b63() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12506,6 +12749,7 @@ pub fn lorehold_sparkscholar_b63_v2() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12566,6 +12810,7 @@ pub fn lorehold_coinflinger() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12610,6 +12855,7 @@ pub fn lorehold_ember_speaker_b64() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12650,6 +12896,7 @@ pub fn spirit_spellblade() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12701,6 +12948,7 @@ pub fn lorehold_sparkchorus() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12741,6 +12989,7 @@ pub fn lorehold_sigilbearer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12783,6 +13032,7 @@ pub fn spirit_wardancer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12824,6 +13074,7 @@ pub fn lorehold_pyromancer_b66() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12869,6 +13120,7 @@ pub fn lorehold_spiritmint_b66() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12921,6 +13173,7 @@ pub fn lorehold_battlegrave() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -12961,6 +13214,7 @@ pub fn lorehold_skybearer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13001,6 +13255,7 @@ pub fn lorehold_spellbreaker() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13044,6 +13299,7 @@ pub fn lorehold_sparkscholar_b67() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13084,6 +13340,7 @@ pub fn lorehold_cinderpriest_b67() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13133,6 +13390,7 @@ pub fn lorehold_memorialer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13183,6 +13441,7 @@ pub fn lorehold_spiritflare() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13230,6 +13489,7 @@ pub fn lorehold_spirit_crier() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13275,6 +13535,7 @@ pub fn lorehold_bellringer() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13329,6 +13590,7 @@ pub fn lorehold_sparkshrine() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13369,6 +13631,7 @@ pub fn lorehold_embertenured() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13415,6 +13678,7 @@ pub fn spirit_glyphbinder() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13456,6 +13720,7 @@ pub fn lorehold_pyrebinder() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13497,6 +13762,7 @@ pub fn lorehold_heroic_sage() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13540,6 +13806,7 @@ pub fn lorehold_bloodrazer_b125() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13581,6 +13848,7 @@ pub fn lorehold_saintkeeper_b125() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13622,6 +13890,7 @@ pub fn lorehold_vanguardian_b125() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13674,6 +13943,7 @@ pub fn lorehold_heraldcaller_b125() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13717,6 +13987,7 @@ pub fn lorehold_spiritbinder_b126() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13757,6 +14028,7 @@ pub fn lorehold_cinderscholar_b126() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13798,6 +14070,7 @@ pub fn lorehold_halfblood_b126() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13839,6 +14112,7 @@ pub fn lorehold_skywatcher_b126() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13880,6 +14154,7 @@ pub fn lorehold_ember_mage_b126() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13921,6 +14196,7 @@ pub fn lorehold_sparkscholar_b126() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -13964,6 +14240,7 @@ pub fn lorehold_aerialist_b127() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14005,6 +14282,7 @@ pub fn lorehold_ironbound_b127() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14054,6 +14332,7 @@ pub fn lorehold_pyrebrand_b127() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14107,6 +14386,7 @@ pub fn lorehold_veteran_b127() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14148,6 +14428,7 @@ pub fn lorehold_honorbound_b127() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14195,6 +14476,7 @@ pub fn lorehold_embercurse_b127() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14238,6 +14520,7 @@ pub fn lorehold_skybinder_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14280,6 +14563,7 @@ pub fn lorehold_bookforger_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14321,6 +14605,7 @@ pub fn lorehold_bell_ringer_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14368,6 +14653,7 @@ pub fn lorehold_cliffstrike_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14409,6 +14695,7 @@ pub fn lorehold_sparkmender_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14450,6 +14737,7 @@ pub fn lorehold_battlespirit_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14491,6 +14779,7 @@ pub fn lorehold_soulreaver_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14542,6 +14831,7 @@ pub fn lorehold_pyrestone_b128() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14600,6 +14890,7 @@ pub fn lorehold_spirit_banner_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14666,6 +14957,7 @@ pub fn lorehold_stoneglyph_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14707,6 +14999,7 @@ pub fn lorehold_pyrespirit_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14758,6 +15051,7 @@ pub fn lorehold_lectern_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14809,6 +15103,7 @@ pub fn lorehold_memorist_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14852,6 +15147,7 @@ pub fn lorehold_sparkscholar_ii_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14894,6 +15190,7 @@ pub fn lorehold_excavation_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14945,6 +15242,7 @@ pub fn lorehold_pyreverse_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -14986,6 +15284,7 @@ pub fn lorehold_sparkmender_ii_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15034,6 +15333,7 @@ pub fn lorehold_embertongue_b129() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15078,6 +15378,7 @@ pub fn lorehold_spiritcaller_b130() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15132,6 +15433,7 @@ pub fn lorehold_skyguard_banner_b130() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15174,6 +15476,7 @@ pub fn lorehold_pyresage_b130() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15226,6 +15529,7 @@ pub fn lorehold_reliquarian_b130() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15274,6 +15578,7 @@ pub fn lorehold_battle_cantrip_b130() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15315,6 +15620,7 @@ pub fn lorehold_pyremaster_b130() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15358,6 +15664,7 @@ pub fn lorehold_spirit_warden_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15398,6 +15705,7 @@ pub fn lorehold_pyrosaint_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15442,6 +15750,7 @@ pub fn lorehold_relic_keeper_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15496,6 +15805,7 @@ pub fn lorehold_sparkpriest_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15548,6 +15858,7 @@ pub fn lorehold_battle_chant_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15595,6 +15906,7 @@ pub fn lorehold_remembrance_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15635,6 +15947,7 @@ pub fn lorehold_ember_choir_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15682,6 +15995,7 @@ pub fn lorehold_pyremourner_b131() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15725,6 +16039,7 @@ pub fn lorehold_cleric_recruit_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15766,6 +16081,7 @@ pub fn lorehold_pyrescholar_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15807,6 +16123,7 @@ pub fn lorehold_spiritforger_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15848,6 +16165,7 @@ pub fn lorehold_ember_bandit_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15891,6 +16209,7 @@ pub fn lorehold_skyforge_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15932,6 +16251,7 @@ pub fn lorehold_champions_echo_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -15974,6 +16294,7 @@ pub fn lorehold_pyresinger_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16017,6 +16338,7 @@ pub fn lorehold_spirit_cleric_b133() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16059,6 +16381,7 @@ pub fn lorehold_bell_ringer_ii_b133() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16100,6 +16423,7 @@ pub fn lorehold_sparkstrider_b133() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16140,6 +16464,7 @@ pub fn lorehold_final_lesson_b132() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16183,6 +16508,7 @@ pub fn lorehold_skirmisher_b135() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16235,6 +16561,7 @@ pub fn lorehold_crackleflame_b135() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16275,6 +16602,7 @@ pub fn lorehold_sparkpilgrim_b135() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16317,6 +16645,7 @@ pub fn lorehold_pyremartyr_b135() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16360,6 +16689,7 @@ pub fn lorehold_ember_chant_b136() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16401,6 +16731,7 @@ pub fn lorehold_skirmisher_captain_b136() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16442,6 +16773,7 @@ pub fn lorehold_sage_choir_b136() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16482,6 +16814,7 @@ pub fn lorehold_ember_sprite_b136() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16527,6 +16860,7 @@ pub fn lorehold_spirit_captain_b137() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16569,6 +16903,7 @@ pub fn lorehold_pyrocaller_b138() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16609,6 +16944,7 @@ pub fn lorehold_spirit_marshal_b138() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16649,6 +16985,7 @@ pub fn lorehold_sparkdancer_b138() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16697,6 +17034,7 @@ pub fn lorehold_spiritsong_b138() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16745,6 +17083,7 @@ pub fn lorehold_pyromancer_adept_b139() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16785,6 +17124,7 @@ pub fn lorehold_spiritwarden_b139() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16826,6 +17166,7 @@ pub fn lorehold_battle_witness_b139() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16866,6 +17207,7 @@ pub fn lorehold_ember_cleric_b138() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16909,6 +17251,7 @@ pub fn lorehold_stormcleric_b141() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16950,6 +17293,7 @@ pub fn lorehold_pyrosage_b141() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -16997,6 +17341,7 @@ pub fn lorehold_spiritforge_b141() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17047,6 +17392,7 @@ pub fn lorehold_ember_soldier_b141() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17090,6 +17436,7 @@ pub fn lorehold_sparkscholar_iii_b141() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17139,6 +17486,7 @@ pub fn lorehold_pyroscribe_b142() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17195,6 +17543,7 @@ pub fn lorehold_spiritbond_b142() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17247,6 +17596,7 @@ pub fn lorehold_stoneveil_b142() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17297,6 +17647,7 @@ pub fn lorehold_spiritmender_b142() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17341,6 +17692,7 @@ pub fn lorehold_spellfire_b142() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17396,6 +17748,7 @@ pub fn lorehold_ember_acolyte_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17439,6 +17792,7 @@ pub fn lorehold_pyromancer_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17486,6 +17840,7 @@ pub fn lorehold_stonemason_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17528,6 +17883,7 @@ pub fn lorehold_inferno_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17580,6 +17936,7 @@ pub fn lorehold_spirit_bond_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17620,6 +17977,7 @@ pub fn lorehold_flamekeeper_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17673,6 +18031,7 @@ pub fn lorehold_battle_chant_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17718,6 +18077,7 @@ pub fn lorehold_ignis_b144() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17759,6 +18119,7 @@ pub fn lorehold_conjurer_b144() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17809,6 +18170,7 @@ pub fn lorehold_pyroflame_b144() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17862,6 +18224,7 @@ pub fn lorehold_spiritcaller_b145() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17903,6 +18266,7 @@ pub fn lorehold_inferno_acolyte_b145() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17943,6 +18307,7 @@ pub fn lorehold_knight_errant_b145() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -17982,6 +18347,7 @@ pub fn lorehold_embermage_b144() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18025,6 +18391,7 @@ pub fn lorehold_cinderscholar_b143() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18076,6 +18443,7 @@ pub fn lorehold_echocaller_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18118,6 +18486,7 @@ pub fn lorehold_spirit_glyph_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18158,6 +18527,7 @@ pub fn lorehold_ember_adept_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18199,6 +18569,7 @@ pub fn lorehold_pyresinger_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18244,6 +18615,7 @@ pub fn lorehold_spirit_burst_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18285,6 +18657,7 @@ pub fn lorehold_soulrender_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18334,6 +18707,7 @@ pub fn lorehold_battle_sage_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18375,6 +18749,7 @@ pub fn lorehold_pyrebound_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18425,6 +18800,7 @@ pub fn lorehold_spirit_decree_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18466,6 +18842,7 @@ pub fn lorehold_glyph_strike_b146() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18509,6 +18886,7 @@ pub fn lorehold_glyphcaster_b147() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18549,6 +18927,7 @@ pub fn lorehold_ironwarden_b147() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18593,6 +18972,7 @@ pub fn lorehold_pyrehowler_b147() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18643,6 +19023,7 @@ pub fn lorehold_cinderscry_b147() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18696,6 +19077,7 @@ pub fn spirit_banner_bearer_b147() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18745,6 +19127,7 @@ pub fn lorehold_lightcaller_b148() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18788,6 +19171,7 @@ pub fn lorehold_ember_wraith_b148() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18832,6 +19216,7 @@ pub fn lorehold_cinderlist_b148() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18872,6 +19257,7 @@ pub fn lorehold_skystalker_b148() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18920,6 +19306,7 @@ pub fn lorehold_spirit_smith_b148() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -18963,6 +19350,7 @@ pub fn lorehold_echobreaker_b149() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19003,6 +19391,7 @@ pub fn lorehold_eternal_phoenix_b149() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19043,6 +19432,7 @@ pub fn lorehold_pyre_stalker_b149() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19088,6 +19478,7 @@ pub fn lorehold_embermage_b150() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19128,6 +19519,7 @@ pub fn lorehold_spiritforge_b150() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19168,6 +19560,7 @@ pub fn lorehold_ancestor_b150() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19208,6 +19601,7 @@ pub fn lorehold_sparkmage_b150() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19256,6 +19650,7 @@ pub fn lorehold_bonfire_b150() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19296,6 +19691,7 @@ pub fn lorehold_spirit_tender_b150() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19339,6 +19735,7 @@ pub fn lorehold_ember_strike_b150() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19381,6 +19778,7 @@ pub fn lorehold_skirmisher_b151() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19431,6 +19829,7 @@ pub fn lorehold_pyrelore_b151() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19471,6 +19870,7 @@ pub fn lorehold_spirit_guide_b151() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19518,6 +19918,7 @@ pub fn lorehold_battlemage_b151() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19558,6 +19959,7 @@ pub fn lorehold_sun_spirit_b151() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19600,6 +20002,7 @@ pub fn lorehold_spirit_stalker_b152() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19643,6 +20046,7 @@ pub fn lorehold_ember_cleric_b152() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19683,6 +20087,7 @@ pub fn lorehold_pyre_ancient_b152() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19723,6 +20128,7 @@ pub fn lorehold_pyromancer_b152() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19768,6 +20174,7 @@ pub fn lorehold_spirit_surger_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19813,6 +20220,7 @@ pub fn lorehold_reflux_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19854,6 +20262,7 @@ pub fn lorehold_battlespirit_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19895,6 +20304,7 @@ pub fn lorehold_cinderspeaker_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19937,6 +20347,7 @@ pub fn lorehold_smiterite_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -19991,6 +20402,7 @@ pub fn lorehold_memoryflame_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20045,6 +20457,7 @@ pub fn lorehold_spirit_banner_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20091,6 +20504,7 @@ pub fn lorehold_stratagem_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20132,6 +20546,7 @@ pub fn lorehold_searingscholar_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20172,6 +20587,7 @@ pub fn lorehold_cinderward_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20221,6 +20637,7 @@ pub fn lorehold_strikeritual_b154() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20263,6 +20680,7 @@ pub fn lorehold_chronicler_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20309,6 +20727,7 @@ pub fn spirit_crusader_ii_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20349,6 +20768,7 @@ pub fn lorehold_reverent_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20391,6 +20811,7 @@ pub fn lorehold_ironscribe_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20431,6 +20852,7 @@ pub fn pillardrop_veteran_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20473,6 +20895,7 @@ pub fn lorehold_flamebrand_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20518,6 +20941,7 @@ pub fn lorehold_spirit_captain_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20568,6 +20992,7 @@ pub fn lorehold_pyromancer_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20621,6 +21046,7 @@ pub fn lorehold_banner_b156() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20668,6 +21094,7 @@ pub fn lorehold_marshal_b156() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20716,6 +21143,7 @@ pub fn lorehold_banner_bearer_b156() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20759,6 +21187,7 @@ pub fn lorehold_glyphbearer_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20799,6 +21228,7 @@ pub fn lorehold_watchspirit_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20841,6 +21271,7 @@ pub fn lorehold_spiritforge_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20886,6 +21317,7 @@ pub fn lorehold_pyrescholar_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20926,6 +21358,7 @@ pub fn lorehold_bonewright_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -20966,6 +21399,7 @@ pub fn lorehold_skystrider_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21011,6 +21445,7 @@ pub fn lorehold_battlechant_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21059,6 +21494,7 @@ pub fn lorehold_ancestralist_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21099,6 +21535,7 @@ pub fn lorehold_echocaller_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21137,6 +21574,7 @@ pub fn lorehold_pyrebolt_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21177,6 +21615,7 @@ pub fn lorehold_vanguard_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21221,6 +21660,7 @@ pub fn lorehold_spirit_caller_b155() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21263,6 +21703,7 @@ pub fn lorehold_wallscribe_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21303,6 +21744,7 @@ pub fn lorehold_embermage_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21343,6 +21785,7 @@ pub fn lorehold_spirit_drummer_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21383,6 +21826,7 @@ pub fn lorehold_stoneflame_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21423,6 +21867,7 @@ pub fn lorehold_reaver_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21463,6 +21908,7 @@ pub fn spirit_vanguard_ii_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21503,6 +21949,7 @@ pub fn lorehold_spectermage_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21543,6 +21990,7 @@ pub fn lorehold_spirit_caster_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21583,6 +22031,7 @@ pub fn lorehold_crusader_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21630,6 +22079,7 @@ pub fn lorehold_spellsong_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21683,6 +22133,7 @@ pub fn lorehold_spiritforger_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21724,6 +22175,7 @@ pub fn lorehold_stonewright_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21764,6 +22216,7 @@ pub fn lorehold_pyremage_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21815,6 +22268,7 @@ pub fn lorehold_spectral_lance_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21862,6 +22316,7 @@ pub fn lorehold_recallmage_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21903,6 +22358,7 @@ pub fn lorehold_spectral_watcher_b158() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21946,6 +22402,7 @@ pub fn lorehold_pyrescholar_b159() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -21986,6 +22443,7 @@ pub fn lorehold_sentinel_b159() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22026,6 +22484,7 @@ pub fn lorehold_ember_mage_b159() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22066,6 +22525,7 @@ pub fn lorehold_spectral_cavalry_b159() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22134,6 +22594,7 @@ pub fn lorehold_battlescroll_b159() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22176,6 +22637,7 @@ pub fn lorehold_spectralguard_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22217,6 +22679,7 @@ pub fn lorehold_sparkpriest_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22257,6 +22720,7 @@ pub fn lorehold_bonewright_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22307,6 +22771,7 @@ pub fn lorehold_recallsmith_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22347,6 +22812,7 @@ pub fn lorehold_ghostflame_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22388,6 +22854,7 @@ pub fn lorehold_pyresage_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22428,6 +22895,7 @@ pub fn lorehold_recoverer_b160() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22470,6 +22938,7 @@ pub fn lorehold_pyrescholar_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22528,6 +22997,7 @@ pub fn lorehold_cavalcade_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22574,6 +23044,7 @@ pub fn lorehold_wallflame_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22614,6 +23085,7 @@ pub fn lorehold_reckoner_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22654,6 +23126,7 @@ pub fn lorehold_spectralfist_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22694,6 +23167,7 @@ pub fn lorehold_pyreknight_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22738,6 +23212,7 @@ pub fn lorehold_tutorpriest_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22778,6 +23253,7 @@ pub fn lorehold_sparkspirit_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22818,6 +23294,7 @@ pub fn lorehold_ghostbinder_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22858,6 +23335,7 @@ pub fn lorehold_crackleflame_b161() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22900,6 +23378,7 @@ pub fn lorehold_bonelord_b162() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22940,6 +23419,7 @@ pub fn lorehold_spectralrider_b162() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -22980,6 +23460,7 @@ pub fn lorehold_brave_b162() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23023,6 +23504,7 @@ pub fn lorehold_battleweave_b162() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23069,6 +23551,7 @@ pub fn lorehold_spectralweaver_b162() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23111,6 +23594,7 @@ pub fn lorehold_coursemate_b163() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23151,6 +23635,7 @@ pub fn lorehold_pyrebound_b163() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23191,6 +23676,7 @@ pub fn lorehold_spirit_guard_b163() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23231,6 +23717,7 @@ pub fn lorehold_phantasm_b163() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23271,6 +23758,7 @@ pub fn lorehold_sparkling_spirit_b163() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23312,6 +23800,7 @@ pub fn lorehold_sparkscholar_b163() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23361,6 +23850,7 @@ pub fn lorehold_lightcage_b163() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23412,6 +23902,7 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23551,6 +24042,7 @@ pub fn lorehold_pyremender_b164() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23592,6 +24084,7 @@ pub fn lorehold_ghostflame_b164() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23632,6 +24125,7 @@ pub fn lorehold_skybinder_b164() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23672,6 +24166,7 @@ pub fn lorehold_ironforge_b164() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23790,6 +24285,7 @@ pub fn lorehold_flamebinder_b165() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23856,6 +24352,7 @@ pub fn lorehold_pyreguard_b165() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23895,6 +24392,7 @@ pub fn lorehold_braveheart_b165() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -23974,6 +24472,7 @@ pub fn rip_apart() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24045,6 +24544,7 @@ pub fn lorehold_sparkmage_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24085,6 +24585,7 @@ pub fn lorehold_spiritskirmisher_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24135,6 +24636,7 @@ pub fn lorehold_pyresmith_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24188,6 +24690,7 @@ pub fn lorehold_recall_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24228,6 +24731,7 @@ pub fn lorehold_pyreweaver_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24270,6 +24774,7 @@ pub fn lorehold_vandal_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24310,6 +24815,7 @@ pub fn lorehold_spectrescholar_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24347,6 +24853,7 @@ pub fn lorehold_charge_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24391,6 +24898,7 @@ pub fn lorehold_boltmage_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24431,6 +24939,7 @@ pub fn lorehold_battlespirit_b166() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24476,6 +24985,7 @@ pub fn lorehold_banisher_b167() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24516,6 +25026,7 @@ pub fn lorehold_champion_b167() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24556,6 +25067,7 @@ pub fn lorehold_strikewing_b167() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24602,6 +25114,7 @@ pub fn lorehold_inscription_b167() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -24642,6 +25155,7 @@ pub fn lorehold_spiritcaller_ii_b167() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26248,6 +26762,7 @@ pub fn returned_pastcaller() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26291,6 +26806,7 @@ pub fn lorehold_stoneward_b193() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26331,6 +26847,7 @@ pub fn lorehold_ravenrider_b193() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26371,6 +26888,7 @@ pub fn lorehold_boltstudent_b193() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26411,6 +26929,7 @@ pub fn lorehold_spiritsummoner_b193() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26451,6 +26970,7 @@ pub fn lorehold_pyrescholar_b193() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26491,6 +27011,7 @@ pub fn lorehold_sparkscholar_b193() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26539,6 +27060,7 @@ pub fn lorehold_soulsign_b193() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26582,6 +27104,7 @@ pub fn lorehold_boltscribe_b194() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26622,6 +27145,7 @@ pub fn lorehold_vanguard_ii_b194() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26665,6 +27189,7 @@ pub fn lorehold_bolt_b194() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26706,6 +27231,7 @@ pub fn lorehold_mausolescholar_b194() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26754,6 +27280,7 @@ pub fn lorehold_frostbreaker_b195() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26797,6 +27324,7 @@ pub fn lorehold_spiritcaller_b195() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26837,6 +27365,7 @@ pub fn lorehold_memoryguard_b195() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26878,6 +27407,7 @@ pub fn lorehold_pyrescribe_b195() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26921,6 +27451,7 @@ pub fn lorehold_lavalord_b196() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -26963,6 +27494,7 @@ pub fn lorehold_sparkward_b196() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27003,6 +27535,7 @@ pub fn lorehold_stormrider_b196() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27044,6 +27577,7 @@ pub fn lorehold_bookburn_b196() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27086,6 +27620,7 @@ pub fn lorehold_sparkmage_b197() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27126,6 +27661,7 @@ pub fn lorehold_brawnsage_b197() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27173,6 +27709,7 @@ pub fn lorehold_apprentice_ii_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27213,6 +27750,7 @@ pub fn lorehold_watchtower_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27254,6 +27792,7 @@ pub fn lorehold_pyromancer_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27295,6 +27834,7 @@ pub fn lorehold_sparkbinder_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27341,6 +27881,7 @@ pub fn lorehold_battlecaller_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27381,6 +27922,7 @@ pub fn lorehold_spiritbinder_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27422,6 +27964,7 @@ pub fn lorehold_burner_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27462,6 +28005,7 @@ pub fn lorehold_champion_b198() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27505,6 +28049,7 @@ pub fn lorehold_ember_b199() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27549,6 +28094,7 @@ pub fn lorehold_recurrence_b199() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27589,6 +28135,7 @@ pub fn lorehold_frontier_b199() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27630,6 +28177,7 @@ pub fn lorehold_boltscribe_b199() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27670,6 +28218,7 @@ pub fn lorehold_aegis_b199() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27711,6 +28260,7 @@ pub fn lorehold_sparkguard_b200() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27752,6 +28302,7 @@ pub fn lorehold_smite_b200() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27802,6 +28353,7 @@ pub fn lorehold_vanguard_b201() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27842,6 +28394,7 @@ pub fn lorehold_wildfire_b201() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27896,6 +28449,7 @@ pub fn lorehold_reanimator_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27937,6 +28491,7 @@ pub fn lorehold_pyromancer_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -27987,6 +28542,7 @@ pub fn lorehold_charge_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28028,6 +28584,7 @@ pub fn lorehold_spirit_caller_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28066,6 +28623,7 @@ pub fn lorehold_bolt_ii_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28106,6 +28664,7 @@ pub fn lorehold_battlescholar_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28154,6 +28713,7 @@ pub fn lorehold_excavate_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28205,6 +28765,7 @@ pub fn lorehold_frontlord_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28243,6 +28804,7 @@ pub fn lorehold_cleanse_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28289,6 +28851,7 @@ pub fn lorehold_echoblade_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28330,6 +28893,7 @@ pub fn lorehold_lavascholar_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28371,6 +28935,7 @@ pub fn lorehold_ghostsmith_b202() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28412,6 +28977,7 @@ pub fn lorehold_apprentice_b203() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28453,6 +29019,7 @@ pub fn lorehold_soulbinder_b203() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28497,6 +29064,7 @@ pub fn lorehold_spirit_sage_b203() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28534,6 +29102,7 @@ pub fn lorehold_strike_b203() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28574,6 +29143,7 @@ pub fn lorehold_ancestor_b203() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28613,6 +29183,7 @@ pub fn lorehold_spirit_squire_b203() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28656,6 +29227,7 @@ pub fn lorehold_battlemage_b204() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28696,6 +29268,7 @@ pub fn lorehold_pyromaster_b204() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28735,6 +29308,7 @@ pub fn lorehold_ardent_b204() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28772,6 +29346,7 @@ pub fn lorehold_flameburst_b204() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28816,6 +29391,7 @@ pub fn lorehold_spiritbringer_b204() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28868,6 +29444,7 @@ pub fn lorehold_battlescarred_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28913,6 +29490,7 @@ pub fn lorehold_echovenger_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -28961,6 +29539,7 @@ pub fn lorehold_vengescribe_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29006,6 +29585,7 @@ pub fn lorehold_grudgebearer_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29050,6 +29630,7 @@ pub fn lorehold_stoneguard_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29094,6 +29675,7 @@ pub fn lorehold_chroniclekeeper_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29135,6 +29717,7 @@ pub fn lorehold_warhost_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29176,6 +29759,7 @@ pub fn lorehold_emberhistorian_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29216,6 +29800,7 @@ pub fn lorehold_relicwarden_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29257,6 +29842,7 @@ pub fn lorehold_warchronicler_b205() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29301,6 +29887,7 @@ pub fn lorehold_skirmisher_b206() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29344,6 +29931,7 @@ pub fn lorehold_archivekeeper_b206() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29385,6 +29973,7 @@ pub fn lorehold_ember_veteran_b206() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29429,6 +30018,7 @@ pub fn lorehold_soulkindler_b207() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29469,6 +30059,7 @@ pub fn lorehold_cinderscribe_b207() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29509,6 +30100,7 @@ pub fn lorehold_battlecaller_b207() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29553,6 +30145,7 @@ pub fn lorehold_emberbolt_b207() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29602,6 +30195,7 @@ pub fn lorehold_relicsmith_b207() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29657,6 +30251,7 @@ pub fn lorehold_charge_ii_b207() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29697,6 +30292,7 @@ pub fn lorehold_vanguard_b207() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29743,6 +30339,7 @@ pub fn lorehold_vanguard_captain_b208() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29790,6 +30387,7 @@ pub fn lorehold_pyrohistorian_b208() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }
 
@@ -29830,5 +30428,6 @@ pub fn lorehold_skydefender_b208() -> CardDefinition {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     }
 }

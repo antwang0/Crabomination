@@ -92,6 +92,7 @@ fn color_identity_unions_mdfc_back_face_per_cr_903_4d() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
     let front = CardDefinition {
         name: "Synthetic Front",
@@ -124,6 +125,7 @@ fn color_identity_unions_mdfc_back_face_per_cr_903_4d() {
         adventure: None,
         plot_cost: None,
         split: None,
+        saga_chapters: vec![],
     };
     let id = color_identity(&front);
     assert!(id.contains(Color::Blue), "U should be in identity");
