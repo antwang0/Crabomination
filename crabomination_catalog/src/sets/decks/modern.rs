@@ -14955,6 +14955,85 @@ pub fn breezekeeper() -> CardDefinition {
     }
 }
 
+/// Teferi's Drake — {2}{U} 3/2 Drake. Flying, Phasing (CR 702.26).
+pub fn teferis_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Teferi's Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
+/// Frenetic Efreet — {1}{U}{R} 2/1 Efreet. Flying.
+/// `{0}: Flip a coin. Win → this phases out; lose → sacrifice it.` (CR 702.26)
+pub fn frenetic_efreet() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Frenetic Efreet",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Efreet],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::FlipCoin {
+                count: Value::Const(1),
+                on_heads: Box::new(Effect::PhaseOut { what: Selector::This }),
+                on_tails: Box::new(Effect::SacrificeSource),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Piercing Rays — {1}{W} Sorcery. "Exile target tapped creature."
+/// Forecast — {2}{W}, Reveal from hand: tap target untapped creature. (CR 702.56)
+pub fn piercing_rays() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Piercing Rays",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            from_hand: true,
+            once_per_turn: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::Untapped),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Reality Ripple — {1}{U} Instant. "Target artifact, creature, or land
 /// phases out." (CR 702.26)
 pub fn reality_ripple() -> CardDefinition {

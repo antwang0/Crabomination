@@ -35151,3 +35151,80 @@ fn steeling_stance_forecast_blocked_outside_upkeep() {
         target: Some(Target::Permanent(bear)), x_value: None,
     }).is_err(), "Forecast is upkeep-only");
 }
+
+/// Teferi's Drake (3/2 flyer) has Phasing and leaves play on its untap step.
+#[test]
+fn teferis_drake_phases_out() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::teferis_drake());
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "Teferi's Drake phased out");
+}
+
+/// Frenetic Efreet's {0} ability phases it out on a won flip.
+#[test]
+fn frenetic_efreet_phases_out_on_won_flip() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::frenetic_efreet());
+    g.clear_sickness(id);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // win
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("free activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "won flip → phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == id));
+}
+
+/// Frenetic Efreet sacrifices itself on a lost flip.
+#[test]
+fn frenetic_efreet_sacrifices_on_lost_flip() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::frenetic_efreet());
+    g.clear_sickness(id);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // lose
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("free activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "lost flip → sacrificed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "in graveyard");
+}
+
+/// Piercing Rays exiles a tapped creature; its Forecast taps from hand in upkeep.
+#[test]
+fn piercing_rays_exiles_tapped_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let rays = g.add_card_to_hand(0, catalog::piercing_rays());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rays, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Piercing Rays castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "tapped creature exiled");
+}
+
+/// Piercing Rays' Forecast taps a target untapped creature from hand in upkeep.
+#[test]
+fn piercing_rays_forecast_taps_from_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rays = g.add_card_to_hand(0, catalog::piercing_rays());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rays, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Forecast activatable from hand in upkeep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Forecast tapped the bear");
+    assert!(g.players[0].hand.iter().any(|c| c.id == rays), "card stays in hand");
+}
