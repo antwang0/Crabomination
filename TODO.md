@@ -20,6 +20,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Comparative Analysis, Containment Membrane, Boulder Salvo, Goblin Freerunner,
   Reckless Bushwhacker, Tyrant of Valakut (Surge); Kor Bladewhirl, Tajuru
   Warcaller (Rally); Wall of Resurgence, Cyclone Sire (animate-land riders).
+  - ⏳ **Awaken-cast UI targeting.** The client alt-cast modal now offers a
+    direct "Cast" for plain alt costs (Surge/Awaken/Emerge), but doesn't yet
+    drop into the targeting cursor for the awaken land (and any base target).
+    Bots/tests pass targets explicitly; the human UI needs an alt-cast →
+    targeting follow-up so Awaken's land slot can be chosen.
 - ⏳ **OGW/BFZ cards skipped this batch (need a primitive).**
   - **Oblivion Sower** — process-onto-battlefield (target opp exiles top 4,
     then put any number of *their* land cards from exile onto the battlefield

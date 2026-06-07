@@ -160,7 +160,9 @@ pub struct AltCastModal;
 #[derive(Component)]
 pub struct AltCastPitchButton {
     pub spell: CardId,
-    pub pitch: CardId,
+    /// `Some(card)` for pitch alt costs (exile a hand card); `None` for plain
+    /// alternative costs (Surge/Awaken/Emerge/Spectacle/Overload).
+    pub pitch: Option<CardId>,
 }
 
 #[derive(Component)]
@@ -184,6 +186,21 @@ pub fn spawn_alt_cast_modal(
     }
     let Some(spell_id) = state.pending else { return };
     let Some(cv) = &view.0 else { return };
+
+    // Look up the pending spell's alt-cost shape: pitch (exile a hand card)
+    // vs. plain alternative (Surge/Awaken/Emerge/Spectacle/Overload).
+    let (needs_pitch, alt_label) = cv
+        .players
+        .get(cv.your_seat)
+        .and_then(|p| {
+            p.hand.iter().find_map(|h| match h {
+                crabomination::net::HandCardView::Known(k) if k.id == spell_id => {
+                    Some((k.alt_cost_needs_pitch, k.alt_cost_label.clone()))
+                }
+                _ => None,
+            })
+        })
+        .unwrap_or((true, String::new()));
 
     // Collect candidate pitch cards: every other Known card in the viewer's
     // hand. The engine validates the filter and returns InvalidPitchCard if
@@ -232,19 +249,21 @@ pub fn spawn_alt_cast_modal(
                 BackgroundColor(theme::PANEL_BG),
             ))
             .with_children(|panel| {
+                let header = if needs_pitch {
+                    "Cast for alternative cost — pick a card to exile:".to_string()
+                } else if alt_label.is_empty() {
+                    "Cast for alternative cost?".to_string()
+                } else {
+                    format!("Cast for alternative cost ({alt_label})?")
+                };
                 panel.spawn((
-                    Text::new("Cast for alternative cost — pick a card to exile:"),
+                    Text::new(header),
                     ui_fonts.tf(15.0),
                     TextColor(theme::TEXT_PRIMARY),
                 ));
-                if candidates.is_empty() {
-                    panel.spawn((
-                        Text::new("(no other cards in hand to pitch)"),
-                        ui_fonts.tf(13.0),
-                        TextColor(theme::TEXT_SECONDARY),
-                    ));
-                }
-                for (pid, name) in candidates {
+                if !needs_pitch {
+                    // Plain alternative cost (Surge/Awaken/Emerge/Spectacle/
+                    // Overload): no hand card to exile — one confirm button.
                     panel
                         .spawn((
                             Button,
@@ -253,16 +272,45 @@ pub fn spawn_alt_cast_modal(
                                 ..default()
                             },
                             BackgroundColor(theme::BUTTON_INFO_BG),
-                            AltCastPitchButton { spell: spell_id, pitch: pid },
+                            AltCastPitchButton { spell: spell_id, pitch: None },
                         ))
                         .with_children(|b| {
                             b.spawn((
-                                Text::new(name),
+                                Text::new("Cast"),
                                 ui_fonts.tf(13.0),
                                 TextColor(theme::TEXT_PRIMARY),
                                 bevy::picking::Pickable::IGNORE,
                             ));
                         });
+                }
+                if needs_pitch && candidates.is_empty() {
+                    panel.spawn((
+                        Text::new("(no other cards in hand to pitch)"),
+                        ui_fonts.tf(13.0),
+                        TextColor(theme::TEXT_SECONDARY),
+                    ));
+                }
+                if needs_pitch {
+                    for (pid, name) in candidates {
+                        panel
+                            .spawn((
+                                Button,
+                                Node {
+                                    padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                                    ..default()
+                                },
+                                BackgroundColor(theme::BUTTON_INFO_BG),
+                                AltCastPitchButton { spell: spell_id, pitch: Some(pid) },
+                            ))
+                            .with_children(|b| {
+                                b.spawn((
+                                    Text::new(name),
+                                    ui_fonts.tf(13.0),
+                                    TextColor(theme::TEXT_PRIMARY),
+                                    bevy::picking::Pickable::IGNORE,
+                                ));
+                            });
+                    }
                 }
                 panel
                     .spawn((
@@ -305,7 +353,7 @@ pub fn handle_alt_cast_buttons(
         {
             outbox.submit(GameAction::CastSpellAlternative {
                 card_id: btn.spell,
-                pitch_card: Some(btn.pitch),
+                pitch_card: btn.pitch,
                 target: None,
                 additional_targets: vec![],
                 mode: None,

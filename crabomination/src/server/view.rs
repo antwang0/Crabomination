@@ -375,6 +375,17 @@ fn known_card(card: &CardInstance) -> KnownCard {
         card_types: card.definition.card_types.clone(),
         needs_target: card.definition.effect.requires_target(),
         has_alternative_cost: card.definition.alternative_cost.is_some(),
+        alt_cost_needs_pitch: card
+            .definition
+            .alternative_cost
+            .as_ref()
+            .is_some_and(|a| a.exile_filter.is_some()),
+        alt_cost_label: card
+            .definition
+            .alternative_cost
+            .as_ref()
+            .map(|a| format_mana_cost_for_label(&a.mana_cost))
+            .unwrap_or_default(),
         back_face_name: card
             .definition
             .back_face
@@ -2028,5 +2039,23 @@ mod tests {
         });
         let view = project(&state, 0);
         assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);
+    }
+
+    #[test]
+    fn known_card_distinguishes_pitch_from_plain_alt_cost() {
+        // Pyrokinesis exiles a red card (pitch) → needs_pitch = true.
+        let pitch = crate::card::CardInstance::new(
+            crate::card::CardId(1), catalog::pyrokinesis(), 0);
+        let k = known_card(&pitch);
+        assert!(k.has_alternative_cost);
+        assert!(k.alt_cost_needs_pitch, "Pyrokinesis pitches a card");
+
+        // Boulder Salvo's Surge is a plain alt cost (no exile) with a label.
+        let surge = crate::card::CardInstance::new(
+            crate::card::CardId(2), catalog::boulder_salvo(), 0);
+        let k2 = known_card(&surge);
+        assert!(k2.has_alternative_cost);
+        assert!(!k2.alt_cost_needs_pitch, "Surge needs no pitch");
+        assert_eq!(k2.alt_cost_label, "{1}{R}", "surge cost label rendered");
     }
 }

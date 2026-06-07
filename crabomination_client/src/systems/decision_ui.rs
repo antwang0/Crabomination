@@ -859,6 +859,7 @@ fn spawn_search_modal(
 ///   the player's own hand.
 /// - **Inquisition / Thoughtseize** — `Effect::DiscardChosen`. The caster
 ///   sees the target opponent's hand and picks for them.
+///
 /// Generic "pick cards from a list + Confirm" modal. Shared by the discard
 /// decision and the `ChooseCards` decision (forced sacrifice / graveyard
 /// exile-as-cost). `title` is the prompt shown above the grid; selection state
