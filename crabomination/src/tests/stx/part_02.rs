@@ -144,6 +144,41 @@ fn spined_karok_is_a_vanilla_two_four() {
 }
 
 #[test]
+fn brackish_trudge_recurs_from_graveyard_only_after_lifegain() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_graveyard(0, catalog::brackish_trudge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // No life gained this turn → activation rejected.
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(err.is_err(), "can't recur without having gained life this turn");
+    // Gain life, then it returns to hand.
+    g.players[0].life_gained_this_turn = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("{1}{B}: return after lifegain");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "returned to hand");
+}
+
+#[test]
+fn brackish_trudge_enters_tapped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::brackish_trudge());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Brackish Trudge castable for {2}{B}");
+    drain_stack(&mut g);
+    let bt = g.battlefield.iter().find(|c| c.definition.name == "Brackish Trudge").unwrap();
+    assert!(bt.tapped, "enters tapped");
+    assert_eq!((bt.power(), bt.toughness()), (4, 2));
+}
+
+#[test]
 fn vortex_runner_grows_and_unblockable_with_eight_lands() {
     use crate::card::Keyword;
     let mut g = two_player_game();

@@ -537,54 +537,33 @@ pub fn lash_of_malice() -> CardDefinition {
 /// Scripted deciders can probe other modes via `DecisionAnswer::Mode`.
 /// ✅ for the printed body; the trample-anthem mode is the only true
 /// approximation.
+/// Big Play — {1}{G} Instant. "Target creature gets +2/+2 and gains reach until
+/// end of turn. Put a +1/+1 counter on it."
 pub fn big_play() -> CardDefinition {
     use crate::card::{CounterType, Keyword};
     use crate::effect::Duration;
-    use crate::mana::r;
     CardDefinition {
         name: "Big Play",
-        cost: cost(&[generic(3), r(), w()]),
+        cost: cost(&[generic(1), g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: "Must attack" — collapsed to Tap + Stun on opp creature.
-            Effect::Seq(vec![
-                Effect::Tap {
-                    what: target_filtered(SelectionRequirement::Creature),
-                },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
-            ]),
-            // Mode 1: Tap + Stun target creature (Frost Trickster shape).
-            Effect::Seq(vec![
-                Effect::Tap {
-                    what: target_filtered(SelectionRequirement::Creature),
-                },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
-            ]),
-            // Mode 2: Grant Trample EOT to each friendly creature.
-            Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                body: Box::new(Effect::GrantKeyword {
-                    what: Selector::TriggerSource,
-                    keyword: Keyword::Trample,
-                    duration: Duration::EndOfTurn,
-                }),
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Reach,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
             },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

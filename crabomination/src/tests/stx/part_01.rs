@@ -1657,21 +1657,16 @@ fn lash_of_malice_kills_two_two_creature() {
         "Lash should kill a 2/2 via -2/-2 → 0/0 → SBA");
 }
 
-/// Big Play auto-picks mode 1 by default (Tap + Stun a target opp
-/// creature). With mode 1 wired as Tap + Stun against any creature,
-/// targeting an opp's bear should tap it and apply a stun counter.
+/// Big Play gives the target +2/+2 and reach until end of turn, plus a
+/// permanent +1/+1 counter.
 #[test]
-fn big_play_auto_picks_tap_and_stun() {
+fn big_play_pumps_grants_reach_and_a_counter() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(bear);
-    // Bear starts untapped.
-    assert!(!g.battlefield_find(bear).unwrap().tapped);
-
     let bp = g.add_card_to_hand(0, catalog::big_play());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: bp,
@@ -1679,43 +1674,14 @@ fn big_play_auto_picks_tap_and_stun() {
         additional_targets: vec![],
         mode: None, x_value: None,
     })
-    .expect("Big Play castable for {3}{R}{W}");
+    .expect("Big Play castable for {1}{G}");
     drain_stack(&mut g);
 
-    let bear_card = g.battlefield_find(bear).expect("bear still on bf");
-    assert!(bear_card.tapped, "Big Play should tap the target");
-    assert_eq!(
-        bear_card.counter_count(CounterType::Stun), 1,
-        "Big Play should leave a stun counter"
-    );
-}
-
-/// Big Play mode 2 (`mode: Some(2)`) grants Trample EOT to each
-/// friendly creature. We verify the keyword grant lands on a Grizzly
-/// Bears.
-#[test]
-fn big_play_mode_2_grants_trample_to_friendlies() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-
-    let bp = g.add_card_to_hand(0, catalog::big_play());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: bp,
-        target: None,
-        additional_targets: vec![],
-        mode: Some(2),
-        x_value: None,
-    })
-    .expect("Big Play castable for {3}{R}{W}");
-    drain_stack(&mut g);
-
-    let computed = g.computed_permanent(bear).unwrap();
-    assert!(computed.keywords.contains(&Keyword::Trample),
-        "Mode 2 should grant trample to the friendly bear");
+    let b = g.computed_permanent(bear).unwrap();
+    // 2/2 base + a +1/+1 counter + the +2/+2 EOT pump = 5/5.
+    assert_eq!((b.power, b.toughness), (5, 5));
+    assert!(b.keywords.contains(&Keyword::Reach), "gains reach EOT");
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
 // ── New STX cards added in modern_decks push ────────────────────────────────

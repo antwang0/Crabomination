@@ -37,43 +37,37 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 /// `exile-N-cards-from-gy` additional cost). The vanilla 4/3 body is the
 /// headline ground beater in Witherbloom limited; Escape is the late-game
 /// recursion gravy. Tests: `brackish_trudge_is_a_four_mana_lizard_horror`.
+/// Brackish Trudge — {2}{B} 4/2 Fungus Beast. "This creature enters tapped.
+/// {1}{B}: Return this card from your graveyard to your hand. Activate only if
+/// you gained life this turn."
 pub fn brackish_trudge() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Predicate};
     CardDefinition {
         name: "Brackish Trudge",
-        cost: cost(&[generic(2), b(), g()]),
-        supertypes: vec![],
+        cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Lizard, CreatureType::Horror],
+            creature_types: vec![CreatureType::Fungus, CreatureType::Beast],
             ..Default::default()
         },
         power: 4,
-        toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        toughness: 2,
+        // Enters tapped (self-tap ETB trigger).
+        triggered_abilities: vec![super::super::etb_tap()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            from_graveyard: true,
+            condition: Some(Predicate::LifeGainedThisTurnAtLeast {
+                who: PlayerRef::You,
+                at_least: Value::Const(1),
+            }),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
     }
 }
 
