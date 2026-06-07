@@ -1947,3 +1947,21 @@ fn ruin_processor_processes_for_life() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life + 5, "gained 5 from processing");
 }
+
+/// Akoum Firebird returns from the graveyard on landfall when {4}{R}{R} is paid.
+#[test]
+fn akoum_firebird_returns_on_landfall() {
+    use crate::card::Keyword;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let def = catalog::akoum_firebird();
+    assert!(def.keywords.contains(&Keyword::MustAttack) && def.keywords.contains(&Keyword::Flying));
+    let mut g = two_player_game();
+    let bird = g.add_card_to_graveyard(0, catalog::akoum_firebird());
+    let land = g.add_card_to_hand(0, catalog::mountain());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bird), "Firebird returns to battlefield");
+}

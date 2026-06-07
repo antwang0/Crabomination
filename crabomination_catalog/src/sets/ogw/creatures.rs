@@ -1805,6 +1805,35 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Akoum Firebird — {2}{R}{R} 3/3 Phoenix. Flying, haste, attacks each combat
+/// if able. Landfall — from your graveyard, you may pay {4}{R}{R} to return it
+/// to the battlefield.
+pub fn akoum_firebird() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef, Selector, ZoneDest};
+    CardDefinition {
+        name: "Akoum Firebird",
+        cost: cost(&[crate::mana::generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phoenix], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::MustAttack],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::FromYourGraveyard),
+            effect: Effect::MayPay {
+                description: "Pay {4}{R}{R}: return Akoum Firebird from your graveyard".into(),
+                mana_cost: cost(&[crate::mana::generic(4), r(), r()]),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Ruin Processor — {7} 7/8 Eldrazi Processor. When you cast it, you may put a
 /// card an opponent owns from exile into their graveyard; if you do, gain 5 life.
 pub fn ruin_processor() -> CardDefinition {

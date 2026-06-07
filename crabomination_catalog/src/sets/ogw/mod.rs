@@ -87,6 +87,7 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         sheer_drop,
         mires_malice,
         ruin_processor,
+        akoum_firebird,
         corpse_churn,
         tears_of_valakut,
         eldrazi_aggressor,
