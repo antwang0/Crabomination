@@ -237,6 +237,7 @@ impl Effect {
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
+            | Effect::ExileReturnNextEndStep { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
@@ -437,6 +438,7 @@ impl Effect {
             | Effect::ExileSameNameAsTarget { what }
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
+            | Effect::ExileReturnNextEndStep { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }

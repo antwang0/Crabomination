@@ -296,6 +296,26 @@ pub fn golden_ratio() -> CardDefinition {
     }
 }
 
+/// Semester's End — {3}{W} Instant. Exile target creature or planeswalker you
+/// control; at the next end step return it under its owner's control with an
+/// extra +1/+1 (creature) or loyalty (planeswalker) counter. (Printed as "any
+/// number of targets"; modeled single-target — no variable-target primitive.)
+pub fn semesters_end() -> CardDefinition {
+    CardDefinition {
+        name: "Semester's End",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ExileReturnNextEndStep {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Make Your Move — {2}{W} Instant. Destroy target artifact, enchantment, or
 /// creature with power 4 or greater.
 pub fn make_your_move() -> CardDefinition {

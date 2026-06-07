@@ -2379,6 +2379,53 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileReturnNextEndStep { what } => {
+                // Exile each resolved permanent now; register a per-card
+                // NextEndStep delayed trigger that returns it under its owner's
+                // control with an extra +1/+1 (creature) or loyalty (PW)
+                // counter. Semester's End.
+                use crate::card::CounterType;
+                use crate::game::types::{DelayedKind, DelayedTrigger};
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let EntityRef::Permanent(cid) = ent else { continue; };
+                    let is_pw = self
+                        .battlefield_find(cid)
+                        .is_some_and(|c| c.definition.is_planeswalker());
+                    self.remove_from_battlefield_to_exile(cid);
+                    if ctx.controller < self.players.len() {
+                        self.players[ctx.controller].cards_exiled_this_turn =
+                            self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
+                    }
+                    events.push(GameEvent::PermanentExiled { card_id: cid });
+                    let counter_kind = if is_pw {
+                        CounterType::Loyalty
+                    } else {
+                        CounterType::PlusOnePlusOne
+                    };
+                    let body = Effect::Seq(vec![
+                        Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                        Effect::AddCounter {
+                            what: Selector::Target(0),
+                            kind: counter_kind,
+                            amount: crate::effect::Value::Const(1),
+                        },
+                    ]);
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: DelayedKind::NextEndStep,
+                        effect: body,
+                        target: Some(Target::Permanent(cid)),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ExileTaggedWithSource { what } => {
                 let source = ctx.source;
                 for ent in self.resolve_selector(what, ctx) {

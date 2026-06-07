@@ -1713,6 +1713,11 @@ pub enum Effect {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
     },
+    /// Exile each resolved permanent, then return it to the battlefield under
+    /// its owner's control at the beginning of the next end step, entering with
+    /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).
+    /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
+    ExileReturnNextEndStep { what: Selector },
     Tap     { what: Selector },
     /// Untap every permanent the selector resolves to. The optional
     /// `up_to` cap limits the count to "up to N" — used by Frantic

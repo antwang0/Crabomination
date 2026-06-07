@@ -102,6 +102,30 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn semesters_end_blinks_creature_and_returns_with_counter_at_end_step() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::semesters_end());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Exiled now; not on the battlefield.
+    assert!(g.battlefield_find(bear).is_none(), "exiled by Semester's End");
+    assert!(g.exile.iter().any(|c| c.id == bear), "in exile");
+    // Advance to the end step so the delayed trigger returns it.
+    while g.step != crate::game::types::TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let back = g.battlefield_find(bear).expect("returned at end step");
+    assert_eq!((back.power(), back.toughness()), (3, 3), "returns with a +1/+1 counter");
+}
+
+#[test]
 fn make_your_move_hits_big_creature_and_artifact_but_not_small_creature() {
     let mut g = two_player_game();
     let big = g.add_card_to_battlefield(1, catalog::gnarled_professor()); // 5/4
