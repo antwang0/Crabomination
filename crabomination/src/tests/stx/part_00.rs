@@ -714,11 +714,11 @@ fn frost_trickster_taps_and_stuns_target_on_etb() {
     let id = g.add_card_to_hand(0, catalog::frost_trickster());
 
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Frost Trickster castable for {1}{U}");
+    .expect("Frost Trickster castable for {2}{U}");
     drain_stack(&mut g);
 
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();

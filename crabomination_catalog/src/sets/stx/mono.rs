@@ -205,25 +205,22 @@ pub fn owlin_shieldmage() -> CardDefinition {
 
 // ── Frost Trickster ─────────────────────────────────────────────────────────
 
-/// Frost Trickster — {1}{U} Creature — Spirit Wizard. Flash, flying, 2/2.
-/// "When this creature enters, tap target creature an opponent controls.
-/// That creature doesn't untap during its controller's next untap step."
-///
-/// Modeled as "When this enters, tap target creature an opponent controls
-/// and put a stun counter on it" — close enough for the demo (a stun
-/// counter prevents the next untap, matching the printed line).
+/// Frost Trickster — {2}{U} 2/2 Bird Wizard with flying. "When this creature
+/// enters, tap target creature an opponent controls. That creature doesn't
+/// untap during its controller's next untap step." (Modeled as tap + a stun
+/// counter, which prevents the next untap.)
 pub fn frost_trickster() -> CardDefinition {
     CardDefinition {
         name: "Frost Trickster",
-        cost: cost(&[generic(1), u()]),
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Flash, Keyword::Flying],
+        keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),

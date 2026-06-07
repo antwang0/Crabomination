@@ -459,24 +459,32 @@ fn archmage_emeritus_does_not_draw_on_creature_cast() {
 }
 
 #[test]
-fn promising_duskmage_drains_on_instant_cast() {
+fn promising_duskmage_draws_on_death_only_with_a_counter() {
+    // With a +1/+1 counter → dies → draw a card.
     let mut g = two_player_game();
-    let _pdm = g.add_card_to_battlefield(0, catalog::promising_duskmage());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let p0_life_before = g.players[0].life;
-    let p1_life_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Bolt castable for {R}");
+    g.add_card_to_library(0, catalog::island());
+    let pdm = g.add_card_to_battlefield(0, catalog::promising_duskmage());
+    g.battlefield_find_mut(pdm).unwrap()
+        .counters.insert(crate::card::CounterType::PlusOnePlusOne, 1);
+    let hand_before = g.players[0].hand.len();
+    g.battlefield_find_mut(pdm).unwrap().damage = 5; // lethal
+    let ev = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&ev);
     drain_stack(&mut g);
-    // Bolt deals 3 + magecraft loses 1 = 4 total to P1.
-    assert_eq!(g.players[1].life, p1_life_before - 4,
-        "P1 takes 3 (Bolt) + 1 (magecraft drain) = 4 damage");
-    // P0 gains 1 from the drain.
-    assert_eq!(g.players[0].life, p0_life_before + 1,
-        "P0 gains 1 from magecraft drain");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "death with a counter draws");
+}
+
+#[test]
+fn promising_duskmage_no_draw_without_a_counter() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let pdm = g.add_card_to_battlefield(0, catalog::promising_duskmage());
+    let hand_before = g.players[0].hand.len();
+    g.battlefield_find_mut(pdm).unwrap().damage = 5;
+    let ev = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "no counter → no draw");
 }
 
 #[test]

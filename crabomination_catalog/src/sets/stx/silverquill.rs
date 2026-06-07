@@ -467,31 +467,35 @@ pub fn archmage_emeritus() -> CardDefinition {
 // ── Promising Duskmage ──────────────────────────────────────────────────────
 
 /// Promising Duskmage — {2}{W}{B}, 2/2 Inkling Wizard. Flying.
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// target opponent loses 1 life and you gain 1 life."
-///
-/// The Witherbloom-style drain payoff in Silverquill colours — the
-/// `magecraft_drain_each_opp(1)` shortcut emits the canonical
-/// `Effect::Drain { from: EachOpponent, to: You, amount: 1 }` so the
-/// life swap is atomic. The printed Oracle says "target opponent"
-/// (single); the shortcut collapses to each-opponent for the auto-
-/// target friendliness — in a 1v1 game this is identical, and in a
-/// 4-player game it's strictly better (which is fine for an Inkling
-/// 2/2 flyer at four mana).
+/// Promising Duskmage — {2}{B} 2/3 Human Warlock. "When this creature dies, if
+/// it had a +1/+1 counter on it, draw a card." (Reads the dying card's
+/// counters via last-known information.)
 pub fn promising_duskmage() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, Predicate, TriggeredAbility};
     CardDefinition {
         name: "Promising Duskmage",
-        cost: cost(&[generic(2), w(), b()]),
+        cost: cost(&[generic(2), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
             ..Default::default()
         },
         power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(1),
+                ),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
         ..Default::default()
     }
 }
