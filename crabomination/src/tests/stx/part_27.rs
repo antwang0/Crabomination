@@ -102,6 +102,37 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn sticky_fingers_grants_menace_and_mints_treasure_on_combat_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let aura = g.add_card_to_hand(0, catalog::sticky_fingers());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("aura castable");
+    drain_stack(&mut g);
+    let computed = g.compute_battlefield();
+    let cb = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(cb.keywords.contains(&Keyword::Menace), "grants menace");
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker: bear, target: crate::game::AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != crate::game::types::TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "combat damage to a player mints a Treasure");
+}
+
+#[test]
 fn exponential_growth_doubles_power_x_times() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2

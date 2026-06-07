@@ -387,6 +387,39 @@ pub fn detention_vortex() -> CardDefinition {
     }
 }
 
+/// Sticky Fingers — {R} Aura. Enchant creature. The enchanted creature has
+/// menace and "Whenever this creature deals combat damage to a player, create
+/// a Treasure token."
+pub fn sticky_fingers() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Sticky Fingers",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Menace],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 // ── Creatures ────────────────────────────────────────────────────────────────
 
 /// Gnarled Professor — {2}{G}{G} 5/4 Treefolk Druid with trample. ETB: Learn.

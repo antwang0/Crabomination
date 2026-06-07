@@ -4235,6 +4235,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::double_major,
         super::reject,
         super::detention_vortex,
+        super::sticky_fingers,
         super::devouring_tendrils,
         super::study_break,
         super::golden_ratio,
