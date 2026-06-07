@@ -324,10 +324,10 @@ pub fn elemental_masterpiece() -> CardDefinition {
 
 /// Detention Vortex — {W} Aura. Enchant nonland permanent. The enchanted
 /// permanent can't attack or block, and its activated abilities can't be
-/// activated (CR 602.5c). (The opponent-only `{3}: Destroy this Aura` escape
-/// clause is dropped — no "only your opponents may activate" path yet.)
+/// activated (CR 602.5c). `{3}: Destroy this Aura.` — only your opponents may
+/// activate this ability and only as a sorcery.
 pub fn detention_vortex() -> CardDefinition {
-    use crate::card::{EnchantmentSubtype, EquipBonus};
+    use crate::card::{ActivatedAbility, EnchantmentSubtype, EquipBonus};
     CardDefinition {
         name: "Detention Vortex",
         cost: cost(&[w()]),
@@ -348,6 +348,13 @@ pub fn detention_vortex() -> CardDefinition {
             ],
             ..Default::default()
         }),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            effect: Effect::Destroy { what: Selector::This },
+            sorcery_speed: true,
+            opponents_only: true,
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

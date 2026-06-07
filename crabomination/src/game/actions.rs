@@ -5153,14 +5153,21 @@ impl GameState {
             return Err(GameError::CardNotOnBattlefield(card_id));
         }
 
-        // Only the controller (or graveyard/hand owner) can activate abilities.
+        // Only the controller (or graveyard/hand owner) can activate abilities,
+        // except abilities flagged `opponents_only` (CR 602.5 — Detention
+        // Vortex's escape clause), which only an opponent of the controller may.
         if source_in_gy || source_in_hand {
             if source_owner != Some(p) {
                 return Err(GameError::NotYourPriority);
             }
         } else {
             let pos = self.battlefield.iter().position(|c| c.id == card_id).unwrap();
-            if self.battlefield[pos].controller != p {
+            let controller = self.battlefield[pos].controller;
+            if ability.opponents_only {
+                if self.same_team(controller, p) {
+                    return Err(GameError::NotYourPriority);
+                }
+            } else if controller != p {
                 return Err(GameError::NotYourPriority);
             }
         }

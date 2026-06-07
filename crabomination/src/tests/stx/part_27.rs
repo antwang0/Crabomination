@@ -417,6 +417,36 @@ fn detention_vortex_locks_activated_abilities() {
     assert!(err.is_err(), "activated abilities are locked while enchanted");
 }
 
+#[test]
+fn detention_vortex_only_opponents_destroy_the_aura() {
+    // The {3}: Destroy this Aura escape clause may only be activated by an
+    // opponent of the Aura's controller, and only at sorcery speed.
+    let mut g = two_player_game();
+    let prowler = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::detention_vortex());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(prowler)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("aura castable");
+    drain_stack(&mut g);
+    // Controller (P0) can't activate the opponent-only escape.
+    g.players[0].mana_pool.add_colorless(3);
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(err.is_err(), "the Aura's controller can't activate the escape");
+    // The opponent (P1), on their turn at sorcery speed, can.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: aura, ability_index: 0, target: None, x_value: None,
+    }).expect("an opponent may activate the escape");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "the Aura is destroyed");
+}
+
 // ── Creatures ────────────────────────────────────────────────────────────────
 
 #[test]

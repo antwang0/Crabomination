@@ -604,6 +604,12 @@ pub struct ActivatedAbility {
     /// Defaults to false via `#[serde(default)]`.
     #[serde(default)]
     pub return_self_cost: bool,
+    /// CR 602.5 — "Only your opponents may activate this ability." When true,
+    /// the source permanent's controller is barred from activating it; only an
+    /// opponent (a player not on the controller's team) may. Powers Detention
+    /// Vortex's `{3}: Destroy this Aura` escape clause. Defaults to false.
+    #[serde(default)]
+    pub opponents_only: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
