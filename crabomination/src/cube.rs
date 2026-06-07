@@ -310,11 +310,11 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks: mana-fixing artifact land ──
         power_depot,
         // ── Modern utility artifacts ──
-        // coalition_relic — 🟡 charge-counter burst ability omitted
+        coalition_relic,
         ghost_vacuum,
         krark_clan_ironworks,
-        // karn_scion_of_urza — 🟡 artifact-count scaling and ult omitted
-        // pentad_prism     — 🟡 Sunburst collapses to flat 2 counters
+        karn_scion_of_urza,
+        pentad_prism,
         // ── modern_decks-14 ──
         mortuary_mire,
         geier_reach_sanitarium,
@@ -1088,7 +1088,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cryptic_command,
         gush,
         mystical_tutor,
-        // dandan         — 🟡 "can attack only if defending player controls an Island" omitted
+        dandan,
         turnabout,
         remand,
         storm_crow,
@@ -1383,7 +1383,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         griselbrand,
         dark_confidant,
         bloodghast,
-        // ichorid           — 🟡 "opponent has a black creature in graveyard" gate omitted
+        ichorid,
         silversmote_ghoul,
         bitterbloom_bearer,
         // dread_return      — 🟡 flashback sac-3-creatures additional cost omitted
@@ -1392,7 +1392,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         bloodchiefs_thirst,
         collective_brutality,
         deadly_dispute,
-        // indulgent_tormentor — 🟡 opponent choice collapsed to always-drain-3
+        indulgent_tormentor,
         damnation,
         diabolic_tutor,
         imperial_seal,
@@ -1441,7 +1441,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cruel_celebrant,
         mayhem_devil,
         beacon_of_destruction,
-        // tezzeret_cruel_captain — 🟡 static (+1/+1 to artifact creatures) and ult omitted
+        tezzeret_cruel_captain,
         // ── modern_decks-14 ──
         cremate,
         // ── modern_decks-15 ──
@@ -1524,7 +1524,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Red) {
         v.push(terminate);
         v.push(voldaren_epicure);
-        // bloodtithe_harvester — 🟡 sac-Blood ping ability omitted
+        v.push(bloodtithe_harvester);
         v.push(drossforge_bridge);
         v.push(raucous_theater);
         // ── modern_decks-15 (BR cross-pool removal) ──
@@ -1796,10 +1796,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         reckless_abandon,
         fiery_temper,
         big_game_hunter,
-        // tarfire 🟡 — Kindred/Tribal type fully omitted from engine
-        // (the printed Kindred Goblin subtype doesn't grant any tribal
-        // payoff today). The 2-damage-to-any-target body works end-to-
-        // end. Activated.
+        // tarfire — Kindred Goblin instant; now faithful (CardType::Kindred +
+        // Goblin subtype). The 2-damage-to-any-target body works end-to-end.
         tarfire,
         shivan_dragon,
         goblin_guide,
@@ -1823,7 +1821,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         grim_lavamancer,
         // divide-damage via Effect::DealDamageDivided (now faithful)
         pyrokinesis,
-        // simian_spirit_guide — 🟡 "exile from hand: add {R}" alt-mana ability missing
+        simian_spirit_guide,
         pyroclasm,
         lightning_strike,
         goblin_bombardment,
@@ -1849,7 +1847,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         magda_brazen_outlaw,
         stone_rain,
         earthquake,
-        // chaos_warp      — 🟡 "reveal top card; cast if permanent" half omitted
+        chaos_warp,
         // power-scaled sweep on combat damage (now faithful via PowerOf(This))
         balefire_dragon,
         // ── modern_decks-14 ──
@@ -1976,7 +1974,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Black) {
         v.push(terminate);
         v.push(voldaren_epicure);
-        // bloodtithe_harvester — 🟡 sac-Blood ping ability omitted
+        v.push(bloodtithe_harvester);
         v.push(drossforge_bridge);
         v.push(raucous_theater);
         // ── modern_decks-15 (BR cross-pool removal) ──
@@ -2248,7 +2246,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         epic_confrontation,
         wild_mongrel,
         carnage_tyrant,
-        // elvish_reclaimer         — 🟡 Threshold pump (+3/+2 with 7+ in graveyard) omitted
+        elvish_reclaimer,
         // rofellos_llanowar_emissary ✅ (was 🟡) — push (claude/modern_decks):
         // Forest-count multiplier now wired via
         // `ManaPayload::OfColor(Green, Value::Times(2, CountOf(Forest)))`.
