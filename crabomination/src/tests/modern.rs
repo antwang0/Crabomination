@@ -35053,3 +35053,39 @@ fn the_great_henge_mana_life_and_etb_payoff() {
     assert_eq!((b.power(), b.toughness()), (3, 3), "nontoken creature got a +1/+1 counter");
     assert_eq!(g.players[0].library.len(), lib_before - 1, "Henge drew a card");
 }
+
+/// Mana Vault taps for {C}{C}{C}, doesn't untap, and deals 1 to you at upkeep
+/// while tapped.
+#[test]
+fn mana_vault_taps_for_three_and_burns_at_upkeep() {
+    let mut g = two_player_game();
+    let mv = g.add_card_to_battlefield(0, catalog::mana_vault());
+    g.clear_sickness(mv);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mv, ability_index: 0, target: None, x_value: None,
+    }).expect("tap Mana Vault");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 3, "added {{C}}{{C}}{{C}}");
+    g.do_untap();
+    assert!(g.battlefield_find(mv).unwrap().tapped, "Mana Vault doesn't untap");
+    let life = g.players[0].life;
+    g.fire_step_triggers(crate::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 1, "1 damage at upkeep while tapped");
+}
+
+/// Chromatic Lantern grants your lands "{T}: Add one mana of any color".
+#[test]
+fn chromatic_lantern_lets_lands_tap_for_any_color() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::chromatic_lantern());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.clear_sickness(forest);
+    // The granted "{T}: add any color" is a virtual ability at index 1 (after
+    // the Forest's printed "{T}: add {G}").
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest, ability_index: 1, target: None, x_value: None,
+    }).expect("Forest taps via Chromatic Lantern's granted ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "Forest produced one mana");
+}

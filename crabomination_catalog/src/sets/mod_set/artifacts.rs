@@ -1581,3 +1581,86 @@ pub fn the_great_henge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mana Vault — {0} Artifact. Doesn't untap during your untap step. "{T}: Add
+/// {C}{C}{C}." "{4}: Untap this artifact." "At the beginning of your upkeep, if
+/// Mana Vault is tapped, it deals 1 damage to you." (The "you may pay {4}" to
+/// avoid the damage is collapsed to always taking it — the usual line.)
+pub fn mana_vault() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::Predicate;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Mana Vault",
+        cost: cost(&[generic(0)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Mana Vault doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(3)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::Untap { what: Selector::This, up_to: None },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::This,
+                    filter: SelectionRequirement::Tapped,
+                },
+                then: Box::new(Effect::DealDamage { to: Selector::You, amount: Value::Const(1) }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chromatic Lantern — {3} Artifact. "Lands you control have '{T}: Add one mana
+/// of any color.'" "{T}: Add one mana of any color." The land-granting clause
+/// uses `StaticEffect::GrantActivatedAbility`.
+pub fn chromatic_lantern() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Chromatic Lantern",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control have \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

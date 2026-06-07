@@ -272,6 +272,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         myr_enforcer,
         chief_of_the_foundry,
         sol_ring,
+        mana_vault,
+        chromatic_lantern,
         ornithopter,
         ornithopter_of_paradise,
         mind_stone,
