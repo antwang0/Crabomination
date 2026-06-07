@@ -2031,6 +2031,20 @@ pub enum Effect {
         what: Selector,
         cost: crate::card::WardCost,
     },
+    /// "Unless [who] pays [cost], [then]." The generic Rhystic-tax rider:
+    /// resolve `who` to a player (typically `PlayerRef::Triggerer` — the
+    /// opponent who cast the spell / drew the card), ask them yes/no whether to
+    /// pay `cost`, and if they decline or can't afford it, resolve `then` (in
+    /// the trigger's own context, so `PlayerRef::You` in `then` is the rider's
+    /// controller). Powers Rhystic Study, Mystic Remora, Esper Sentinel
+    /// (draw), Smothering Tithe (Treasure), Indulgent Tormentor, etc. The
+    /// AutoDecider declines to pay by default (the conservative line — let the
+    /// effect happen). When `who` resolves to no one, `then` resolves outright.
+    UnlessPlayerPays {
+        who: PlayerRef,
+        cost: crate::card::WardCost,
+        then: Box<Effect>,
+    },
     /// Copy target spell/ability `count` times.
     CopySpell    { what: Selector, count: Value },
     /// Copy target spell **unless** its caster pays `mana_cost`. Used by

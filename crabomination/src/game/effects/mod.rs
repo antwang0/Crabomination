@@ -3985,6 +3985,52 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::UnlessPlayerPays { who, cost, then } => {
+                // Rhystic-tax rider: resolve the taxed player, ask them yes/no
+                // whether to pay `cost`, and resolve `then` if they don't (or
+                // can't). `then` runs in this same context, so its
+                // `PlayerRef::You` is the rider's controller.
+                use crate::card::WardCost;
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(payer) = self.resolve_player(who, ctx) else {
+                    return self.run_effect(then, ctx, events);
+                };
+                // AutoDecider declines (false) — let the effect resolve.
+                let wants_to_pay = matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source: ctx.source.unwrap_or(CardId(0)),
+                        description: "Pay the tax to prevent the triggered effect?".to_string(),
+                    }),
+                    DecisionAnswer::Bool(true),
+                );
+                let paid = wants_to_pay
+                    && match cost {
+                        WardCost::Mana(mc) => {
+                            let saved = self.priority.player_with_priority;
+                            self.priority.player_with_priority = payer;
+                            let ok = self.try_pay_with_auto_tap(payer, mc).is_ok();
+                            self.priority.player_with_priority = saved;
+                            ok
+                        }
+                        WardCost::Life(n) => {
+                            let n = *n as i32;
+                            if self.effective_life(payer) >= n {
+                                self.adjust_life(payer, -n);
+                                true
+                            } else {
+                                false
+                            }
+                        }
+                        // Discard / sacrifice costs aren't used by the
+                        // tax-rider cards; treat as unpaid so the effect runs.
+                        _ => false,
+                    };
+                if !paid {
+                    self.run_effect(then, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::CounterAbility { what } => {
                 // Counter target activated/triggered ability. The selector
                 // resolves to a permanent (the ability's source); we remove

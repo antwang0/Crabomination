@@ -247,6 +247,7 @@ impl Effect {
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. } => sel_has_target(what),
+            Effect::UnlessPlayerPays { then, .. } => then.requires_target(),
             Effect::PumpPT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
@@ -451,6 +452,7 @@ impl Effect {
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
             | Effect::GainControl { what, .. } => sel_filter(what),
+            Effect::UnlessPlayerPays { then, .. } => then.primary_target_filter(),
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
             | Effect::RemoveAllCounters { what }
@@ -859,6 +861,7 @@ impl Effect {
             | Effect::CounterAbility { .. }
             | Effect::CounterUnlessPaid { .. }
             | Effect::CounterUnless { .. } => false,
+            Effect::UnlessPlayerPays { then, .. } => then.accepts_player_target(),
             // Permanent-targeting effects: skip Player.
             Effect::Destroy { .. }
             | Effect::DestroyNoRegen { .. }
@@ -1114,6 +1117,7 @@ impl Effect {
                 | Effect::CounterUnless { what, .. }
                 | Effect::Suspect { what }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
+                Effect::UnlessPlayerPays { then, .. } => eff_find(then, slot, mode, kicked),
                 Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }

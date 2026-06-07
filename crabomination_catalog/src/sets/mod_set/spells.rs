@@ -361,8 +361,8 @@ pub fn return_to_dust() -> CardDefinition {
 }
 
 /// Rhystic Study — {2}{U} Enchantment. "Whenever an opponent casts a spell, you
-/// may draw a card unless that player pays {1}." Simplified to an unconditional
-/// draw on each opponent's cast (the "unless they pay {1}" tax is dropped).
+/// may draw a card unless that player pays {1}." The caster is asked to pay {1}
+/// (`UnlessPlayerPays`, `PlayerRef::Triggerer`); if they decline/can't, you draw.
 pub fn rhystic_study() -> CardDefinition {
     CardDefinition {
         name: "Rhystic Study",
@@ -370,16 +370,20 @@ pub fn rhystic_study() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::Triggerer,
+                cost: crate::card::WardCost::generic(1),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
         }],
         ..Default::default()
     }
 }
 
 /// Mystic Remora — {U} Enchantment. "Whenever an opponent casts a noncreature
-/// spell, you may draw a card unless that player pays {4}." Simplified to an
-/// unconditional draw on each opponent's noncreature cast (the {4} tax and the
-/// cumulative-upkeep cost are dropped).
+/// spell, you may draw a card unless that player pays {4}." The caster is asked
+/// to pay {4} (`UnlessPlayerPays`); if they decline/can't, you draw. (The
+/// cumulative-upkeep maintenance cost is still omitted.)
 pub fn mystic_remora() -> CardDefinition {
     CardDefinition {
         name: "Mystic Remora",
@@ -391,7 +395,11 @@ pub fn mystic_remora() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Noncreature,
                 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::Triggerer,
+                cost: crate::card::WardCost::generic(4),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
         }],
         ..Default::default()
     }
@@ -399,7 +407,7 @@ pub fn mystic_remora() -> CardDefinition {
 
 /// Smothering Tithe — {3}{W} Enchantment. "Whenever an opponent draws a card,
 /// that player may pay {2}. If they don't, you create a Treasure token."
-/// Simplified to always creating a Treasure on each opponent's draw.
+/// (`UnlessPlayerPays`, `PlayerRef::Triggerer` = the drawing opponent.)
 pub fn smothering_tithe() -> CardDefinition {
     CardDefinition {
         name: "Smothering Tithe",
@@ -407,10 +415,14 @@ pub fn smothering_tithe() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: crate::game::effects::treasure_token(),
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::Triggerer,
+                cost: crate::card::WardCost::generic(2),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::treasure_token(),
+                }),
             },
         }],
         ..Default::default()

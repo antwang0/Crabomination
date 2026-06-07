@@ -35285,6 +35285,27 @@ fn rhystic_study_draws_when_opponent_casts() {
     assert_eq!(g.players[0].library.len(), lib - 1, "Rhystic Study drew a card");
 }
 
+/// When the opponent pays the {1} tax, Rhystic Study draws nothing.
+#[test]
+fn rhystic_study_no_draw_when_opponent_pays() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rhystic_study());
+    g.add_card_to_library(0, catalog::shock());
+    let lib = g.players[0].library.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // opponent pays
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1); // spare {1} to pay the tax
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib, "opponent paid {{1}} → no draw");
+}
+
 #[test]
 fn mystic_remora_draws_on_opponent_noncreature() {
     let mut g = two_player_game();

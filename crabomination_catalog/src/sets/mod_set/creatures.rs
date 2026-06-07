@@ -8640,9 +8640,9 @@ pub fn impassioned_orator() -> CardDefinition {
 
 /// Esper Sentinel — {W} Creature — Human Artificer 1/1. "Whenever an opponent
 /// casts their first noncreature spell each turn, draw a card unless that player
-/// pays {X}, where X is Esper Sentinel's power." Simplified to an unconditional
-/// draw on each opponent's noncreature cast (the "first each turn" gate and the
-/// power-scaled tax are dropped).
+/// pays {X}, where X is Esper Sentinel's power." The caster is asked to pay {1}
+/// (`UnlessPlayerPays`); if they decline/can't, you draw. (The "first each turn"
+/// gate and the power-scaled — vs fixed {1} — tax are still simplified.)
 pub fn esper_sentinel() -> CardDefinition {
     use crate::effect::Predicate;
     CardDefinition {
@@ -8661,7 +8661,11 @@ pub fn esper_sentinel() -> CardDefinition {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Noncreature,
                 }),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            effect: Effect::UnlessPlayerPays {
+                who: PlayerRef::Triggerer,
+                cost: crate::card::WardCost::generic(1),
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            },
         }],
         ..Default::default()
     }
