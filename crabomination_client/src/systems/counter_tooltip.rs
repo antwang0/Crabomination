@@ -424,6 +424,19 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(String::from("(monstrous)"));
     }
 
+    // CR 714 — Saga chapter progress. The current chapter is the Lore counter
+    // count; `saga_final_chapter` is the highest chapter number (sacrificed
+    // after it resolves).
+    if let Some(final_ch) = p.saga_final_chapter {
+        let lore = p
+            .counters
+            .iter()
+            .find(|(k, _)| *k == CounterType::Lore)
+            .map(|(_, n)| *n)
+            .unwrap_or(0);
+        lines.push(format!("(saga — chapter {lore} / {final_ch})"));
+    }
+
     // Marked damage: every creature with non-zero damage is one toughness-
     // threshold away from death. Surface "marked: N damage" plus a
     // (lethal? Y/N) shorthand so the player sees at a glance how close

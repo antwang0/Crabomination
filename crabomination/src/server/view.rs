@@ -403,6 +403,12 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .unwrap_or_default(),
         modal_descriptions,
         modal_needs_target,
+        saga_final_chapter: card
+            .definition
+            .saga_chapters
+            .iter()
+            .map(|(n, _)| *n)
+            .max(),
     }
 }
 
@@ -551,6 +557,12 @@ fn project_permanent(
         soulbond_partner: card
             .soulbond_partner
             .filter(|p| battlefield.iter().any(|o| o.id == *p)),
+        saga_final_chapter: card
+            .definition
+            .saga_chapters
+            .iter()
+            .map(|(n, _)| *n)
+            .max(),
     }
 }
 

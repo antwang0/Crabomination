@@ -575,6 +575,12 @@ pub struct KnownCard {
     /// mode pick or to fire the cast immediately.
     #[serde(default)]
     pub modal_needs_target: Vec<bool>,
+    /// CR 714 — for a Saga, its final (highest) chapter number, so the client
+    /// can render "Chapter N / final" alongside the lore-counter chip. `None`
+    /// for non-Saga cards. The current chapter is the card's Lore counter
+    /// count (already surfaced via the generic counter display).
+    #[serde(default)]
+    pub saga_final_chapter: Option<u32>,
 }
 
 /// One activated ability as projected for the client.
@@ -912,6 +918,11 @@ pub struct PermanentView {
     /// (unpaired) case. Populated by `project_permanent`.
     #[serde(default)]
     pub soulbond_partner: Option<CardId>,
+    /// CR 714 — for a Saga, its final (highest) chapter number. With the Lore
+    /// counter count (in `counters`) the client renders "Chapter N / final".
+    /// `None` for non-Sagas. Populated by `project_permanent`.
+    #[serde(default)]
+    pub saga_final_chapter: Option<u32>,
 }
 
 impl PermanentView {
