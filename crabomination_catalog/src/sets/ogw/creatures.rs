@@ -1805,6 +1805,30 @@ pub fn kozileks_pathfinder() -> CardDefinition {
     }
 }
 
+/// Flux Channeler — {2}{U} 2/2 Human Wizard. Whenever you cast a noncreature
+/// spell, proliferate.
+pub fn flux_channeler() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::shortcut::cast_is_noncreature;
+    CardDefinition {
+        name: "Flux Channeler",
+        cost: cost(&[crate::mana::generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_noncreature()),
+            effect: Effect::Proliferate,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sustainer of the Realm — {2}{W}{W} 2/3 Angel. Flying; whenever it blocks, it
 /// gets +0/+2 until end of turn.
 pub fn sustainer_of_the_realm() -> CardDefinition {

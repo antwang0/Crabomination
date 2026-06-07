@@ -21,6 +21,22 @@ pub fn murderous_compulsion() -> CardDefinition {
     }
 }
 
+/// Roil Spout — {1}{W}{U} Sorcery. Put target creature on top of its owner's
+/// library. (Awaken 4 dropped — no Awaken primitive yet.)
+pub fn roil_spout() -> CardDefinition {
+    use crate::effect::{LibraryPosition, ZoneDest};
+    CardDefinition {
+        name: "Roil Spout",
+        cost: cost(&[generic(1), crate::mana::w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Top },
+        },
+        ..Default::default()
+    }
+}
+
 /// Coastal Discovery — {3}{U} Sorcery. Draw two cards. (Awaken 4 dropped.)
 pub fn coastal_discovery() -> CardDefinition {
     use crate::effect::Selector;

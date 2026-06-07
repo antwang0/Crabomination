@@ -2072,3 +2072,44 @@ fn coastal_and_comparative_draw_two() {
     // -1 (spell) +2 (draw) = net +1.
     assert_eq!(g.players[0].hand.len(), before + 1, "drew two");
 }
+
+/// Roil Spout puts target creature on top of its owner's library.
+#[test]
+fn roil_spout_tucks_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::roil_spout());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roil Spout");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == creature), "creature left the battlefield");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(creature),
+        "creature is on top of its owner's library");
+}
+
+/// Flux Channeler proliferates when its controller casts a noncreature spell.
+#[test]
+fn flux_channeler_proliferates_on_noncreature_cast() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::flux_channeler());
+    // A creature with a +1/+1 counter to proliferate.
+    let pet = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(pet).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    // Cast a noncreature spell (Lightning Bolt at the opponent).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(pet).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "proliferate added a +1/+1 counter");
+}
