@@ -1136,3 +1136,20 @@ fn natural_state_destroys_cheap_artifact() {
     crate::game::cast_at(&mut g, id, Target::Permanent(art));
     assert!(!g.battlefield.iter().any(|c| c.id == art), "MV-2 artifact destroyed");
 }
+
+/// Eldrazi Mimic copies the base P/T of a colorless creature that enters under
+/// its controller until end of turn.
+#[test]
+fn eldrazi_mimic_copies_base_pt_of_entering_colorless() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let mimic = g.add_card_to_battlefield(0, catalog::eldrazi_mimic());
+    assert_eq!(g.computed_permanent(mimic).unwrap().power, 2, "starts 2/1");
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    // An 8/9 colorless Eldrazi enters under our control.
+    let big = g.add_card_to_battlefield(0, catalog::eldrazi_devastator());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: big }]);
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(mimic).unwrap();
+    assert_eq!((cp.power, cp.toughness), (8, 9), "Mimic becomes 8/9 to match");
+}

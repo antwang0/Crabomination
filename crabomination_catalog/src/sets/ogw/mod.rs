@@ -66,6 +66,7 @@ pub fn all_ogw_card_factories() -> &'static [crate::CardFactory] {
         blight_herder,
         eldrazi_aggressor,
         reaver_drone,
+        eldrazi_mimic,
         void_grafter,
         brood_butcher,
         lifespring_druid,

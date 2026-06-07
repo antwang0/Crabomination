@@ -356,6 +356,35 @@ pub fn reaver_drone() -> CardDefinition {
     }
 }
 
+/// Eldrazi Mimic — {2} 2/1 Eldrazi. Whenever another colorless creature you
+/// control enters, you may set this creature's base P/T to that creature's
+/// until end of turn.
+pub fn eldrazi_mimic() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::effect::{Duration, Predicate, Selector, Value};
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::Colorless)
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::MayDo {
+                description: "Set base P/T to the entering creature's?".into(),
+                body: Box::new(Effect::SetBasePT {
+                    what: Selector::This,
+                    power: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                    toughness: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..colossus("Eldrazi Mimic", cost(&[generic(2)]), 2, 1)
+    }
+}
+
 /// Havoc Sower — {3}{B} 3/3 Eldrazi Drone. Devoid; {1}{C}: +2/+1 until end of turn.
 pub fn havoc_sower() -> CardDefinition {
     use crate::card::ActivatedAbility;
