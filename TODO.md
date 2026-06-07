@@ -8,6 +8,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Test harness: `check_state_based_actions()` doesn't dispatch
+  *another-creature-died* watcher triggers.** A creature killed via raw
+  `damage = N; check_state_based_actions()` fires its own death (SelfSource)
+  triggers but not other permanents' "whenever another creature you control
+  dies" watchers — those need the full event-dispatch path (kill via a damage
+  spell + `drain_stack`, as the Grim Haruspex / Sifter of Skulls tests do).
+  Worth auditing whether the direct-SBA path should also gather watcher
+  triggers, or whether this is purely a test-only shortcut.
 - ⏳ **Eldrazi-titan pass leftovers (this run).** Skipped, each needs a new
   primitive: (a) **Process** mechanic (put a card an opponent owns from exile
   into their graveyard) — blocks Wasteland Strangler, Mind Raker, Blight Herder,
