@@ -950,50 +950,37 @@ pub fn soothing_hush() -> CardDefinition {
 
 // ── Vortex Runner (STX-flavor blue common creature) ─────────────────────────
 
-/// Vortex Runner — {1}{U}, 2/1 Merfolk Wizard.
-/// "This creature can't be blocked."
-///
-/// Push (modern_decks, NEW, `stx::extras`): A 2/1 unblockable Merfolk
-/// for 2 mana — chip-shot evasion. Wired via the existing
-/// `Keyword::Unblockable`. Tests:
-/// `vortex_runner_is_a_two_mana_two_one_unblockable_merfolk`.
+/// Vortex Runner — {2}{U} 2/3 Human Wizard. "As long as you control eight or
+/// more lands, this creature gets +1/+0 and can't be blocked."
 pub fn vortex_runner() -> CardDefinition {
+    use crate::card::{Predicate, StaticAbility};
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Vortex Runner",
-        cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
+        cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
         power: 2,
-        toughness: 1,
-        keywords: vec![Keyword::Unblockable],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "With 8+ lands, gets +1/+0 and can't be blocked.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCardType(CardType::Land)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(8),
+                },
+                power: 1,
+                toughness: 0,
+                keywords: vec![Keyword::Unblockable],
+            },
+        }],
+        ..Default::default()
     }
 }
 

@@ -2755,32 +2755,34 @@ pub fn saw_it_coming() -> CardDefinition {
 /// per-creature.
 pub fn dueling_coach() -> CardDefinition {
     use crate::card::{
-        ActivatedAbility, CounterType as CT, CreatureType, EventKind, EventScope, EventSpec,
-        TriggeredAbility,
+        ActivatedAbility, CounterType as CT, EventKind, EventScope, EventSpec, TriggeredAbility,
     };
     CardDefinition {
         name: "Dueling Coach",
-        cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
+        cost: cost(&[generic(3), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
             ..Default::default()
         },
-        power: 1,
+        power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
+        // ETB: put a +1/+1 counter on target creature.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CT::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        // {4}{W}, {T}: put a +1/+1 counter on each creature you control.
         activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: false,
-            mana_cost: cost(&[generic(2), w()]),
+            mana_cost: cost(&[generic(4), w()]),
+            tap_cost: true,
             effect: Effect::ForEach {
                 selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::WithCounter(CT::PlusOnePlusOne)),
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
                 ),
                 body: Box::new(Effect::AddCounter {
                     what: Selector::TriggerSource,
@@ -2788,50 +2790,9 @@ pub fn dueling_coach() -> CardDefinition {
                     amount: Value::Const(1),
                 }),
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
             ..Default::default()
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                kind: CT::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-        }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 

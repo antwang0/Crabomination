@@ -10,34 +10,27 @@ use super::*;
 /// has one — Mr Coach is 1/2 with no counters by default, so it's only
 /// gated to creatures that already have a counter).
 #[test]
-fn dueling_coach_activation_doubles_counters() {
+fn dueling_coach_activation_counters_each_creature_you_control() {
     let mut g = two_player_game();
     let coach = g.add_card_to_battlefield(0, catalog::dueling_coach());
     g.clear_sickness(coach);
     let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // Seed counter on bear1 only — bear2 should NOT get a counter from
-    // the activation (gate is "creatures you control with +1/+1
-    // counter").
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear1) {
-        c.counters.insert(CounterType::PlusOnePlusOne, 1);
-    }
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: coach,
         ability_index: 0,
         target: None, x_value: None })
-    .expect("Dueling Coach activation works for {2}{W}");
+    .expect("Dueling Coach activation works for {4}{W},{T}");
     drain_stack(&mut g);
 
+    // Every creature you control — both bears and the coach — gets a counter.
     let bear1_c = g.battlefield.iter().find(|c| c.id == bear1).unwrap();
     let bear2_c = g.battlefield.iter().find(|c| c.id == bear2).unwrap();
-    assert_eq!(bear1_c.counter_count(CounterType::PlusOnePlusOne), 2,
-        "bear1 should get a counter (had a counter to begin with)");
-    assert_eq!(bear2_c.counter_count(CounterType::PlusOnePlusOne), 0,
-        "bear2 should NOT get a counter (had no +1/+1 to begin with)");
+    assert_eq!(bear1_c.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(bear2_c.counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
 // ── Increasing Vengeance ────────────────────────────────────────────────────
@@ -148,6 +141,22 @@ fn spined_karok_is_a_vanilla_two_four() {
     assert_eq!(c.cost.cmc(), 3);
     assert_eq!((c.power, c.toughness), (2, 4));
     assert!(c.triggered_abilities.is_empty() && c.activated_abilities.is_empty());
+}
+
+#[test]
+fn vortex_runner_grows_and_unblockable_with_eight_lands() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::vortex_runner());
+    // Under 8 lands → base 2/3, blockable.
+    let lo = g.computed_permanent(id).unwrap();
+    assert_eq!((lo.power, lo.toughness), (2, 3));
+    assert!(!lo.keywords.contains(&Keyword::Unblockable));
+    // Reach 8 lands → +1/+0 and can't be blocked.
+    for _ in 0..8 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let hi = g.computed_permanent(id).unwrap();
+    assert_eq!((hi.power, hi.toughness), (3, 3));
+    assert!(hi.keywords.contains(&Keyword::Unblockable), "8+ lands → unblockable");
 }
 
 // ── Inspiring Veteran ───────────────────────────────────────────────────

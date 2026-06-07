@@ -4862,7 +4862,7 @@ fn dueling_coach_etb_lands_counter_on_friendly() {
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::dueling_coach());
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
@@ -4871,7 +4871,7 @@ fn dueling_coach_etb_lands_counter_on_friendly() {
         mode: None,
         x_value: None,
     })
-    .expect("Dueling Coach castable for {1}{W}");
+    .expect("Dueling Coach castable for {3}{W}");
     drain_stack(&mut g);
 
     let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
