@@ -143,26 +143,11 @@ fn increasing_vengeance_double_copies_when_flashed_back_from_graveyard() {
 // ── Spined Karok ────────────────────────────────────────────────────────
 
 #[test]
-fn spined_karok_etb_lands_counter_on_friendly() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::spined_karok());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("Spined Karok castable for {2}{G}{U}");
-    drain_stack(&mut g);
-
-    let bear_card = g.battlefield_find(bear).expect("bear still on bf");
-    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1);
+fn spined_karok_is_a_vanilla_two_four() {
+    let c = catalog::spined_karok();
+    assert_eq!(c.cost.cmc(), 3);
+    assert_eq!((c.power, c.toughness), (2, 4));
+    assert!(c.triggered_abilities.is_empty() && c.activated_abilities.is_empty());
 }
 
 // ── Inspiring Veteran ───────────────────────────────────────────────────

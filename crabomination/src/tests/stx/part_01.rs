@@ -1148,7 +1148,7 @@ fn flow_state_draws_one_normally_and_two_when_graveyard_has_is_pair() {
     let mut g = two_player_game();
     for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
     g.add_card_to_graveyard(0, catalog::lightning_bolt());        // instant
-    g.add_card_to_graveyard(0, catalog::pop_quiz());              // sorcery (Lesson)
+    g.add_card_to_graveyard(0, catalog::hunt_for_specimens());    // sorcery
     let id = g.add_card_to_hand(0, catalog::flow_state());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);

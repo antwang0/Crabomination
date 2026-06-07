@@ -17,36 +17,16 @@ use crate::mana::{Color, b, cost, g, generic, u, w, x};
 
 // ── Pop Quiz ────────────────────────────────────────────────────────────────
 
-/// Pop Quiz — {1}{W} Sorcery — Lesson. "Draw two cards, then put a card
-/// from your hand on top of your library."
-///
-/// Two-step: `Draw 2` then `PutOnLibraryFromHand 1`. The Lesson sub-type is
-/// recorded so future Lesson-aware effects (Mascot Exhibition's "search
-/// your sideboard") can filter on it; today Lesson cards resolve from hand
-/// like any other sorcery.
+/// Pop Quiz — {2}{U} Instant. "Draw a card. Learn."
 pub fn pop_quiz() -> CardDefinition {
     CardDefinition {
         name: "Pop Quiz",
-        cost: cost(&[generic(1), w()]),
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-            Effect::PutOnLibraryFromHand {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Learn { who: PlayerRef::You },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

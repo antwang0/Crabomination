@@ -609,28 +609,22 @@ fn silverquill_wardlock_b187_fans_shield_counters_to_friendly_creatures() {
 // ── Mono-color additions ────────────────────────────────────────────────────
 
 #[test]
-fn pop_quiz_draws_two_then_returns_one_to_top() {
-    // Seed library so the draw has cards.
+fn pop_quiz_draws_a_card_and_learns() {
     let mut g = two_player_game();
-    for _ in 0..3 {
-        g.add_card_to_library(0, catalog::island());
-    }
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::pop_quiz());
-    let lib_before = g.players[0].library.len();
     let hand_before = g.players[0].hand.len();
 
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Pop Quiz castable for {1}{W}");
+    .expect("Pop Quiz castable for {2}{U}");
     drain_stack(&mut g);
 
-    // Hand: -1 (cast Pop Quiz) +2 (draw) -1 (put on top) = 0 net.
-    assert_eq!(g.players[0].hand.len(), hand_before);
-    // Library: -2 (drawn) +1 (put-on-top) = -1.
-    assert_eq!(g.players[0].library.len(), lib_before - 1);
+    // -1 (cast) +1 (draw) +1 (Learn → Draw fallback, no sideboard) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
 
 #[test]

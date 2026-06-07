@@ -3055,62 +3055,19 @@ pub fn quench() -> CardDefinition {
 
 // ── New STX additions — push (modern_decks) ────────────────────────────────
 
-/// Spined Karok — {2}{G}{U} Creature — Beast, 3/3.
-///
-/// Push (modern_decks) NEW (`stx::extras`): "Reach. / When this creature
-/// enters, target creature you control gets +1/+1 counter."
-///
-/// Vanilla green/blue body with reach + a snowball-friendly ETB. The ETB
-/// uses the standard `target_filtered(Creature & ControlledByYou)` shape
-/// like Dueling Coach's ETB. Tests verify the body and the counter
-/// landing on a friendly target.
+/// Spined Karok — {2}{G} 2/4 Crocodile (vanilla).
 pub fn spined_karok() -> CardDefinition {
-    use crate::card::{CounterType as CT, EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Spined Karok",
-        cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
+        cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
+            creature_types: vec![CreatureType::Crocodile],
             ..Default::default()
         },
-        power: 3,
-        toughness: 3,
-        keywords: vec![Keyword::Reach],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                kind: CT::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-        }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        power: 2,
+        toughness: 4,
+        ..Default::default()
     }
 }
 
