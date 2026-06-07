@@ -264,6 +264,12 @@ struct MatchStats {
     /// reports duration σ next to the turn-count σ. Milliseconds keep the
     /// squares well within `u128` even for very long sessions.
     total_duration_squared_ms: u128,
+    /// Matches that completed without a declared outcome (`observe_winner`
+    /// got `None` — channel disconnect, watchdog kill, or a stuck loop). The
+    /// `wins + draws + inconclusive ≤ total_matches` identity makes this the
+    /// explicit count of the "stuck" delta operators previously had to derive
+    /// by subtraction; a rising `inconclusive_pct` flags a hang regression.
+    inconclusive: u64,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -370,8 +376,16 @@ impl MatchStats {
                 let idx = seat.min(SEAT_BUCKET_COUNT - 1);
                 self.seat_wins[idx] = self.seat_wins[idx].saturating_add(1);
             }
-            None => {}
+            None => self.inconclusive = self.inconclusive.saturating_add(1),
         }
+    }
+    /// Percentage of completed matches that produced no declared outcome
+    /// (stuck / disconnected). Surfaced next to `decisive_pct` so a hang
+    /// regression is visible directly rather than by subtraction.
+    fn inconclusive_pct(&self) -> u64 {
+        let total = self.total_matches();
+        if total == 0 { return 0; }
+        self.inconclusive.saturating_mul(100) / total
     }
     /// Accumulate the win-by-life delta for one match. `final_life`
     /// is the per-seat life array; `winner` is the winning seat. The
@@ -736,9 +750,15 @@ fn format_match_stats(s: &MatchStats) -> String {
                 out.push_str(&format!(" deck={} ({}%)", s.deck_wins, s.deck_pct()));
             }
         }
-        let unresolved = n.saturating_sub(s.wins + s.draws);
-        if unresolved > 0 {
-            out.push_str(&format!(" unresolved={unresolved}"));
+        // Stuck/disconnected matches: prefer the explicit `inconclusive`
+        // counter (and its percentage) over the subtraction fallback so a
+        // hang regression reads directly off the summary line.
+        if s.inconclusive > 0 {
+            out.push_str(&format!(
+                " unresolved={} ({}%)",
+                s.inconclusive,
+                s.inconclusive_pct()
+            ));
         }
         // Per-seat win histogram: " seat_wins=12/8/0/0" (only render
         // up to the highest non-zero seat so 1v1 doesn't surface
@@ -1593,13 +1613,26 @@ mod tests {
         s.observe_winner(Some(Some(0))); // seat 0 wins
         s.observe_winner(Some(None));     // draw
         s.observe_winner(Some(Some(1))); // seat 1 wins
-        s.observe_winner(None);           // unresolved — silently dropped
+        s.observe_winner(None);           // unresolved — counted as inconclusive
         assert_eq!(s.wins, 2);
         assert_eq!(s.draws, 1);
+        assert_eq!(s.inconclusive, 1);
         assert_eq!(s.seat_wins[0], 1);
         assert_eq!(s.seat_wins[1], 1);
         // 2 decisive of 3 resolved → 66%. Unresolved is excluded.
         assert_eq!(s.decisive_pct(), 66);
+    }
+
+    #[test]
+    fn inconclusive_pct_is_share_of_all_matches() {
+        // 1 stuck match out of 4 total → 25%.
+        let mut s = MatchStats { bot_matches: 4, ..Default::default() };
+        s.observe_winner(Some(Some(0)));
+        s.observe_winner(Some(Some(1)));
+        s.observe_winner(Some(None));
+        s.observe_winner(None); // inconclusive
+        assert_eq!(s.inconclusive, 1);
+        assert_eq!(s.inconclusive_pct(), 25);
     }
 
     #[test]
@@ -1764,10 +1797,10 @@ mod tests {
         s.record_bot(Duration::from_secs(60), Format::Demo);
         s.record_bot(Duration::from_secs(70), Format::Demo);
         s.observe_winner(Some(Some(0)));
-        // The second match had no observed winner.
+        s.observe_winner(None); // second match ended with no declared outcome
         let line = format_match_stats(&s);
         assert!(line.contains("wins=1"), "got: {line}");
-        assert!(line.contains("unresolved=1"), "got: {line}");
+        assert!(line.contains("unresolved=1 (50%)"), "got: {line}");
     }
 
     #[test]

@@ -635,6 +635,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::CantBeBlockedExceptBy(_) => "Can't be blocked except by certain creatures".into(),
         K::CantBeBlockedBy(_) => "Can't be blocked by certain creatures".into(),
         K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature".into(),
+        K::CantBeBlockedExceptByN(n) => format!("Can't be blocked except by {n} or more creatures"),
         K::Ninjutsu(cost) => format!("Ninjutsu {}", cost.summary()),
         K::Suspend(n, cost) => format!("Suspend {n}—{}", cost.summary()),
         // Cost/count-bearing keywords that otherwise fell through to the raw
