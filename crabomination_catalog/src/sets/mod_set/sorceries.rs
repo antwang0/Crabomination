@@ -1125,3 +1125,49 @@ pub fn foresee() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Final Judgment — {4}{W}{W} Sorcery. Exile all creatures.
+pub fn final_judgment() -> CardDefinition {
+    CardDefinition {
+        name: "Final Judgment",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile { what: Selector::EachPermanent(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Planar Cleansing — {3}{W}{W} Sorcery. Destroy all nonland permanents.
+pub fn planar_cleansing() -> CardDefinition {
+    CardDefinition {
+        name: "Planar Cleansing",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DestroyNoRegen {
+            what: Selector::EachPermanent(SelectionRequirement::Not(Box::new(
+                SelectionRequirement::Land,
+            ))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Akroma's Vengeance — {4}{W}{W} Sorcery. Destroy all artifacts, creatures,
+/// and enchantments. Cycling {3}.
+pub fn akromas_vengeance() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Akroma's Vengeance",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
+        effect: Effect::DestroyNoRegen {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Enchantment),
+            ),
+        },
+        ..Default::default()
+    }
+}

@@ -674,6 +674,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mind_spring,
         foresee,
         catalog_draw,
+        // White board wipes.
+        final_judgment,
+        planar_cleansing,
+        akromas_vengeance,
         prey_upon,
         hedron_archive,
         soul_warden,

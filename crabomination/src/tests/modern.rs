@@ -24349,6 +24349,41 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn planar_cleansing_destroys_nonland_permanents_only() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ench = g.add_card_to_battlefield(1, catalog::ghostly_prison());
+    let land = g.add_card_to_battlefield(1, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::planar_cleansing());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == creature), "creature destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment destroyed");
+    assert!(g.battlefield.iter().any(|c| c.id == land), "land survives");
+}
+
+#[test]
+fn final_judgment_exiles_all_creatures() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::final_judgment());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == mine || c.id == theirs), "all creatures gone");
+    // Exiled, not in graveyard.
+    assert!(g.exile.iter().any(|c| c.id == mine), "exiled, not destroyed");
+}
+
+#[test]
 fn mind_spring_draws_x_cards() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
