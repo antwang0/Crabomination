@@ -215,6 +215,8 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // allied-color batch (modern_decks)
+        bontus_monument,
         // ── modern_decks: cube staples ──
         scrapheap_scrounger,
         chromatic_sphere,
@@ -425,6 +427,10 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        ministrant_of_obligation,
+        dragons_eye_sentry,
+        kor_sanctifiers,
         // landcycling (modern_decks)
         daru_lancer,
         // classic batch (modern_decks)
@@ -892,6 +898,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        tolarian_terror,
+        vodalian_arcanist,
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
         snapping_drake,
@@ -1188,6 +1197,11 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        festering_mummy,
+        reassembling_skeleton,
+        dread_wanderer,
+        mausoleum_turnkey,
         // ── modern_decks: aggro / aristocrat supplement ──
         walking_corpse,
         highborn_ghoul,
@@ -1554,6 +1568,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        goblin_motivator,
+        goblin_gang_leader,
+        frenzied_goblin,
+        onakke_ogre,
         // ── modern_decks: aggro / firebreathing supplement ──
         kird_ape,
         sedge_troll,
@@ -1951,6 +1970,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // allied-color batch (modern_decks)
+        llanowar_tribe,
+        sakura_tribe_scout,
         // landcycling (modern_decks)
         wirewood_guardian,
         // classic batch (modern_decks)

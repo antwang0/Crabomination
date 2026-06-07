@@ -5753,25 +5753,60 @@ impl GameState {
                     return Ok(()); // can't collect enough evidence
                 }
                 let src = ctx.source.unwrap_or(CardId(0));
-                let answer = self.decider.decide(&Decision::OptionalTrigger {
-                    source: src,
-                    description: format!(
-                        "Collect evidence {need}? (exile cards from your graveyard \
-                         with total mana value {need} or greater)"
-                    ),
-                });
-                if !matches!(answer, DecisionAnswer::Bool(true)) {
-                    return Ok(());
-                }
-                let mut acc = 0u32;
-                let mut to_exile = Vec::new();
-                for (cid, mv) in gy {
-                    if acc >= need {
-                        break;
+                let to_exile: Vec<CardId> = if self.players[p].wants_ui {
+                    // A human picks exactly which cards to exile; the engine
+                    // validates the chosen set clears the MV threshold and
+                    // otherwise treats the answer as a decline.
+                    let mv: std::collections::HashMap<CardId, u32> =
+                        gy.iter().copied().collect();
+                    let candidates: Vec<(CardId, String)> = self.players[p]
+                        .graveyard
+                        .iter()
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source: src,
+                        prompt: format!(
+                            "Collect evidence {need}: exile cards from your \
+                             graveyard with total mana value {need}+"
+                        ),
+                        candidates,
+                        min: 0,
+                        max: mv.len() as u32,
+                    });
+                    let chosen: Vec<CardId> = match answer {
+                        DecisionAnswer::Cards(ids) => {
+                            ids.into_iter().filter(|id| mv.contains_key(id)).collect()
+                        }
+                        _ => vec![],
+                    };
+                    let picked: u32 = chosen.iter().map(|id| mv[id]).sum();
+                    if picked < need {
+                        return Ok(()); // declined or insufficient evidence
                     }
-                    acc += mv;
-                    to_exile.push(cid);
-                }
+                    chosen
+                } else {
+                    let answer = self.decider.decide(&Decision::OptionalTrigger {
+                        source: src,
+                        description: format!(
+                            "Collect evidence {need}? (exile cards from your graveyard \
+                             with total mana value {need} or greater)"
+                        ),
+                    });
+                    if !matches!(answer, DecisionAnswer::Bool(true)) {
+                        return Ok(());
+                    }
+                    let mut acc = 0u32;
+                    let mut auto = Vec::new();
+                    for (cid, mv) in gy {
+                        if acc >= need {
+                            break;
+                        }
+                        acc += mv;
+                        auto.push(cid);
+                    }
+                    auto
+                };
                 for cid in to_exile {
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                 }

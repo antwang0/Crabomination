@@ -238,18 +238,14 @@ pub(crate) fn cost_reduction_for_spell(
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
-    // Per-card hardcoded "Affinity-for-cards-in-your-graveyard" hook.
-    // The Dawning Archaic ("This spell costs {1} less to cast for each
-    // instant and sorcery card in your graveyard") was the only card
-    // needing this primitive at promotion time; rather than thread a
-    // new `affinity_graveyard_filter` field through every CardDefinition
-    // site, the discount is dispatched per-name. Future Affinity-for-gy
-    // cards can extend this match.
-    if card.definition.name == "The Dawning Archaic" {
+    // Card-intrinsic "Affinity-for-cards-in-your-graveyard" cost reduction:
+    // "{1} less for each [filter] card in your graveyard" (The Dawning
+    // Archaic, Tolarian Terror). Generic-only, clamped by the caller.
+    if let Some(filter) = &card.definition.affinity_graveyard_filter {
         let count = state.players[caster]
             .graveyard
             .iter()
-            .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
+            .filter(|c| state.evaluate_requirement_on_card(filter, c, caster))
             .count();
         reduction = reduction.saturating_add(count as u32);
     }

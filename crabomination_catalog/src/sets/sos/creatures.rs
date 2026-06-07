@@ -5126,13 +5126,9 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
 /// without paying its mana cost. If that spell would be put into your
 /// graveyard, exile it instead."
 ///
-/// Push (modern_decks): the attack-triggered free-cast-from-graveyard
-/// rider is **now wired** via `Effect::CastWithoutPayingImmediate`
-/// targeting a target IS card in the controller's graveyard, with
-/// `exile_after = true` (per printed "if that spell would go to a
-/// graveyard, exile it instead"). The IS-in-gy cost-reduction static
-/// is still omitted — engine has no per-graveyard-IS-count cost-
-/// reduction primitive (tracked in TODO.md).
+/// Cost reduction ({1} less per instant/sorcery in your graveyard) rides
+/// `affinity_graveyard_filter`; the attack-triggered free-cast-from-graveyard
+/// rider rides `Effect::CastWithoutPayingImmediate` with `exile_after`.
 pub fn the_dawning_archaic() -> CardDefinition {
     use crate::card::{Supertype, Zone};
     use crate::effect::shortcut::target_filtered;
@@ -5148,6 +5144,10 @@ pub fn the_dawning_archaic() -> CardDefinition {
         power: 7,
         toughness: 7,
         keywords: vec![Keyword::Reach],
+        affinity_graveyard_filter: Some(
+            SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+        ),
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),

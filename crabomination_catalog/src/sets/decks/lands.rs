@@ -7,8 +7,8 @@
 //! lands and tap lands enter tapped via a self-targeting `Tap` trigger.
 
 use super::super::{
-    dual_land_with, etb_tap, etb_tap_then_surveil_one, fastland_etb_conditional_tap, painland,
-    shockland_pay_two_or_tap, tap_add, tap_add_colorless,
+    dual_land_with, etb_tap, etb_tap_then_gain_one, etb_tap_then_surveil_one,
+    fastland_etb_conditional_tap, painland, shockland_pay_two_or_tap, tap_add, tap_add_colorless,
 };
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType, Selector,
@@ -786,4 +786,35 @@ pub fn ghost_quarter() -> CardDefinition {
         ],
         ..Default::default()
     }
+}
+
+// ── Khans life-gain taplands ───────────────────────────────────────────────
+//
+// "~ enters tapped. When ~ enters, you gain 1 life. {T}: Add {C1} or {C2}."
+// `dual_land_with` supplies the two color mana abilities; the shared
+// `etb_tap_then_gain_one` trigger taps it and gains the life.
+
+pub fn tranquil_cove() -> CardDefinition {
+    dual_land_with("Tranquil Cove", LandType::Plains, LandType::Island,
+        Color::White, Color::Blue, vec![etb_tap_then_gain_one()])
+}
+
+pub fn dismal_backwater() -> CardDefinition {
+    dual_land_with("Dismal Backwater", LandType::Island, LandType::Swamp,
+        Color::Blue, Color::Black, vec![etb_tap_then_gain_one()])
+}
+
+pub fn bloodfell_caves() -> CardDefinition {
+    dual_land_with("Bloodfell Caves", LandType::Swamp, LandType::Mountain,
+        Color::Black, Color::Red, vec![etb_tap_then_gain_one()])
+}
+
+pub fn rugged_highlands() -> CardDefinition {
+    dual_land_with("Rugged Highlands", LandType::Mountain, LandType::Forest,
+        Color::Red, Color::Green, vec![etb_tap_then_gain_one()])
+}
+
+pub fn blossoming_sands() -> CardDefinition {
+    dual_land_with("Blossoming Sands", LandType::Forest, LandType::Plains,
+        Color::Green, Color::White, vec![etb_tap_then_gain_one()])
 }

@@ -1050,6 +1050,13 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub affinity_filter: Option<SelectionRequirement>,
+    /// "This spell costs {1} less to cast for each [filter] card in your
+    /// graveyard" — the graveyard-counting sibling of `affinity_filter`.
+    /// Generic-only, clamped by the caller. Powers Tolarian Terror /
+    /// The Dawning Archaic (instant-or-sorcery), Murktide-class delve-flavor
+    /// reductions, etc. Defaults to `None` for snapshot back-compat.
+    #[serde(default)]
+    pub affinity_graveyard_filter: Option<SelectionRequirement>,
     /// "Equipped creature gets +P/+T and has [keywords]." Read by
     /// `compute_battlefield` for any Equipment whose `attached_to` points at
     /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)

@@ -135,6 +135,36 @@ fn sample_collector_without_evidence_does_nothing() {
     );
 }
 
+/// A `wants_ui` controller picks exactly which graveyard cards to exile for
+/// evidence; the engine honors that choice over the auto cheapest-set.
+#[test]
+fn collect_evidence_ui_picker_honors_chosen_cards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sample_collector());
+    g.clear_sickness(id);
+    g.players[0].wants_ui = true;
+    // MV-2 bears ×2 plus an MV-1 Bolt. Auto would take Bolt+one bear (=3);
+    // the human instead exiles both bears (=4), leaving the Bolt behind.
+    let bear_a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear_a, bear_b])]));
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt left in graveyard");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_a || c.id == bear_b),
+        "chosen bears exiled");
+    assert_eq!(
+        g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "evidence collected → +1/+1 counter",
+    );
+}
+
 // ── Discover (CR 701.57) ─────────────────────────────────────────────────────
 
 /// Geological Appraiser discovers 3 and the controller casts the hit for free.

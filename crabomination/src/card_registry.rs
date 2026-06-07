@@ -37,6 +37,16 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         all.push(f);
     }
     all.push(sets::decks::rofellos_llanowar_emissary as CardFactory);
+    // Khans life-gain taplands (sets::decks::lands) — not in any demo deck,
+    // so registered here for snapshot name→factory round-trip.
+    let gainlands: [CardFactory; 5] = [
+        sets::decks::tranquil_cove,
+        sets::decks::dismal_backwater,
+        sets::decks::bloodfell_caves,
+        sets::decks::rugged_highlands,
+        sets::decks::blossoming_sands,
+    ];
+    all.extend_from_slice(&gainlands);
     // STX (Strixhaven 2021) factory list — large but bounded; the
     // dedup pass below removes any factory the cube/sos pools already
     // exposed. Without this, mid-game snapshots involving STX

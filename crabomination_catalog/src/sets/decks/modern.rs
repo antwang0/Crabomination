@@ -25566,3 +25566,415 @@ pub fn mark_of_mutiny() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// modern_decks batch: allied-color commons/uncommons on existing primitives.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Ministrant of Obligation — {2}{W} 2/1 Human Cleric. Afterlife 2.
+pub fn ministrant_of_obligation() -> CardDefinition {
+    use crate::effect::shortcut::afterlife;
+    CardDefinition {
+        name: "Ministrant of Obligation",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![afterlife(2)],
+        ..Default::default()
+    }
+}
+
+/// Dragon's Eye Sentry — {W} 1/3 Human Monk. Defender, first strike.
+pub fn dragons_eye_sentry() -> CardDefinition {
+    CardDefinition {
+        name: "Dragon's Eye Sentry",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Defender, Keyword::FirstStrike],
+        ..Default::default()
+    }
+}
+
+/// Kor Sanctifiers — {2}{W} 2/3 Kor Cleric. Kicker {W}; ETB if kicked,
+/// destroy target artifact or enchantment.
+pub fn kor_sanctifiers() -> CardDefinition {
+    CardDefinition {
+        name: "Kor Sanctifiers",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Kicker(cost(&[w()]))],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tolarian Terror — {6}{U} 5/5 Serpent. Costs {1} less for each instant or
+/// sorcery card in your graveyard. Ward {2}.
+pub fn tolarian_terror() -> CardDefinition {
+    CardDefinition {
+        name: "Tolarian Terror",
+        cost: cost(&[generic(6), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Serpent], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        affinity_graveyard_filter: Some(
+            SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+        ),
+        ..Default::default()
+    }
+}
+
+/// Vodalian Arcanist — {1}{U} 1/3 Merfolk Wizard. "{T}: Add {C}. Spend this
+/// mana only to cast an instant or sorcery spell."
+pub fn vodalian_arcanist() -> CardDefinition {
+    use crate::mana::SpendRestriction;
+    CardDefinition {
+        name: "Vodalian Arcanist",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colorless(Value::Const(1))),
+                    SpendRestriction::InstantSorceryOnly,
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Festering Mummy — {B} 1/1 Zombie. When it dies, you may put a -1/-1
+/// counter on target creature.
+pub fn festering_mummy() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Festering Mummy",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::MayDo {
+            description: "put a -1/-1 counter on target creature".to_string(),
+            body: Box::new(Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Reassembling Skeleton — {1}{B} 1/1 Skeleton Warrior. "{1}{B}: Return this
+/// card from your graveyard to the battlefield tapped."
+pub fn reassembling_skeleton() -> CardDefinition {
+    CardDefinition {
+        name: "Reassembling Skeleton",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            from_graveyard: true,
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dread Wanderer — {B} 2/1 Zombie Jackal. Enters tapped. "{2}{B}: Return
+/// this from your graveyard to the battlefield. Activate only as a sorcery
+/// and only if you have one or fewer cards in hand."
+pub fn dread_wanderer() -> CardDefinition {
+    use crate::sets::etb_tap;
+    CardDefinition {
+        name: "Dread Wanderer",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Jackal],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb_tap()],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            from_graveyard: true,
+            sorcery_speed: true,
+            condition: Some(Predicate::ValueAtMost(
+                Value::HandSizeOf(PlayerRef::You),
+                Value::Const(1),
+            )),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mausoleum Turnkey — {3}{B} 3/2 Ogre Rogue. ETB: return target creature
+/// card from your graveyard to your hand. (The "of an opponent's choice"
+/// rider collapses to the controller's pick.)
+pub fn mausoleum_turnkey() -> CardDefinition {
+    CardDefinition {
+        name: "Mausoleum Turnkey",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bontu's Monument — {3} Legendary Artifact. Black creature spells you cast
+/// cost {1} less. Whenever you cast a creature spell, each opponent loses 1
+/// life and you gain 1 life.
+pub fn bontus_monument() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    use crate::effect::shortcut::drain;
+    CardDefinition {
+        name: "Bontu's Monument",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Black creature spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::HasColor(Color::Black)),
+                amount: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                },
+            ),
+            effect: drain(1),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Motivator — {R} 1/1 Goblin Warrior. "{T}: Target creature gains
+/// haste until end of turn."
+pub fn goblin_motivator() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Motivator",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Gang Leader — {2}{R}{R} 2/2 Goblin Warrior. ETB: create two 1/1
+/// red Goblin creature tokens.
+pub fn goblin_gang_leader() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Gang Leader",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Goblin".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Red],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Goblin],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Frenzied Goblin — {R} 1/1 Goblin Berserker. "Whenever this creature
+/// attacks, you may pay {R}. If you do, target creature can't block this turn."
+pub fn frenzied_goblin() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Frenzied Goblin",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_attack(Effect::MayPay {
+            description: "target creature can't block this turn".to_string(),
+            mana_cost: cost(&[r()]),
+            body: Box::new(Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Llanowar Tribe — {G}{G}{G} 3/3 Elf Druid. "{T}: Add {G}{G}{G}."
+pub fn llanowar_tribe() -> CardDefinition {
+    CardDefinition {
+        name: "Llanowar Tribe",
+        cost: cost(&[g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColor(Color::Green, Value::Const(3)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sakura-Tribe Scout — {G} 1/1 Snake Shaman Scout. "{T}: You may put a land
+/// card from your hand onto the battlefield."
+pub fn sakura_tribe_scout() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Sakura-Tribe Scout",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Shaman, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::MayDo {
+                description: "put a land card from your hand onto the battlefield".to_string(),
+                body: Box::new(Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Hand,
+                            filter: SelectionRequirement::Land,
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Onakke Ogre — {2}{R} 4/2 Ogre Warrior (French vanilla).
+pub fn onakke_ogre() -> CardDefinition {
+    CardDefinition {
+        name: "Onakke Ogre",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        ..Default::default()
+    }
+}
