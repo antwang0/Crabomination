@@ -15,4 +15,9 @@ For full per-card history see
 - 🟡 partial — body wired with simplified or stub effect; key behavior missing
 - ⏳ todo — not yet implemented
 
-_(List remaining 🟡/⏳ items here as new Strixhaven work surfaces.)_
+No 🟡 partials are outstanding. ⏳ work remaining: ~60 printed STX cards
+are still unimplemented (the Dean MDFCs, Codie/Extus/Blex/Jadzi legends,
+several Lessons, and the X-spells) — see the "Remaining real STX cards"
+entry in `TODO.md` for the catalog-diff recipe. The modern_decks run
+added the extras_14 batch (Campus lands, Access Tunnel, Archway Commons,
+keyword creatures, and assorted spells), all ✅.

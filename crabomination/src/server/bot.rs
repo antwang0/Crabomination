@@ -535,6 +535,9 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
         | Effect::MayPay { body, .. }
         | Effect::ForEach { body, .. } => find_maydo_body(body, desc),
         Effect::Seq(v) => v.iter().find_map(|e| find_maydo_body(e, desc)),
+        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+            v.iter().find_map(|e| find_maydo_body(e, desc))
+        }
         Effect::If { then, else_, .. } => {
             find_maydo_body(then, desc).or_else(|| find_maydo_body(else_, desc))
         }
@@ -567,10 +570,18 @@ fn effect_imposes_self_cost(eff: &Effect) -> bool {
         Effect::SacrificeAnyNumber { who, .. } => matches!(who, PlayerRef::You),
         Effect::PayLifeLookTake { who } => matches!(who, PlayerRef::You),
         Effect::Seq(v) => v.iter().any(effect_imposes_self_cost),
+        Effect::ChooseMode(v) | Effect::ChooseN { modes: v, .. } | Effect::Escalate { modes: v, .. } => {
+            v.iter().any(effect_imposes_self_cost)
+        }
         Effect::If { then, else_, .. } => {
             effect_imposes_self_cost(then) || effect_imposes_self_cost(else_)
         }
         Effect::ForEach { body, .. } | Effect::MayDo { body, .. } => effect_imposes_self_cost(body),
+        // Mana/energy "pay or else" wrap a fallback (usually SacrificeSource);
+        // the bot reads the fallback to decide whether declining is costly.
+        Effect::PayManaOrElse { otherwise, .. } | Effect::PayEnergyOrElse { otherwise, .. } => {
+            effect_imposes_self_cost(otherwise)
+        }
         // "You may sacrifice/exile this" riders are a clear self-cost.
         Effect::SacrificeSource => true,
         Effect::Exile { what } => hits_self(what),
@@ -3248,5 +3259,45 @@ mod monarch_tests {
             }
             other => panic!("expected DeclareAttackers, got {other:?}"),
         }
+    }
+}
+
+#[cfg(test)]
+mod self_cost_tests {
+    use super::*;
+    use crate::effect::{Effect, PlayerRef, Selector, Value};
+
+    #[test]
+    fn self_cost_seen_through_modal_and_pay_or_else() {
+        // A self-cost mode nested inside ChooseMode is recognized.
+        let modal = Effect::ChooseMode(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]);
+        assert!(effect_imposes_self_cost(&modal), "lose-life mode is a self cost");
+
+        // PayManaOrElse → SacrificeSource fallback is a self cost.
+        let tax = Effect::PayManaOrElse {
+            mana_cost: crate::mana::cost(&[crate::mana::generic(1)]),
+            otherwise: Box::new(Effect::SacrificeSource),
+        };
+        assert!(effect_imposes_self_cost(&tax), "sac-unless-pay fallback is a self cost");
+
+        // A purely beneficial modal is not flagged.
+        let upside = Effect::ChooseMode(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]);
+        assert!(!effect_imposes_self_cost(&upside));
+
+        // find_maydo_body reaches into a mode by its prompt.
+        let nested = Effect::ChooseMode(vec![Effect::MayDo {
+            description: "Pay the price.".into(),
+            body: Box::new(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::You),
+                amount: Value::Const(1),
+            }),
+        }]);
+        assert!(find_maydo_body(&nested, "Pay the price.").is_some());
     }
 }

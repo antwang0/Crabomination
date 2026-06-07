@@ -817,6 +817,24 @@ picking an item up.
 
 ## Suggested next-up tasks
 
+- ⏳ **Remaining real STX (Strixhaven 2021) cards (~60 left).** The
+  modern_decks run added an extras_14 batch (Campus lands, Access Tunnel,
+  Archway Commons, keyword creatures, and a spread of spells). Still
+  unimplemented printed STX cards include the Dean MDFCs (Plargg/Augusta,
+  Shaile/Embrose, Valentin/Lisette, Kianne/Imbraham, Uvilda/Nassari), the
+  Codie/Extus/Blex/Jadzi legends, several Lesson sorceries (Basic
+  Conjuration, Start from Scratch, Teachings of the Archaics), and X-spells
+  (Blot Out the Sky, Culmination of Studies, Exponential Growth,
+  Ecological Appreciation). Diff `set:stx` Scryfall names against the
+  catalog string literals (note: helper-built names like the Snarl cycle
+  are passed as `name` params, so grep the whole file, not just `name: "…"`).
+- ✅ **`Effect::PayManaOrElse { mana_cost, otherwise }`** (this run) —
+  the mana sibling of `PayEnergyOrElse`; pays from the floating pool when
+  able, else runs the fallback (Archway Commons' "sacrifice unless pay
+  {1}"). Remaining ⏳: a `wants_ui`/bot mid-resolution pay prompt (today a
+  bot with no floating mana always takes the fallback, same limitation as
+  `MayPay`).
+
 - ⏳ **Discovered during the Eldrazi/devoid pass (not yet done):**
   - **Generalize variable-power CDA** (`*/N` from a count). Tarmogoyf, Vile
     Aggregate (`DynamicPt::ColorlessCreaturesControlled`, shipped this run),

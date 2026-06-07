@@ -508,6 +508,10 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::Shadow => "Can only block or be blocked by creatures with shadow.",
         K::Horsemanship => "Can only be blocked by creatures with horsemanship.",
         K::Unblockable => "Can't be blocked.",
+        K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature.",
+        K::CantBeBlockedExceptByN(_) => "Can't be blocked except by that many or more creatures.",
+        K::CantBeBlockedExceptBy(_) => "Can only be blocked by creatures matching the named quality.",
+        K::CantBeBlockedBy(_) => "Can't be blocked by creatures matching the named quality.",
         K::Changeling => "Is every creature type.",
         K::Flash => "You may cast it any time you could cast an instant.",
         K::Flanking => "Creatures without flanking blocking it get -1/-1 until end of turn.",
@@ -1047,7 +1051,8 @@ mod tests {
         use crabomination::card::Keyword;
         for kw in [Keyword::Prowess, Keyword::Fear, Keyword::Skulk,
                    Keyword::Shadow, Keyword::Unblockable, Keyword::Changeling,
-                   Keyword::Flash, Keyword::Intimidate, Keyword::Horsemanship] {
+                   Keyword::Flash, Keyword::Intimidate, Keyword::Horsemanship,
+                   Keyword::CantBeBlockedByMoreThanOne, Keyword::CantBeBlockedExceptByN(2)] {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");
         }

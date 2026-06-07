@@ -55,7 +55,8 @@ and the rules-coverage audit in `TODO.md`.
 - **Misc primitives:** per-card board-bounce to each owner
   (`PlayerRef::OwnerOfMoved`; Aetherize/Evacuation), set-all-life-to-lowest
   (`Value::LowestLifeTotal`; Repay in Kind), step-gated activated abilities
-  (`Predicate::CurrentStepIs`; Mirror Universe/Magus of the Mirror upkeep gate).
+  (`Predicate::CurrentStepIs`; Mirror Universe/Magus of the Mirror upkeep gate),
+  sacrifice-unless-pay-mana (`Effect::PayManaOrElse`; Archway Commons).
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant (+ teams);
   singleplayer vs. bot, networked TCP multiplayer, draft + cube, Learn/Lessons
   sideboard, full-state serde snapshots (save/restore + replay foundation).

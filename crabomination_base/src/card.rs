@@ -123,6 +123,8 @@ pub enum CreatureType {
     Homunculus,
     // Amonkhet Naga (Ramunap Excavator).
     Naga,
+    // Strixhaven artifact-creature subtype (Biblioplex Assistant).
+    Gargoyle,
 }
 
 /// Land subtypes (basic land types + others).

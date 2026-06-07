@@ -384,6 +384,7 @@ impl Effect {
             Effect::AddEnergy(amount) => value_has_target(amount),
             Effect::PayEnergy { then, .. } => then.requires_target(),
             Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
+            Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
         }
     }

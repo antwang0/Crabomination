@@ -1423,6 +1423,13 @@ pub enum Effect {
     /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when
     /// able. Lathnu Hellion, Greenbelt Rampager.
     PayEnergyOrElse { amount: u32, otherwise: Box<Effect> },
+    /// "Sacrifice this unless you pay `mana_cost`" (CR 608-style ETB
+    /// tax). Pays `mana_cost` from the controller's floating pool if
+    /// affordable; otherwise resolves `otherwise` (typically
+    /// `SacrificeSource`). The mana sibling of `PayEnergyOrElse`. Used by
+    /// Archway Commons' "When this land enters, sacrifice it unless you
+    /// pay {1}."
+    PayManaOrElse { mana_cost: crate::mana::ManaCost, otherwise: Box<Effect> },
     /// CR 107.16 — exile the top card of the controller's library, then they
     /// may pay `energy` {E}; if they do, they may cast that card without
     /// paying its mana cost (the spell stays exiled if not cast). Amped

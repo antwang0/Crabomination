@@ -1513,6 +1513,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PayManaOrElse { mana_cost, otherwise } => {
+                // Mana sibling of PayEnergyOrElse — pay from the floating
+                // pool when able (AutoDecider keeps the permanent),
+                // otherwise resolve the fallback (sacrifice / bounce).
+                let p = ctx.controller;
+                if self.players[p].mana_pool.pay(mana_cost).is_err() {
+                    self.run_effect(otherwise, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::ExileTopMayPayEnergyToCast { energy } => {
                 use crate::card::Zone;
                 use crate::decision::{Decision, DecisionAnswer};
