@@ -1,6 +1,7 @@
-//! Functionality tests for the extras_14 STX batch — real Strixhaven
-//! cards (Campus / Snarl-adjacent lands, keyword creatures, spells)
-//! wired against existing primitives plus the new `Effect::PayManaOrElse`.
+//! Functionality tests for the extras_14 + extras_15 STX batches — real
+//! Strixhaven cards (Campus lands, keyword creatures, spells, Equipment,
+//! payoff creatures) wired against existing primitives plus the new
+//! `Effect::PayManaOrElse`.
 
 use crate::card::{CounterType, CreatureType, Keyword};
 use crate::game::types::Target;
@@ -465,4 +466,110 @@ fn infuse_with_vitality_returns_creature_on_death() {
     drain_stack(&mut g);
     let returned = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears");
     assert!(returned.is_some() && returned.unwrap().tapped, "bear returns to battlefield tapped");
+}
+
+// ── extras_15 — equipment + payoff creatures ─────────────────────────────────
+
+#[test]
+fn poets_quill_equips_for_plus_one_one_and_lifelink() {
+    let mut g = two_player_game();
+    let quill = g.add_card_to_battlefield(0, catalog::poets_quill());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: quill, target: bear }).expect("equip {1}{B}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "+1/+1");
+    assert!(cp.keywords.contains(&Keyword::Lifelink), "grants lifelink");
+}
+
+#[test]
+fn team_pennant_grants_vigilance_and_trample() {
+    let mut g = two_player_game();
+    let pennant = g.add_card_to_battlefield(0, catalog::team_pennant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: pennant, target: bear }).expect("equip {3}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Vigilance) && cp.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn zephyr_boots_grants_flying() {
+    let mut g = two_player_game();
+    let boots = g.add_card_to_battlefield(0, catalog::zephyr_boots());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: boots, target: bear }).expect("equip {2}");
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn leech_fanatic_has_lifelink_only_on_your_turn() {
+    let mut g = two_player_game();
+    let lf = g.add_card_to_battlefield(0, catalog::leech_fanatic());
+    // Player 0's turn (default active player) → lifelink.
+    assert!(g.computed_permanent(lf).unwrap().keywords.contains(&Keyword::Lifelink));
+    // Opponent's turn → no lifelink.
+    g.active_player_idx = 1;
+    assert!(!g.computed_permanent(lf).unwrap().keywords.contains(&Keyword::Lifelink));
+}
+
+#[test]
+fn stonerise_spirit_grants_flying_by_exiling_graveyard_card() {
+    let mut g = two_player_game();
+    let spirit = g.add_card_to_battlefield(0, catalog::stonerise_spirit());
+    g.clear_sickness(spirit);
+    let fodder = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: spirit, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("{4}, exile a gy card: grant flying");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fodder), "graveyard card exiled as cost");
+    assert!(g.battlefield_find(bear).unwrap().granted_keywords_eot.contains(&Keyword::Flying));
+}
+
+#[test]
+fn novice_dissector_sacrifices_to_add_counter() {
+    let mut g = two_player_game();
+    let dissector = g.add_card_to_battlefield(0, catalog::novice_dissector());
+    g.clear_sickness(dissector);
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dissector, ability_index: 0,
+        target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("{1}, sac a creature: +1/+1 counter");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed as cost");
+    assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn blood_age_general_pumps_attacking_spirits() {
+    use crate::game::Attack;
+    let mut g = two_player_game();
+    let general = g.add_card_to_battlefield(0, catalog::blood_age_general());
+    // A separate attacking Spirit (Stonerise Spirit, a 1/2 flier).
+    let spirit = g.add_card_to_battlefield(0, catalog::stonerise_spirit());
+    g.clear_sickness(spirit);
+    g.clear_sickness(general);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: spirit, target: AttackTarget::Player(1),
+    }])).expect("attack with the Spirit");
+    drain_stack(&mut g);
+    let pwr = g.battlefield_find(spirit).unwrap().power();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: general, ability_index: 0, target: None, x_value: None,
+    }).expect("{T}: attacking Spirits +1/+0");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(spirit).unwrap().power(), pwr + 1, "attacking Spirit pumped");
 }

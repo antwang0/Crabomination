@@ -4212,5 +4212,13 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::arcane_subtraction,
         super::exhilarating_elocution,
         super::infuse_with_vitality,
+        // ── extras_15 — equipment + payoff creatures ──
+        super::poets_quill,
+        super::team_pennant,
+        super::zephyr_boots,
+        super::leech_fanatic,
+        super::stonerise_spirit,
+        super::novice_dissector,
+        super::blood_age_general,
     ]
 }
