@@ -634,6 +634,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         flame_javelin,
         pongify,
         arc_trail,
+        cone_of_flame,
         prey_upon,
         hedron_archive,
         soul_warden,

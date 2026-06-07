@@ -767,6 +767,32 @@ pub fn arc_trail() -> CardDefinition {
     }
 }
 
+/// Cone of Flame — {3}{R}{R} Sorcery. 1/2/3 damage to three distinct any
+/// targets (slots 0/1/2). Extends the Arc Trail per-slot-fixed-damage shape
+/// to three slots.
+pub fn cone_of_flame() -> CardDefinition {
+    CardDefinition {
+        name: "Cone of Flame",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                amount: Value::Const(2),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 2, filter: SelectionRequirement::Any },
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Prey Upon — {G} Sorcery. "Target creature you control fights target
 /// creature you don't control." Both slots fight via `Effect::Fight`.
 pub fn prey_upon() -> CardDefinition {

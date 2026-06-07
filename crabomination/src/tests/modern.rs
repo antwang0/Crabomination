@@ -24321,6 +24321,27 @@ fn arc_trail_splits_two_and_one_damage() {
 }
 
 #[test]
+fn cone_of_flame_splits_one_two_three_across_three_targets() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::cone_of_flame());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear), Target::Permanent(big)],
+        mode: None, x_value: None,
+    }).expect("castable for {3}{R}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "1 damage to the player (slot 0)");
+    // bear (slot 1) took 2 → dies; big (slot 2) took 3 → marked, survives.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2 damage kills the 2/2");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == big).unwrap().damage, 3, "3 damage on the 4/4");
+}
+
+#[test]
 fn prey_upon_makes_two_creatures_fight() {
     let mut g = two_player_game();
     let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4

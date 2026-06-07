@@ -819,9 +819,11 @@ picking an item up.
   - **"Discard unless they discard an artifact" conditional discard**
     (Wrench Mind) — needs a discard whose count flexes on the discarder's
     revealed choice; today only fixed-count `Discard` ships.
-  - **Fixed different-damage to N distinct targets** (Cone of Flame: 1/2/3
-    to three targets) — distinct from `DealDamageDivided` (a shared pool);
-    needs per-slot fixed amounts across additional_targets.
+  - ✅ **Fixed different-damage to N distinct targets** (Cone of Flame: 1/2/3
+    to three targets) — already expressible as a `Seq` of
+    `DealDamage { to: TargetFiltered { slot } }` (the Arc Trail shape extended
+    to three slots). Shipped Cone of Flame; test
+    `cone_of_flame_splits_one_two_three_across_three_targets`.
 
 - 🟡 **Energy ({E}) follow-ups.** (b) **✅ "pay {E}{E} or sacrifice/bounce"
   rider** — `Effect::PayEnergyOrElse { amount, otherwise }` ships Lathnu
