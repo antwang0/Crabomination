@@ -859,6 +859,8 @@ picking an item up.
   - **From-hand discard-cost mana ability** — Elemental Masterpiece's
     `{U/R}{U/R}, Discard this: Create a Treasure` (a cycling-adjacent
     from-hand activated ability that mints a token).
+  - ✅ **`Effect::ExchangeHandAndGraveyard { who }`** — direct zone-vector
+    swap (per-card enters/leaves-gy triggers don't fire). Harness Infinity.
 - ✅ **`Effect::PayManaOrElse { mana_cost, otherwise }`** (this run) —
   the mana sibling of `PayEnergyOrElse`; pays from the floating pool when
   able, else runs the fallback (Archway Commons' "sacrifice unless pay
