@@ -24349,6 +24349,21 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn mind_spring_draws_x_cards() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::mind_spring());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3); // X=3
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("castable X=3");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 3, "drew X=3 (spent the spell)");
+}
+
+#[test]
 fn fireball_deals_x_damage_to_target() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::fireball());

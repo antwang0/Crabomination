@@ -1710,3 +1710,17 @@ pub fn reclaim() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Catalog — {2}{U} Instant. Draw two cards. Discard a card.
+pub fn catalog_draw() -> CardDefinition {
+    CardDefinition {
+        name: "Catalog",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+        ]),
+        ..Default::default()
+    }
+}

@@ -669,6 +669,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         fireball,
         disintegrate,
         flame_sweep,
+        // Blue card draw.
+        tidings,
+        mind_spring,
+        foresee,
+        catalog_draw,
         prey_upon,
         hedron_archive,
         soul_warden,

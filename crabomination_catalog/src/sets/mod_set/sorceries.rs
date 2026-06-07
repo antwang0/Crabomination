@@ -1089,3 +1089,39 @@ pub fn flame_sweep() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Tidings — {4}{U} Sorcery. Draw four cards.
+pub fn tidings() -> CardDefinition {
+    CardDefinition {
+        name: "Tidings",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Mind Spring — {X}{U}{U} Sorcery. Draw X cards.
+pub fn mind_spring() -> CardDefinition {
+    CardDefinition {
+        name: "Mind Spring",
+        cost: cost(&[x(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        ..Default::default()
+    }
+}
+
+/// Foresee — {2}{U} Sorcery. Scry 4, then draw two cards.
+pub fn foresee() -> CardDefinition {
+    CardDefinition {
+        name: "Foresee",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(4) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
