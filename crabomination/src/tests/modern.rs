@@ -34687,3 +34687,79 @@ fn vanilla_beaters_have_stats() {
     let gr = catalog::goblin_roughrider();
     assert_eq!((gr.power, gr.toughness), (3, 2));
 }
+
+// ── Allied-color batch 5 (modern_decks) ─────────────────────────────────────
+
+/// Mistral Singer pumps from prowess on a noncreature cast.
+#[test]
+fn mistral_singer_prowess() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::mistral_singer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, bolt, Target::Player(1));
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "prowess +1/+1");
+}
+
+/// Air Servant taps a flyer.
+#[test]
+fn air_servant_taps_flyer() {
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(1, catalog::snapping_drake());
+    let id = g.add_card_to_battlefield(0, catalog::air_servant());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(drake)), x_value: None })
+    .expect("tap flyer");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(drake).unwrap().tapped);
+}
+
+/// Ronom Unicorn sacrifices itself to destroy an enchantment.
+#[test]
+fn ronom_unicorn_destroys_enchantment() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_battlefield(1, catalog::crippling_blight());
+    let id = g.add_card_to_battlefield(0, catalog::ronom_unicorn());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Permanent(aura)), x_value: None })
+    .expect("sac to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "enchantment destroyed");
+    assert!(g.battlefield_find(id).is_none(), "unicorn sacrificed");
+}
+
+/// Blade Instructor mentors a smaller attacker.
+#[test]
+fn blade_instructor_mentors() {
+    let mut g = two_player_game();
+    let mentor = g.add_card_to_battlefield(0, catalog::blade_instructor()); // 3/1
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 (lesser power)
+    g.clear_sickness(mentor);
+    g.clear_sickness(small);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: mentor, target: AttackTarget::Player(1) },
+        Attack { attacker: small, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(small).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "mentor put a +1/+1 counter on the smaller attacker");
+}
+
+/// Akroma's Devoted gives all Clerics vigilance.
+#[test]
+fn akromas_devoted_grants_cleric_vigilance() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::akromas_devoted());
+    let pilgrim = g.add_card_to_battlefield(0, catalog::ministrant_of_obligation()); // Human Cleric
+    assert!(g.computed_permanent(pilgrim).unwrap().keywords.contains(&Keyword::Vigilance),
+        "other Cleric gains vigilance");
+}

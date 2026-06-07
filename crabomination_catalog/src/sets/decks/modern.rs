@@ -26313,3 +26313,103 @@ pub fn goblin_roughrider() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mistral Singer — {2}{U} 2/2 Siren. Flying, prowess.
+pub fn mistral_singer() -> CardDefinition {
+    use crate::effect::shortcut::prowess_trigger;
+    CardDefinition {
+        name: "Mistral Singer",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Siren], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![prowess_trigger()],
+        ..Default::default()
+    }
+}
+
+/// Air Servant — {4}{U} 4/3 Elemental. Flying. "{2}{U}: Tap target creature
+/// with flying."
+pub fn air_servant() -> CardDefinition {
+    CardDefinition {
+        name: "Air Servant",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            effect: Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ronom Unicorn — {1}{W} 2/2 Unicorn. "Sacrifice this: destroy target
+/// enchantment."
+pub fn ronom_unicorn() -> CardDefinition {
+    CardDefinition {
+        name: "Ronom Unicorn",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blade Instructor — {2}{W} 3/1 Human Soldier. Mentor.
+pub fn blade_instructor() -> CardDefinition {
+    use crate::effect::shortcut::mentor;
+    CardDefinition {
+        name: "Blade Instructor",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![mentor()],
+        ..Default::default()
+    }
+}
+
+/// Akroma's Devoted — {3}{W} 2/4 Human Cleric. "Cleric creatures have
+/// vigilance."
+pub fn akromas_devoted() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Akroma's Devoted",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Cleric creatures have vigilance.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(SelectionRequirement::HasCreatureType(CreatureType::Cleric)),
+                keyword: Keyword::Vigilance,
+            },
+        }],
+        ..Default::default()
+    }
+}

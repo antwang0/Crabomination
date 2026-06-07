@@ -433,6 +433,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         kor_sanctifiers,
         tireless_missionaries,
         sandsteppe_outcast,
+        blade_instructor,
+        akromas_devoted,
+        ronom_unicorn,
         // landcycling (modern_decks)
         daru_lancer,
         // classic batch (modern_decks)
@@ -906,6 +909,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sphinxs_insight,
         precognitive_perception,
         cloudreader_sphinx,
+        mistral_singer,
+        air_servant,
         // ── modern_decks: aggro supplement ──
         faerie_miscreant,
         snapping_drake,
