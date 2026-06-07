@@ -126,10 +126,13 @@ pub enum StaticEffect {
     /// Checked in `declare_attackers`, which sums the tax across every
     /// attacker hitting a protected player/walker and auto-pays it from the
     /// active player's mana pool (rejecting the declaration if it can't be
-    /// covered). Ghostly Prison / Propaganda / Windborn Muse
-    /// (`protect_planeswalkers: false`), Baird (true); copies stack. A
-    /// wants_ui interactive pay prompt is a TODO.
-    AttackTaxToController { amount: u32, protect_planeswalkers: bool },
+    /// covered). `amount` is a `Value` evaluated with the static's controller
+    /// as "you", so fixed taxes use `Value::Const(n)` (Ghostly Prison /
+    /// Propaganda / Windborn Muse = 2, Baird = 1, all `protect_planeswalkers`
+    /// per card) while dynamic ones scale off the controller's board — Sphere
+    /// of Safety = number of enchantments you control. Copies stack. A wants_ui
+    /// interactive pay prompt is a TODO.
+    AttackTaxToController { amount: Value, protect_planeswalkers: bool },
     /// CR 121.2b — Targeted players can't draw more than `max` cards each
     /// turn. While active, an `Effect::Draw` that would push a player past
     /// `max` (counting `Player.cards_drawn_this_turn`) is truncated. Models

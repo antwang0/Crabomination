@@ -34885,3 +34885,31 @@ fn aura_shards_destroys_artifact_on_creature_etb() {
     assert!(!g.battlefield.iter().any(|c| c.id == stone),
         "creature ETB triggers Aura Shards to destroy the opponent's artifact");
 }
+
+/// Avenger of Zendikar makes a Plant per land on ETB, then landfall pumps every
+/// Plant with a +1/+1 counter.
+#[test]
+fn avenger_of_zendikar_makes_plants_then_landfall_pumps() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); } // 3 lands
+    let av = g.add_card_to_hand(0, catalog::avenger_of_zendikar());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: av, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Avenger of Zendikar for {5}{G}{G}");
+    drain_stack(&mut g);
+    let plants: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Plant")
+        .map(|c| c.id)
+        .collect();
+    assert_eq!(plants.len(), 3, "one 0/1 Plant per land you control");
+    // Landfall: playing a land puts a +1/+1 counter on each Plant.
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land for landfall");
+    drain_stack(&mut g);
+    for pid in plants {
+        let p = g.battlefield_find(pid).unwrap();
+        assert_eq!((p.power(), p.toughness()), (1, 2), "landfall pumped the Plant to 1/2");
+    }
+}

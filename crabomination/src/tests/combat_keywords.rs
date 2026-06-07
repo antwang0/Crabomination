@@ -1039,3 +1039,42 @@ fn cr_508_1g_windborn_muse_does_not_tax_planeswalker_attacks() {
     }])).expect("planeswalker attack is untaxed");
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
+
+/// Sphere of Safety taxes {X} = enchantments you control; with only Sphere out
+/// it counts itself, so the tax is {1}.
+#[test]
+fn sphere_of_safety_counts_itself() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    g.add_card_to_battlefield(1, catalog::sphere_of_safety());
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("pay {1} (Sphere counts itself) to attack");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the {{1}} tax was paid");
+}
+
+/// Sphere of Safety's tax scales with the defender's enchantment count: a
+/// second (non-tax) enchantment pushes the tax to {2}.
+#[test]
+fn sphere_of_safety_scales_with_enchantment_count() {
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Bear", 2, 2, vec![]));
+    g.clear_sickness(atk);
+    g.add_card_to_battlefield(1, catalog::sphere_of_safety());
+    g.add_card_to_battlefield(1, catalog::glorious_anthem()); // 2nd, non-tax enchantment
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).is_err(), "{{1}} can't cover the {{2}} tax for two enchantments");
+    g.players[0].mana_pool.add_colorless(1); // top up to {2}
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("pay {2} for two enchantments");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}

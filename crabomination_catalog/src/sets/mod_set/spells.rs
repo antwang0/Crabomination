@@ -203,7 +203,7 @@ pub fn ghostly_prison() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you unless their controller pays {2} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: 2, protect_planeswalkers: false },
+            effect: StaticEffect::AttackTaxToController { amount: Value::Const(2), protect_planeswalkers: false },
         }],
         ..Default::default()
     }
@@ -217,7 +217,30 @@ pub fn propaganda() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you unless their controller pays {2} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: 2, protect_planeswalkers: false },
+            effect: StaticEffect::AttackTaxToController { amount: Value::Const(2), protect_planeswalkers: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sphere of Safety — {3}{W} Enchantment. "Creatures can't attack you or a
+/// planeswalker you control unless their controller pays {X} for each of those
+/// creatures, where X is the number of enchantments you control." The dynamic
+/// tax uses `Value::count(enchantments you control)` (which counts Sphere
+/// itself), evaluated against the defending player in `declare_attackers`.
+pub fn sphere_of_safety() -> CardDefinition {
+    CardDefinition {
+        name: "Sphere of Safety",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures can't attack you or a planeswalker you control unless their controller pays {X} for each, where X is the number of enchantments you control.",
+            effect: StaticEffect::AttackTaxToController {
+                amount: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+                )),
+                protect_planeswalkers: true,
+            },
         }],
         ..Default::default()
     }

@@ -132,6 +132,10 @@ impl GameState {
                 }
             };
             let Some(d) = defender else { continue };
+            // Evaluate each tax `amount` with the defender as "you" (and the
+            // tax permanent as source) so dynamic taxes — Sphere of Safety's
+            // "number of enchantments you control" — count the defender's
+            // board. Fixed taxes are `Value::Const(n)`.
             for c in &self.battlefield {
                 if c.controller != d {
                     continue;
@@ -143,7 +147,9 @@ impl GameState {
                     } = &sa.effect
                         && (!at_planeswalker || *protect_planeswalkers)
                     {
-                        total_tax += amount;
+                        let mut ctx = crate::game::effects::EffectContext::for_spell(d, None, 0, 0);
+                        ctx.source = Some(c.id);
+                        total_tax += self.evaluate_value(amount, &ctx).max(0) as u32;
                     }
                 }
             }

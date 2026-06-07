@@ -3130,6 +3130,60 @@ pub fn sporemound() -> CardDefinition {
     }
 }
 
+/// Avenger of Zendikar — {5}{G}{G} 5/5 Elemental. ETB: create a 0/1 green Plant
+/// token for each land you control. Landfall — whenever a land you control
+/// enters, put a +1/+1 counter on each Plant you control.
+pub fn avenger_of_zendikar() -> CardDefinition {
+    let plant = crate::card::TokenDefinition {
+        name: "Plant".to_string(),
+        power: 0,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Plant], ..Default::default() },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+    };
+    let your_plants = Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Plant)
+            .and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Avenger of Zendikar",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![
+            // ETB: a Plant token for each land you control.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::count(Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    )),
+                    definition: plant,
+                },
+            },
+            // Landfall: +1/+1 counter on each Plant you control.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: your_plants,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Centaur Courser — {2}{G} 3/3 Centaur Warrior (vanilla).
 pub fn centaur_courser() -> CardDefinition {
     CardDefinition {
@@ -8364,7 +8418,7 @@ pub fn windborn_muse() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you unless their controller pays {2} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: 2, protect_planeswalkers: false },
+            effect: StaticEffect::AttackTaxToController { amount: Value::Const(2), protect_planeswalkers: false },
         }],
         ..Default::default()
     }
@@ -8388,7 +8442,7 @@ pub fn baird_steward_of_argive() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         static_abilities: vec![StaticAbility {
             description: "Creatures can't attack you or your planeswalkers unless their controller pays {1} for each.",
-            effect: StaticEffect::AttackTaxToController { amount: 1, protect_planeswalkers: true },
+            effect: StaticEffect::AttackTaxToController { amount: Value::Const(1), protect_planeswalkers: true },
         }],
         ..Default::default()
     }

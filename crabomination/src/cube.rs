@@ -431,6 +431,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // enchantment-scaled attack tax (pillowfort)
+        sphere_of_safety,
         // allied-color batch (modern_decks)
         ministrant_of_obligation,
         dragons_eye_sentry,
@@ -1997,6 +1999,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // team-pump finishers (Overrun variants)
         overwhelming_stampede,
         triumph_of_the_hordes,
+        // landfall payoff
+        avenger_of_zendikar,
         // allied-color batch (modern_decks)
         llanowar_tribe,
         sakura_tribe_scout,
