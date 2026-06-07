@@ -35433,3 +35433,233 @@ fn isochron_scepter_copies_an_instant_on_the_stack() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 20 - 6, "Bolt + its copy deal 6");
 }
+
+// ── Phasing (CR 702.26) ───────────────────────────────────────────────────
+
+/// Tolarian Drake phases out at its controller's untap step, vanishing from
+/// the battlefield, and phases back in the following untap step.
+#[test]
+fn tolarian_drake_phases_out_and_back_in_on_untap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::tolarian_drake());
+    g.active_player_idx = 0;
+    assert!(g.battlefield_find(id).is_some(), "starts phased in");
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "phased out — gone from battlefield");
+    assert!(g.phased_out.iter().any(|c| c.id == id), "tracked in phased_out");
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_some(), "phased back in");
+    assert!(g.phased_out.is_empty(), "side zone emptied");
+}
+
+/// Phasing is not a zone change — counters and damage are retained across a
+/// phase-out/phase-in cycle (CR 702.26e).
+#[test]
+fn phasing_retains_counters_across_cycle() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::tolarian_drake());
+    g.battlefield_find_mut(id).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.active_player_idx = 0;
+    g.do_phasing(); // out
+    g.do_phasing(); // in
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2, "counters survive phasing");
+}
+
+/// Vodalian Illusionist's activated ability phases a target creature out;
+/// it phases back in at its controller's next untap step.
+#[test]
+fn vodalian_illusionist_phases_target_out() {
+    let mut g = two_player_game();
+    let illu = g.add_card_to_battlefield(0, catalog::vodalian_illusionist());
+    g.clear_sickness(illu);
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: illu, ability_index: 0,
+        target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("activatable for {U}{U}, T");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == victim), "tracked in phased_out");
+    // Its controller (player 1) untaps next: phases back in.
+    g.active_player_idx = 1;
+    g.do_phasing();
+    assert!(g.battlefield_find(victim).is_some(), "phased back in on owner's untap");
+}
+
+/// Changeling Hero (Champion, CR 702.77) exiles another creature you control
+/// on ETB; when the Hero leaves, the championed creature returns.
+#[test]
+fn changeling_hero_champions_and_returns_on_leave() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hero = g.add_card_to_hand(0, catalog::changeling_hero());
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hero, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Changeling Hero castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "championed bear is exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear sits in exile");
+    // Hero dies → the championed bear returns to the battlefield.
+    let hero_id = g.battlefield.iter().find(|c| c.definition.name == "Changeling Hero").unwrap().id;
+    g.remove_to_graveyard_with_triggers(hero_id);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bear returns when the Hero leaves");
+}
+
+/// Breezekeeper is a 4/4 flyer with Phasing.
+#[test]
+fn breezekeeper_phases_on_untap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::breezekeeper());
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "Breezekeeper phased out");
+}
+
+/// Reality Ripple phases out a target creature.
+#[test]
+fn reality_ripple_phases_target_out() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rip = g.add_card_to_hand(0, catalog::reality_ripple());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rip, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reality Ripple castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == bear));
+}
+
+// ── Forecast (CR 702.56) ───────────────────────────────────────────────────
+
+/// Steeling Stance's Forecast ability pumps a target creature from hand
+/// during the controller's upkeep, leaving the card in hand.
+#[test]
+fn steeling_stance_forecast_pumps_from_hand_in_upkeep() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stance = g.add_card_to_hand(0, catalog::steeling_stance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stance, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Forecast activatable from hand in upkeep");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!((b.power(), b.toughness()), (3, 3), "Forecast pumped the bear +1/+1");
+    assert!(g.players[0].hand.iter().any(|c| c.id == stance), "card stays in hand (revealed)");
+}
+
+/// The Forecast ability can't be activated outside the controller's upkeep.
+#[test]
+fn steeling_stance_forecast_blocked_outside_upkeep() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let stance = g.add_card_to_hand(0, catalog::steeling_stance());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: stance, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).is_err(), "Forecast is upkeep-only");
+}
+
+/// Teferi's Drake (3/2 flyer) has Phasing and leaves play on its untap step.
+#[test]
+fn teferis_drake_phases_out() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::teferis_drake());
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "Teferi's Drake phased out");
+}
+
+/// Frenetic Efreet's {0} ability phases it out on a won flip.
+#[test]
+fn frenetic_efreet_phases_out_on_won_flip() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::frenetic_efreet());
+    g.clear_sickness(id);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // win
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("free activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "won flip → phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == id));
+}
+
+/// Frenetic Efreet sacrifices itself on a lost flip.
+#[test]
+fn frenetic_efreet_sacrifices_on_lost_flip() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::frenetic_efreet());
+    g.clear_sickness(id);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)])); // lose
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("free activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "lost flip → sacrificed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "in graveyard");
+}
+
+/// Piercing Rays exiles a tapped creature; its Forecast taps from hand in upkeep.
+#[test]
+fn piercing_rays_exiles_tapped_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let rays = g.add_card_to_hand(0, catalog::piercing_rays());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rays, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Piercing Rays castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "tapped creature exiled");
+}
+
+/// Piercing Rays' Forecast taps a target untapped creature from hand in upkeep.
+#[test]
+fn piercing_rays_forecast_taps_from_hand() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let rays = g.add_card_to_hand(0, catalog::piercing_rays());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rays, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Forecast activatable from hand in upkeep");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "Forecast tapped the bear");
+    assert!(g.players[0].hand.iter().any(|c| c.id == rays), "card stays in hand");
+}
+
+/// Sandbar Crocodile is a 5/6 with Phasing.
+#[test]
+fn sandbar_crocodile_phases_out() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sandbar_crocodile());
+    g.active_player_idx = 0;
+    g.do_phasing();
+    assert!(g.battlefield_find(id).is_none(), "Sandbar Crocodile phased out");
+}

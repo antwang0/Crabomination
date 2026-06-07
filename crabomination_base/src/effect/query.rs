@@ -238,6 +238,7 @@ impl Effect {
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::PhaseOut { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
@@ -439,6 +440,7 @@ impl Effect {
             | Effect::ExileTaggedWithSource { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::PhaseOut { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
@@ -699,6 +701,7 @@ impl Effect {
                 }
             }
             Effect::Tap { .. } => format!("tap {}", self.target_phrase()),
+            Effect::PhaseOut { .. } => format!("phase out {}", self.target_phrase()),
             Effect::Untap { .. } => format!("untap {}", self.target_phrase()),
             Effect::CounterSpell { .. } | Effect::CounterSpellToZone { .. } => {
                 "counter target spell".into()
@@ -860,6 +863,7 @@ impl Effect {
             Effect::Destroy { .. }
             | Effect::DestroyNoRegen { .. }
             | Effect::Exile { .. }
+            | Effect::PhaseOut { .. }
             | Effect::Tap { .. }
             | Effect::Untap { .. }
             | Effect::Move { .. }
@@ -1110,7 +1114,7 @@ impl Effect {
                 | Effect::CounterUnless { what, .. }
                 | Effect::Suspect { what }
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
-                Effect::Tap { what } | Effect::Untap { what, .. } => {
+                Effect::PhaseOut { what } | Effect::Tap { what } | Effect::Untap { what, .. } => {
                     sel_find(what, slot).or_else(|| implicit_player_for_slot(what, slot))
                 }
                 Effect::PumpPT { what, .. }

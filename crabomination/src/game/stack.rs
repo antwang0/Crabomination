@@ -925,7 +925,60 @@ impl GameState {
         events
     }
 
+    /// CR 702.26 / 502.1 — phasing turn-based action at the start of the
+    /// untap step (before permanents untap). Permanents the active player
+    /// controls that are phased out phase in; permanents they control with
+    /// phasing (plus anything attached to them) phase out. Phasing in/out is
+    /// not a zone change: no ETB/LTB triggers fire and all state is retained,
+    /// modelled by moving the `CardInstance` between `battlefield` and
+    /// `phased_out` rather than re-creating it.
+    pub(crate) fn do_phasing(&mut self) {
+        let p = self.active_player_idx;
+        // Direct phasers currently in play (computed *before* phase-in so a
+        // permanent that phases in this step doesn't immediately phase back
+        // out), plus any Aura/Equipment attached to one of them.
+        let mut to_phase_out: std::collections::HashSet<crate::card::CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == p && c.has_keyword(&crate::card::Keyword::Phasing))
+            .map(|c| c.id)
+            .collect();
+        if !to_phase_out.is_empty() {
+            let attached: Vec<crate::card::CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.attached_to.is_some_and(|h| to_phase_out.contains(&h)))
+                .map(|c| c.id)
+                .collect();
+            to_phase_out.extend(attached);
+        }
+        // Phase IN: every phased-out permanent this player controls returns.
+        let mut i = 0;
+        while i < self.phased_out.len() {
+            if self.phased_out[i].controller == p {
+                let c = self.phased_out.remove(i);
+                self.battlefield.push(c);
+            } else {
+                i += 1;
+            }
+        }
+        // Phase OUT the set captured above.
+        if !to_phase_out.is_empty() {
+            let mut idx = 0;
+            while idx < self.battlefield.len() {
+                if to_phase_out.contains(&self.battlefield[idx].id) {
+                    let c = self.battlefield.remove(idx);
+                    self.phased_out.push(c);
+                } else {
+                    idx += 1;
+                }
+            }
+        }
+    }
+
     pub(crate) fn do_untap(&mut self) {
+        // CR 502.1 — phasing happens first, as a turn-based action.
+        self.do_phasing();
         let p = self.active_player_idx;
         // Untap permanents YOU CONTROL on your untap step, not just
         // those you originally owned. A creature you've stolen

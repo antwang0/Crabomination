@@ -297,8 +297,9 @@ feature; sweep card-batch by card-batch.
   to exile from hand with N time counters, tick one off per owner's upkeep,
   free-cast when the last is removed; Rift Bolt, Ancestral Vision, Lotus
   Bloom. Creature-suspend haste + a UI prompt for the free cast's targets are
-  TODO.md follow-ups), ⏳ Forecast,
-  ⏳ Hideaway, ⏳ Aftermath.
+  TODO.md follow-ups), ✅ Forecast (CR 702.56 — rides the `from_hand`
+  activated-ability path gated to the controller's upkeep + once-per-turn;
+  Steeling Stance), ⏳ Hideaway, ⏳ Aftermath.
 - **Combat-flavor:** ✅ Bushido / ✅ Flanking / ✅ Rampage
   (`Keyword::{Bushido,Flanking,Rampage}` — combat-step rules in
   `declare_blockers`),

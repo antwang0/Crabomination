@@ -874,6 +874,8 @@ pub enum GameEvent {
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
+    /// CR 702.26 — a permanent phased out (moved to `GameState.phased_out`).
+    PermanentPhasedOut { card_id: CardId },
     /// CR 701.40 — a permanent explored. `card_id` is the exploring
     /// permanent; `controller` is its controller (whose library was
     /// revealed).

@@ -14811,6 +14811,265 @@ pub fn lonis_genetics_expert() -> CardDefinition {
     }
 }
 
+/// Tolarian Drake — {2}{U} 2/4 Drake. Flying, Phasing.
+///
+/// CR 702.26 — phases out/in before its controller's untap step
+/// (`GameState::do_phasing`). While phased out it's treated as though it
+/// doesn't exist; all state (counters, damage, attachments) is retained.
+pub fn tolarian_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Tolarian Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
+/// Changeling Hero — {4}{W} 4/4 Shapeshifter. Changeling.
+/// Champion a creature (CR 702.77).
+///
+/// Champion is wired as an ETB linked-exile: the controller exiles another
+/// creature they control via `Effect::ExileUntilSourceLeaves`, and
+/// `return_linked_exiles` returns it when the Hero leaves. The "sacrifice it
+/// unless you exile" clause collapses to "the trigger does nothing if you
+/// control no other creature" (no forced self-sacrifice yet).
+pub fn changeling_hero() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Changeling Hero",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Changeling],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vodalian Illusionist — {2}{U} 2/2 Merfolk Wizard.
+/// `{U}{U}, {T}: Target creature phases out.` (CR 702.26)
+pub fn vodalian_illusionist() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Vodalian Illusionist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[u(), u()]),
+            effect: Effect::PhaseOut {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Steeling Stance — {1}{W}{W} Instant. "Creatures you control get +1/+1
+/// until end of turn." Forecast — {W}, Reveal from hand: target creature gets
+/// +1/+1 until end of turn. (CR 702.56)
+///
+/// Forecast rides the engine's `from_hand` activated-ability path: the
+/// ability is activatable only from hand (`from_hand`), only during the
+/// controller's upkeep (`condition`), and once per turn (`once_per_turn`);
+/// the card stays in hand ("reveal").
+pub fn steeling_stance() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::{each_your_creature, target_filtered};
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Steeling Stance",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: each_your_creature(),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[w()]),
+            from_hand: true,
+            once_per_turn: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Breezekeeper — {3}{U} 4/4 Djinn. Flying, Phasing (CR 702.26).
+pub fn breezekeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Breezekeeper",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
+/// Sandbar Crocodile — {4}{U} 5/6 Crocodile. Phasing (CR 702.26).
+pub fn sandbar_crocodile() -> CardDefinition {
+    CardDefinition {
+        name: "Sandbar Crocodile",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Crocodile],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 6,
+        keywords: vec![Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
+/// Teferi's Drake — {2}{U} 3/2 Drake. Flying, Phasing (CR 702.26).
+pub fn teferis_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Teferi's Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Phasing],
+        ..Default::default()
+    }
+}
+
+/// Frenetic Efreet — {1}{U}{R} 2/1 Efreet. Flying.
+/// `{0}: Flip a coin. Win → this phases out; lose → sacrifice it.` (CR 702.26)
+pub fn frenetic_efreet() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Frenetic Efreet",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Efreet],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            effect: Effect::FlipCoin {
+                count: Value::Const(1),
+                on_heads: Box::new(Effect::PhaseOut { what: Selector::This }),
+                on_tails: Box::new(Effect::SacrificeSource),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Piercing Rays — {1}{W} Sorcery. "Exile target tapped creature."
+/// Forecast — {2}{W}, Reveal from hand: tap target untapped creature. (CR 702.56)
+pub fn piercing_rays() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::target_filtered;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Piercing Rays",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w()]),
+            from_hand: true,
+            once_per_turn: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::Untapped),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reality Ripple — {1}{U} Instant. "Target artifact, creature, or land
+/// phases out." (CR 702.26)
+pub fn reality_ripple() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Reality Ripple",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PhaseOut {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .or(SelectionRequirement::Land),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Bloodbraid Elf — {2}{R}{G} Creature 3/2. Haste. Cascade.
 ///
 /// Cascade (CR 702.85) is now a first-class engine mechanic: the

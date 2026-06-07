@@ -133,6 +133,11 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
 
         E::StepChanged(_) | E::TurnStarted { .. } => theme::TEXT_SECONDARY,
 
+        // Phasing — a permanent slips out of (or back into) existence. Read
+        // as a transient/secondary board event; the glyph carries the cue
+        // since the permanent itself vanishes from the board view.
+        E::PermanentPhasedOut { .. } => theme::TEXT_SECONDARY,
+
         E::CardDrawn { .. }
         | E::CardDiscarded { .. }
         | E::CardMilled { .. }
@@ -185,6 +190,8 @@ fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static str {
         // Coin flips and die rolls — a die glyph flags randomization outcomes.
         E::CoinFlipWon { .. } | E::CoinFlipLost { .. } | E::DiceRolled { .. } => "⚄ ",
         E::EnergyGained { .. } => "⚡ ",
+        // Phasing — a hollow circle reads as "now you don't".
+        E::PermanentPhasedOut { .. } => "◌ ",
         _ => "",
     }
 }

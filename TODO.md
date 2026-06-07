@@ -8,6 +8,18 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Phasing (CR 702.26) follow-ups** (engine shipped this run): a permanent
+  that **enters phased out** (Reality Ripple-adjacent / Teferi's Veil grant);
+  phasing **grant** to other permanents (Teferi's Veil "attacking creatures
+  gain phasing"); a creature phasing out mid-combat (remove from the combat
+  arrays cleanly — today `do_phasing` only runs in the untap step so this can't
+  arise yet, but `Effect::PhaseOut` could be cast in combat); "when this phases
+  in" triggers (rare). The side-zone model (`GameState.phased_out`) is the hook.
+- ℹ️ **Client can't be built in the web sandbox** — `wayland-sys`'s build
+  script needs the system `wayland-client` lib, which isn't installed here, so
+  `cargo build/clippy -p crabomination_client` fails before compiling our code.
+  Client-only changes can't be compile-verified in this environment; keep them
+  to small, pattern-matching-consistent edits and rely on review.
 - ⏳ **Discovered this run (allied-color card batch):**
   - **Evoke keyword** — `AlternativeCost.evoke_sacrifice` exists but no
     `shortcut::evoke`; blocks Inner-Flame Acolyte and the Lorwyn evoke cycle.
@@ -732,6 +744,14 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.26 — Phasing** (`GameState.phased_out` side zone + `do_phasing`
+  at the top of the untap step; `Effect::PhaseOut` for targeted phase-out.
+  Tolarian Drake, Breezekeeper, Vodalian Illusionist, Reality Ripple).
+- ✅ **CR 702.77 — Champion** (ETB linked-exile via `ExileUntilSourceLeaves`;
+  returns on leave. "Sacrifice unless you exile" collapses to a no-op when no
+  other creature is controlled. Changeling Hero).
+- ✅ **CR 702.56 — Forecast** (`ActivatedAbility.from_hand` + upkeep-only
+  `condition` + `once_per_turn`; card stays in hand. Steeling Stance).
 - ✅ **CR 603.3b — Same-controller trigger ordering** (server *suspend* path for a networked human still ⏳).
 - ✅ **CR 702.124 — Addendum** (`shortcut::addendum` / `cast_during_your_main`: a resolution-time `IsTurnOf(You) ∧ main-phase` gate — exact since a main-phase cast resolves in the same step. Sphinx's Insight, Precognitive Perception).
 - ✅ **CR 601.2f — generic cost reduction (graveyard-Affinity)** (`CardDefinition.affinity_graveyard_filter`: {1} less per matching graveyard card, generalizing the old per-name Dawning Archaic hook; clamped generic-only. The bot's `can_afford_in_state` folds in cost reductions too. Tolarian Terror, The Dawning Archaic).
@@ -771,7 +791,15 @@ picking an item up.
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth.
 - 🟡 **CR 121 — Drawing a Card** — choose-to-draw (121.3); draw-count replacement (121.2a); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
-- 🟡 **CR 502 — Untap Step** — Phasing (502.1); Daybound/Nightbound DFC transform (502.2). `StaticEffect::PreventUntap` honors `Selector::This` (self-referential — Basalt/Grim Monolith) and now `Selector::AttachedTo(This)` (aura-anchored "enchanted creature doesn't untap" — Claustrophobia/Dehydration).
+- 🟡 **CR 502 — Untap Step** — Phasing (502.1 / 702.26) ✅: `do_phasing`
+  runs as a turn-based action at the top of the untap step, moving the active
+  player's phasing permanents (and their attachments) to `GameState.phased_out`
+  and phasing back in everything they control there — modelled as a side zone
+  so every battlefield query ignores phased-out cards and no ETB/LTB fires, all
+  state retained (Tolarian Drake). Targeted phase-out ✅ via `Effect::PhaseOut`
+  (Vodalian Illusionist). Daybound/Nightbound DFC transform (502.2) still ⏳.
+  `StaticEffect::PreventUntap` honors `Selector::This` (Basalt/Grim Monolith)
+  and `Selector::AttachedTo(This)` (Claustrophobia/Dehydration).
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).

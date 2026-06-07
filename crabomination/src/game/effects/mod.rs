@@ -2634,6 +2634,36 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PhaseOut { what } => {
+                // CR 702.26 — collect the targeted permanents (and anything
+                // attached to them) and move them to the phased-out zone.
+                let mut ids: std::collections::HashSet<crate::card::CardId> = self
+                    .resolve_selector(what, ctx)
+                    .iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .collect();
+                if !ids.is_empty() {
+                    let attached: Vec<crate::card::CardId> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.attached_to.is_some_and(|h| ids.contains(&h)))
+                        .map(|c| c.id)
+                        .collect();
+                    ids.extend(attached);
+                    let mut idx = 0;
+                    while idx < self.battlefield.len() {
+                        if ids.contains(&self.battlefield[idx].id) {
+                            let c = self.battlefield.remove(idx);
+                            events.push(GameEvent::PermanentPhasedOut { card_id: c.id });
+                            self.phased_out.push(c);
+                        } else {
+                            idx += 1;
+                        }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Untap { what, up_to } => {
                 let cap = up_to
                     .as_ref()
