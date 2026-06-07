@@ -113,6 +113,10 @@ pub enum CreatureType {
     Scion,
     // Battle for Zendikar / OGW Eldrazi Processor (process-matters).
     Processor,
+    // Yeti (Mountain Yeti, Zhalfirin Yeti).
+    Yeti,
+    // Ranger (Murasa Ranger).
+    Ranger,
     // Artifact creature subtype (Bottle Gnomes).
     Gnome,
     // Artifact creature subtype (Court Homunculus, Fblthp).

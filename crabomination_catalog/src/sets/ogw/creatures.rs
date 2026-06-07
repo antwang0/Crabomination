@@ -369,6 +369,215 @@ pub fn reaver_drone() -> CardDefinition {
     }
 }
 
+/// Canopy Gorger — {4}{G}{G} 6/5 Wurm.
+pub fn canopy_gorger() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Canopy Gorger",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wurm], ..Default::default() },
+        power: 6,
+        toughness: 5,
+        ..Default::default()
+    }
+}
+
+/// Mammoth Spider — {4}{G} 3/5 Spider. Reach.
+pub fn mammoth_spider() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Mammoth Spider",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spider], ..Default::default() },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Murasa Ranger — {3}{G} 3/3 Human Warrior Ranger. Landfall — you may pay
+/// {3}{G}; if you do, put two +1/+1 counters on this creature.
+pub fn murasa_ranger() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        name: "Murasa Ranger",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {3}{G} to put two +1/+1 counters on Murasa Ranger?".into(),
+                mana_cost: cost(&[generic(3), g()]),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Snapping Gnarlid — {1}{G} 2/2 Beast. Landfall — gets +1/+1 EOT when a land
+/// you control enters.
+pub fn snapping_gnarlid() -> CardDefinition {
+    landfall_pump("Snapping Gnarlid", cost(&[generic(1), g()]), 2, 2, 1, 1)
+}
+
+/// Territorial Baloth — {4}{G} 4/4 Beast. Landfall — gets +2/+2 EOT.
+pub fn territorial_baloth() -> CardDefinition {
+    landfall_pump("Territorial Baloth", cost(&[generic(4), g()]), 4, 4, 2, 2)
+}
+
+/// Shared body for the Beast landfall-pumps above.
+fn landfall_pump(
+    name: &'static str, c: crate::mana::ManaCost, p: i32, t: i32, dp: i32, dt: i32,
+) -> CardDefinition {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: p,
+        toughness: t,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(dp),
+                toughness: Value::Const(dt),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oran-Rief Invoker — {1}{G} 2/2 Human Shaman. {8}: +5/+5 and gains trample EOT.
+pub fn oran_rief_invoker() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CreatureType};
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        name: "Oran-Rief Invoker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(8)]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(5),
+                    toughness: Value::Const(5),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lavastep Raider — {R} 1/2 Goblin Warrior. {2}{R}: +2/+0 until end of turn.
+pub fn lavastep_raider() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CreatureType};
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        name: "Lavastep Raider",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cliffside Lookout — {W} 1/1 Kor Scout Ally. {4}{W}: creatures you control
+/// get +1/+1 until end of turn.
+pub fn cliffside_lookout() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CreatureType};
+    use crate::effect::shortcut::each_your_creature;
+    use crate::effect::{Duration, Selector, Value};
+    CardDefinition {
+        name: "Cliffside Lookout",
+        cost: cost(&[crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Scout, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), crate::mana::w()]),
+            effect: Effect::ForEach {
+                selector: each_your_creature(),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mountain Yeti — {2}{R}{R} 3/3 Yeti. Mountainwalk, Protection from white.
+pub fn mountain_yeti() -> CardDefinition {
+    use crate::card::{CreatureType, LandType};
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Mountain Yeti",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Yeti], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Landwalk(LandType::Mountain), Keyword::Protection(Color::White)],
+        ..Default::default()
+    }
+}
+
 /// Wasteland Scorpion — {2}{B} 2/2 Scorpion. Deathtouch, Cycling {2}.
 pub fn wasteland_scorpion() -> CardDefinition {
     use crate::card::CreatureType;

@@ -1384,3 +1384,99 @@ fn expedition_raptor_supports_on_etb() {
     assert!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne) >= 1,
         "support places a +1/+1 counter");
 }
+
+/// Landfall pumps: Snapping Gnarlid +1/+1, Territorial Baloth +2/+2 EOT.
+#[test]
+fn landfall_pumps_grow_until_end_of_turn() {
+    let mut g = two_player_game();
+    let gn = g.add_card_to_battlefield(0, catalog::snapping_gnarlid());
+    let bl = g.add_card_to_battlefield(0, catalog::territorial_baloth());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(gn).unwrap().power, 3, "Gnarlid 2/2 → 3/3");
+    assert_eq!(g.computed_permanent(bl).unwrap().power, 6, "Baloth 4/4 → 6/6");
+}
+
+/// Oran-Rief Invoker pumps itself +5/+5 with trample for {8}.
+#[test]
+fn oran_rief_invoker_invokes() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::oran_rief_invoker());
+    g.players[0].mana_pool.add_colorless(8);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("invoke");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (7, 7), "2/2 → 7/7");
+    assert!(cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Cliffside Lookout pumps the whole team +1/+1.
+#[test]
+fn cliffside_lookout_pumps_team() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let look = g.add_card_to_battlefield(0, catalog::cliffside_lookout());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: look, ability_index: 0, target: None, x_value: None,
+    }).expect("team pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(other).unwrap().power, 3, "Grizzly 2/2 → 3/3");
+}
+
+/// Mountain Yeti has mountainwalk and protection from white.
+#[test]
+fn mountain_yeti_keywords() {
+    use crate::card::{Keyword, LandType};
+    use crate::mana::Color;
+    let def = catalog::mountain_yeti();
+    assert!(def.keywords.contains(&Keyword::Landwalk(LandType::Mountain)));
+    assert!(def.keywords.contains(&Keyword::Protection(Color::White)));
+}
+
+/// Lavastep Raider pumps itself +2/+0.
+#[test]
+fn lavastep_raider_pumps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lavastep_raider());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "1/2 → 3/2");
+}
+
+/// Canopy Gorger (6/5) and Mammoth Spider (3/5 reach) are vanilla bodies.
+#[test]
+fn canopy_gorger_and_mammoth_spider_bodies() {
+    use crate::card::Keyword;
+    assert_eq!((catalog::canopy_gorger().power, catalog::canopy_gorger().toughness), (6, 5));
+    let spider = catalog::mammoth_spider();
+    assert_eq!((spider.power, spider.toughness), (3, 5));
+    assert!(spider.keywords.contains(&Keyword::Reach));
+}
+
+/// Murasa Ranger grows with two +1/+1 counters when its landfall cost is paid.
+#[test]
+fn murasa_ranger_landfall_pays_for_counters() {
+    use crate::card::CounterType;
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::murasa_ranger());
+    // Pre-float the {3}{G} the MayPay needs and accept the optional cost.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "two +1/+1 counters after paying the landfall cost");
+}
