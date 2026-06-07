@@ -1088,3 +1088,51 @@ fn lifespring_druid_taps_for_any_color() {
     }).expect("tap for mana");
     assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
 }
+
+/// Havoc Sower pumps itself +2/+1 for {1}{C}.
+#[test]
+fn havoc_sower_pumps_itself() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::havoc_sower());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (5, 4), "3/3 → 5/4 after +2/+1");
+}
+
+/// Defiant Bloodlord drains an opponent whenever its controller gains life.
+#[test]
+fn defiant_bloodlord_drains_on_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::defiant_bloodlord());
+    let opp_before = g.players[1].life;
+    g.adjust_life(0, 3); // gain 3 life
+    g.dispatch_triggers_for_events(&[GameEvent::LifeGained { player: 0, amount: 3 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 3, "opponent loses life equal to life gained");
+}
+
+/// Cinder Hellion deals 2 to an opponent on ETB.
+#[test]
+fn cinder_hellion_etb_burns_opponent() {
+    let mut g = two_player_game();
+    let before = g.players[1].life;
+    let id = g.add_card_to_battlefield(0, catalog::cinder_hellion());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 2, "ETB deals 2 to the opponent");
+}
+
+/// Natural State destroys a cheap artifact.
+#[test]
+fn natural_state_destroys_cheap_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::natural_state());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    crate::game::cast_at(&mut g, id, Target::Permanent(art));
+    assert!(!g.battlefield.iter().any(|c| c.id == art), "MV-2 artifact destroyed");
+}

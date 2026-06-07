@@ -229,3 +229,21 @@ pub fn touch_of_the_void() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Natural State — {G} Instant. Destroy target artifact or enchantment with
+/// mana value 3 or less.
+pub fn natural_state() -> CardDefinition {
+    CardDefinition {
+        name: "Natural State",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+        },
+        ..Default::default()
+    }
+}

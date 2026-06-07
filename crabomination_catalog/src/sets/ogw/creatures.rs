@@ -356,6 +356,80 @@ pub fn reaver_drone() -> CardDefinition {
     }
 }
 
+/// Havoc Sower — {3}{B} 3/3 Eldrazi Drone. Devoid; {1}{C}: +2/+1 until end of turn.
+pub fn havoc_sower() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        keywords: vec![Keyword::Devoid],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), crate::mana::colorless(1)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..drone("Havoc Sower", cost(&[generic(3), b()]), 3, 3)
+    }
+}
+
+/// Defiant Bloodlord — {5}{B}{B} 4/5 Vampire. Flying; whenever you gain life,
+/// target opponent loses that much life.
+pub fn defiant_bloodlord() -> CardDefinition {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef, Selector, Value};
+    CardDefinition {
+        name: "Defiant Bloodlord",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::TriggerEventAmount,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cinder Hellion — {4}{R} 4/4 Hellion. Trample; ETB deal 2 damage to target
+/// opponent or planeswalker.
+pub fn cinder_hellion() -> CardDefinition {
+    use crate::card::{CreatureType, SelectionRequirement};
+    use crate::effect::shortcut::etb;
+    use crate::effect::Value;
+    CardDefinition {
+        name: "Cinder Hellion",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hellion],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Void Grafter — {1}{G}{U} 2/4 Eldrazi Drone. Devoid, Flash; ETB another
 /// target creature you control gains hexproof until end of turn.
 pub fn void_grafter() -> CardDefinition {
