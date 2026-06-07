@@ -651,6 +651,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Seal enchantments (pre-paid removal).
         seal_of_doom,
         seal_of_primordium,
+        // Black card-draw / death payoffs.
+        ancient_craving,
+        dark_prophecy,
+        costly_plunder,
+        pressure_point,
+        seal_of_strength,
         prey_upon,
         hedron_archive,
         soul_warden,

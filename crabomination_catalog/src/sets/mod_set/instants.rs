@@ -1662,3 +1662,35 @@ pub fn frost_breath() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Costly Plunder — {1}{B} Instant. Sacrifice an artifact or creature; draw
+/// two cards.
+pub fn costly_plunder() -> CardDefinition {
+    CardDefinition {
+        name: "Costly Plunder",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Pressure Point — {1}{W} Instant. Tap target creature; draw a card.
+pub fn pressure_point() -> CardDefinition {
+    CardDefinition {
+        name: "Pressure Point",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}

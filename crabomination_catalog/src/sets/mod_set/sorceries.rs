@@ -974,3 +974,17 @@ pub fn renegade_tactics() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ancient Craving — {3}{B} Sorcery. You draw three cards and you lose 3 life.
+pub fn ancient_craving() -> CardDefinition {
+    CardDefinition {
+        name: "Ancient Craving",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}

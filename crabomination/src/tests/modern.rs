@@ -24349,6 +24349,60 @@ fn history_of_benalia_saga_chapters_and_sacrifice() {
 }
 
 #[test]
+fn pressure_point_taps_a_creature_and_cantrips() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pressure_point());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().find(|c| c.id == target).unwrap().tapped, "target tapped");
+    assert_eq!(g.players[0].hand.len(), hand0, "net hand unchanged: spent the spell, drew one");
+}
+
+#[test]
+fn seal_of_strength_sacrifices_to_pump() {
+    let mut g = two_player_game();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_strength());
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal, ability_index: 0, target: Some(Target::Permanent(creature)), x_value: None,
+    }).expect("sac to pump");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    assert_eq!((c.power(), c.toughness()), (5, 5), "+3/+3");
+    assert!(!g.battlefield.iter().any(|c| c.id == seal), "Seal sacrificed");
+}
+
+#[test]
+fn dark_prophecy_draws_and_loses_life_when_your_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dark_prophecy());
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::grizzly_bears()); // something to draw
+    let hand0 = g.players[0].hand.len();
+    let life0 = g.players[0].life;
+    // Kill the creature with a burn spell so the death event dispatches the
+    // "another creature you control dies" watcher.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(creature)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == creature), "bear died");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card on death");
+    assert_eq!(g.players[0].life, life0 - 1, "lost 1 life on death");
+}
+
+#[test]
 fn seal_of_doom_sacrifices_to_destroy_nonblack_creature() {
     let mut g = two_player_game();
     let seal = g.add_card_to_battlefield(0, catalog::seal_of_doom());

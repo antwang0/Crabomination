@@ -8479,3 +8479,42 @@ pub fn seal_of_primordium() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dark Prophecy — {B}{B}{B} Enchantment. Whenever a creature you control
+/// dies, draw a card and lose 1 life.
+pub fn dark_prophecy() -> CardDefinition {
+    CardDefinition {
+        name: "Dark Prophecy",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Strength — {G} Enchantment. "Sacrifice this: Target creature gets
+/// +3/+3 until end of turn."
+pub fn seal_of_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Seal of Strength",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(3),
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
