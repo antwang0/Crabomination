@@ -125,7 +125,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessEvenCounters
         | Keyword::AttacksAlone | Keyword::DealsNoCombatDamage
         | Keyword::CantBeBlockedExceptBy(_) | Keyword::CantBeBlockedBy(_)
-        | Keyword::CantBeBlockedByMoreThanOne
+        | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
         Keyword::Unleash => "Unleash",
         Keyword::Ninjutsu(_) => "Ninjutsu",

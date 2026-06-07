@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Eldrazi-titan pass leftovers (this run).** Skipped, each needs a new
+  primitive: (a) **Process** mechanic (put a card an opponent owns from exile
+  into their graveyard) — blocks Wasteland Strangler, Mind Raker, Blight Herder,
+  Oblivion Sower, Processor Assault; (b) **conditional static keyword grant**
+  ("has haste as long as you control another colorless creature") — Eldrazi
+  Aggressor; (c) **non-linked exile-from-opponent-hand** ("you choose a nonland
+  card and exile it" + a separate LTB draw) — Thought-Knot Seer; (d) Reaver
+  Drone's upkeep "lose life unless you control another colorless creature" needs
+  the `OtherThanSource` self-exclusion to thread through the `SelectorCountAtLeast`
+  condition path (works for Dominator Drone's ETB but unverified for upkeep).
+- ⏳ **Hand of Emrakul / Spawnsire alt-cost & wish.** Hand of Emrakul's
+  "sacrifice four Eldrazi Spawn rather than pay mana" alt-cost and Spawnsire's
+  {20} cast-from-outside-the-game are both dropped (no sacrifice-N-of-a-type
+  alt-cost / wish primitives).
 - ⏳ **Goldvein Hydra death-treasure rider (LKI).** The dies trigger's
   `Value::PowerOf(This)` can't read the counter-boosted power because
   `died_card_snapshots` is cleared after the trigger dispatcher runs, before
