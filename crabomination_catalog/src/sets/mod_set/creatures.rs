@@ -8638,6 +8638,35 @@ pub fn impassioned_orator() -> CardDefinition {
     }
 }
 
+/// Esper Sentinel — {W} Creature — Human Artificer 1/1. "Whenever an opponent
+/// casts their first noncreature spell each turn, draw a card unless that player
+/// pays {X}, where X is Esper Sentinel's power." Simplified to an unconditional
+/// draw on each opponent's noncreature cast (the "first each turn" gate and the
+/// power-scaled tax are dropped).
+pub fn esper_sentinel() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Esper Sentinel",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Birgi, God of Storytelling — {2}{R} Legendary Creature — God 3/3. "Whenever
 /// you cast a spell, add {R}." (Front face only; the Harnfel // back face is
 /// omitted.)

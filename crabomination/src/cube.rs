@@ -440,6 +440,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // artifact/enchantment hate
         aura_of_silence,
         return_to_dust,
+        // draw-tax payoffs (simplified)
+        smothering_tithe,
+        esper_sentinel,
         // allied-color batch (modern_decks)
         ministrant_of_obligation,
         dragons_eye_sentry,
@@ -923,6 +926,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // counterspells
         mana_drain,
         fierce_guardianship,
+        // cast-tax card advantage (simplified)
+        rhystic_study,
+        mystic_remora,
         // allied-color batch (modern_decks)
         tolarian_terror,
         vodalian_arcanist,

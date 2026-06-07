@@ -360,6 +360,63 @@ pub fn return_to_dust() -> CardDefinition {
     }
 }
 
+/// Rhystic Study — {2}{U} Enchantment. "Whenever an opponent casts a spell, you
+/// may draw a card unless that player pays {1}." Simplified to an unconditional
+/// draw on each opponent's cast (the "unless they pay {1}" tax is dropped).
+pub fn rhystic_study() -> CardDefinition {
+    CardDefinition {
+        name: "Rhystic Study",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mystic Remora — {U} Enchantment. "Whenever an opponent casts a noncreature
+/// spell, you may draw a card unless that player pays {4}." Simplified to an
+/// unconditional draw on each opponent's noncreature cast (the {4} tax and the
+/// cumulative-upkeep cost are dropped).
+pub fn mystic_remora() -> CardDefinition {
+    CardDefinition {
+        name: "Mystic Remora",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
+                .with_filter(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Smothering Tithe — {3}{W} Enchantment. "Whenever an opponent draws a card,
+/// that player may pay {2}. If they don't, you create a Treasure token."
+/// Simplified to always creating a Treasure on each opponent's draw.
+pub fn smothering_tithe() -> CardDefinition {
+    CardDefinition {
+        name: "Smothering Tithe",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Mana Drain — {U}{U} Instant. "Counter target spell." (The "add {C} for each
 /// of its mana value at your next precombat main phase" ritual rider is
 /// omitted.)

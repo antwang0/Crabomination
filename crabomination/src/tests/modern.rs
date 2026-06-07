@@ -35260,3 +35260,60 @@ fn deflecting_swat_counters_a_spell() {
     cast_then_counter(&mut g, ds, bolt);
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered");
 }
+
+/// Opponent (seat 1) casts a Lightning Bolt at seat 0. Returns nothing; the
+/// caller asserts the seat-0 payoff.
+fn opponent_casts_bolt(g: &mut GameState) {
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts Bolt");
+    drain_stack(g);
+}
+
+#[test]
+fn rhystic_study_draws_when_opponent_casts() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rhystic_study());
+    g.add_card_to_library(0, catalog::shock());
+    let lib = g.players[0].library.len();
+    opponent_casts_bolt(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "Rhystic Study drew a card");
+}
+
+#[test]
+fn mystic_remora_draws_on_opponent_noncreature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mystic_remora());
+    g.add_card_to_library(0, catalog::shock());
+    let lib = g.players[0].library.len();
+    opponent_casts_bolt(&mut g); // Bolt is noncreature
+    assert_eq!(g.players[0].library.len(), lib - 1, "Mystic Remora drew a card");
+}
+
+#[test]
+fn esper_sentinel_draws_on_opponent_noncreature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::esper_sentinel());
+    g.add_card_to_library(0, catalog::shock());
+    let lib = g.players[0].library.len();
+    opponent_casts_bolt(&mut g);
+    assert_eq!(g.players[0].library.len(), lib - 1, "Esper Sentinel drew a card");
+}
+
+#[test]
+fn smothering_tithe_makes_treasure_on_opponent_draw() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::smothering_tithe());
+    g.add_card_to_library(1, catalog::shock());
+    let mut evs = vec![];
+    g.draw_one(1, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"),
+        "Smothering Tithe created a Treasure for you");
+}
