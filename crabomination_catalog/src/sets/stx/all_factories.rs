@@ -4239,6 +4239,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::devouring_tendrils,
         super::study_break,
         super::golden_ratio,
+        super::geometric_nexus,
         super::culmination_of_studies,
         super::semesters_end,
         super::make_your_move,

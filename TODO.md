@@ -835,9 +835,6 @@ picking an item up.
     Shaile, Dean of Radiance's `{T}: +1/+1 on each creature that entered
     this turn.`
   - **MDFC legends** — Codie/Extus/Blex/Jadzi and the Dean cycle (two-faced).
-  - **Spell-MV-in-trigger** — Geometric Nexus ("charge counters equal to that
-    spell's mana value"); needs the cast spell's MV plumbed into the trigger's
-    `event_amount` + a remove-all-counters-and-count activation cost.
   - **Group land-search** — Scholarship Sponsor's catch-up basic-land tutor.
   - **Variable-number-of-targets** — Semester's End is shipped single-target;
     Ecological Appreciation needs "up to four with different names" + an

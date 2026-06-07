@@ -296,6 +296,57 @@ pub fn golden_ratio() -> CardDefinition {
     }
 }
 
+/// Geometric Nexus — {2} Artifact. Whenever a player casts an instant or
+/// sorcery spell, put charge counters on this equal to that spell's mana value.
+/// `{6}, {T}, Remove all charge counters: Create a 0/0 G/U Fractal with X +1/+1
+/// counters, where X is the number removed.` (The removal is modeled as part of
+/// the resolution rather than a paid cost.)
+pub fn geometric_nexus() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    let charge_on_self = || Value::CountersOn {
+        what: Box::new(Selector::This),
+        kind: CounterType::Charge,
+    };
+    CardDefinition {
+        name: "Geometric Nexus",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6)]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::catalog::sets::sos::fractal_token(),
+                },
+                Effect::AddCounter {
+                    what: Selector::LastCreatedToken,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: charge_on_self(),
+                },
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: charge_on_self(),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Culmination of Studies — {X}{U}{R} Sorcery. Exile the top X cards of your
 /// library. For each land exiled this way create a Treasure, for each blue card
 /// draw a card, and for each red card deal 1 damage to each opponent.

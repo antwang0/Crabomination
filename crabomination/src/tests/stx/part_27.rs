@@ -102,6 +102,38 @@ fn blot_out_the_sky_wraths_noncreatures_at_x_six() {
 }
 
 #[test]
+fn geometric_nexus_charges_on_spell_cast_then_mints_a_scaled_fractal() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let nexus = g.add_card_to_battlefield(0, catalog::geometric_nexus());
+    // Cast a 3-MV instant (Counterspell {U}{U}? use a known 3-MV IS). Use a
+    // sorcery with cmc 3 — Golden Ratio ({1}{G}{U}) = 3.
+    let spell = g.add_card_to_hand(0, catalog::golden_ratio());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a 3-MV sorcery");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(nexus).unwrap().counter_count(CounterType::Charge), 3,
+        "charge counters equal the spell's mana value");
+    // Activate: spend {6}, tap, remove all charge → 0/0 Fractal with 3 +1/+1.
+    g.clear_sickness(nexus);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nexus, ability_index: 0, target: None, x_value: None,
+    }).expect("activate the Fractal-maker");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
+        .expect("a Fractal token");
+    assert_eq!((fractal.power(), fractal.toughness()), (3, 3), "X = 3 charge counters removed");
+    assert_eq!(g.battlefield_find(nexus).unwrap().counter_count(CounterType::Charge), 0,
+        "all charge counters removed");
+}
+
+#[test]
 fn culmination_of_studies_scales_treasure_draw_and_burn_by_exiled_types() {
     let mut g = two_player_game();
     g.players[0].hand.clear();
