@@ -369,6 +369,133 @@ pub fn reaver_drone() -> CardDefinition {
     }
 }
 
+/// Wasteland Scorpion — {2}{B} 2/2 Scorpion. Deathtouch, Cycling {2}.
+pub fn wasteland_scorpion() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Wasteland Scorpion",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scorpion],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch, Keyword::Cycling(ManaCost::new(vec![generic(2)]))],
+        ..Default::default()
+    }
+}
+
+/// Expedition Raptor — {3}{W}{W} 2/2 Bird. Flying; ETB support 2.
+pub fn expedition_raptor() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::effect::shortcut::{etb, support};
+    CardDefinition {
+        name: "Expedition Raptor",
+        cost: cost(&[generic(3), crate::mana::w(), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(support(2))],
+        ..Default::default()
+    }
+}
+
+/// Felidar Cub — {1}{W} 2/2 Cat Beast. Sacrifice this creature: destroy target
+/// enchantment.
+pub fn felidar_cub() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CreatureType, SelectionRequirement};
+    CardDefinition {
+        name: "Felidar Cub",
+        cost: cost(&[generic(1), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Enchantment),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tajuru Pathwarden — {4}{G} 5/4 Elf Warrior Ally. Vigilance, Trample.
+pub fn tajuru_pathwarden() -> CardDefinition {
+    use crate::card::CreatureType;
+    CardDefinition {
+        name: "Tajuru Pathwarden",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Courier Griffin — {3}{W} 2/3 Griffin. Flying; ETB gain 2 life.
+pub fn courier_griffin() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::effect::shortcut::etb;
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        name: "Courier Griffin",
+        cost: cost(&[generic(3), crate::mana::w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Griffin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::GainLife { who: Selector::You, amount: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Vampire Envoy — {2}{B} 1/4 Vampire Cleric Ally. Flying; whenever this
+/// creature becomes tapped, you gain 1 life.
+pub fn vampire_envoy() -> CardDefinition {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{Selector, Value};
+    CardDefinition {
+        name: "Vampire Envoy",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Eldrazi Displacer — {2}{W} 3/3 Eldrazi. Devoid; {2}{C}: exile another
 /// target creature, then return it to the battlefield tapped under its
 /// owner's control.

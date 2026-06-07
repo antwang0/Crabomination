@@ -1314,3 +1314,73 @@ fn murk_strider_processes_then_bounces() {
     assert!(!g.battlefield.iter().any(|c| c.id == victim), "target creature bounced");
     assert!(g.players[1].hand.iter().any(|c| c.id == victim), "back in owner's hand");
 }
+
+/// Wasteland Scorpion has deathtouch and can cycle for {2}.
+#[test]
+fn wasteland_scorpion_cycles() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let def = catalog::wasteland_scorpion();
+    assert!(def.keywords.contains(&Keyword::Deathtouch));
+    let id = g.add_card_to_hand(0, catalog::wasteland_scorpion());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: id }).expect("cycle");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "discard one, draw one (net zero)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cycled card in graveyard");
+}
+
+/// Felidar Cub sacrifices itself to destroy a target enchantment.
+#[test]
+fn felidar_cub_sacs_to_destroy_enchantment() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    let cub = g.add_card_to_battlefield(0, catalog::felidar_cub());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cub, ability_index: 0,
+        target: Some(Target::Permanent(aura)), x_value: None,
+    }).expect("sac to destroy");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == cub), "Felidar Cub sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == aura), "enchantment destroyed");
+}
+
+/// Courier Griffin gains 2 life on ETB; Tajuru Pathwarden is a vig/trample body.
+#[test]
+fn courier_griffin_gains_life_tajuru_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let before = g.players[0].life;
+    let id = g.add_card_to_battlefield(0, catalog::courier_griffin());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 2, "ETB gains 2 life");
+    let taj = catalog::tajuru_pathwarden();
+    assert!(taj.keywords.contains(&Keyword::Vigilance) && taj.keywords.contains(&Keyword::Trample));
+}
+
+/// Vampire Envoy gains a life whenever it becomes tapped.
+#[test]
+fn vampire_envoy_gains_life_when_tapped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::vampire_envoy());
+    let before = g.players[0].life;
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: id }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, before + 1, "gains 1 life on becoming tapped");
+}
+
+/// Expedition Raptor supports two on ETB.
+#[test]
+fn expedition_raptor_supports_on_etb() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rap = g.add_card_to_battlefield(0, catalog::expedition_raptor());
+    g.fire_self_etb_triggers(rap, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "support places a +1/+1 counter");
+}

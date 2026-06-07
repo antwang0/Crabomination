@@ -130,6 +130,10 @@ pub(crate) fn event_matches_spec(
             event,
             GameEvent::PermanentUntapped { card_id } if *card_id == source.id
         ) || matches!(
+            // "Whenever this creature becomes tapped" (Vampire Envoy).
+            event,
+            GameEvent::PermanentTapped { card_id } if *card_id == source.id
+        ) || matches!(
             // CR 701.40 — "Whenever this creature explores." Source must
             // equal the exploring permanent.
             event,
