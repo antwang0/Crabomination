@@ -39122,3 +39122,86 @@ fn wirewood_lodge_untaps_elf() {
     drain_stack(&mut g);
     assert!(!g.battlefield_find(elf).unwrap().tapped, "Elf untapped");
 }
+
+// ── Anthems / value batch 3 ──────────────────────────────────────────────────
+
+/// Cathars' Crusade counters up your team when a creature enters.
+#[test]
+fn cathars_crusade_counters_on_creature_enter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cathars_crusade());
+    let existing = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Cast a creature so it enters through the real funnel.
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast elf");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(existing).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "existing creature got a counter");
+    assert_eq!(g.battlefield_find(elf).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "the newcomer also got a counter");
+}
+
+/// Anointed Procession doubles token creation.
+#[test]
+fn anointed_procession_doubles_tokens() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::anointed_procession());
+    let s = g.add_card_to_battlefield(0, catalog::sling_gang_lieutenant()); // ETB: 2 Goblins
+    g.fire_self_etb_triggers(s, 0);
+    drain_stack(&mut g);
+    let goblins = g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count();
+    assert_eq!(goblins, 4, "two Goblins doubled to four");
+}
+
+/// Grim Tutor fetches any card and costs 3 life.
+#[test]
+fn grim_tutor_fetches_and_loses_life() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(target))]));
+    let id = g.add_card_to_hand(0, catalog::grim_tutor());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Grim Tutor");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == target), "fetched to hand");
+    assert_eq!(g.players[0].life, life - 3, "lost 3 life");
+}
+
+/// Puresteel Paladin draws when an Equipment enters.
+#[test]
+fn puresteel_paladin_draws_on_equipment() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::puresteel_paladin());
+    let drawn = g.add_card_to_library(0, catalog::forest());
+    let equip = g.add_card_to_hand(0, catalog::bonesplitter()); // an Equipment
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: equip, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Equipment");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == drawn),
+        "Puresteel drew a card when the Equipment entered");
+}
+
+/// Quirion Dryad grows when you cast a nongreen colored spell.
+#[test]
+fn quirion_dryad_grows_on_colored_spell() {
+    let mut g = two_player_game();
+    let dryad = g.add_card_to_battlefield(0, catalog::quirion_dryad());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt()); // a red spell
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast red spell");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(dryad).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "Dryad grew on a red spell");
+}

@@ -32152,3 +32152,120 @@ pub fn wirewood_lodge() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Anthems / value batch 3 (push claude/modern_decks) ───────────────────────
+
+/// Cathars' Crusade — {3}{W}{W} Enchantment. Whenever a creature you control
+/// enters, put a +1/+1 counter on each creature you control.
+pub fn cathars_crusade() -> CardDefinition {
+    CardDefinition {
+        name: "Cathars' Crusade",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Anointed Procession — {3}{W} Enchantment. If an effect would create one or
+/// more tokens under your control, it creates twice that many instead.
+pub fn anointed_procession() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Anointed Procession",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If an effect would create tokens under your control, it creates twice that many instead.",
+            effect: StaticEffect::DoubleTokens,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grim Tutor — {1}{B}{B} Sorcery. Search your library for a card, put it into
+/// your hand, then shuffle. You lose 3 life.
+pub fn grim_tutor() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Tutor",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Puresteel Paladin — {W}{W} 2/2 Human Knight. Whenever an Equipment you
+/// control enters, you may draw a card. (The Metalcraft equip-{0} grant is
+/// dropped — no card-driven equip-cost reduction primitive yet.)
+pub fn puresteel_paladin() -> CardDefinition {
+    CardDefinition {
+        name: "Puresteel Paladin",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quirion Dryad — {1}{G} 1/1 Dryad. Whenever you cast a white, blue, black, or
+/// red spell, put a +1/+1 counter on this creature.
+pub fn quirion_dryad() -> CardDefinition {
+    CardDefinition {
+        name: "Quirion Dryad",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dryad], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasColor(Color::White)
+                        .or(SelectionRequirement::HasColor(Color::Blue))
+                        .or(SelectionRequirement::HasColor(Color::Black))
+                        .or(SelectionRequirement::HasColor(Color::Red)),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
