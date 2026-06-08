@@ -8,6 +8,26 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Discovered this run (STX sweep / extras_17):**
+  - **"Sacrifice X or pay {N}" OR additional cost** — an `AdditionalCastCost`
+    variant (or a `Vec<AdditionalCastCost>` "choose one" wrapper). Makes Bayou
+    Groff faithful (today the pay-{3} alternative is dropped) and unblocks the
+    Eldraine/STX "sac or pay" cycle.
+  - **Generic `CardExiled` event** (`EventKind::CardExiled` + a `GameEvent`
+    fired from every move-to-exile site) — Stonebinder's Familiar's "whenever
+    one or more cards are exiled during your turn" once-per-turn trigger.
+  - **Turn-scoped ETB delayed trigger** (a `DelayedTriggerKind` watching
+    `EntersBattlefield` until cleanup) — First Day of Class's "whenever a
+    creature you control enters this turn, +1/+1 counter + haste".
+  - **`SelectionRequirement::EnteredThisTurn`** — a per-instance
+    `entered_this_turn` flag (set on ETB, cleared at cleanup), distinct from
+    `summoning_sick`; Shaile, Dean of Radiance.
+  - **X-scaled MV target filter** (`ManaValueAtMost(Value)`) — Confront the
+    Past's "planeswalker with mana value X or less" reanimate mode.
+  - The STX "still wrong" list in *Suggested next-up tasks* was largely stale:
+    Frost Trickster / Eager First-Year / Owlin Shieldmage / Promising Duskmage /
+    Rise of Extus / Verdant Mastery were already faithful. Re-verify before
+    picking a sweep target.
 - ⏳ **Phasing (CR 702.26) follow-ups** (engine shipped this run): a permanent
   that **enters phased out** (Reality Ripple-adjacent / Teferi's Veil grant);
   phasing **grant** to other permanents (Teferi's Veil "attacking creatures
