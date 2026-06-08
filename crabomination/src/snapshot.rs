@@ -459,12 +459,12 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.face_down = cs.face_down;
     // CR 712 — rebuild a transformed permanent: stash the front, flip the
     // active definition to the back face.
-    if cs.transformed {
-        if let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) {
-            c.front_face = Some(c.definition.clone());
-            c.definition = std::sync::Arc::new(back);
-            c.transformed = true;
-        }
+    if cs.transformed
+        && let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone())
+    {
+        c.front_face = Some(c.definition.clone());
+        c.definition = std::sync::Arc::new(back);
+        c.transformed = true;
     }
     c.is_token = cs.is_token;
     c.used_loyalty_ability_this_turn = cs.used_loyalty_ability_this_turn;

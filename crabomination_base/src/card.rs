@@ -2335,12 +2335,12 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.face_down = wire.face_down;
         // CR 712 — restore a transformed permanent: stash the front, flip the
         // active definition to the back face.
-        if wire.transformed {
-            if let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) {
-                c.front_face = Some(c.definition.clone());
-                c.definition = Arc::new(back);
-                c.transformed = true;
-            }
+        if wire.transformed
+            && let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone())
+        {
+            c.front_face = Some(c.definition.clone());
+            c.definition = Arc::new(back);
+            c.transformed = true;
         }
         c.is_token = wire.is_token;
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;
