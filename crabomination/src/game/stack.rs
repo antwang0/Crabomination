@@ -804,6 +804,15 @@ impl GameState {
                     // the sole source of truth.
                 } else {
                     let chosen_mode = mode.unwrap_or(0);
+                    // CR 702.15 — Radiant Scrollwielder: while this instant/
+                    // sorcery resolves, its controller gains life from any
+                    // damage it deals. Stamp the seat so `deal_damage_to_from`
+                    // can credit it, then clear after resolution.
+                    let is_is = card.definition.card_types.iter().any(|t| {
+                        matches!(t, crate::card::CardType::Instant | crate::card::CardType::Sorcery)
+                    });
+                    self.resolving_spell_lifelink_seat =
+                        (is_is && self.controller_grants_spell_lifelink(caster)).then_some(caster);
                     let mut spell_events = self.continue_spell_resolution(
                         card,
                         caster,
@@ -815,6 +824,7 @@ impl GameState {
                         mana_spent,
                         None,
                     )?;
+                    self.resolving_spell_lifelink_seat = None;
                     events.append(&mut spell_events);
                     if self.pending_decision.is_some() {
                         return Ok(events);

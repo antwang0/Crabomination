@@ -5,9 +5,9 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, LoyaltyAbility, PlaneswalkerSubtype, Predicate, Selector, SelectionRequirement,
-    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
-    WardCost, Zone,
+    Keyword, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate, Selector,
+    SelectionRequirement, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
+    TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
@@ -156,6 +156,57 @@ pub fn torrent_sculptor() -> CardDefinition {
             },
         ]))],
         back_face: Some(Box::new(flamethrower_sonata())),
+        ..Default::default()
+    }
+}
+
+/// Radiant Scrollwielder — {2}{R}{W} 2/4 Dwarf Cleric. Instant and sorcery
+/// spells you control have lifelink. At the beginning of your upkeep, exile an
+/// instant or sorcery card from your graveyard and let yourself cast it this
+/// turn (exiled instead of graveyard'd if it would leave). (The "at random"
+/// pick is approximated by the auto-picker.)
+pub fn radiant_scrollwielder() -> CardDefinition {
+    let is = SelectionRequirement::HasCardType(CardType::Instant)
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Radiant Scrollwielder",
+        cost: cost(&[generic(2), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you control have lifelink.",
+            effect: StaticEffect::YourInstantSorcerySpellsHaveLifelink,
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: Zone::Graveyard,
+                            filter: is,
+                        }),
+                        count: Box::new(Value::Const(1)),
+                    },
+                    to: ZoneDest::Exile,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: true,
+                },
+            ]),
+        }],
         ..Default::default()
     }
 }

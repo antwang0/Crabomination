@@ -230,6 +230,45 @@ impl GameState {
             }
             EntityRef::Card(_) => {}
         }
+        // CR 702.15 — lifelink on the non-combat damage path: if the source is
+        // a lifelink permanent (a ping ability) or an instant/sorcery spell
+        // whose controller has "your spells have lifelink" (Radiant
+        // Scrollwielder), that controller gains life equal to the damage dealt.
+        // (Combat damage handles its own lifelink in `combat.rs`.)
+        if let Some(seat) = self.noncombat_lifelink_seat(source) {
+            self.adjust_life(seat, amount as i32);
+            events.push(GameEvent::LifeGained { player: seat, amount });
+        }
+    }
+
+    /// Seat that gains life from lifelink on a *non-combat* damage event from
+    /// `source`, if any (CR 702.15). Returns the source's controller when the
+    /// source is a lifelink permanent, or the caster of an instant/sorcery
+    /// spell whose controller grants spells lifelink.
+    fn noncombat_lifelink_seat(&self, source: Option<crate::card::CardId>) -> Option<usize> {
+        use crate::card::Keyword;
+        // A lifelink permanent (e.g. a ping ability from a lifelink creature).
+        if let Some(src) = source
+            && let Some(cp) = self.computed_permanent(src)
+            && cp.keywords.contains(&Keyword::Lifelink)
+        {
+            return Some(cp.controller);
+        }
+        // The currently-resolving instant/sorcery whose controller grants
+        // spells lifelink (stamped in `resolve_top_of_stack`).
+        self.resolving_spell_lifelink_seat
+    }
+
+    /// True if `seat` controls a permanent granting
+    /// `StaticEffect::YourInstantSorcerySpellsHaveLifelink` (Radiant Scrollwielder).
+    pub(crate) fn controller_grants_spell_lifelink(&self, seat: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::YourInstantSorcerySpellsHaveLifelink)
+                })
+        })
     }
 
     pub(crate) fn move_card_to(

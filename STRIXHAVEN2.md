@@ -37,7 +37,8 @@ Sequence, Torrent Sculptor // Flamethrower Sonata, Blex // Search for Blex.
 - **Cast-from-top impulse + can't-cast-permanents static**: Codie.
 - 🟡 **Awaken the Blood Avatar**: the optional "sacrifice any number, {2} less
   each" cast cost is dropped (no variable-sacrifice cost reduction yet).
-- **Misc primitives**: Radiant Scrollwielder (spell-lifelink static + upkeep
-  random-recur), Ecological Appreciation (up-to-four variable targets + opponent
-  split), Jadzi, Flamescroll//Revel (opponent ability-activation trigger +
-  spell-lock).
+- **Misc primitives**: Ecological Appreciation (up-to-four variable targets +
+  opponent split), Jadzi, Flamescroll//Revel (opponent ability-activation
+  trigger + spell-lock). (Radiant Scrollwielder ✅ —
+  `StaticEffect::YourInstantSorcerySpellsHaveLifelink` + non-combat lifelink,
+  CR 702.15; upkeep random-recur via auto-pick.)

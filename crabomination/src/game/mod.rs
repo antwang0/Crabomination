@@ -598,6 +598,12 @@ pub struct GameState {
     /// for snapshot back-compat.
     #[serde(default)]
     pub(crate) dies_to_exile_eot: std::collections::HashSet<CardId>,
+    /// CR 702.15 — the seat that should gain life from lifelink on damage dealt
+    /// by the instant/sorcery spell currently resolving, if its controller has
+    /// "your spells have lifelink" (Radiant Scrollwielder). Set around the
+    /// spell's resolution and cleared after; transient, not serialized.
+    #[serde(skip)]
+    pub(crate) resolving_spell_lifelink_seat: Option<usize>,
     /// Temporary control changes awaiting reversion (Act of Treason /
     /// Threaten / Tempted by the Oriq). `Effect::GainControl` with a
     /// non-`Permanent` duration records the controller the permanent had
@@ -725,6 +731,7 @@ impl Clone for GameState {
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
+            resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
             temporary_control: self.temporary_control.clone(),
             foretold_this_turn: self.foretold_this_turn.clone(),
             plotted_cards: self.plotted_cards.clone(),
@@ -822,6 +829,7 @@ impl GameState {
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
+            resolving_spell_lifelink_seat: None,
             temporary_control: Vec::new(),
             foretold_this_turn: std::collections::HashSet::new(),
             plotted_cards: std::collections::HashSet::new(),
@@ -6343,6 +6351,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // ExileDyingOpponentCreatures (Valentin) — consulted in
             // `remove_from_battlefield_to_graveyard`; no layer effect.
             | StaticEffect::ExileDyingOpponentCreatures { .. }
+            // YourInstantSorcerySpellsHaveLifelink (Radiant Scrollwielder) —
+            // consulted in the non-combat damage path; no layer effect.
+            | StaticEffect::YourInstantSorcerySpellsHaveLifelink
             // SelfCostReducedByGreatestPower (The Great Henge) — read by
             // `cost_reduction_for_spell` off the spell being cast; no layer.
             | StaticEffect::SelfCostReducedByGreatestPower => vec![],

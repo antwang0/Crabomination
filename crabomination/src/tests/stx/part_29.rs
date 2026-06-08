@@ -315,3 +315,30 @@ fn lisette_pumps_team_on_lifegain_when_paid() {
     crate::game::cast_at(&mut g, vc, Target::Permanent(opp));
     assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ── Radiant Scrollwielder + non-combat lifelink (CR 702.15) ────────────────────
+
+#[test]
+fn radiant_scrollwielder_gives_instants_lifelink() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::radiant_scrollwielder());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    crate::game::cast_at(&mut g, bolt, Target::Player(1));
+    assert_eq!(g.players[0].life, life + 3, "bolt with spell-lifelink gains 3 life");
+    assert_eq!(g.players[1].life, 20 - 3);
+}
+
+#[test]
+fn radiant_scrollwielder_upkeep_exiles_instant_and_grants_replay() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::radiant_scrollwielder());
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // Fire the controller's upkeep trigger (active player is seat 0).
+    g.fire_step_triggers(crate::game::types::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "instant exiled from graveyard");
+}

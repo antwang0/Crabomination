@@ -447,6 +447,11 @@ pub enum StaticEffect {
         #[serde(default)]
         when_you_do: Option<Box<Effect>>,
     },
+    /// CR 702.15 — "Instant and sorcery spells you control have lifelink."
+    /// Consulted in the non-combat damage path (`deal_damage_to_from`): when
+    /// an instant/sorcery spell whose controller has this static deals damage,
+    /// that controller gains that much life. Radiant Scrollwielder.
+    YourInstantSorcerySpellsHaveLifelink,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

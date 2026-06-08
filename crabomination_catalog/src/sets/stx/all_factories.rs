@@ -4281,5 +4281,6 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::rowan_scholar_of_sparks,
         super::mila_crafty_companion,
         super::valentin_dean_of_the_vein,
+        super::radiant_scrollwielder,
     ]
 }
