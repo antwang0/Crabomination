@@ -401,6 +401,16 @@ impl MatchStats {
         if total == 0 { return 0; }
         self.inconclusive.saturating_mul(100) / total
     }
+    /// Share of decisive (non-draw) wins taken by the player on the play
+    /// (seat 0), as a percentage. A value far from 50 over a long bot ladder
+    /// flags turn-order bias in the active-player heuristic — the
+    /// `seat_wins` histogram's stated purpose, surfaced without mental math.
+    /// Returns 50 (neutral) when no seated wins have been recorded.
+    fn first_seat_win_pct(&self) -> u64 {
+        let seated: u64 = self.seat_wins.iter().sum();
+        if seated == 0 { return 50; }
+        self.seat_wins[0].saturating_mul(100) / seated
+    }
     /// Accumulate the win-by-life delta for one match. `final_life`
     /// is the per-seat life array; `winner` is the winning seat. The
     /// delta is `winner_life - max_opponent_life` clamped to ≥0 so
@@ -847,6 +857,11 @@ fn format_match_stats(s: &MatchStats) -> String {
             .map(|w| w.to_string())
             .collect();
         out.push_str(&format!(" seat_wins={}", parts.join("/")));
+        // First-player win share among decisive wins — turn-order-bias gauge.
+        // Only meaningful once both seats have had a chance to win.
+        if last_nonzero >= 1 {
+            out.push_str(&format!(" (p0={}%)", s.first_seat_win_pct()));
+        }
         // Average winning-seat life delta — "blowout" check. A high value
         // (12+) means the winner cruised; near-zero values mean games
         // ended in a race. Push (claude/modern_decks batch 202).
@@ -1700,6 +1715,17 @@ mod tests {
         assert_eq!(s.seat_wins[1], 1);
         // 2 decisive of 3 resolved → 66%. Unresolved is excluded.
         assert_eq!(s.decisive_pct(), 66);
+    }
+
+    #[test]
+    fn first_seat_win_pct_gauges_turn_order_bias() {
+        let mut s = MatchStats::default();
+        assert_eq!(s.first_seat_win_pct(), 50, "neutral with no data");
+        for _ in 0..3 { s.observe_winner(Some(Some(0))); }
+        s.observe_winner(Some(Some(1)));
+        s.observe_winner(Some(None)); // draws don't count toward seat share
+        // 3 of 4 seated wins on the play → 75%.
+        assert_eq!(s.first_seat_win_pct(), 75);
     }
 
     #[test]
