@@ -2345,6 +2345,15 @@ pub enum Effect {
         slot: usize,
     },
 
+    /// "Whenever a creature you control enters this turn, [body]." Registers
+    /// a turn-scoped delayed trigger (CR 603.4) that fires once per creature
+    /// the controller controls that enters for the rest of the turn; the
+    /// entering creature is exposed to `body` as `Selector::TriggerSource`.
+    /// Expires at cleanup. Used by First Day of Class.
+    CreaturesYouControlEnteringThisTurn {
+        body: Box<Effect>,
+    },
+
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller
     /// can afford; eliminates the controller otherwise. (No interactive

@@ -412,6 +412,11 @@ pub enum DelayedKind {
     /// Expires at cleanup if the watched card hasn't died (the "this turn"
     /// window). Powers Searing Blood's "deals 3 to its controller".
     WhenCardDies(crate::card::CardId),
+    /// "Whenever a creature you control enters this turn, …" (CR 603.4).
+    /// Fires once per creature controlled by `DelayedTrigger.controller`
+    /// that enters for the rest of the turn; the entering creature is the
+    /// trigger source. Expires at cleanup. Powers First Day of Class.
+    CreatureYouControlEntersThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────

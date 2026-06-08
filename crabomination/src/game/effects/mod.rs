@@ -5086,6 +5086,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CreaturesYouControlEnteringThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    fires_once: false,
+                });
+                Ok(())
+            }
+
             Effect::PayOrLoseGame { mana_cost, life_cost } => {
                 let p = ctx.controller;
                 // Try to pay mana via auto-tap, then deduct life. If any of

@@ -3882,6 +3882,52 @@ impl GameState {
                 });
             }
         }
+        // Turn-scoped "whenever a creature you control enters this turn"
+        // delayed triggers (CR 603.4 — First Day of Class). Fire once per
+        // entering creature controlled by the trigger's controller; the
+        // entering creature is the trigger source. These persist (not
+        // fires_once) until cleanup.
+        let entered_creatures: Vec<(CardId, usize)> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::PermanentEntered { card_id } => self
+                    .battlefield_find(*card_id)
+                    .filter(|c| c.definition.is_creature())
+                    .map(|c| (*card_id, c.controller)),
+                _ => None,
+            })
+            .collect();
+        if !entered_creatures.is_empty() {
+            use crate::game::types::DelayedKind;
+            let watchers: Vec<crate::game::types::DelayedTrigger> = self
+                .delayed_triggers
+                .iter()
+                .filter(|dt| {
+                    matches!(dt.kind, DelayedKind::CreatureYouControlEntersThisTurn)
+                })
+                .cloned()
+                .collect();
+            for (cid, controller) in &entered_creatures {
+                for dt in &watchers {
+                    if dt.controller != *controller {
+                        continue;
+                    }
+                    self.stack.push(crate::game::types::StackItem::Trigger {
+                        source: dt.source,
+                        controller: dt.controller,
+                        effect: Box::new(dt.effect.clone()),
+                        target: None,
+                        mode: None,
+                        x_value: 0,
+                        converged_value: 0,
+                        trigger_source: Some(crate::game::effects::EntityRef::Permanent(*cid)),
+                        mana_spent: 0,
+                        event_amount: 0,
+                        intervening_if: None,
+                    });
+                }
+            }
+        }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
         // and call `&self.evaluate_predicate` to gate each candidate by

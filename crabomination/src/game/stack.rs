@@ -1317,7 +1317,11 @@ impl GameState {
         // Expire event-keyed "when [card] dies this turn" delayed triggers
         // that never fired (CR 603.4 — the "this turn" window closes).
         self.delayed_triggers.retain(|dt| {
-            !matches!(dt.kind, crate::game::types::DelayedKind::WhenCardDies(_))
+            !matches!(
+                dt.kind,
+                crate::game::types::DelayedKind::WhenCardDies(_)
+                    | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
+            )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at

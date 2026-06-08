@@ -920,7 +920,7 @@ pub fn daemogoth_titan() -> CardDefinition {
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Demon, CreatureType::Horror],
+            creature_types: vec![CreatureType::Demon],
             ..Default::default()
         },
         power: 11,
@@ -2120,64 +2120,33 @@ pub fn eyetwitch_brood() -> CardDefinition {
 
 // ── First Day of Class ──────────────────────────────────────────────────────
 
-/// First Day of Class — {1}{R} Sorcery. "Until end of turn, creatures you
-/// control get +1/+1. Whenever a creature you control deals combat
-/// damage to a player this turn, create a 1/1 white Pest creature
-/// token with 'When this creature dies, you gain 1 life.'"
-///
-/// ✅ The anthem clause (+1/+1 EOT for each creature you control)
-/// wires faithfully via `ForEach(Creature & ControlledByYou)` +
-/// `PumpPT`, which is the headline play pattern: a one-mana
-/// Glorious Anthem for a turn. The "deals combat damage → 1/1 Pest"
-/// delayed trigger is omitted — the engine has no
-/// `DelayedTriggerSpec` primitive that registers a one-turn-window
-/// trigger from a sorcery resolution. This rider is bonus value
-/// that rarely flips combat math when the anthem is already swinging
-/// in. Tracked in TODO.md.
+/// First Day of Class — {1}{R} Sorcery. "Whenever a creature you control
+/// enters this turn, put a +1/+1 counter on it and it gains haste until
+/// end of turn. Learn." The turn-scoped enters trigger rides
+/// `Effect::CreaturesYouControlEnteringThisTurn` (CR 603.4).
 pub fn first_day_of_class() -> CardDefinition {
     CardDefinition {
         name: "First Day of Class",
         cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-            ),
-            body: Box::new(Effect::PumpPT {
-                what: Selector::TriggerSource,
-                power: Value::Const(1),
-                toughness: Value::Const(1),
-                duration: Duration::EndOfTurn,
-            }),
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreaturesYouControlEnteringThisTurn {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: Selector::TriggerSource,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+            Effect::Learn { who: PlayerRef::You },
+        ]),
+        ..Default::default()
     }
 }
 
@@ -2981,10 +2950,9 @@ pub fn wandering_archaic() -> CardDefinition {
 
 // ── Illuminate History ──────────────────────────────────────────────────────
 
-/// Illuminate History — {1}{R}{W} Sorcery.
-/// "As an additional cost to cast this spell, discard a card. Create two
-/// 2/2 red and white Spirit creature tokens with flying." Discard is a
-/// real cast-time cost via `AdditionalCastCost::Discard`.
+/// Illuminate History — {2}{R}{R} Sorcery — Lesson. "Discard any number of
+/// cards, then draw that many cards. Then if there are seven or more cards in
+/// your graveyard, create a 3/2 red and white Spirit creature token."
 pub fn illuminate_history() -> CardDefinition {
     use crabomination_base::tokens::lorehold_spirit_3_2_token;
     CardDefinition {

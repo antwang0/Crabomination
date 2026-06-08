@@ -3499,26 +3499,39 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
 }
 
 #[test]
-fn first_day_of_class_pumps_each_creature_you_control() {
+fn first_day_of_class_buffs_creatures_entering_this_turn() {
+    use crate::card::{CounterType, Keyword};
     let mut g = two_player_game();
-    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // A creature already on the battlefield is NOT affected (only creatures
+    // that enter *after* the spell resolves).
+    let pre = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Library cards so FDoC's Learn (discard-to-draw fallback) doesn't deck us.
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); }
     let id = g.add_card_to_hand(0, catalog::first_day_of_class());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("FDOC castable for {W}");
+    }).expect("FDOC castable");
     drain_stack(&mut g);
 
-    let bear_a = g.battlefield.iter().find(|c| c.id == a).unwrap();
-    let bear_b = g.battlefield.iter().find(|c| c.id == b).unwrap();
-    let bear_opp = g.battlefield.iter().find(|c| c.id == opp).unwrap();
-    assert_eq!(bear_a.power(), 3, "your bears get +1/+1");
-    assert_eq!(bear_b.power(), 3);
-    assert_eq!(bear_opp.power(), 2, "opp bears unaffected");
+    // Still player 0's main phase: cast a creature. It gets a +1/+1 counter
+    // and haste as it enters.
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+
+    let entered = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(entered.counter_count(CounterType::PlusOnePlusOne), 1, "entering creature gets a +1/+1 counter");
+    assert!(entered.has_keyword(&Keyword::Haste), "entering creature gains haste");
+    // The pre-existing bear is untouched.
+    let old = g.battlefield.iter().find(|c| c.id == pre).unwrap();
+    assert_eq!(old.counter_count(CounterType::PlusOnePlusOne), 0, "pre-existing creature unaffected");
 }
 
 #[test]
