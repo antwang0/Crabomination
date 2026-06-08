@@ -2948,6 +2948,43 @@ pub fn wandering_archaic() -> CardDefinition {
     }
 }
 
+// ── Draconic Intervention ───────────────────────────────────────────────────
+
+/// Draconic Intervention — {2}{R}{R} Sorcery. "As an additional cost to cast
+/// this spell, exile an instant or sorcery card from your graveyard. Draconic
+/// Intervention deals X damage to each non-Dragon creature, where X is the
+/// exiled card's mana value. If a creature dealt damage this way would die
+/// this turn, exile it instead. Exile Draconic Intervention." The exile-instead
+/// rider rides `ExileIfWouldDieThisTurn` (installed before the damage so a
+/// lethal hit is redirected), X = the exiled card's MV via
+/// `AdditionalCastCost::ExileFromGraveyard`.
+pub fn draconic_intervention() -> CardDefinition {
+    let non_dragon = || {
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::HasCreatureType(CreatureType::Dragon).negate())
+    };
+    CardDefinition {
+        name: "Draconic Intervention",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::ExileFromGraveyard {
+            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+        }],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::EachPermanent(non_dragon()),
+            },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(non_dragon()),
+                amount: Value::XFromCost,
+            },
+        ]),
+        exile_on_resolve: true,
+        ..Default::default()
+    }
+}
+
 // ── Fervent Mastery ─────────────────────────────────────────────────────────
 
 /// Fervent Mastery — {3}{R}{R} Sorcery. "You may pay {2}{R}{R} rather than

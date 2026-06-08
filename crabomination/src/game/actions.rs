@@ -2360,6 +2360,10 @@ impl GameState {
                 }).count();
                 matching >= *count as usize
             }
+            A::ExileFromGraveyard { filter } => self.players[p]
+                .graveyard
+                .iter()
+                .any(|c| self.evaluate_requirement_on_card(filter, c, p)),
         })
     }
 
@@ -2512,6 +2516,26 @@ impl GameState {
                             &ctx,
                             &mut events,
                         );
+                    }
+                }
+                A::ExileFromGraveyard { filter } => {
+                    // Auto-exile the lowest-MV matching card from the caster's
+                    // graveyard; its mana value becomes the spell's X.
+                    let pick = self.players[p]
+                        .graveyard
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                        .min_by_key(|c| c.definition.cost.cmc())
+                        .map(|c| (c.id, c.definition.cost.cmc()));
+                    if let Some((id, mv)) = pick {
+                        if let Some(pos) =
+                            self.players[p].graveyard.iter().position(|c| c.id == id)
+                        {
+                            let card = self.players[p].graveyard.remove(pos);
+                            self.exile.push(card);
+                            events.push(GameEvent::PermanentExiled { card_id: id });
+                        }
+                        sac_power = Some(mv);
                     }
                 }
             }

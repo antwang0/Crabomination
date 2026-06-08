@@ -1263,6 +1263,14 @@ pub enum AdditionalCastCost {
         #[serde(default = "one_u32")]
         count: u32,
     },
+    /// "As an additional cost to cast this spell, exile a [filter] card from
+    /// your graveyard." The exiled card's mana value becomes the spell's X
+    /// (read at resolution via `Value::XFromCost`) — Draconic Intervention
+    /// ("X is the exiled card's mana value"). Auto-picker exiles the lowest-MV
+    /// match. Cast is rejected if no matching card is in the graveyard.
+    ExileFromGraveyard {
+        filter: SelectionRequirement,
+    },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.

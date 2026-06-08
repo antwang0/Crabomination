@@ -926,9 +926,12 @@ picking an item up.
   - **Group land-search** — Scholarship Sponsor's catch-up basic-land tutor.
   - **Variable-number-of-targets** — Ecological Appreciation ("up to four with
     different names" + opponent-chooses-two split).
-  - **Single-faced, still blocked**: Draconic Intervention (exile-an-I/S
-    additional cost whose MV becomes X), Radiant Scrollwielder (random gy recur
-    + spell-lifelink static), Codie (can't-cast-permanents static +
+  - ✅ **Draconic Intervention** — shipped via new
+    `AdditionalCastCost::ExileFromGraveyard { filter }` (exiles a gy card, its MV
+    becomes the spell's X) + `ExileIfWouldDieThisTurn` for the "exile instead"
+    rider.
+  - **Single-faced, still blocked**: Radiant Scrollwielder (random gy recur +
+    spell-lifelink static), Codie (can't-cast-permanents static +
     cascade-on-IS), Elite Spellbinder (exile-from-hand may-play + tax).
   Diff `set:stx` Scryfall names against the catalog string literals (note:
   helper-built names like the Snarl cycle are passed as `name` params, so

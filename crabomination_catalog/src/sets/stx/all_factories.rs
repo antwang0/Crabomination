@@ -2349,6 +2349,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::wandering_archaic,
         super::illuminate_history,
         super::fervent_mastery,
+        super::draconic_intervention,
         super::take_up_the_shield,
         super::star_pupils_papers,
         super::frostboil_snarl,

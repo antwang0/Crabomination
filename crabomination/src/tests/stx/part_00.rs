@@ -3534,6 +3534,40 @@ fn first_day_of_class_buffs_creatures_entering_this_turn() {
     assert_eq!(old.counter_count(CounterType::PlusOnePlusOne), 0, "pre-existing creature unaffected");
 }
 
+/// Draconic Intervention — exile an I/S from your graveyard (X = its MV),
+/// deal X to each non-Dragon creature; a creature that would die is exiled
+/// instead. Dragons are untouched.
+#[test]
+fn draconic_intervention_burns_non_dragons_and_exiles_the_dead() {
+    use crate::card::{CardDefinition, CardType, CreatureType, Subtypes};
+    let dragon_def = |name: &'static str| CardDefinition {
+        name, card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 2, toughness: 2, ..Default::default()
+    };
+    let mut g = two_player_game();
+    // A 2-MV instant in the graveyard → X = 2.
+    g.add_card_to_graveyard(0, catalog::lightning_helix());
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 non-Dragon → dies to 2
+    let dragon = g.add_card_to_battlefield(0, dragon_def("Wyrm"));
+    let di = g.add_card_to_hand(0, catalog::draconic_intervention());
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: di, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Draconic Intervention castable");
+    drain_stack(&mut g);
+
+    // The 2/2 non-Dragon took 2 (lethal) → exiled instead of dying.
+    assert!(g.exile.iter().any(|c| c.id == small), "lethally-damaged non-Dragon is exiled");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == small), "it did NOT go to the graveyard");
+    // The Dragon is untouched.
+    assert!(g.battlefield.iter().any(|c| c.id == dragon), "Dragon takes no damage");
+    // Draconic Intervention exiles itself on resolve.
+    assert!(g.exile.iter().any(|c| c.id == di), "Draconic Intervention exiles itself");
+}
+
 /// Fervent Mastery (regular cast) tutors up to three cards to hand (three
 /// sequential searches), then discards three at random. Net: three cards
 /// leave the library.
