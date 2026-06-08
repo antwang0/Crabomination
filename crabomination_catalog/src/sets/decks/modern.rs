@@ -29329,3 +29329,142 @@ pub fn brazen_collector() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Pawpatch Formation — {1}{G} Instant. Choose one — destroy target creature
+/// with flying; destroy target enchantment; or draw a card and create a Food.
+pub fn pawpatch_formation() -> CardDefinition {
+    CardDefinition {
+        name: "Pawpatch Formation",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+                ),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Enchantment) },
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crate::game::effects::food_token(),
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Bant Charm — {G}{W}{U} Instant. Choose one — destroy target artifact; put
+/// target creature on the bottom of its owner's library; or counter target
+/// instant spell.
+pub fn bant_charm() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Bant Charm",
+        cost: cost(&[g(), w(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: crate::effect::LibraryPosition::Bottom,
+                },
+            },
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasCardType(CardType::Instant)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Skyskipper Duo — {4}{U} 3/3 Bird Frog with Flying. When it enters, exile up
+/// to one other target creature you control, returning it at the next end step.
+pub fn skyskipper_duo() -> CardDefinition {
+    CardDefinition {
+        name: "Skyskipper Duo",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird, CreatureType::Frog], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ExileReturnNextEndStep {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Wax-Wane Witness — {3}{W} 2/4 Bat Cleric with Flying and Vigilance.
+/// Whenever you gain or lose life, it gets +1/+0 until end of turn. (The "during
+/// your turn" restriction is dropped.)
+pub fn wax_wane_witness() -> CardDefinition {
+    let pump = || Effect::PumpPT {
+        what: Selector::This,
+        power: Value::Const(1),
+        toughness: Value::Const(0),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Wax-Wane Witness",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bat, CreatureType::Cleric], ..Default::default() },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        triggered_abilities: vec![
+            TriggeredAbility { event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl), effect: pump() },
+            TriggeredAbility { event: EventSpec::new(EventKind::LifeLost, EventScope::YourControl), effect: pump() },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Might of the Meek — {R} Instant. Target creature gains trample until end of
+/// turn; if you control a Mouse it also gets +1/+0 until end of turn. Draw a card.
+pub fn might_of_the_meek() -> CardDefinition {
+    CardDefinition {
+        name: "Might of the Meek",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Mouse)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::PumpPT {
+                    what: Selector::Target(0),
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}

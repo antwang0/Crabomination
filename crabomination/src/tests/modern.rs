@@ -37410,3 +37410,83 @@ fn brazen_collector_adds_red_on_attack() {
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Red) >= 1, "added red on attack");
 }
+
+/// Pawpatch Formation mode 0 destroys a flyer.
+#[test]
+fn pawpatch_formation_destroys_flyer() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // flyer
+    let id = g.add_card_to_hand(0, catalog::pawpatch_formation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(angel)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Pawpatch Formation mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "flyer destroyed");
+}
+
+/// Bant Charm mode 1 tucks a creature to the bottom of its owner's library.
+#[test]
+fn bant_charm_tucks_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::bant_charm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast Bant Charm mode 1");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature left the battlefield");
+    assert_eq!(g.players[1].library.last().map(|c| c.id), Some(bear), "tucked to library bottom");
+}
+
+/// Skyskipper Duo blinks one of your creatures on ETB.
+#[test]
+fn skyskipper_duo_blinks_your_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let duo = g.add_card_to_battlefield(0, catalog::skyskipper_duo());
+    g.fire_self_etb_triggers(duo, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear exiled by the blink");
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear is in exile until end step");
+}
+
+/// Wax-Wane Witness pumps itself when you gain life.
+#[test]
+fn wax_wane_witness_grows_on_lifegain() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::wax_wane_witness());
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::LifeGained { player: 0, amount: 1 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(id).unwrap().power, 3, "Wax-Wane Witness grew +1/+0");
+}
+
+/// Might of the Meek grants trample, draws, and pumps when you control a Mouse.
+#[test]
+fn might_of_the_meek_pumps_with_mouse() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // A Mouse on board satisfies the conditional; target a plain bear so the
+    // pump is observed without Valiant noise.
+    g.add_card_to_battlefield(0, catalog::heartfire_hero()); // 1/1 Mouse
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_library(0, catalog::forest()); // something to draw
+    let id = g.add_card_to_hand(0, catalog::might_of_the_meek());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Might of the Meek");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&Keyword::Trample), "gained trample");
+    assert_eq!(cp.power, 3, "+1/+0 because you control a Mouse");
+    assert_eq!(g.players[0].hand.len(), hand0, "cast one, drew one (net even)");
+}
