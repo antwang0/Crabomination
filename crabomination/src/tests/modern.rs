@@ -37884,6 +37884,77 @@ fn risen_reef_etb_puts_land_onto_battlefield() {
     assert!(bf1 > bf0, "the revealed Forest entered the battlefield");
 }
 
+/// Trinket Mage tutors a small artifact to hand.
+#[test]
+fn trinket_mage_tutors_small_artifact() {
+    let mut g = two_player_game();
+    let relic = g.add_card_to_library(0, catalog::ornithopter()); // {0} artifact
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(relic)),
+    ]));
+    let id = g.add_card_to_battlefield(0, catalog::trinket_mage());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == relic), "tutored the MV-0 artifact");
+}
+
+/// Mistmeadow Witch blinks a creature: it leaves and returns.
+#[test]
+fn mistmeadow_witch_blinks_a_creature() {
+    use crate::TurnStep;
+    let mut g = two_player_game();
+    let witch = g.add_card_to_battlefield(0, catalog::mistmeadow_witch());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: witch,
+        ability_index: 0,
+        target: Some(crate::game::Target::Permanent(bear)),
+        x_value: None,
+    }).expect("blink");
+    drain_stack(&mut g);
+    // The original bear is exiled (a new object returns at end step).
+    assert!(g.battlefield_find(bear).is_none(), "original creature exiled by blink");
+}
+
+/// Master Splicer makes a Golem and anthems Golems +1/+1 (token is 4/4).
+#[test]
+fn master_splicer_creates_and_buffs_golem() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::master_splicer());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let golem_id = g.battlefield.iter().find(|c| c.definition.name == "Golem")
+        .expect("Golem token minted").id;
+    let cp = g.compute_battlefield();
+    let golem = cp.iter().find(|c| c.id == golem_id).unwrap();
+    assert_eq!((golem.power, golem.toughness), (4, 4), "3/3 base + anthem +1/+1");
+}
+
+/// Geist of Saint Traft makes a tapped+attacking 4/4 Angel when it attacks.
+#[test]
+fn geist_of_saint_traft_makes_attacking_angel() {
+    use crate::game::types::{Attack, AttackTarget};
+    use crate::TurnStep;
+    let mut g = two_player_game();
+    let geist = g.add_card_to_battlefield(0, catalog::geist_of_saint_traft());
+    if let Some(c) = g.battlefield_find_mut(geist) { c.summoning_sick = false; }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: geist, target: AttackTarget::Player(1) }])
+        .expect("Geist attacks");
+    drain_stack(&mut g);
+    let angel = g.battlefield.iter().find(|c| c.definition.name == "Angel")
+        .expect("Angel token created");
+    assert!(angel.tapped, "Angel is tapped");
+    assert!(g.attacking.iter().any(|a| a.attacker == angel.id), "Angel is attacking");
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {

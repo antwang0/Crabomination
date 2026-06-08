@@ -30018,6 +30018,130 @@ pub fn risen_reef() -> CardDefinition {
     }
 }
 
+/// Trinket Mage — {2}{U} 2/2 Human Wizard. ETB: tutor an artifact with mana
+/// value 1 or less to hand.
+pub fn trinket_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Trinket Mage",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Artifact.and(SelectionRequirement::ManaValueAtMost(1)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mistmeadow Witch — {1}{W/U} 1/1 Kithkin Wizard. {2}{W}{U}: blink target
+/// creature (exile, return under its owner's control at the next end step).
+pub fn mistmeadow_witch() -> CardDefinition {
+    CardDefinition {
+        name: "Mistmeadow Witch",
+        cost: cost(&[generic(1), crate::mana::hybrid(Color::White, Color::Blue)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), w(), u()]),
+            effect: Effect::ExileReturnNextEndStep {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Master Splicer — {3}{W} 1/1 Phyrexian Human Artificer. ETB: create a 3/3
+/// colorless Golem. Golems you control get +1/+1.
+pub fn master_splicer() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Master Splicer",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Golem".into(),
+                power: 3,
+                toughness: 3,
+                card_types: vec![CardType::Artifact, CardType::Creature],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+                ..Default::default()
+            },
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Golems you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Golem)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Geist of Saint Traft — {1}{W}{U} 2/2 Legendary Spirit Cleric with Hexproof.
+/// On attack: create a 4/4 white flying Angel tapped and attacking, exiled at
+/// end of combat.
+pub fn geist_of_saint_traft() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Geist of Saint Traft",
+        cost: cost(&[generic(1), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Hexproof],
+        triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Angel".into(),
+                power: 4,
+                toughness: 4,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+                keywords: vec![Keyword::Flying],
+                ..Default::default()
+            },
+            cleanup: crate::effect::AttackingTokenCleanup::ExileAtEndOfCombat,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.
