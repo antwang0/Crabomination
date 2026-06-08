@@ -2948,6 +2948,49 @@ pub fn wandering_archaic() -> CardDefinition {
     }
 }
 
+// ── Fervent Mastery ─────────────────────────────────────────────────────────
+
+/// Fervent Mastery — {3}{R}{R} Sorcery. "You may pay {2}{R}{R} rather than
+/// pay this spell's mana cost. If the {2}{R}{R} cost was paid, an opponent
+/// discards any number of cards, then draws that many cards. Search your
+/// library for up to three cards, put them into your hand, shuffle, then
+/// discard three cards at random." The alt-cost rider rides
+/// `AlternativeCost.effect_override` (the cheaper cast runs the extra opponent
+/// loot first). "Up to three" is three sequential library searches.
+pub fn fervent_mastery() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    let base = || {
+        vec![
+            Effect::Search { who: PlayerRef::You, filter: SelectionRequirement::Any, to: ZoneDest::Hand(PlayerRef::You) },
+            Effect::Search { who: PlayerRef::You, filter: SelectionRequirement::Any, to: ZoneDest::Hand(PlayerRef::You) },
+            Effect::Search { who: PlayerRef::You, filter: SelectionRequirement::Any, to: ZoneDest::Hand(PlayerRef::You) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(3), random: true },
+        ]
+    };
+    let opponent_loot = vec![
+        Effect::DiscardAnyNumber { who: Selector::Player(PlayerRef::EachOpponent) },
+        Effect::Draw {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::CountOf(Box::new(Selector::DiscardedThisResolution {
+                filter: SelectionRequirement::Any,
+            })),
+        },
+    ];
+    let alt_effect: Vec<Effect> = opponent_loot.into_iter().chain(base()).collect();
+    CardDefinition {
+        name: "Fervent Mastery",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(base()),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), r(), r()]),
+            effect_override: Some(Effect::Seq(alt_effect)),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
 // ── Illuminate History ──────────────────────────────────────────────────────
 
 /// Illuminate History — {2}{R}{R} Sorcery — Lesson. "Discard any number of

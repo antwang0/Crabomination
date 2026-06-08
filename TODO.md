@@ -23,12 +23,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     stamped centrally at every ETB; Shaile // Embrose.
   - **X-scaled MV target filter** (`ManaValueAtMost(Value)`) — Confront the
     Past's "planeswalker with mana value X or less" reanimate mode.
-  - **"Cast for its alternative mana cost?" predicate** — model the Mastery
-    cycle's "you may pay {Y} rather than this spell's mana cost" as a real
-    second castable cost + a `cast_via_alt_cost` flag + a predicate, so the
-    alt-cost-gated rider fires only when the alt cost was paid. Today Verdant
-    Mastery collapses the branch (both clauses always fire) and Fervent Mastery
-    is unimplemented.
+  - ✅ **Mastery alt-cost rider** — handled by the existing
+    `AlternativeCost.effect_override` (the alt cast runs a different effect).
+    Ships **Fervent Mastery** (Baleful Mastery already used the same hook).
+    Remaining: **Verdant Mastery** still collapses its "if the {3}{G} cost was
+    paid" branch (both clauses always fire) — give it an `effect_override` and a
+    faithful "search up to four basics, distribute" body.
   - The STX "still wrong" list in *Suggested next-up tasks* was largely stale:
     Frost Trickster / Eager First-Year / Owlin Shieldmage / Promising Duskmage /
     Rise of Extus / Verdant Mastery / Illuminate History were already faithful.
@@ -927,9 +927,9 @@ picking an item up.
   - **Variable-number-of-targets** — Ecological Appreciation ("up to four with
     different names" + opponent-chooses-two split).
   - **Single-faced, still blocked**: Draconic Intervention (exile-an-I/S
-    additional cost whose MV becomes X), Fervent Mastery / Radiant Scrollwielder
-    (random gy recur + spell-lifelink static), Codie (can't-cast-permanents
-    static + cascade-on-IS), Elite Spellbinder (exile-from-hand may-play + tax).
+    additional cost whose MV becomes X), Radiant Scrollwielder (random gy recur
+    + spell-lifelink static), Codie (can't-cast-permanents static +
+    cascade-on-IS), Elite Spellbinder (exile-from-hand may-play + tax).
   Diff `set:stx` Scryfall names against the catalog string literals (note:
   helper-built names like the Snarl cycle are passed as `name` params, so
   grep the whole file, not just `name: "…"`).

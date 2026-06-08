@@ -3534,6 +3534,40 @@ fn first_day_of_class_buffs_creatures_entering_this_turn() {
     assert_eq!(old.counter_count(CounterType::PlusOnePlusOne), 0, "pre-existing creature unaffected");
 }
 
+/// Fervent Mastery (regular cast) tutors up to three cards to hand (three
+/// sequential searches), then discards three at random. Net: three cards
+/// leave the library.
+#[test]
+fn fervent_mastery_tutors_three_cards_from_library() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::grizzly_bears());
+    let b = g.add_card_to_library(0, catalog::grizzly_bears());
+    let c = g.add_card_to_library(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); } // padding
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(a)),
+        DecisionAnswer::Search(Some(b)),
+        DecisionAnswer::Search(Some(c)),
+    ]));
+    let lib_before = g.players[0].library.len();
+    let id = g.add_card_to_hand(0, catalog::fervent_mastery());
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fervent Mastery castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].library.len(), lib_before - 3, "three cards tutored out of the library");
+    // The three searched cards are no longer in the library (they went to hand,
+    // some may then be discarded at random — either way they left the library).
+    for id in [a, b, c] {
+        assert!(!g.players[0].library.iter().any(|c| c.id == id), "tutored card left the library");
+    }
+}
+
 #[test]
 fn verdant_mastery_fetches_basic_for_you_and_opponent() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
