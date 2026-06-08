@@ -370,7 +370,14 @@ feature; sweep card-batch by card-batch.
   Appraiser, Trumpeting Carnosaur), ✅ Collect Evidence
   (`Effect::CollectEvidence { amount, then }` — CR 701.59; `wants_ui` controller
   picks the exiled cards via a sum-validated `ChooseCards`, bots auto-pick the
-  cheapest set; Sample Collector, Izoni).
+  cheapest set; Sample Collector, Izoni),
+  ✅ Expend (`EventKind::Expend` + `Predicate::ExpendReached(n)` over the
+  per-turn `mana_spent_on_spells_this_turn`, CR 700.14; Roughshod Duo),
+  ✅ Valiant (`BecameTarget + YourControl` + `once_per_turn`, CR 603.3d;
+  Heartfire Hero).
+- **Leaves-battlefield LKI:** ✅ CR 603.10 — `Value::PowerOf`/`ToughnessOf`
+  read a dying object's last-known counter/pump-boosted P/T (`leaves_bf_lki`
+  + `resolving_lki_source`); Goldvein Hydra, Cacophony Scamp, Heartfire Hero.
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
   per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,

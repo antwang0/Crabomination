@@ -8,17 +8,36 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Bloomburrow follow-ups (noticed this run):**
+  - **Expend** (CR 700.14) ships (`mana_spent_on_spells_this_turn` +
+    `EventKind::Expend` + `Predicate::ExpendReached`; Roughshod Duo). Remaining:
+    a `Value::ManaSpentOnSpellsThisTurn` reader for "expend 8" payoffs that
+    scale, and bot awareness of expend thresholds when sequencing spells.
+  - **Per-target scaled damage** — Sunspine Lynx "deals damage to each player
+    equal to the number of nonbasic lands *that player* controls" needs a
+    per-recipient `Value` (the count is read against each damaged player, not
+    the controller). Carded only partway without it.
+  - **Equipment tokens** ship via `TokenDefinition.equipped_bonus` (Mabel's
+    Cragflame). Remaining: token Equipment whose equip cost or granted abilities
+    aren't expressible as a flat `EquipBonus` (e.g. activated-ability grants).
+  - **Pawpatch Recruit** "whenever another creature you control becomes the
+    target of an opponent's spell/ability, +1/+1 on a different creature" —
+    needs the `YourPermanentTargetedByOpponent` scope wired to a +1/+1-on-another
+    body (the engine has the scope; the "other than that creature" target
+    constraint is the gap).
 - ⏳ **Bargain / Eldraine follow-ups (this run):**
   - ✅ "This spell costs {N} less if it's bargained" — `StaticEffect::
     BargainCostReduction { amount }` folded into `cast_spell_bargain` via the
     transient `extra_cast_reduction` (Ice Out, Johann's Stopgap). Hamlet
     Glutton's {3}-less variant just needs the row.
-  - Cacophony Scamp / Heartfire Hero "when this dies, deals damage equal to its
-    power" needs LKI power on the dies trigger (CR 603.10 gap, see Goldvein
-    Hydra note) before it's faithful.
-  - Heartfire Hero / Pawpatch Recruit **Valiant** ("becomes the target of a
-    spell/ability you control the first time each turn") needs a
-    becomes-targeted trigger event.
+  - ✅ Cacophony Scamp / Heartfire Hero "when this dies, deals damage equal to
+    its power" — CR 603.10 leaves-battlefield LKI now ships (`leaves_bf_lki` +
+    `resolving_lki_source`; `Value::PowerOf`/`ToughnessOf` read the dying
+    object's last-known counter-boosted P/T). Promotes Goldvein Hydra's
+    death-treasure rider too.
+  - ✅ Heartfire Hero **Valiant** — rides `BecameTarget + YourControl` +
+    `once_per_turn` (CR 603.3d). Pawpatch Recruit's "another creature you
+    control becomes targeted by an opponent" variant still ⏳.
   - **Gift** (Wilds of Eldraine; Sazacap's Brew, Coiling Rebirth) — promise an
     opponent a gift as an optional rider.
   - The bot never pays Bargain (always casts the base spell); a client
@@ -31,9 +50,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     player controls". Remaining: The Myriad Pools' "copy a permanent spell"
     cast trigger; Azcanta's "you *may* transform" (auto-transforms now);
     Search for Azcanta back-face dig ships but the "may reveal" is auto.
-  - Daybound (CR 702.146): only the ETB "becomes day" half is wired; the
-    "casting a daybound spell while neither day nor night makes it day" half
-    and the per-player night-entry rule beyond CR 502.2 are still ⏳.
+  - Daybound (CR 702.146): ETB "becomes day" ✅ and the cast-time "casting a
+    daybound spell while neither day nor night makes it day" half ✅ (702.146e,
+    in `finalize_cast`). The per-player night-entry rule beyond CR 502.2 is
+    still ⏳.
   - Werewolf night→day check approximates "a player cast two or more spells
     last turn" as the global `spells_cast_last_turn >= 2`; a true per-player
     last-turn tally would be more faithful.
@@ -223,12 +243,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   "sacrifice four Eldrazi Spawn rather than pay mana" alt-cost and Spawnsire's
   {20} cast-from-outside-the-game are both dropped (no sacrifice-N-of-a-type
   alt-cost / wish primitives).
-- ⏳ **Goldvein Hydra death-treasure rider (LKI).** The dies trigger's
-  `Value::PowerOf(This)` can't read the counter-boosted power because
-  `died_card_snapshots` is cleared after the trigger dispatcher runs, before
-  the stack trigger resolves (CR 603.10 full LKI for stack resolution is
-  unmodeled). Carded without the rider. Fix needs either a snapshot kept alive
-  through resolution or a captured-at-trigger-time value.
+- ✅ **Goldvein Hydra death-treasure rider (LKI).** CR 603.10 leaves-battlefield
+  LKI ships: `leaves_bf_lki` snapshots the dying object at every removal funnel
+  (SBA lethal, destroy/sacrifice, `push_pending_trigger`) and survives until the
+  trigger resolves, scoped by `resolving_lki_source`. `Value::PowerOf` /
+  `ToughnessOf` read it (priority over the graveyard's printed P/T). Goldvein
+  Hydra mints power-many Treasures; Cacophony Scamp / Heartfire Hero ping for
+  last-known power. Remaining ⏳: LKI for other characteristics (color/types)
+  read by leaves-battlefield bodies, and the tapped-Treasure rider.
 - ✅ **Collect Evidence which-cards picker.** A `wants_ui` controller now
   picks via `ChooseCards` (validated to clear the MV threshold, else declined);
   bots/tests keep the auto cheapest-pick. `collect_evidence_ui_picker_honors_chosen_cards`.
