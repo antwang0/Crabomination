@@ -31149,7 +31149,7 @@ pub fn cauldron_familiar() -> CardDefinition {
 
 /// Witch's Oven — {1} Artifact. {T}, Sacrifice a creature: create a Food token.
 /// (The "two Food if the sacrificed creature's toughness was 4+" rider is
-/// dropped — always one Food.)
+/// dropped — cost-sacrifice P/T isn't visible to the ability's resolution.)
 pub fn witchs_oven() -> CardDefinition {
     CardDefinition {
         name: "Witch's Oven",
