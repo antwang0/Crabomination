@@ -23409,6 +23409,29 @@ fn legions_landing_makes_a_vampire_then_transforms_on_a_wide_attack() {
 }
 
 #[test]
+fn vanilla_werewolves_flip_to_their_back_faces() {
+    let mut g = two_player_game();
+    let cards = [
+        (catalog::tormented_pariah(), "Rampaging Werewolf", (6, 4)),
+        (catalog::villagers_of_estwald(), "Howlpack of Estwald", (4, 6)),
+        (catalog::hinterland_hermit(), "Hinterland Scourge", (3, 2)),
+        (catalog::lambholt_elder(), "Silverpelt Werewolf", (4, 5)),
+    ];
+    for (def, back_name, (bp, bt)) in cards {
+        let id = g.add_card_to_battlefield(0, def);
+        let mut ev = vec![];
+        g.transform_permanent(id, &mut ev);
+        let back = g.battlefield_find(id).unwrap();
+        assert_eq!(back.definition.name, back_name);
+        assert_eq!((back.power(), back.toughness()), (bp, bt));
+    }
+    // Hinterland Scourge must be blocked; Silverpelt draws on combat damage.
+    use crate::card::Keyword;
+    let scourge = g.battlefield.iter().find(|c| c.definition.name == "Hinterland Scourge").unwrap();
+    assert!(scourge.definition.keywords.contains(&Keyword::MustBeBlocked));
+}
+
+#[test]
 fn geier_reach_bandit_flips_to_a_four_three() {
     let mut g = two_player_game();
     let grb = g.add_card_to_battlefield(0, catalog::geier_reach_bandit());

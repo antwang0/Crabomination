@@ -859,6 +859,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mayor_of_avabruck);
         v.push(ulvenwald_captive);
         v.push(outland_liberator);
+        v.push(villagers_of_estwald);
+        v.push(lambholt_elder);
         v.push(thornglint_bridge);
         v.push(lush_portico);
         // ── Cube expansion: GW cards ──
@@ -874,6 +876,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(kruin_outlaw);
         v.push(geier_reach_bandit);
         v.push(mondronen_shaman);
+        v.push(tormented_pariah);
+        v.push(hinterland_hermit);
         v.push(onward_victory);
         v.push(talisman_of_conviction);
         v.push(rustvale_bridge);

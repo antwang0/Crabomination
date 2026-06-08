@@ -27922,3 +27922,86 @@ pub fn legions_landing() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Helper: a vanilla classic-werewolf DFC (front Human Werewolf, back Werewolf)
+/// whose only abilities are the day/night transform triggers plus any extra
+/// `back_keywords` / `back_triggers`.
+#[allow(clippy::too_many_arguments)] // a card-shape builder; each field is a printed stat
+fn vanilla_werewolf(
+    front_name: &'static str,
+    front_cost: ManaCost,
+    front_types: Vec<CreatureType>,
+    fp: i32,
+    ft: i32,
+    back_name: &'static str,
+    bp: i32,
+    bt: i32,
+    back_keywords: Vec<Keyword>,
+    mut back_triggers: Vec<TriggeredAbility>,
+) -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    back_triggers.push(werewolf_night_transform());
+    let back = CardDefinition {
+        name: back_name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: bp,
+        toughness: bt,
+        keywords: back_keywords,
+        triggered_abilities: back_triggers,
+        ..Default::default()
+    };
+    CardDefinition {
+        name: front_name,
+        cost: front_cost,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: front_types, ..Default::default() },
+        power: fp,
+        toughness: ft,
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(back)),
+        ..Default::default()
+    }
+}
+
+/// Tormented Pariah // Rampaging Werewolf — {3}{R} Human Werewolf 3/2 // 6/4.
+pub fn tormented_pariah() -> CardDefinition {
+    vanilla_werewolf(
+        "Tormented Pariah", cost(&[generic(3), r()]),
+        vec![CreatureType::Human, CreatureType::Werewolf], 3, 2,
+        "Rampaging Werewolf", 6, 4, vec![], vec![],
+    )
+}
+
+/// Villagers of Estwald // Howlpack of Estwald — {2}{G} Human Werewolf 2/3 // 4/6.
+pub fn villagers_of_estwald() -> CardDefinition {
+    vanilla_werewolf(
+        "Villagers of Estwald", cost(&[generic(2), g()]),
+        vec![CreatureType::Human, CreatureType::Werewolf], 2, 3,
+        "Howlpack of Estwald", 4, 6, vec![], vec![],
+    )
+}
+
+/// Hinterland Hermit // Hinterland Scourge — {1}{R} Human Werewolf 2/1 // 3/2
+/// (must be blocked if able).
+pub fn hinterland_hermit() -> CardDefinition {
+    vanilla_werewolf(
+        "Hinterland Hermit", cost(&[generic(1), r()]),
+        vec![CreatureType::Human, CreatureType::Werewolf], 2, 1,
+        "Hinterland Scourge", 3, 2, vec![Keyword::MustBeBlocked], vec![],
+    )
+}
+
+/// Lambholt Elder // Silverpelt Werewolf — {2}{G} Human Werewolf 1/2 // 4/5
+/// (combat damage to a player → draw a card).
+pub fn lambholt_elder() -> CardDefinition {
+    vanilla_werewolf(
+        "Lambholt Elder", cost(&[generic(2), g()]),
+        vec![CreatureType::Human, CreatureType::Werewolf], 1, 2,
+        "Silverpelt Werewolf", 4, 5, vec![],
+        vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+    )
+}
