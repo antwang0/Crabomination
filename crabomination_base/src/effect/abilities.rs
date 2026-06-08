@@ -485,6 +485,12 @@ pub enum StaticEffect {
     /// an instant/sorcery spell whose controller has this static deals damage,
     /// that controller gains that much life. Radiant Scrollwielder.
     YourInstantSorcerySpellsHaveLifelink,
+    /// "Spells and abilities your opponents control can't cause you to
+    /// sacrifice permanents." Consulted in the `Effect::Sacrifice` resolver:
+    /// when an opponent-controlled effect would force this static's controller
+    /// to sacrifice, that player is skipped. Sigarda, Host of Herons; Tamiyo,
+    /// Collector of Tales (the discard half is a separate gap).
+    OpponentsCantMakeYouSacrifice,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

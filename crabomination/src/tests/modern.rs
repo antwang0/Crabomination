@@ -38890,3 +38890,41 @@ fn wirewood_symbiote_requires_an_elf_to_bounce() {
     assert!(g.players[0].hand.iter().any(|c| c.id == elf), "Elf returned to hand");
     assert!(!g.battlefield_find(bear).unwrap().tapped, "creature untapped");
 }
+
+/// Sigarda stops an opponent's edict from making you sacrifice.
+#[test]
+fn sigarda_blocks_opponent_edict() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sigarda_host_of_herons());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Opponent (P1) casts Diabolic Edict targeting P0.
+    let edict = g.add_card_to_hand(1, catalog::diabolic_edict());
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: edict, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast edict at Sigarda's controller");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "Sigarda prevented the sacrifice");
+}
+
+/// A player's own sacrifice effect still works under Sigarda (only opponents
+/// are blocked).
+#[test]
+fn sigarda_allows_your_own_sacrifice() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sigarda_host_of_herons());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // P0 casts their own Innocent Blood-style edict hitting each player.
+    let ib = g.add_card_to_hand(0, catalog::innocent_blood());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ib, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast innocent blood");
+    drain_stack(&mut g);
+    // P0's own spell can still make P0 sacrifice (the bear is gone).
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0),
+        "your own sacrifice effect still resolves");
+}

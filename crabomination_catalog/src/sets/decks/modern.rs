@@ -12416,6 +12416,7 @@ pub fn kolaghans_command() -> CardDefinition {
 /// distinct-types-in-gy + convoke-emblem is engine-wide ⏳).
 pub fn tamiyo_collector_of_tales() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::effect::{StaticAbility, StaticEffect};
     CardDefinition {
         name: "Tamiyo, Collector of Tales",
         cost: cost(&[generic(2), g(), u()]),
@@ -12425,6 +12426,11 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
             planeswalker_subtypes: vec![PlaneswalkerSubtype::Tamiyo],
             ..Default::default()
         },
+        static_abilities: vec![StaticAbility {
+            // The "can't make you discard" half remains a separate gap.
+            description: "Spells your opponents control can't cause you to sacrifice permanents.",
+            effect: StaticEffect::OpponentsCantMakeYouSacrifice,
+        }],
         base_loyalty: 4,
         loyalty_abilities: vec![
             LoyaltyAbility {
@@ -31674,6 +31680,28 @@ pub fn wirewood_symbiote() -> CardDefinition {
                 up_to: None,
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sigarda, Host of Herons — {2}{G}{W}{W} 5/5 Legendary Angel with Flying and
+/// Hexproof. Spells and abilities your opponents control can't cause you to
+/// sacrifice permanents.
+pub fn sigarda_host_of_herons() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Sigarda, Host of Herons",
+        cost: cost(&[generic(2), g(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Hexproof],
+        static_abilities: vec![StaticAbility {
+            description: "Spells and abilities your opponents control can't cause you to sacrifice permanents.",
+            effect: StaticEffect::OpponentsCantMakeYouSacrifice,
         }],
         ..Default::default()
     }

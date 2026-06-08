@@ -4340,6 +4340,12 @@ impl GameState {
                     .collect();
                 let mut deferred_ui: Option<usize> = None;
                 for p in players {
+                    // Sigarda / Tamiyo — "spells and abilities your opponents
+                    // control can't cause you to sacrifice." Skip a player the
+                    // opponent-controlled effect would force.
+                    if p != ctx.controller && self.player_cant_be_made_to_sacrifice(p) {
+                        continue;
+                    }
                     let candidates = self.sacrifice_candidates(p, filter, source_id);
                     if candidates.is_empty() {
                         continue;

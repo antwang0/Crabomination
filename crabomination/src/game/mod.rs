@@ -6697,7 +6697,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // continuous-layer effect.
             | StaticEffect::SacrificeCostReduction { .. }
             // BargainCostReduction — read by `cast_spell_bargain` at cast time.
-            | StaticEffect::BargainCostReduction { .. } => vec![],
+            | StaticEffect::BargainCostReduction { .. }
+            // OpponentsCantMakeYouSacrifice (Sigarda/Tamiyo) — consulted in
+            // the `Effect::Sacrifice` resolver; no continuous-layer effect.
+            | StaticEffect::OpponentsCantMakeYouSacrifice => vec![],
         })
         .collect()
 }

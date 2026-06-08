@@ -4358,6 +4358,20 @@ impl GameState {
         })
     }
 
+    /// True when `player` controls a permanent with the "opponents can't make
+    /// you sacrifice" static (Sigarda, Host of Herons / Tamiyo). Consulted by
+    /// the `Effect::Sacrifice` resolver to skip an opponent-forced sacrifice.
+    pub(crate) fn player_cant_be_made_to_sacrifice(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::OpponentsCantMakeYouSacrifice))
+        })
+    }
+
     // Note: `fire_ward_triggers` (the old Ward(u32) version) was removed
     // during the merge — Ward is now enforced via
     // `push_ward_triggers_for_cast` (CR 702.21) which handles the full
