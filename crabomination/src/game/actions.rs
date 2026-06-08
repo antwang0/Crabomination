@@ -2758,6 +2758,9 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
 
         let was_creature_spell = !card.adventuring && card.definition.is_creature();
+        // CR 702.146e — casting a daybound spell while it's neither day nor
+        // night makes it day as the spell is put onto the stack.
+        let casts_daybound = card.definition.keywords.contains(&Keyword::Daybound);
         // CR 702.40 — Storm: when this spell is cast, copy it for each spell
         // cast before it this turn. `spells_cast_this_turn` already includes
         // this spell (bumped above), so prior spells = count - 1. Capture the
@@ -2825,6 +2828,12 @@ impl GameState {
         // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
         // observe the actual amount paid for *this* spell.
         self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value);
+        // CR 702.146e — a daybound spell cast while neither day nor night
+        // makes it day.
+        if casts_daybound && self.day_night.is_none() {
+            let mut day_evs = Vec::new();
+            self.set_day_night(crate::game::types::DayNight::Day, &mut day_evs);
+        }
         // CR 700.14 — Expend. Bump the caster's running spell-mana total and
         // dispatch an `Expended` event so "Whenever you expend N" triggers
         // fire on the cost-payment that first reaches their threshold.

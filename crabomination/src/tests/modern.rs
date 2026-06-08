@@ -37285,3 +37285,19 @@ fn expend_threshold_fires_only_on_crossing() {
     );
     assert!(!pred_false, "staying above 4 does not re-fire");
 }
+
+/// CR 702.146e — casting a daybound spell while it's neither day nor night
+/// makes it day.
+#[test]
+fn daybound_spell_cast_makes_it_day() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    assert_eq!(g.day_night, None, "neither day nor night at start");
+    let vw = g.add_card_to_hand(0, catalog::village_watch());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: vw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Village Watch");
+    assert_eq!(g.day_night, Some(DayNight::Day), "daybound cast set it to day");
+}
