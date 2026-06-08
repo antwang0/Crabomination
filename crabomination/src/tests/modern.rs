@@ -2996,6 +2996,139 @@ fn mutagenic_growth_payable_with_two_life() {
     assert_eq!((c.power(), c.toughness()), (4, 4), "+2/+2");
 }
 
+// ── Bloomburrow batch ──────────────────────────────────────────────────────
+
+#[test]
+fn hop_to_it_makes_three_rabbits() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::hop_to_it());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hop to It");
+    drain_stack(&mut g);
+    let rabbits = g.battlefield.iter().filter(|c| c.definition.name == "Rabbit").count();
+    assert_eq!(rabbits, 3, "three 1/1 Rabbit tokens");
+}
+
+#[test]
+fn bellowing_crier_loots_on_enter() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    let hand_before = g.players[0].hand.len();
+    let crier = g.add_card_to_hand(0, catalog::bellowing_crier());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: crier, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bellowing Crier");
+    drain_stack(&mut g);
+    // Drew 1, discarded 1: net hand change is the crier leaving (cast) only.
+    assert_eq!(g.players[0].hand.len(), hand_before, "looted: drew one, discarded one");
+}
+
+#[test]
+fn banishing_light_exiles_then_returns_on_leave() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let bl = g.add_card_to_hand(0, catalog::banishing_light());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bl, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Banishing Light");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "ETB exiled the opponent's creature");
+    // Destroy the enchantment → the exiled card returns to the battlefield.
+    g.remove_from_battlefield_to_graveyard(bl);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_some(), "linked exile returned on leave");
+}
+
+#[test]
+fn knightfisher_makes_fish_when_a_bird_enters() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::knightfisher());
+    // Another nontoken Bird entering → a 1/1 Fish.
+    let bird = g.add_card_to_hand(0, catalog::knightfisher());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bird, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a second Knightfisher");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Fish"), "minted a Fish token");
+}
+
+#[test]
+fn valley_mightcaller_grows_when_a_frog_enters() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let vmc = g.add_card_to_battlefield(0, catalog::valley_mightcaller());
+    // A Frog (Bellowing Crier) entering → +1/+1 counter.
+    let frog = g.add_card_to_hand(0, catalog::bellowing_crier());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: frog, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a Frog");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(vmc).unwrap();
+    assert_eq!((c.power(), c.toughness()), (2, 2), "Valley Mightcaller grew to 2/2");
+}
+
+#[test]
+fn spellgyre_counter_mode_counters_a_spell() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add_colorless(1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bears cast");
+    let sg = g.add_card_to_hand(0, catalog::spellgyre());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sg, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Spellgyre mode 0 (counter)");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears), "counter mode countered Bears");
+}
+
+#[test]
+fn spellgyre_draw_mode_draws_two() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let sg = g.add_card_to_hand(0, catalog::spellgyre());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sg, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Spellgyre mode 1 (surveil + draw)");
+    drain_stack(&mut g);
+    // Cast the spellgyre (−1) then drew two (+2) → net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew two cards");
+}
+
 #[test]
 fn disentomb_returns_creature_from_graveyard() {
     let mut g = two_player_game();

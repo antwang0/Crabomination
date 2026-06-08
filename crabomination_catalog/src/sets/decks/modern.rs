@@ -28251,3 +28251,152 @@ pub fn lambholt_elder() -> CardDefinition {
         }],
     )
 }
+
+// ── Bloomburrow (2024) ──────────────────────────────────────────────────────
+
+/// Hop to It — {2}{W} Sorcery. Create three 1/1 white Rabbit creature tokens.
+pub fn hop_to_it() -> CardDefinition {
+    CardDefinition {
+        name: "Hop to It",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: TokenDefinition {
+                name: "Rabbit".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Rabbit],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Bellowing Crier — {1}{U} 2/1 Frog Advisor. When it enters, draw a card,
+/// then discard a card.
+pub fn bellowing_crier() -> CardDefinition {
+    CardDefinition {
+        name: "Bellowing Crier",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
+        ..Default::default()
+    }
+}
+
+/// Knightfisher — {3}{U}{U} 4/5 Bird Knight with Flying. Whenever another
+/// nontoken Bird you control enters, create a 1/1 blue Fish creature token.
+pub fn knightfisher() -> CardDefinition {
+    CardDefinition {
+        name: "Knightfisher",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Bird))
+                        .and(SelectionRequirement::NotToken)
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Fish".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Fish],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Valley Mightcaller — {G} 1/1 Frog Warrior with Trample. Whenever another
+/// Frog, Rabbit, Raccoon, or Squirrel you control enters, put a +1/+1 counter
+/// on Valley Mightcaller.
+pub fn valley_mightcaller() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Valley Mightcaller",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(
+                            SelectionRequirement::HasCreatureType(CreatureType::Frog)
+                                .or(SelectionRequirement::HasCreatureType(CreatureType::Rabbit))
+                                .or(SelectionRequirement::HasCreatureType(CreatureType::Raccoon))
+                                .or(SelectionRequirement::HasCreatureType(CreatureType::Squirrel)),
+                        )
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spellgyre — {2}{U}{U} Instant. Choose one — counter target spell; or
+/// surveil 2, then draw two cards.
+pub fn spellgyre() -> CardDefinition {
+    CardDefinition {
+        name: "Spellgyre",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
