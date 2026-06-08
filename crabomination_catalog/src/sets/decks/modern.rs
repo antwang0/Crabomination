@@ -30375,6 +30375,158 @@ pub fn sai_master_thopterist() -> CardDefinition {
     }
 }
 
+/// Imperious Perfect — {2}{G} 2/2 Elf Warrior. Other Elves you control get
+/// +1/+1. {G}, {T}: create a 1/1 green Elf Warrior token.
+pub fn imperious_perfect() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Imperious Perfect",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Elves you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Elf Warrior".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Diregraf Captain — {1}{U}{B} 2/2 Zombie Soldier with Deathtouch. Other
+/// Zombies you control get +1/+1; whenever another Zombie you control dies,
+/// each opponent loses 1 life.
+pub fn diregraf_captain() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    use crate::effect::shortcut::{each_opponent, lose_life};
+    CardDefinition {
+        name: "Diregraf Captain",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        static_abilities: vec![StaticAbility {
+            description: "Other Zombie creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: lose_life(1, each_opponent()),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Undead Warchief — {2}{B}{B} 1/1 Zombie. Zombie spells you cast cost {1}
+/// less; Zombie creatures you control get +2/+1.
+pub fn undead_warchief() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Undead Warchief",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Zombie spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Zombie creatures you control get +2/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: 2,
+                    toughness: 1,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kalonian Hydra — {3}{G}{G} 0/0 Hydra with Trample. Enters with four +1/+1
+/// counters. On attack, double the +1/+1 counters on each creature you control.
+pub fn kalonian_hydra() -> CardDefinition {
+    use crate::effect::shortcut::{each_your_creature, on_attack};
+    CardDefinition {
+        name: "Kalonian Hydra",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Hydra], ..Default::default() },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
+        triggered_abilities: vec![on_attack(Effect::DoubleCountersOnEach {
+            what: each_your_creature(),
+            kind: CounterType::PlusOnePlusOne,
+        })],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.

@@ -38082,6 +38082,93 @@ fn sai_makes_thopter_on_artifact_cast() {
     assert_eq!(thopters1, thopters0 + 1, "Sai mints a Thopter on the artifact cast");
 }
 
+/// Imperious Perfect anthems other Elves and taps to make an Elf Warrior.
+#[test]
+fn imperious_perfect_anthem_and_token() {
+    use crate::card::{CreatureType, CardType, CardDefinition, Subtypes};
+    use crate::TurnStep;
+    let mut g = two_player_game();
+    let perfect = g.add_card_to_battlefield(0, catalog::imperious_perfect());
+    let elf = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Llanowar", card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 1, toughness: 1, ..Default::default()
+    });
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == elf).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "other Elf +1/+1");
+    // Activate the token maker.
+    if let Some(c) = g.battlefield_find_mut(perfect) { c.summoning_sick = false; }
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let elves0 = g.battlefield.iter().filter(|c| c.definition.name == "Elf Warrior").count();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: perfect, ability_index: 0, target: None, x_value: None,
+    }).expect("make an Elf");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Elf Warrior").count(),
+        elves0 + 1, "minted an Elf Warrior token");
+}
+
+/// Diregraf Captain drains an opponent when another Zombie dies.
+#[test]
+fn diregraf_captain_drains_on_zombie_death() {
+    use crate::card::{CreatureType, CardType, CardDefinition, Subtypes};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::diregraf_captain());
+    let zombie = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Walker", card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2, toughness: 2, ..Default::default()
+    });
+    // Kill our own Zombie via lethal damage so the SBA death path dispatches
+    // CreatureDied to the Captain's listener.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(zombie)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt own zombie");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 1, "opponent loses 1 on Zombie death");
+}
+
+/// Undead Warchief gives Zombies +2/+1 (including itself).
+#[test]
+fn undead_warchief_buffs_zombies() {
+    let mut g = two_player_game();
+    let chief = g.add_card_to_battlefield(0, catalog::undead_warchief());
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == chief).map(|c| (c.power, c.toughness)), Some((3, 2)),
+        "Warchief is itself a Zombie: 1/1 + 2/1");
+}
+
+/// Kalonian Hydra doubles +1/+1 counters on each of your creatures when it attacks.
+#[test]
+fn kalonian_hydra_doubles_counters_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    use crate::card::CounterType;
+    use crate::TurnStep;
+    let mut g = two_player_game();
+    let hydra = g.add_card_to_battlefield(0, catalog::kalonian_hydra());
+    // Manually seed the 4 ETB counters (add_card_to_battlefield bypasses ETB).
+    g.battlefield_find_mut(hydra).unwrap().add_counters(CounterType::PlusOnePlusOne, 4);
+    if let Some(c) = g.battlefield_find_mut(hydra) { c.summoning_sick = false; }
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.declare_attackers(vec![Attack { attacker: hydra, target: AttackTarget::Player(1) }])
+        .expect("Hydra attacks");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(hydra).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        8,
+        "4 +1/+1 counters doubled to 8 on attack",
+    );
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {

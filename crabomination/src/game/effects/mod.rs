@@ -3319,6 +3319,43 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoubleCountersOnEach { what, kind } => {
+                // CR 122.1 — Solemnity locks counter placement entirely.
+                if self.counters_locked() { return Ok(()); }
+                // Snapshot the (permanent, current-count) pairs first so the
+                // additions don't compound across the fan-out.
+                let targets: Vec<(CardId, u32)> = self
+                    .resolve_selector(what, ctx)
+                    .into_iter()
+                    .filter_map(|e| e.as_permanent_id())
+                    .filter_map(|cid| {
+                        let c = self.battlefield_find(cid)?;
+                        let cur = c.counter_count(*kind);
+                        (cur > 0).then_some((cid, cur))
+                    })
+                    .collect();
+                for (cid, cur) in targets {
+                    // Adding `cur` doubles the total (N → 2N), routed through the
+                    // CR 614.16 counter-doubling replacement like any other add.
+                    let doublers = self
+                        .battlefield_find(cid)
+                        .map(|c| self.counter_doublers_for(c.controller))
+                        .unwrap_or(0);
+                    let mut add = cur;
+                    for _ in 0..doublers {
+                        add = add.saturating_mul(2);
+                    }
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.add_counters(*kind, add);
+                        events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: add });
+                    }
+                    self.permanents_gained_counter_this_turn.insert(cid);
+                }
+                let mut sba = self.check_state_based_actions();
+                events.append(&mut sba);
+                Ok(())
+            }
+
             Effect::RemoveCounter { what, kind, amount } => {
                 let n = self.evaluate_value(amount, ctx).max(0) as u32;
                 if n == 0 { return Ok(()); }

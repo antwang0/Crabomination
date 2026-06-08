@@ -1826,6 +1826,12 @@ pub enum Effect {
     /// as a pump bonus, so power ends at `power * 2^times`. `times` ≤ 0 is a
     /// no-op. Reusable for any "double power N times" card.
     DoublePower { what: Selector, times: Value, duration: Duration },
+    /// CR 701.10 — "double the number of `kind` counters on each [selector]."
+    /// For every resolved permanent, add counters of `kind` equal to the number
+    /// it currently has (so N → 2N). Honors counter-doubling replacements
+    /// (Doubling Season) on the added counters. Kalonian Hydra's on-attack
+    /// trigger over the controller's creatures.
+    DoubleCountersOnEach { what: Selector, kind: crate::card::CounterType },
     /// Override the resolved permanent's base power and toughness via a
     /// layer-7b continuous effect. Unlike `PumpPT` (which adds to the
     /// existing P/T via direct bonus fields), `SetBasePT` installs a

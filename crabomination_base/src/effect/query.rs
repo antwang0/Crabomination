@@ -415,6 +415,7 @@ impl Effect {
             Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::ExileTopMayPayEnergyToCast { .. } => false,
+            Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
         }
     }
 
