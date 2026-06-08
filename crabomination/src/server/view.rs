@@ -58,7 +58,7 @@ fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                project_player(p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0)
+                project_player(p, i, viewer_seat, &state.prevention_shields, devotion, state.draw_cap_for(i), state.monarch == Some(i), commander_damage_taken(state, i), state.team_of(i).0, state.player_cannot_gain_life_now(i))
             })
             .collect(),
         battlefield: {
@@ -306,6 +306,7 @@ fn project_player(
     is_monarch: bool,
     commander_damage_taken: Vec<crate::net::CommanderDamageEntry>,
     team: usize,
+    cannot_gain_life: bool,
 ) -> PlayerView {
     use crate::game::types::PreventionTarget;
     let has_prevention_shield = prevention_shields
@@ -356,6 +357,7 @@ fn project_player(
         devotion,
         is_monarch,
         has_city_blessing: player.city_blessing,
+        cannot_gain_life,
         commander_damage_taken,
         team,
     }
@@ -1400,6 +1402,16 @@ mod tests {
         let v = project(&state, 0);
         assert!(v.battlefield.iter().find(|p| p.id == a).unwrap().suspected);
         assert!(!v.battlefield.iter().find(|p| p.id == b).unwrap().suspected);
+    }
+
+    #[test]
+    fn lifegain_lock_surfaces_in_the_view() {
+        let mut state = two_player_game();
+        // Sunspine Lynx locks lifegain for every player (CR 119.7).
+        state.add_card_to_battlefield(0, catalog::sunspine_lynx());
+        let v = project(&state, 0);
+        assert!(v.players[0].cannot_gain_life, "controller's lifegain is locked");
+        assert!(v.players[1].cannot_gain_life, "opponent's lifegain is locked too");
     }
 
     #[test]

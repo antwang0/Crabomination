@@ -57,6 +57,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Day => (Color::srgba(0.42, 0.34, 0.14, 1.0), theme::TEXT_PRIMARY),
         // Night (CR 731) — a cool dusk indigo.
         StatChipKind::Night => (Color::srgba(0.14, 0.16, 0.30, 1.0), theme::TEXT_PRIMARY),
+        // No-lifegain lock (CR 119.7) — a muted blood red.
+        StatChipKind::NoLifegain => (Color::srgba(0.34, 0.12, 0.12, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -77,6 +79,7 @@ pub(super) enum StatChipKind {
     Blessing,
     Day,
     Night,
+    NoLifegain,
 }
 
 /// Compact per-color devotion readout (CR 700.5), e.g. `"B3 G1"`. Returns
@@ -537,6 +540,10 @@ pub fn update_player_stats_chips(
         if p.has_city_blessing {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Blessing, "✦ blessed".to_string());
         }
+        // CR 119.7 — warn when this player can't gain life (Sunspine Lynx, Erebos).
+        if p.cannot_gain_life {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::NoLifegain, "🚫 no lifegain".to_string());
+        }
         // CR 731 day/night — a global designation; show it whenever set.
         match cv.day_night {
             Some(true) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Day, "☀ day".to_string()),
@@ -796,6 +803,10 @@ pub fn update_opponent_stats_rows(
                 // CR 700.6 city's blessing on an opponent.
                 if p.has_city_blessing {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Blessing, "✦ blessed".to_string());
+                }
+                // CR 119.7 — an opponent who can't gain life.
+                if p.cannot_gain_life {
+                    spawn_stat_chip(row, &ui_fonts, StatChipKind::NoLifegain, "🚫 no lifegain".to_string());
                 }
             });
         }

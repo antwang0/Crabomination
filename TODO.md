@@ -146,11 +146,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `has_keyword(Changeling)`, matching the block-restriction path — a Changeling
   satisfies any creature-type filter (tribal lords/anthems, "sacrifice a
   Goblin", type-targeted removal). Avian / Game-Trail Changeling tested.
-- ℹ️ **Client can't be built in the web sandbox** — `wayland-sys`'s build
-  script needs the system `wayland-client` lib, which isn't installed here, so
-  `cargo build/clippy -p crabomination_client` fails before compiling our code.
-  Client-only changes can't be compile-verified in this environment; keep them
-  to small, pattern-matching-consistent edits and rely on review.
+- ℹ️ **Client build needs system libs** — `apt-get install -y libwayland-dev
+  libasound2-dev libudev-dev` unblocks `cargo build/clippy -p
+  crabomination_client` in the web sandbox (wayland-sys / alsa-sys / libudev
+  build scripts otherwise panic). Install them once per session, then the
+  client compiles and clippy runs clean.
 - ⏳ **Discovered this run (allied-color card batch):**
   - ✅ **Evoke keyword** — fully wired (`AlternativeCost.evoke_sacrifice` +
     ETB-then-sacrifice on the stack; Solitude/Fury/Mulldrifter tested). Now has

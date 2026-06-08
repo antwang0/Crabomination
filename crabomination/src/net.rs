@@ -501,6 +501,11 @@ pub struct PlayerView {
     /// Surfaced so UIs can show a "blessed" badge. `#[serde(default)]`.
     #[serde(default)]
     pub has_city_blessing: bool,
+    /// CR 119.7 — true when this player can't gain life right now (Sunspine
+    /// Lynx, Erebos, Sulfuric Vortex). Surfaced so UIs can warn the player.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub cannot_gain_life: bool,
     /// CR 903.10a — combat damage this player has been dealt by each
     /// individual commander, one entry per source commander that has hit
     /// them. 21 from a *single* commander is a loss, so each entry is
