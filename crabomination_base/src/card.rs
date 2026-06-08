@@ -263,6 +263,9 @@ pub enum CounterType {
     /// each of the owner's upkeeps; when the last is removed it becomes
     /// castable from exile for {4} less (`GameState::process_hone`).
     Hone,
+    /// Ice counter — Thing in the Ice ticks one off per instant/sorcery you
+    /// cast; when the last is removed it transforms (CR 712).
+    Ice,
 }
 
 /// Every zone a card can occupy.
@@ -465,6 +468,14 @@ pub enum Keyword {
     Prowess,
     Ward(WardCost),
     Changeling,
+    /// CR 702.146 — Daybound. A permanent with daybound is on the battlefield
+    /// only as day; on the front face of a daybound/nightbound DFC. When it
+    /// becomes night, the engine transforms it to its nightbound back face.
+    /// Casting/entering a daybound permanent makes it day if it's neither.
+    Daybound,
+    /// CR 702.146 — Nightbound (the back face). When it becomes day, the
+    /// engine transforms it back to its daybound front face.
+    Nightbound,
     /// CR 702.114 — Devoid is a characteristic-defining ability: the object
     /// is colorless regardless of the colored pips in its mana cost. Honored
     /// in `colors_from_card` (the layer-5 color base), so protection-from-

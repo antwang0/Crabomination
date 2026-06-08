@@ -862,6 +862,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Red) {
         v.push(lightning_helix);
+        v.push(village_watch);
         v.push(onward_victory);
         v.push(talisman_of_conviction);
         v.push(rustvale_bridge);
@@ -1102,6 +1103,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sink_into_stupor,
         delver_of_secrets,
         the_everflowing_well,
+        thing_in_the_ice,
         repeal,
         anticipate,
         divination,

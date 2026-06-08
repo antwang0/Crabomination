@@ -853,12 +853,45 @@ impl GameState {
 
     /// CR 731 — set the game's day/night designation, emitting
     /// `DayNightChanged` on a real change.
+    /// CR 712 — flip one DFC permanent to its other face in place. The object
+    /// is unchanged (counters/tapped/attachments persist); fires `Transformed`.
+    pub(crate) fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
+        let Some(c) = self.battlefield_find_mut(id) else { return };
+        if !c.transformed {
+            let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) else { return };
+            c.front_face = Some(c.definition.clone());
+            c.definition = std::sync::Arc::new(back);
+            c.transformed = true;
+        } else {
+            let Some(front) = c.front_face.take() else { return };
+            c.definition = front;
+            c.transformed = false;
+        }
+        events.push(GameEvent::Transformed { card_id: id });
+    }
+
     pub(crate) fn set_day_night(&mut self, dn: crate::game::types::DayNight, events: &mut Vec<GameEvent>) {
+        use crate::game::types::DayNight;
         if self.day_night == Some(dn) {
             return;
         }
         self.day_night = Some(dn);
         events.push(GameEvent::DayNightChanged { day_night: dn });
+        // CR 702.146f/g — daybound/nightbound DFCs flip with the day/night
+        // cycle: front (daybound) ↔ back (nightbound).
+        let want = match dn {
+            DayNight::Night => Keyword::Daybound,
+            DayNight::Day => Keyword::Nightbound,
+        };
+        let to_flip: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.keywords.contains(&want))
+            .map(|c| c.id)
+            .collect();
+        for id in to_flip {
+            self.transform_permanent(id, events);
+        }
     }
 
     /// CR 502.2 — the day/night turn-based check run as each turn begins.

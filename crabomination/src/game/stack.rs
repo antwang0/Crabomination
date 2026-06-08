@@ -621,6 +621,16 @@ impl GameState {
 
                     events.push(GameEvent::PermanentEntered { card_id });
 
+                    // CR 702.146e — a daybound permanent entering while it's
+                    // neither day nor night makes it day.
+                    if self.day_night.is_none()
+                        && self
+                            .battlefield_find(card_id)
+                            .is_some_and(|c| c.definition.keywords.contains(&Keyword::Daybound))
+                    {
+                        self.set_day_night(crate::game::types::DayNight::Day, &mut events);
+                    }
+
                     // CR 303.4f / 303.4h — an Aura permanent spell enters
                     // the battlefield attached to the permanent its single
                     // target chose. Wiring the `attached_to` link makes the

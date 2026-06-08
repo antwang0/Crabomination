@@ -23259,6 +23259,97 @@ fn everflowing_well_mills_draws_then_descends_to_a_land() {
     assert!(pools.definition.card_types.contains(&crate::card::CardType::Land));
 }
 
+#[test]
+fn village_watch_flips_with_day_and_night() {
+    use crate::game::types::DayNight;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Cast it so the daybound ETB rule makes it day.
+    let vw = g.add_card_to_hand(0, catalog::village_watch());
+    g.players[0].mana_pool.add(Color::Red, 5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: vw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Village Watch");
+    drain_stack(&mut g);
+    assert_eq!(g.day_night, Some(DayNight::Day), "daybound permanent makes it day");
+    assert_eq!(g.battlefield_find(vw).unwrap().definition.name, "Village Watch");
+    // Becomes night → flips to the nightbound back face.
+    let mut ev = vec![];
+    g.set_day_night(DayNight::Night, &mut ev);
+    let reavers = g.battlefield_find(vw).unwrap();
+    assert_eq!(reavers.definition.name, "Village Reavers");
+    assert_eq!((reavers.power(), reavers.toughness()), (5, 4));
+    // Becomes day again → flips back to the front.
+    g.set_day_night(DayNight::Day, &mut ev);
+    assert_eq!(g.battlefield_find(vw).unwrap().definition.name, "Village Watch");
+}
+
+#[test]
+fn sink_into_stupor_bounces_then_plays_as_a_land() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Front: bounce an opposing creature.
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sis = g.add_card_to_hand(0, catalog::sink_into_stupor());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sis, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast front face");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_none(), "bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bears));
+    // Back: play Soporific Springs as a land (pay 3 life to stay untapped).
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let springs = g.add_card_to_hand(0, catalog::sink_into_stupor());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Mode(0)]));
+    let life = g.players[0].life;
+    g.perform_action(GameAction::PlayLandBack(springs)).expect("play back-face land");
+    drain_stack(&mut g);
+    let land = g.battlefield_find(springs).expect("land in play");
+    assert_eq!(land.definition.name, "Soporific Springs");
+    assert_eq!(g.players[0].life, life - 3, "paid 3 life");
+    assert!(!land.tapped, "stayed untapped");
+}
+
+#[test]
+fn thing_in_the_ice_melts_then_bounces_the_board() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Cast the spell so it enters with four ice counters.
+    let tite = g.add_card_to_hand(0, catalog::thing_in_the_ice());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: tite, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Thing in the Ice");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(tite).unwrap().counter_count(crate::card::CounterType::Ice), 4,
+        "enters with four ice counters"
+    );
+    // A couple of friendly bystanders + an opposing creature to bounce later.
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Cast four cheap instants to melt the ice.
+    for _ in 0..4 {
+        let bolt = g.add_card_to_hand(0, catalog::shock());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Shock");
+        drain_stack(&mut g);
+    }
+    let horror = g.battlefield_find(tite).expect("still in play");
+    assert_eq!(horror.definition.name, "Awoken Horror");
+    assert_eq!((horror.power(), horror.toughness()), (7, 8));
+    // Non-Horror creatures were bounced; the Horror itself stayed.
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
+}
+
 // ── Cascade instants / Darkblast dredge / simple Auras ──────────────────────
 
 #[test]

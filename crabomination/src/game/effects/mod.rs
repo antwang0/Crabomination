@@ -3093,21 +3093,7 @@ impl GameState {
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 for id in ids {
-                    let Some(c) = self.battlefield_find_mut(id) else { continue };
-                    if !c.transformed {
-                        // Front → back. Needs a back face to flip to.
-                        let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone())
-                        else { continue };
-                        c.front_face = Some(c.definition.clone());
-                        c.definition = std::sync::Arc::new(back);
-                        c.transformed = true;
-                    } else {
-                        // Back → front.
-                        let Some(front) = c.front_face.take() else { continue };
-                        c.definition = front;
-                        c.transformed = false;
-                    }
-                    events.push(GameEvent::Transformed { card_id: id });
+                    self.transform_permanent(id, events);
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);

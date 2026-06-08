@@ -27204,3 +27204,118 @@ pub fn the_everflowing_well() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Thing in the Ice // Awoken Horror — {1}{U} Creature — Wall (transform DFC).
+/// Front: 0/4 Defender, enters with four ice counters. Whenever you cast an
+/// instant or sorcery, remove an ice counter; if it has none, transform it.
+/// Back: Awoken Horror, 7/8. When it transforms into Awoken Horror, return all
+/// non-Horror creatures to their owners' hands.
+pub fn thing_in_the_ice() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    use crate::effect::Predicate;
+    let awoken_horror = CardDefinition {
+        name: "Awoken Horror",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kraken, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 8,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Horror).negate()),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Thing in the Ice",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        enters_with_counters: Some((CounterType::Ice, Value::Const(4))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Ice,
+                    amount: Value::Const(1),
+                },
+                Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::CountersOn {
+                            what: Box::new(Selector::This),
+                            kind: CounterType::Ice,
+                        },
+                        Value::Const(0),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(awoken_horror)),
+        ..Default::default()
+    }
+}
+
+/// Village Watch // Village Reavers — {4}{R} Creature — Human Werewolf
+/// (Daybound/Nightbound DFC, CR 702.146). Front: 4/3 Haste, Daybound. When it
+/// becomes night it transforms into Village Reavers, a 5/4 with Nightbound that
+/// gives Wolves and Werewolves you control haste; it flips back when it's day.
+pub fn village_watch() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let village_reavers = CardDefinition {
+        name: "Village Reavers",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Nightbound],
+        static_abilities: vec![StaticAbility {
+            description: "Wolves and Werewolves you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Wolf)
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Werewolf))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Village Watch",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste, Keyword::Daybound],
+        back_face: Some(Box::new(village_reavers)),
+        ..Default::default()
+    }
+}
