@@ -29687,6 +29687,88 @@ pub fn curious_forager() -> CardDefinition {
     }
 }
 
+/// Repel the Vile — {3}{W} Instant. Choose one — exile target creature with
+/// power 4 or greater; or exile target enchantment.
+pub fn repel_the_vile() -> CardDefinition {
+    CardDefinition {
+        name: "Repel the Vile",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+            },
+            Effect::Exile { what: target_filtered(SelectionRequirement::Enchantment) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wildwood Mentor — {2}{G} 1/1 Treefolk. Whenever a token you control enters,
+/// put a +1/+1 counter on it; whenever it attacks, another target attacking
+/// creature gets +X/+X until end of turn, where X is Wildwood Mentor's power.
+pub fn wildwood_mentor() -> CardDefinition {
+    CardDefinition {
+        name: "Wildwood Mentor",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Treefolk], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::IsToken,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            crate::effect::shortcut::on_attack(Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::IsAttacking.and(SelectionRequirement::OtherThanSource),
+                ),
+                power: Value::PowerOf(Box::new(Selector::This)),
+                toughness: Value::PowerOf(Box::new(Selector::This)),
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Conduit Pylons — Desert land. ETB: surveil 1. `{T}`: Add {C}. `{1}, {T}`:
+/// Add one mana of any color.
+pub fn conduit_pylons() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    CardDefinition {
+        name: "Conduit Pylons",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Desert], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) })],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colorless(Value::Const(1)) },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Sinkhole Surveyor — {1}{B} 1/3 Bird Scout with flying. Whenever it attacks,
 /// you lose 1 life and it endures 1 (CR 701.63).
 pub fn sinkhole_surveyor() -> CardDefinition {

@@ -36629,7 +36629,7 @@ fn tolarian_drake_phases_out_and_back_in_on_untap() {
 #[test]
 fn phasing_in_fires_when_this_phases_in_trigger() {
     use crate::card::{CardDefinition, CardType, Keyword, TriggeredAbility};
-    use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value};
+    use crate::effect::{Effect, EventKind, EventScope, EventSpec, Selector, Value};
     let def = CardDefinition {
         name: "Phase Sentinel",
         card_types: vec![CardType::Creature],
@@ -37608,6 +37608,61 @@ fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
     assert_eq!(g.players[0].life, life0 + 3, "gained 3 life");
     let after_sac = g.battlefield.iter().filter(|c| c.definition.name == "Rabbit").count();
     assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
+}
+
+/// Repel the Vile mode 0 exiles a power-4+ creature.
+#[test]
+fn repel_the_vile_exiles_big_creature() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::repel_the_vile());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(angel)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast mode 0");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "angel exiled");
+    assert!(g.exile.iter().any(|c| c.id == angel), "in exile");
+}
+
+/// Wildwood Mentor grows when a token enters and pumps an ally on attack.
+#[test]
+fn wildwood_mentor_grows_on_token_and_pumps_on_attack() {
+    let mut g = two_player_game();
+    let mentor = g.add_card_to_battlefield(0, catalog::wildwood_mentor());
+    // A token you control enters → +1/+1 on Mentor (now 2/2).
+    let tok = g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: tok }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mentor).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "token entry grew Mentor");
+    // Attack: another attacking creature gets +X/+X (X = Mentor power = 2).
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mentor).unwrap().summoning_sick = false;
+    g.battlefield_find_mut(bear).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: mentor, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + 2, "bear pumped by Mentor's power (2)");
+}
+
+/// Conduit Pylons surveils on ETB and taps for colorless or any color.
+#[test]
+fn conduit_pylons_surveils_and_fixes_mana() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // surveil sees this (AutoDecider keeps it)
+    let id = g.add_card_to_battlefield(0, catalog::conduit_pylons());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    // {T}: Add {C}
+    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None, x_value: None })
+        .expect("tap for C");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "added colorless");
 }
 
 /// Sinkhole Surveyor: attacking costs 1 life and endures 1.
