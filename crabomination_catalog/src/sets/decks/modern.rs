@@ -29607,6 +29607,43 @@ pub fn carrot_cake() -> CardDefinition {
     }
 }
 
+/// Sunspine Lynx — {2}{R}{R} 5/4 Elemental Cat. Players can't gain life and
+/// damage can't be prevented; ETB deals damage to each player equal to the
+/// nonbasic lands that player controls.
+pub fn sunspine_lynx() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{PlayerStaticTarget, StaticEffect};
+    CardDefinition {
+        name: "Sunspine Lynx",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Cat],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Players can't gain life.",
+                effect: StaticEffect::PlayerCannotGainLife { target: PlayerStaticTarget::EachPlayer },
+            },
+            StaticAbility {
+                description: "Damage can't be prevented.",
+                effect: StaticEffect::DamageCantBePrevented,
+            },
+        ],
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachPlayer),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::NonbasicLandCountControlledBy(PlayerRef::Triggerer),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Conduct Electricity — {4}{R} Instant. Deals 6 damage to target creature.
 /// (The secondary "2 damage to up to one target creature token" is dropped —
 /// optional secondary targets aren't modeled here.)

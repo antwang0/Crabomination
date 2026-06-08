@@ -37579,6 +37579,27 @@ fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
     assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
 }
 
+/// Sunspine Lynx pings each player for their nonbasic-land count, locks
+/// lifegain, and lets damage through any prevention shield.
+#[test]
+fn sunspine_lynx_pings_each_player_by_nonbasic_lands() {
+    let mut g = two_player_game();
+    // P0: 2 nonbasic + 1 basic; P1: 1 nonbasic.
+    g.add_card_to_battlefield(0, catalog::wasteland());
+    g.add_card_to_battlefield(0, catalog::wasteland());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(1, catalog::wasteland());
+    let (l0, l1) = (g.players[0].life, g.players[1].life);
+    let lynx = g.add_card_to_battlefield(0, catalog::sunspine_lynx());
+    g.fire_self_etb_triggers(lynx, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 - 2, "P0 took 2 (two nonbasics, basic ignored)");
+    assert_eq!(g.players[1].life, l1 - 1, "P1 took 1 (one nonbasic)");
+    // Lifegain is locked while the Lynx is out.
+    g.adjust_life(0, 5);
+    assert_eq!(g.players[0].life, l0 - 2, "no lifegain while Lynx is in play");
+}
+
 /// Carrot Cake's "when you sacrifice it" trigger is sacrifice-specific: a plain
 /// destroy (non-sacrifice exit) does not mint a Rabbit.
 #[test]

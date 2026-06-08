@@ -433,6 +433,12 @@ pub enum Value {
     /// Biorhythm's "each player's life total becomes the number of
     /// creatures they control" inside a `ForEach` over each player.
     CreatureCountControlledBy(PlayerRef),
+    /// Number of nonbasic lands controlled by the resolved player. Read
+    /// per-recipient inside a `ForEach` over each player so a single effect
+    /// scales independently for each player — Sunspine Lynx's "deals damage
+    /// to each player equal to the number of nonbasic lands that player
+    /// controls."
+    NonbasicLandCountControlledBy(PlayerRef),
     /// Number of loyalty counters on the first permanent the selector
     /// resolves to. Used by Strixhaven's **Confront the Past** mode 2
     /// ("Confront the Past deals damage to target planeswalker equal to

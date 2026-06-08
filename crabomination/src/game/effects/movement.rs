@@ -26,7 +26,10 @@ impl GameState {
         events: &mut Vec<GameEvent>,
     ) -> u32 {
         use crate::game::types::PreventionTarget;
-        if self.damage_cant_be_prevented_this_turn || self.prevention_shields.is_empty() {
+        if self.damage_cant_be_prevented_this_turn
+            || self.prevention_shields.is_empty()
+            || self.damage_cant_be_prevented_now()
+        {
             return amount;
         }
         let (to_player, to_card, key) = match ent {

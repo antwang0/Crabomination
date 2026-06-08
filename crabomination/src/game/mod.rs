@@ -1883,6 +1883,19 @@ impl GameState {
         })
     }
 
+    /// CR 615.12 — True if any active `StaticEffect::DamageCantBePrevented`
+    /// is on the battlefield (Sulfuric Vortex, Sunspine Lynx). Consulted by
+    /// `apply_prevention_shields` to bypass every shield.
+    pub fn damage_cant_be_prevented_now(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|src| {
+            src.definition
+                .static_abilities
+                .iter()
+                .any(|sa| matches!(sa.effect, StaticEffect::DamageCantBePrevented))
+        })
+    }
+
     /// CR 119.8 — True if `seat` cannot lose life right now. Mirror of
     /// `player_cannot_gain_life_now`. Scans the battlefield for any
     /// `StaticEffect::PlayerCannotLoseLife` whose `target` resolves to
@@ -6559,6 +6572,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // LifeGainBonus — consulted in `adjust_life` via
             // `life_gain_bonus_now` (Honor Troll); no layer effect.
             | StaticEffect::LifeGainBonus { .. }
+            // DamageCantBePrevented — consulted in `apply_prevention_shields`
+            // via `damage_cant_be_prevented_now` (Sulfuric Vortex); no layer.
+            | StaticEffect::DamageCantBePrevented
             // ManaProductionDoubled — consulted at mana-ability resolution
             // via `mana_production_doublers_for`; no layer effect.
             | StaticEffect::ManaProductionDoubled

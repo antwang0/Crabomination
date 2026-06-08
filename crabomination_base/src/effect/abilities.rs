@@ -157,6 +157,11 @@ pub enum StaticEffect {
     /// CR 119.10 a gain of 0 isn't a gain, so the bonus only applies on a
     /// genuine positive delta.
     LifeGainBonus { target: PlayerStaticTarget, amount: i32 },
+    /// CR 615.12 — while active, damage can't be prevented (global). A
+    /// permanent-static sibling of `Effect::DamageCantBePreventedThisTurn`;
+    /// `apply_prevention_shields` bypasses all shields while any source on the
+    /// battlefield has this. Sulfuric Vortex, Sunspine Lynx, Everlasting Torment.
+    DamageCantBePrevented,
     /// CR 508.1g — creatures can't attack the source's controller (and, when
     /// `protect_planeswalkers`, a planeswalker they control) unless the
     /// attacking player pays `amount` generic mana for each such attacker.

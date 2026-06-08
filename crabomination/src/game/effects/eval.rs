@@ -363,6 +363,19 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::NonbasicLandCountControlledBy(p) => self
+                .resolve_player(p, ctx)
+                .map(|seat| {
+                    self.battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.controller == seat
+                                && c.definition.is_land()
+                                && !c.definition.is_basic()
+                        })
+                        .count() as i32
+                })
+                .unwrap_or(0),
         }
     }
 

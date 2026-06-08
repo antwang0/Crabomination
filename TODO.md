@@ -13,10 +13,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     `EventKind::Expend` + `Predicate::ExpendReached`; Roughshod Duo). Remaining:
     a `Value::ManaSpentOnSpellsThisTurn` reader for "expend 8" payoffs that
     scale, and bot awareness of expend thresholds when sequencing spells.
-  - **Per-target scaled damage** — Sunspine Lynx "deals damage to each player
-    equal to the number of nonbasic lands *that player* controls" needs a
-    per-recipient `Value` (the count is read against each damaged player, not
-    the controller). Carded only partway without it.
+  - ✅ **Per-target scaled damage** — Sunspine Lynx ships via a `ForEach` over
+    each player + `Value::NonbasicLandCountControlledBy(Triggerer)` (re-read per
+    recipient). Also added `StaticEffect::DamageCantBePrevented` (CR 615.12,
+    permanent-static prevention bypass).
   - **Equipment tokens** ship via `TokenDefinition.equipped_bonus` (Mabel's
     Cragflame). Remaining: token Equipment whose equip cost or granted abilities
     aren't expressible as a flat `EquipBonus` (e.g. activated-ability grants).
