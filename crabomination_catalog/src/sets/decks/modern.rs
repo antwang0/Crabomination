@@ -31734,3 +31734,421 @@ pub fn heritage_druid() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Goblin tribal + White angels batch (push claude/modern_decks) ─────────────
+
+/// Stingscourger — {1}{R} 2/2 Goblin Warrior with Echo {3}{R}. ETB: return
+/// target creature an opponent controls to its owner's hand.
+pub fn stingscourger() -> CardDefinition {
+    CardDefinition {
+        name: "Stingscourger",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Echo(cost(&[generic(3), r()]))],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Mad Auntie — {2}{B} 2/2 Goblin Shaman. Other Goblins you control get +1/+1.
+/// {T}: Regenerate another target Goblin.
+pub fn mad_auntie() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Mad Auntie",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Goblin creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Regenerate {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Chirurgeon — {R} 0/2 Goblin Shaman. Sacrifice a Goblin: Regenerate
+/// target creature.
+pub fn goblin_chirurgeon() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Chirurgeon",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Goblin), 1)),
+            effect: Effect::Regenerate { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sparksmith — {1}{R} 1/1 Goblin. {T}: deals X damage to target creature and X
+/// damage to you, where X is the number of Goblins on the battlefield.
+pub fn sparksmith() -> CardDefinition {
+    let goblin_count = || Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+        filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+    };
+    CardDefinition {
+        name: "Sparksmith",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: goblin_count(),
+                },
+                Effect::DealDamage { to: Selector::You, amount: goblin_count() },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Sharpshooter — {2}{R} 1/1 Goblin. Doesn't untap during your untap
+/// step. Whenever a creature dies, untap it. {T}: deals 1 damage to any target.
+pub fn goblin_sharpshooter() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Goblin Sharpshooter",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "This creature doesn't untap during your untap step.",
+            effect: StaticEffect::PreventUntap { applies_to: Selector::This },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Krenko, Tin Street Kingpin — {2}{R} 1/2 Legendary Goblin. Whenever it
+/// attacks, put a +1/+1 counter on it, then create that many 1/1 red Goblins.
+pub fn krenko_tin_street_kingpin() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Krenko, Tin Street Kingpin",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::PowerOf(Box::new(Selector::This)),
+                definition: goblin_1_1_token(),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Elvish Promenade — {3}{G} Kindred Sorcery — Elf. Create a 1/1 green Elf
+/// Warrior token for each Elf you control.
+pub fn elvish_promenade() -> CardDefinition {
+    CardDefinition {
+        name: "Elvish Promenade",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+            definition: TokenDefinition {
+                name: "Elf Warrior".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Shalai, Voice of Plenty — {3}{W} 3/4 Legendary Angel with Flying. You and
+/// other creatures you control have hexproof. {4}{G}{G}: put a +1/+1 counter on
+/// each creature you control. (Planeswalker-hexproof grant is dropped.)
+pub fn shalai_voice_of_plenty() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Shalai, Voice of Plenty",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You have hexproof.",
+                effect: StaticEffect::ControllerHasHexproof,
+            },
+            StaticAbility {
+                description: "Other creatures you control have hexproof.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Hexproof,
+                },
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g(), g()]),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Angel of Invention — {3}{W}{W} 2/1 Angel with Flying, Vigilance, Lifelink.
+/// Fabricate 2. Other creatures you control get +1/+1.
+pub fn angel_of_invention() -> CardDefinition {
+    use crate::effect::shortcut::fabricate;
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Angel of Invention",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Lifelink],
+        triggered_abilities: vec![fabricate(2)],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lyra Dawnbringer — {3}{W}{W} 5/5 Legendary Angel with Flying, First Strike,
+/// Lifelink. Other Angels you control get +1/+1 and have lifelink.
+pub fn lyra_dawnbringer() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    let other_angels = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Angel)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Lyra Dawnbringer",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Angels you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: other_angels(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Angels you control have lifelink.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: other_angels(),
+                    keyword: Keyword::Lifelink,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Baneslayer Angel — {3}{W}{W} 5/5 Angel with Flying, First Strike, Lifelink.
+/// (Protection from Demons and from Dragons is dropped — protection is by color
+/// only in the engine.)
+pub fn baneslayer_angel() -> CardDefinition {
+    CardDefinition {
+        name: "Baneslayer Angel",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Resplendent Angel — {1}{W}{W} 3/3 Angel with Flying. At the beginning of each
+/// end step, if you gained 5+ life this turn, create a 4/4 white Angel with
+/// flying and vigilance. {3}{W}{W}{W}: +2/+2 and lifelink until end of turn.
+pub fn resplendent_angel() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Resplendent Angel",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(Predicate::LifeGainedThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(5),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Angel".into(),
+                    power: 4,
+                    toughness: 4,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Angel], ..Default::default() },
+                    keywords: vec![Keyword::Flying, Keyword::Vigilance],
+                    ..Default::default()
+                },
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w(), w(), w()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wirewood Lodge — Land. {T}: Add {C}. {G}, {T}: Untap target Elf.
+pub fn wirewood_lodge() -> CardDefinition {
+    CardDefinition {
+        name: "Wirewood Lodge",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                tap_cost: true,
+                effect: Effect::Untap {
+                    what: target_filtered(SelectionRequirement::HasCreatureType(CreatureType::Elf)),
+                    up_to: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

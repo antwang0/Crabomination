@@ -38956,3 +38956,169 @@ fn heritage_druid_needs_three_elves() {
     });
     assert!(res.is_err(), "fewer than three untapped Elves → cost unpayable");
 }
+
+// ── Goblin tribal + White angels batch ───────────────────────────────────────
+
+/// Stingscourger bounces an opponent creature on ETB.
+#[test]
+fn stingscourger_bounces_opponent_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(foe))]));
+    let s = g.add_card_to_battlefield(0, catalog::stingscourger());
+    g.fire_self_etb_triggers(s, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).is_none(), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == foe), "to owner's hand");
+}
+
+/// Mad Auntie pumps other Goblins you control.
+#[test]
+fn mad_auntie_pumps_goblins() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mad_auntie());
+    let gob = g.add_card_to_battlefield(0, catalog::goblin_ringleader()); // 2/2 Goblin
+    assert_eq!(g.computed_permanent(gob).unwrap().power, 3, "other Goblin gets +1/+1");
+}
+
+/// Goblin Chirurgeon regenerates a creature by sacrificing a Goblin.
+#[test]
+fn goblin_chirurgeon_regenerates() {
+    let mut g = two_player_game();
+    let chir = g.add_card_to_battlefield(0, catalog::goblin_chirurgeon());
+    let fodder = g.add_card_to_battlefield(0, catalog::sparksmith()); // 1/1 Goblin, sacrificed
+    let gob = g.add_card_to_battlefield(0, catalog::goblin_ringleader()); // regen target
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: chir, ability_index: 0, target: Some(Target::Permanent(gob)), x_value: None,
+    }).expect("sac a goblin to regen");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder Goblin sacrificed");
+    assert!(g.battlefield_find(gob).unwrap().regeneration_shields > 0, "regen shield set");
+}
+
+/// Sparksmith pings a creature for the number of Goblins, hurting you too.
+#[test]
+fn sparksmith_pings_for_goblin_count() {
+    let mut g = two_player_game();
+    let smith = g.add_card_to_battlefield(0, catalog::sparksmith()); // 1 Goblin
+    g.add_card_to_battlefield(0, catalog::goblin_ringleader()); // 2 Goblins total
+    let foe = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 2
+    let my_life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: smith, ability_index: 0, target: Some(Target::Permanent(foe)), x_value: None,
+    }).expect("sparksmith ping");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(foe).unwrap().damage, 2, "2 damage to creature");
+    assert_eq!(g.players[0].life, my_life - 2, "2 damage to you");
+}
+
+/// Goblin Sharpshooter untaps when a creature dies.
+#[test]
+fn goblin_sharpshooter_untaps_on_death() {
+    let mut g = two_player_game();
+    let shooter = g.add_card_to_battlefield(0, catalog::goblin_sharpshooter());
+    g.battlefield_find_mut(shooter).unwrap().tapped = true;
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("kill a creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(shooter).unwrap().tapped, "Sharpshooter untapped on death");
+}
+
+/// Krenko, Tin Street Kingpin grows and makes Goblins equal to its power on attack.
+#[test]
+fn krenko_tin_street_makes_goblins_on_attack() {
+    let mut g = two_player_game();
+    let krenko = g.add_card_to_battlefield(0, catalog::krenko_tin_street_kingpin());
+    g.clear_sickness(krenko);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: krenko, target: AttackTarget::Player(1) }])
+        .expect("Krenko attacks");
+    drain_stack(&mut g);
+    // Krenko was 1/2; +1/+1 → power 2 → two Goblin tokens.
+    let goblins = g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count();
+    assert_eq!(goblins, 2, "Goblins equal to Krenko's new power");
+}
+
+/// Elvish Promenade makes an Elf token per Elf you control.
+#[test]
+fn elvish_promenade_doubles_elves() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let id = g.add_card_to_hand(0, catalog::elvish_promenade());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Elvish Promenade");
+    drain_stack(&mut g);
+    let elf_warriors = g.battlefield.iter().filter(|c| c.definition.name == "Elf Warrior").count();
+    assert_eq!(elf_warriors, 2, "one token per Elf controlled");
+}
+
+/// Shalai grants your other creatures hexproof.
+#[test]
+fn shalai_grants_team_hexproof() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::shalai_voice_of_plenty());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Hexproof),
+        "other creature gains hexproof");
+}
+
+/// Angel of Invention anthems your other creatures.
+#[test]
+fn angel_of_invention_anthems_team() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::angel_of_invention());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "+1/+1 anthem");
+}
+
+/// Lyra Dawnbringer buffs other Angels and grants them lifelink.
+#[test]
+fn lyra_buffs_other_angels() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lyra_dawnbringer());
+    let other = g.add_card_to_battlefield(0, catalog::serra_angel()); // an Angel
+    let p = g.computed_permanent(other).unwrap();
+    assert_eq!(p.power, 5, "other Angel +1/+1 (4→5)");
+    assert!(p.keywords.contains(&Keyword::Lifelink), "other Angel gains lifelink");
+}
+
+/// Resplendent Angel makes a 4/4 at end step if you gained 5+ life.
+#[test]
+fn resplendent_angel_makes_token_after_lifegain() {
+    use crate::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::resplendent_angel());
+    g.players[0].life_gained_this_turn = 5;
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Angel" && c.power() == 4),
+        "4/4 Angel token created");
+}
+
+/// Wirewood Lodge untaps an Elf for {G}.
+#[test]
+fn wirewood_lodge_untaps_elf() {
+    let mut g = two_player_game();
+    let lodge = g.add_card_to_battlefield(0, catalog::wirewood_lodge());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.battlefield_find_mut(elf).unwrap().tapped = true;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lodge, ability_index: 1, target: Some(Target::Permanent(elf)), x_value: None,
+    }).expect("untap Elf");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(elf).unwrap().tapped, "Elf untapped");
+}
