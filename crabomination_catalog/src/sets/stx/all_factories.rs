@@ -4284,5 +4284,6 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::radiant_scrollwielder,
         super::kianne_dean_of_substance,
         super::uvilda_dean_of_perfection,
+        super::scholarship_sponsor,
     ]
 }

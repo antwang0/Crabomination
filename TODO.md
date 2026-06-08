@@ -959,7 +959,9 @@ picking an item up.
     also done (its own turn-scoped `Effect::CreaturesYouControlEnteringThisTurn`
     delayed trigger, CR 603.4).
   - **MDFC legends** — Codie/Extus/Blex/Jadzi + the rest of the Dean cycle.
-  - **Group land-search** — Scholarship Sponsor's catch-up basic-land tutor.
+  - ✅ **Group land-search** — `Effect::CatchUpBasicLands` (each player behind
+    the land leader fetches basics up to the deficit, tapped, then shuffles).
+    Ships Scholarship Sponsor.
   - **Variable-number-of-targets** — Ecological Appreciation ("up to four with
     different names" + opponent-chooses-two split).
   - ✅ **Draconic Intervention** — shipped via new

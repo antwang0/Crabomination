@@ -116,6 +116,7 @@ impl Effect {
             Effect::StudyTopCard { .. } => false,
             Effect::ExileTopWithCounters { .. } => false,
             Effect::HoneFromHand { .. } => false,
+            Effect::CatchUpBasicLands => false,
             Effect::SacrificeSource => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,

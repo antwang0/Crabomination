@@ -414,6 +414,28 @@ fn imbraham_exiles_top_x_with_study_counters() {
     }
 }
 
+#[test]
+fn scholarship_sponsor_catches_up_lands_for_player_behind() {
+    let mut g = two_player_game();
+    // P0 (the caster) leads with 3 lands; P1 has 1 → deficit 2.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::forest()); }
+    g.add_card_to_battlefield(1, catalog::forest());
+    for _ in 0..4 { g.add_card_to_library(1, catalog::island()); } // basics to fetch
+    let p1_lands_before = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_land()).count();
+    let sponsor = g.add_card_to_hand(0, catalog::scholarship_sponsor());
+    g.players[0].mana_pool.add(crate::mana::Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sponsor, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Scholarship Sponsor castable");
+    drain_stack(&mut g);
+    let p1_lands_after = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_land()).count();
+    assert_eq!(p1_lands_after, p1_lands_before + 2, "P1 fetches 2 basics to match the leader");
+    // The fetched lands enter tapped.
+    let tapped = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_land() && c.tapped).count();
+    assert_eq!(tapped, 2, "fetched basics enter tapped");
+}
+
 // ── Uvilda, Dean of Perfection // Nassari, Dean of Expression ───────────────────
 
 #[test]

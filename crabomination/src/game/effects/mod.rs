@@ -4775,6 +4775,48 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CatchUpBasicLands => {
+                use crate::card::Supertype;
+                use rand::seq::SliceRandom;
+                let n = self.players.len();
+                let land_counts: Vec<usize> = (0..n)
+                    .map(|p| {
+                        self.battlefield
+                            .iter()
+                            .filter(|c| c.controller == p && c.definition.is_land())
+                            .count()
+                    })
+                    .collect();
+                let max = land_counts.iter().copied().max().unwrap_or(0);
+                for (p, &count) in land_counts.iter().enumerate() {
+                    let deficit = max.saturating_sub(count);
+                    if deficit == 0 {
+                        continue;
+                    }
+                    let ids: Vec<crate::card::CardId> = self.players[p]
+                        .library
+                        .iter()
+                        .filter(|c| {
+                            c.definition.is_land()
+                                && c.definition.supertypes.contains(&Supertype::Basic)
+                        })
+                        .take(deficit)
+                        .map(|c| c.id)
+                        .collect();
+                    for id in ids {
+                        self.move_card_to(
+                            id,
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true },
+                            ctx,
+                            events,
+                        );
+                    }
+                    // Searching a library always shuffles it (CR 701.19c).
+                    self.players[p].library.shuffle(&mut rand::rng());
+                }
+                Ok(())
+            }
+
             Effect::HoneFromHand { count } => {
                 // Uvilda — the owner may exile an instant/sorcery from hand
                 // with `count` hone counters. Reuses the Discard decision shape.

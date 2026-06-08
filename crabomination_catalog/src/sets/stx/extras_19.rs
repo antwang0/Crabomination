@@ -311,6 +311,26 @@ pub fn uvilda_dean_of_perfection() -> CardDefinition {
     }
 }
 
+/// Scholarship Sponsor — {3}{W} 3/3 Human Advisor. When it enters, each player
+/// controlling fewer lands than the player with the most searches their library
+/// for up to that many basic lands, puts them onto the battlefield tapped, then
+/// shuffles.
+pub fn scholarship_sponsor() -> CardDefinition {
+    CardDefinition {
+        name: "Scholarship Sponsor",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::CatchUpBasicLands)],
+        ..Default::default()
+    }
+}
+
 /// Radiant Scrollwielder — {2}{R}{W} 2/4 Dwarf Cleric. Instant and sorcery
 /// spells you control have lifelink. At the beginning of your upkeep, exile an
 /// instant or sorcery card from your graveyard and let yourself cast it this

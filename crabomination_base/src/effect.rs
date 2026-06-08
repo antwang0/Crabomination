@@ -2315,6 +2315,11 @@ pub enum Effect {
     /// controller's library, each with one `counter` counter on it.
     ExileTopWithCounters { count: Value, counter: crate::card::CounterType },
 
+    /// Scholarship Sponsor — each player controlling fewer lands than the
+    /// player with the most searches their library for up to (difference)
+    /// basic land cards, puts them onto the battlefield tapped, then shuffles.
+    CatchUpBasicLands,
+
     /// Uvilda, Dean of Perfection — the controller may exile an instant or
     /// sorcery card from their hand with `count` hone counters on it. The
     /// per-upkeep tick-down + reduced cast-from-exile is handled engine-side
