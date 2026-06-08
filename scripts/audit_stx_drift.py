@@ -71,13 +71,19 @@ for src in sorted(STX.glob("*.rs")):
         if scost is None: continue  # unparseable
         card = CACHE_LC.get(name.lower())
         if not card: continue
-        ref = card.get("mana_cost", "")
-        if not ref and card.get("card_faces"):
-            ref = card["card_faces"][0].get("mana_cost", "")
-        if not ref:
-            continue  # MDFC/token/back-face name collision — skip
-        if norm(scost) != norm(ref):
-            issues.append((src.name, m.group(1), name, scost, ref, "COST"))
+        # An MDFC's cache entry is keyed by its full name; a back-face factory
+        # def (e.g. Augusta, Embrose) carries its own face cost, so accept a
+        # match against EITHER printed face rather than only card_faces[0].
+        refs = []
+        if card.get("mana_cost"):
+            refs.append(card["mana_cost"])
+        for face in card.get("card_faces", []) or []:
+            if face.get("mana_cost"):
+                refs.append(face["mana_cost"])
+        if not refs:
+            continue  # token / costless — skip
+        if all(norm(scost) != norm(r) for r in refs):
+            issues.append((src.name, m.group(1), name, scost, "|".join(refs), "COST"))
             continue
         # P/T check for creatures
         pm = re.search(r"power:\s*(-?\d+)", body)

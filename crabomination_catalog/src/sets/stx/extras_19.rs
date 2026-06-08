@@ -4,12 +4,13 @@
 //! `crate::tests::stx`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, Predicate, Selector,
-    SelectionRequirement, StaticAbility, StaticEffect, Subtypes, Supertype, Value, WardCost, Zone,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    Keyword, Predicate, Selector, SelectionRequirement, StaticAbility, StaticEffect, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
-use crate::effect::shortcut::{dies_gain_life, draw, etb};
+use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u};
+use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Emergent Sequence — {1}{G} Sorcery. Search your library for a basic land,
 /// put it onto the battlefield tapped, then shuffle. That land becomes a 0/0
@@ -154,6 +155,76 @@ pub fn torrent_sculptor() -> CardDefinition {
             },
         ]))],
         back_face: Some(Box::new(flamethrower_sonata())),
+        ..Default::default()
+    }
+}
+
+/// Awaken the Blood Avatar — {6}{B}{R} Sorcery, back face of Extus. Each
+/// opponent sacrifices a creature of their choice; create a 3/6 black-and-red
+/// Avatar with haste and an attack trigger that deals 3 to each opponent.
+/// (The optional "sacrifice any number of creatures, {2} less each" cast cost
+/// is dropped — the engine has no variable-sacrifice cost reduction yet.)
+fn awaken_the_blood_avatar() -> CardDefinition {
+    let avatar = TokenDefinition {
+        name: "Avatar".into(),
+        power: 3,
+        toughness: 6,
+        keywords: vec![Keyword::Haste],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black, Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Avatar], ..Default::default() },
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Awaken the Blood Avatar",
+        cost: cost(&[generic(6), b(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: avatar },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Extus, Oriq Overlord // Awaken the Blood Avatar — {1}{W}{B}{B} 2/4 Legendary
+/// Human Warlock with double strike. Magecraft: return target nonlegendary
+/// creature card from your graveyard to your hand.
+pub fn extus_oriq_overlord() -> CardDefinition {
+    CardDefinition {
+        name: "Extus, Oriq Overlord",
+        cost: cost(&[generic(1), w(), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![magecraft(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::HasSupertype(Supertype::Legendary),
+                ))),
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        back_face: Some(Box::new(awaken_the_blood_avatar())),
         ..Default::default()
     }
 }

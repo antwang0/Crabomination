@@ -137,3 +137,40 @@ fn search_for_blex_digs_and_loses_life() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == c3), "binned c3");
     assert_eq!(g.players[0].life, life - 6, "lost 3 life per kept card");
 }
+
+// ── Extus, Oriq Overlord // Awaken the Blood Avatar ────────────────────────────
+
+#[test]
+fn extus_magecraft_returns_nonlegendary_creature_from_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::extus_oriq_overlord());
+    // A nonlegendary creature card in graveyard is the valid magecraft target.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, bolt, Target::Player(1));
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == bear),
+        "magecraft returns the nonlegendary creature to hand"
+    );
+}
+
+#[test]
+fn awaken_the_blood_avatar_forces_sacrifice_and_mints_avatar() {
+    let mut g = two_player_game();
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = *catalog::extus_oriq_overlord().back_face.unwrap();
+    let id = g.add_card_to_hand(0, spell);
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast(&mut g, id);
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_creature), "opponent sacrificed their creature");
+    let avatar = g.battlefield.iter().find(|c| c.definition.name == "Avatar").expect("Avatar minted");
+    assert_eq!((avatar.power(), avatar.toughness()), (3, 6));
+    assert!(avatar.has_keyword(&Keyword::Haste));
+}

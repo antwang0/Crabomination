@@ -4277,5 +4277,6 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::augmenter_pugilist,
         super::torrent_sculptor,
         super::blex_vexing_pest,
+        super::extus_oriq_overlord,
     ]
 }
