@@ -336,3 +336,89 @@ pub fn shadrix_silverquill() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Shaile, Dean of Radiance // Embrose, Dean of Shadow (W // B) ─────────────
+
+/// Shaile, Dean of Radiance — {1}{W} Legendary Bird Cleric 1/1, Flying,
+/// vigilance. "{T}: Put a +1/+1 counter on each creature that entered the
+/// battlefield under your control this turn." MDFC back: Embrose, Dean of
+/// Shadow — {2}{B}{B} Legendary Human Warlock 4/4. "{T}: Put a +1/+1 counter
+/// on another target creature, then Embrose deals 2 damage to that creature."
+/// "Whenever a creature you control with a +1/+1 counter on it dies, draw a
+/// card."
+pub fn shaile_dean_of_radiance() -> CardDefinition {
+    use crate::card::{
+        ActivatedAbility, CounterType, EventKind, EventScope, EventSpec, TriggeredAbility, Value,
+    };
+    use crate::effect::shortcut::target_filtered;
+    let embrose = CardDefinition {
+        name: "Embrose, Dean of Shadow",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(2),
+                },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                crate::card::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne),
+                },
+            ),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Shaile, Dean of Radiance",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::EnteredThisTurn),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(embrose)),
+        ..Default::default()
+    }
+}

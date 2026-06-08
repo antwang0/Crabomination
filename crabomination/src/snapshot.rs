@@ -151,6 +151,10 @@ pub struct CardSnapshot {
     /// back-compat.
     #[serde(default)]
     pub exiled_with: Option<crate::card::CardId>,
+    /// CR 603.4 — turn this permanent entered (Shaile's EnteredThisTurn).
+    /// `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub entered_turn: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -285,6 +289,7 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
         granted_keywords_eot: c.granted_keywords_eot.clone(),
         exiled_by: c.exiled_by,
         exiled_with: c.exiled_with,
+        entered_turn: c.entered_turn,
     }
 }
 
@@ -452,6 +457,7 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.granted_keywords_eot = cs.granted_keywords_eot;
     c.exiled_by = cs.exiled_by;
     c.exiled_with = cs.exiled_with;
+    c.entered_turn = cs.entered_turn;
     Ok(c)
 }
 
@@ -813,6 +819,7 @@ mod tests {
             granted_keywords_eot: vec![],
             exiled_by: None,
             exiled_with: None,
+            entered_turn: None,
         };
         match restore_card(cs) {
             Err(LoadError::UnknownCard(name)) => {

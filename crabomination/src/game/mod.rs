@@ -3833,8 +3833,16 @@ impl GameState {
         // CR 702.95 — Soulbond pairing. When a creature enters, attempt to pair
         // it (auto-resolved "may"). Done before trigger dispatch so a paired
         // creature's bonus is live for any subsequent ETB-trigger evaluation.
+        // CR 603.4 — stamp the entry turn on every permanent that entered in
+        // this batch, so `SelectionRequirement::EnteredThisTurn` (Shaile) can
+        // compare against the current turn. Centralized here because every
+        // battlefield-entry path emits a `PermanentEntered` event.
+        let turn = self.turn_number;
         for e in events {
             if let GameEvent::PermanentEntered { card_id } = e {
+                if let Some(c) = self.battlefield_find_mut(*card_id) {
+                    c.entered_turn = Some(turn);
+                }
                 self.apply_soulbond_pairing(*card_id);
             }
         }

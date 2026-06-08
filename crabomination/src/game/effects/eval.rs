@@ -935,6 +935,8 @@ impl GameState {
                     R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
                     R::IsAttacking => self.attacking.iter().any(|a| a.attacker == card.id),
                     R::IsBlocking => self.block_map.contains_key(&card.id),
+                    // CR 603.4 — entered this turn (stamped on every ETB).
+                    R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
                     // CR 303 — "enchanted" = an Aura is attached. Equipment also
                     // sets `attached_to`, so require the attachment be an
                     // enchantment to exclude it.
@@ -1111,6 +1113,9 @@ impl GameState {
             R::HasEnchantmentSubtype(e) => card.definition.subtypes.enchantment_subtypes.contains(e),
             R::IsToken => card.is_token,
             R::NotToken => !card.is_token,
+            // CR 603.4 — entered this turn (hidden-zone cards are never
+            // stamped, so this is false off the battlefield).
+            R::EnteredThisTurn => card.entered_turn == Some(self.turn_number),
             R::IsBasicLand => card.definition.is_land() && card.definition.supertypes.contains(&Supertype::Basic),
             R::IsNonbasicLand => card.definition.is_land() && !card.definition.supertypes.contains(&Supertype::Basic),
             R::ManaValueAtMost(n) => card.definition.cost.cmc() <= *n,

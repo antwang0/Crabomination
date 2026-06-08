@@ -33,6 +33,33 @@ fn dueling_coach_activation_counters_each_creature_you_control() {
     assert_eq!(bear2_c.counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
+/// Shaile, Dean of Radiance — "{T}: Put a +1/+1 counter on each creature that
+/// entered the battlefield under your control this turn." Only creatures
+/// stamped with the current turn (CR 603.4 `EnteredThisTurn`) get a counter.
+#[test]
+fn shaile_counters_only_creatures_that_entered_this_turn() {
+    let mut g = two_player_game();
+    let shaile = g.add_card_to_battlefield(0, catalog::shaile_dean_of_radiance());
+    g.clear_sickness(shaile);
+    // One bear entered this turn, one is an old resident.
+    let fresh = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let old = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let turn = g.turn_number;
+    g.battlefield.iter_mut().find(|c| c.id == fresh).unwrap().entered_turn = Some(turn);
+    // An opponent creature that "entered this turn" is not yours → unaffected.
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == opp).unwrap().entered_turn = Some(turn);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shaile, ability_index: 0, target: None, x_value: None,
+    }).expect("Shaile {T} activates");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.iter().find(|c| c.id == fresh).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "fresh creature gets a counter");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == old).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "old creature unaffected");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == opp).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "opponent creature unaffected");
+}
+
 // ── Increasing Vengeance ────────────────────────────────────────────────────
 
 #[test]

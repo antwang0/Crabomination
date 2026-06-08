@@ -888,12 +888,11 @@ picking an item up.
   `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
   keep it at zero after adding cards.
   **Still wrong on the *effect body*** (cost/PT right, oracle text invented or
-  blocked on a primitive): Illuminate History (discard-any-number→draw-that-many
-  + gy≥7 Spirit), First Day of Class ("creatures entering this turn" delayed
-  trigger — needs a turn-scoped ETB delayed trigger), Stonebinder's Familiar
-  (needs a generic `CardExiled` event), Hofri Ghostforge (Spirit-copy
-  reanimation), Confront the Past, Verdant/Fervent Mastery, Strixhaven Stadium,
-  Rise of Extus, plus Daemogoth Titan's subtypes ({B/G}×4 — confirm). Per card:
+  blocked on a primitive): Stonebinder's Familiar (needs a generic `CardExiled`
+  event), Hofri Ghostforge (Spirit-copy reanimation), Confront the Past
+  (needs X-aware MV target filter + 2X loyalty removal), Fervent Mastery
+  (alt-cost-was-paid rider), Strixhaven Stadium (point counters + "that player
+  loses" combat trigger). Per card:
   replace the body with the Scryfall text and rewrite its test(s); watch for
   fixture coupling. Swept faithful this run: **Mage Duel** (+1/+2 then fight),
   **Tempted by the Oriq** (permanent MV≤3 steal), **Mentor's Guidance**
@@ -913,9 +912,12 @@ picking an item up.
   two on attack; the gy-to-bottom enabler dropped). Still unimplemented,
   grouped by the primitive they're blocked on:
   - **Study / hone counters** — Kianne/Imbraham, Uvilda/Nassari Deans.
-  - **Entered-this-turn filter** (`SelectionRequirement::EnteredThisTurn`) —
-    Shaile, Dean of Radiance; also unblocks First Day of Class.
-  - **MDFC legends** — Codie/Extus/Blex/Jadzi + the Dean cycle (two-faced).
+  - ✅ **Entered-this-turn filter** (`SelectionRequirement::EnteredThisTurn`,
+    `CardInstance.entered_turn` stamped at every ETB via the dispatcher) —
+    ships **Shaile // Embrose**, the first Dean MDFC. **First Day of Class** is
+    also done (its own turn-scoped `Effect::CreaturesYouControlEnteringThisTurn`
+    delayed trigger, CR 603.4).
+  - **MDFC legends** — Codie/Extus/Blex/Jadzi + the rest of the Dean cycle.
   - **Group land-search** — Scholarship Sponsor's catch-up basic-land tutor.
   - **Variable-number-of-targets** — Ecological Appreciation ("up to four with
     different names" + opponent-chooses-two split).

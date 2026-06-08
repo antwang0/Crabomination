@@ -2277,6 +2277,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::legends::velomachus_lorehold,
         super::legends::tanazir_quandrix,
         super::legends::shadrix_silverquill,
+        super::legends::shaile_dean_of_radiance,
         // ── extras (828 factories) ──
         super::bookwurm,
         super::field_trip,

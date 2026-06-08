@@ -680,6 +680,12 @@ pub enum SelectionRequirement {
     IsNonbasicLand,
     IsAttacking,
     IsBlocking,
+    /// CR 603.4 — true when the candidate permanent entered the battlefield
+    /// this turn (its `CardInstance.entered_turn` equals the current
+    /// `GameState.turn_number`). Battlefield-only; powers "each creature that
+    /// entered the battlefield under your control this turn" (Shaile, Dean of
+    /// Radiance). Combine with `ControlledByYou` for the controller clause.
+    EnteredThisTurn,
     /// True when the candidate permanent has an Aura attached to it (CR 303
     /// "enchanted permanent"). Battlefield-only: scans for any enchantment
     /// whose `attached_to` points at the candidate. Powers Kestia's
@@ -1860,6 +1866,12 @@ pub struct CardInstance {
     /// (`CastSplitRight`), `2` = fused (`CastSplitFused`). Drives effect
     /// selection in `continue_spell_resolution`. Cleared off the stack.
     pub split_cast: Option<u8>,
+    /// CR 603.4 — the turn number on which this permanent last entered the
+    /// battlefield. `Some(t)` lets "creatures that entered this turn" filters
+    /// (`SelectionRequirement::EnteredThisTurn` — Shaile, Dean of Radiance)
+    /// compare against `GameState.turn_number`. `None` for objects that never
+    /// entered through the battlefield-entry path (hand/library/stack cards).
+    pub entered_turn: Option<u32>,
 }
 
 impl CardInstance {
@@ -1921,6 +1933,7 @@ impl CardInstance {
             on_adventure: false,
             saddled: false,
             split_cast: None,
+            entered_turn: None,
         }
     }
 
@@ -2157,6 +2170,10 @@ struct CardInstanceWire {
     exiled_by: Option<ExileLink>,
     #[serde(default)]
     exiled_with: Option<CardId>,
+    /// CR 603.4 — turn this permanent last entered. `#[serde(default)]` so
+    /// older snapshots load as `None`.
+    #[serde(default)]
+    entered_turn: Option<u32>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -2209,6 +2226,7 @@ impl serde::Serialize for CardInstance {
             split_cast: self.split_cast,
             exiled_by: self.exiled_by.clone(),
             exiled_with: self.exiled_with,
+            entered_turn: self.entered_turn,
         };
         wire.serialize(ser)
     }
@@ -2261,6 +2279,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.split_cast = wire.split_cast;
         c.exiled_by = wire.exiled_by;
         c.exiled_with = wire.exiled_with;
+        c.entered_turn = wire.entered_turn;
         Ok(c)
     }
 }
