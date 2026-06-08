@@ -6340,6 +6340,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // UntapAllYoursEachUntapStep (Seedborn Muse) — consulted by
             // `do_untap`; no layer effect.
             | StaticEffect::UntapAllYoursEachUntapStep
+            // ExileDyingOpponentCreatures (Valentin) — consulted in
+            // `remove_from_battlefield_to_graveyard`; no layer effect.
+            | StaticEffect::ExileDyingOpponentCreatures { .. }
             // SelfCostReducedByGreatestPower (The Great Henge) — read by
             // `cost_reduction_for_spell` off the spell being cast; no layer.
             | StaticEffect::SelfCostReducedByGreatestPower => vec![],

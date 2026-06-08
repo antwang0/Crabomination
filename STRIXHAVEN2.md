@@ -27,16 +27,17 @@ live), Extus // Awaken the Blood Avatar (magecraft gy-return + each-opp-sac +
 3/6 Avatar), Mascot Exhibition (corrected to the real {7} Lesson). Emergent
 Sequence, Torrent Sculptor // Flamethrower Sonata, Blex // Search for Blex.
 
+✅ also: Rowan//Will, Mila//Lukka (planeswalker MDFCs), Valentin//Lisette
+(`StaticEffect::ExileDyingOpponentCreatures` death-replacement + reflexive).
+
 ⏳ work remaining printed STX cards, grouped by blocker:
 - **Study/hone counters** (a new counter type + cast-from-exile-with-counter):
   Kianne//Imbraham, Uvilda//Nassari.
 - **Continuous "becomes a copy" layer-1**: Echoing Equation (Augmenter's back).
-- **Death-replacement "exile instead"**: Valentin//Lisette (Lisette's lifegain
-  pump is otherwise ready).
 - **Cast-from-top impulse + can't-cast-permanents static**: Codie.
 - 🟡 **Awaken the Blood Avatar**: the optional "sacrifice any number, {2} less
   each" cast cost is dropped (no variable-sacrifice cost reduction yet).
 - **Misc primitives**: Radiant Scrollwielder (spell-lifelink static + upkeep
   random-recur), Ecological Appreciation (up-to-four variable targets + opponent
-  split), the planeswalker MDFCs Rowan//Will and Mila//Lukka, Jadzi,
-  Flamescroll//Revel (opponent ability-activation trigger + spell-lock).
+  split), Jadzi, Flamescroll//Revel (opponent ability-activation trigger +
+  spell-lock).

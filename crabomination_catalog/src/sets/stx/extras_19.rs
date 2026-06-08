@@ -160,6 +160,100 @@ pub fn torrent_sculptor() -> CardDefinition {
     }
 }
 
+/// 1/1 black-and-green Pest token with "When this token dies, you gain 1 life."
+/// (Valentin's reflexive; distinct from SOS's attack-trigger Pest.)
+fn valentin_pest_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Pest".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black, Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pest], ..Default::default() },
+        triggered_abilities: vec![dies_gain_life(1)],
+        ..Default::default()
+    }
+}
+
+/// Lisette, Dean of the Root — {2}{G}{G} 4/4 Human Druid (back of Valentin).
+/// Whenever you gain life, you may pay {1}; if you do, put a +1/+1 counter on
+/// each creature you control and those creatures gain trample until end of turn.
+fn lisette_dean_of_the_root() -> CardDefinition {
+    let yours = || Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Lisette, Dean of the Root",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::MayPay {
+                description: "Pay {1}: +1/+1 counter on each creature you control + trample EOT."
+                    .into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter {
+                        what: yours(),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::GrantKeyword {
+                        what: yours(),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Valentin, Dean of the Vein // Lisette, Dean of the Root — {B} 1/1 Legendary
+/// Vampire Warlock with menace + lifelink. If a nontoken creature an opponent
+/// controls would die, exile it instead; when you do, you may pay {2} to make a
+/// 1/1 BG Pest with "when this dies, you gain 1 life."
+pub fn valentin_dean_of_the_vein() -> CardDefinition {
+    CardDefinition {
+        name: "Valentin, Dean of the Vein",
+        cost: cost(&[b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Menace, Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If a nontoken creature an opponent controls would die, exile it instead. \
+                When you do, you may pay {2}: create a 1/1 BG Pest.",
+            effect: StaticEffect::ExileDyingOpponentCreatures {
+                when_you_do: Some(Box::new(Effect::MayPay {
+                    description: "Pay {2} to create a 1/1 BG Pest.".into(),
+                    mana_cost: cost(&[generic(2)]),
+                    body: Box::new(Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: valentin_pest_token(),
+                    }),
+                })),
+            },
+        }],
+        back_face: Some(Box::new(lisette_dean_of_the_root())),
+        ..Default::default()
+    }
+}
+
 /// Lukka, Wayward Bonder — {4}{R}{R} Lukka planeswalker (back of Mila), 5
 /// loyalty. +1: you may discard a card; if you do, draw a card (two if a
 /// creature card was discarded). −2: reanimate a creature card with haste,

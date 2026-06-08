@@ -2038,8 +2038,32 @@ impl GameState {
             // the same redirect via `dies_to_exile_eot`. We must check
             // both here because the card has been removed from the
             // battlefield before `resolve_zone_change` walks for it.
+            // CR 614 — "If a nontoken creature an opponent controls would die,
+            // exile it instead" (Valentin, Dean of the Vein). Detect an active
+            // `ExileDyingOpponentCreatures` static controlled by an opponent of
+            // the dying creature, redirect to exile, and capture its reflexive
+            // "when you do" effect to fire after placement.
+            let valentin_redirect: Option<(usize, Option<Effect>)> = if card.definition.is_creature()
+                && !card.is_token
+            {
+                self.battlefield.iter().find_map(|src| {
+                    src.definition.static_abilities.iter().find_map(|sa| {
+                        if let crate::effect::StaticEffect::ExileDyingOpponentCreatures { when_you_do } =
+                            &sa.effect
+                            && src.controller != card.controller
+                        {
+                            Some((src.controller, when_you_do.as_deref().cloned()))
+                        } else {
+                            None
+                        }
+                    })
+                })
+            } else {
+                None
+            };
             let initial_to = if card.counter_count(crate::card::CounterType::Finality) > 0
                 || self.dies_to_exile_eot.contains(&id)
+                || valentin_redirect.is_some()
             {
                 crate::card::Zone::Exile
             } else {
@@ -2066,6 +2090,25 @@ impl GameState {
             self.place_card_at_resolved_zone(card, resolved);
             let mut events = Vec::new();
             self.return_linked_exiles(id, &mut events);
+            // Fire Valentin's reflexive "when you do, …" for the static's
+            // controller (CR 603.x reflexive trigger off the replacement).
+            if let Some((controller, Some(effect))) = valentin_redirect {
+                let auto_target =
+                    self.auto_target_for_effect_avoiding(&effect, controller, None);
+                self.stack.push(StackItem::Trigger {
+                    source: id,
+                    controller,
+                    effect: Box::new(effect),
+                    target: auto_target,
+                    mode: None,
+                    x_value: 0,
+                    converged_value: 0,
+                    trigger_source: None,
+                    mana_spent: 0,
+                    event_amount: 0,
+                    intervening_if: None,
+                });
+            }
         }
     }
 

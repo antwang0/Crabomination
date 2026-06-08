@@ -437,6 +437,16 @@ pub enum StaticEffect {
     /// the controller's permanents untap alongside the active player's (subject
     /// to the same Stun / `PreventUntap` / exert gates). No layer effect.
     UntapAllYoursEachUntapStep,
+    /// CR 614 — "If a nontoken creature an opponent controls would die, exile
+    /// it instead." Consulted in `remove_from_battlefield_to_graveyard`: an
+    /// opponent's nontoken creature bound for a graveyard from the battlefield
+    /// is routed to exile. When `when_you_do` is `Some`, that reflexive effect
+    /// is pushed onto the stack for the static's controller each time the
+    /// redirect fires ("When you do, …"). Valentin, Dean of the Vein.
+    ExileDyingOpponentCreatures {
+        #[serde(default)]
+        when_you_do: Option<Box<Effect>>,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

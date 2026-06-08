@@ -262,3 +262,56 @@ fn lukka_minus_two_reanimates_with_haste() {
     let b = g.battlefield_find(bear).expect("bear reanimated to battlefield");
     assert!(b.has_keyword(&Keyword::Haste), "reanimated creature has haste");
 }
+
+// ── Valentin, Dean of the Vein // Lisette, Dean of the Root ────────────────────
+
+#[test]
+fn valentin_exiles_dying_opponent_creature_and_offers_pest() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::valentin_dean_of_the_vein());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Accept the reflexive "pay {2}" to make a Pest.
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    // Kill the opponent's bear via lethal damage SBA.
+    g.battlefield_find_mut(opp_bear).unwrap().damage = 2;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == opp_bear), "dying opp creature exiled, not graveyard'd");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == opp_bear), "not in graveyard");
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Pest"),
+        "reflexive Pest minted after paying {{2}}"
+    );
+}
+
+#[test]
+fn valentin_does_not_exile_own_dying_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::valentin_dean_of_the_vein());
+    let my_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(my_bear).unwrap().damage = 2;
+    let _ = g.check_state_based_actions();
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == my_bear), "own creature dies normally");
+}
+
+#[test]
+fn lisette_pumps_team_on_lifegain_when_paid() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, *catalog::valentin_dean_of_the_vein().back_face.unwrap());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Vraska's Contempt: exile target + gain 2 life → triggers Lisette.
+    let vc = g.add_card_to_hand(0, catalog::vraskas_contempt());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3); // {2}{B}{B} spell + {1} for Lisette
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, vc, Target::Permanent(opp));
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
