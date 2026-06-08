@@ -1956,6 +1956,107 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Detain { what } => {
+                // CR 701.35 — stamp each target permanent with the detaining
+                // player so it can't attack/block/activate until the detainer's
+                // next turn (cleared in `do_untap` / turn start).
+                let detainer = ctx.controller;
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        c.detained_by = Some(detainer);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Fateseal { who, amount } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                // CR 701.29 — look at the top N of the targeted opponent's
+                // library; the controller may put any of them on the bottom.
+                let Some(opp) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(amount, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let peek: Vec<(CardId, String)> = self.players[opp]
+                    .library
+                    .iter()
+                    .take(n)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if peek.is_empty() { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                // Decided by the fatesealer (ctx.controller), not the library's
+                // owner. A wants_ui controller is served the same inline pick
+                // (a dedicated suspend path is a TODO.md follow-up).
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Fateseal: put which cards on the bottom?".to_string(),
+                    candidates: peek,
+                    min: 0,
+                    max: n as u32,
+                });
+                if let DecisionAnswer::Cards(to_bottom) = answer {
+                    for cid in to_bottom {
+                        if let Some(pos) = self.players[opp].library.iter().position(|c| c.id == cid) {
+                            let card = self.players[opp].library.remove(pos);
+                            self.players[opp].library.push(card);
+                        }
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::DigToHandLoseLife { count, life_per_card } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let per = self.evaluate_value(life_per_card, ctx).max(0);
+                let top: Vec<(CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(n)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if top.is_empty() { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                // Controller chooses any subset to keep (a `wants_ui` seat is
+                // served the same inline pick; a dedicated suspend path is a
+                // TODO.md follow-up).
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Put which cards into your hand?".to_string(),
+                    candidates: top.clone(),
+                    min: 0,
+                    max: top.len() as u32,
+                });
+                let chosen: Vec<CardId> = match answer {
+                    DecisionAnswer::Cards(v) => v,
+                    _ => vec![],
+                };
+                let mut taken = 0i32;
+                // Take chosen → hand (top-down), rest of the revealed set → graveyard.
+                for (cid, _) in &top {
+                    if chosen.contains(cid) {
+                        if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
+                            let card = self.players[p].library.remove(pos);
+                            self.players[p].hand.push(card);
+                            events.push(GameEvent::CardDrawn { player: p, card_id: *cid });
+                            taken += 1;
+                        }
+                    } else if let Some(pos) = self.players[p].library.iter().position(|c| c.id == *cid) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].graveyard.push(card);
+                    }
+                }
+                let life = taken * per;
+                if life > 0 {
+                    self.adjust_life(p, -life);
+                    events.push(GameEvent::LifeLost { player: p, amount: life as u32 });
+                }
+                Ok(())
+            }
+
             Effect::Provoke { what } => {
                 // CR 702.39 — untap the target creature and force it to block
                 // the source attacker this combat if able.
@@ -6383,7 +6484,16 @@ impl GameState {
                 .last_moved_cards
                 .iter()
                 .copied()
-                .map(EntityRef::Card)
+                // A card moved onto the battlefield (Search/reveal → bf) is now
+                // a permanent — surface it as one so battlefield-only effects
+                // (AddCounter, BecomeCreature) act on it (Emergent Sequence).
+                .map(|cid| {
+                    if self.battlefield_find(cid).is_some() {
+                        EntityRef::Permanent(cid)
+                    } else {
+                        EntityRef::Card(cid)
+                    }
+                })
                 .collect(),
             Selector::CastSpellTarget(slot) => {
                 // Walk the stack for the spell whose SpellCast event fired

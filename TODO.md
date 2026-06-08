@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Discovered this run (final STX sweep):**
+  - **Study / hone counters + cast-from-exile-with-counter** — a new
+    `CounterType::{Study,Hone}` plus a "cast a card you own in exile with a
+    [counter] counter" pathway. Unblocks Kianne//Imbraham (study) and
+    Uvilda//Nassari (hone), the last two Dean MDFCs.
+  - **Continuous "becomes a copy of" (layer 1)** — until-EOT/permanent copy of
+    a chosen permanent (Echoing Equation, Helm of the Host loop, Mirrorform).
+  - **Death-replacement "exile instead" for opponents' creatures** + reflexive
+    trigger — Valentin, Dean of the Vein.
+  - **`Effect::Fateseal` / `Effect::DigToHandLoseLife` `wants_ui` suspend path**
+    — both currently decide inline (the bot/scripted path); a networked human
+    isn't prompted. Same gap as the existing inline pickers.
+  - **Detain interactions** — `detained_by` blocks attack/block/activate and
+    lifts at the detainer's next turn; a granted-static "permanents your
+    opponents control enter detained" variant (Lavinia of the Tenth) is ⏳.
+
 - ⏳ **Discovered this run (STX sweep / extras_17):**
   - **"Sacrifice X or pay {N}" OR additional cost** — an `AdditionalCastCost`
     variant (or a `Vec<AdditionalCastCost>` "choose one" wrapper). Makes Bayou
@@ -20,7 +36,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     EnteringThisTurn` + `DelayedKind::CreatureYouControlEntersThisTurn`, fired
     from the dispatcher and expiring at cleanup; First Day of Class.
   - ✅ **`SelectionRequirement::EnteredThisTurn`** — `CardInstance.entered_turn`
-    stamped centrally at every ETB; Shaile // Embrose.
+    stamped centrally at every ETB (also at the movement ETB site so
+    Emergent Sequence counts the land it just searched mid-resolution);
+    Shaile // Embrose.
   - **X-scaled MV target filter** (`ManaValueAtMost(Value)`) — Confront the
     Past's "planeswalker with mana value X or less" reanimate mode.
   - ✅ **Mastery alt-cost rider** — handled by the existing
@@ -855,6 +873,8 @@ picking an item up.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker.
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
+- ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics.
+- ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
 - ✅ **CR 701.57 — Discover N** — `Effect::Discover { n }`: exile from top until a nonland MV≤N, cast it free or put in hand (controller's choice), bottom the rest. Ships Geological Appraiser, Trumpeting Carnosaur. (Cascade-adjacent; shares the bottom-the-rest tail.)
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework; true damage *redirection* (614.9) + damage *halving*; general skip-step/turn (614.10). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)

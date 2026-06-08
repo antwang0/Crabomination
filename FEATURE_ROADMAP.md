@@ -161,7 +161,11 @@ not how Magic works" moments.
   "becomes a copy of" layer interaction, set-P/T vs +N/+N ordering.
 - 🟡 **Static ability framework:** cost-reduction statics, "you may play"
   permissions from permanents, "creatures you control have X", anthem
-  stacking — wired. Devotion-gated creature states (Nyx gods) ship via
+  stacking — wired, including **disjunctive multi-type "other … you control"
+  anthems** (the `affected_from_requirement` / `CardMatch` path now matches
+  `Or`-of-creature-type filters and applies `OtherThanSource` against the live
+  source id — Blex, Vexing Pest's Pest/Bat/Insect/Snake/Spider lord).
+  Devotion-gated creature states (Nyx gods) ship via
   `StaticEffect::NotCreatureWhileDevotionBelow` (CR 700.5). Remaining:
   broader "you may play" permissions and devotion-gated *non-type* states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).

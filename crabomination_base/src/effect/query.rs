@@ -199,6 +199,13 @@ impl Effect {
             Effect::Explore { who } => sel_has_target(who),
             Effect::Goad { what } => sel_has_target(what),
             Effect::Suspect { what } => sel_has_target(what),
+            Effect::Detain { what } => sel_has_target(what),
+            Effect::Fateseal { who, amount } => {
+                player_has_target(who) || value_has_target(amount)
+            }
+            Effect::DigToHandLoseLife { count, life_per_card } => {
+                value_has_target(count) || value_has_target(life_per_card)
+            }
             Effect::Discover { n } => value_has_target(n),
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
@@ -449,6 +456,7 @@ impl Effect {
             | Effect::Untap { what, .. }
             | Effect::Provoke { what }
             | Effect::Suspect { what }
+            | Effect::Detain { what }
             | Effect::CounterSpell { what }
             | Effect::CounterSpellToZone { what, .. }
             | Effect::CounterAbility { what }

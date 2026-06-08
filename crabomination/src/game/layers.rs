@@ -521,6 +521,12 @@ pub(crate) fn affected_includes(
             ctrl_ok && type_ok && counter_ok
         }
         AffectedPermanents::CardMatch { source_controller, requirement } => {
+            // CR "other ... you control": `OtherThanSource` is matched here
+            // (where the source id is known) rather than in the source-blind
+            // `requirement_matches_card`, which treats it as always-true.
+            if requirement_mentions_other_than_source(requirement) && source == card.id {
+                return false;
+            }
             requirement_matches_card(requirement, card, *source_controller)
         }
     }
@@ -542,10 +548,27 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
         | R::HasKeyword(_) => true,
+        // OtherThanSource is matched in `affects()` (which knows the source id),
+        // so it's safe to route a filter containing it through CardMatch.
+        R::OtherThanSource => true,
         R::And(a, b) | R::Or(a, b) => {
             requirement_is_card_only(a) && requirement_is_card_only(b)
         }
         R::Not(inner) => requirement_is_card_only(inner),
+        _ => false,
+    }
+}
+
+/// True if `req` contains an `OtherThanSource` leaf anywhere — the source
+/// exclusion is then applied in `affects()` against the live source id.
+fn requirement_mentions_other_than_source(req: &SelectionRequirement) -> bool {
+    use SelectionRequirement as R;
+    match req {
+        R::OtherThanSource => true,
+        R::And(a, b) | R::Or(a, b) => {
+            requirement_mentions_other_than_source(a) || requirement_mentions_other_than_source(b)
+        }
+        R::Not(inner) => requirement_mentions_other_than_source(inner),
         _ => false,
     }
 }
@@ -605,6 +628,9 @@ pub(crate) fn requirement_matches_card(
                 || requirement_matches_card(b, card, source_controller)
         }
         R::Not(inner) => !requirement_matches_card(inner, card, source_controller),
+        // Source exclusion is enforced in `affects()` (source id known there);
+        // treat as always-matching for the printed-characteristics walk.
+        R::OtherThanSource => true,
         _ => false,
     }
 }

@@ -488,6 +488,11 @@ impl GameState {
                 card.controller = p;
                 card.tapped = *tapped;
                 card.summoning_sick = card.definition.is_creature();
+                // CR 603.4 — stamp the entry turn immediately (the central
+                // dispatch loop also sets it, but doing it here makes it
+                // readable mid-resolution — Emergent Sequence counts the land
+                // it just put in).
+                card.entered_turn = Some(self.turn_number);
                 // A permanent entering the battlefield from another zone is
                 // a brand-new object (rule 400.7) — clear residual damage,
                 // pump bonuses, and attachment.

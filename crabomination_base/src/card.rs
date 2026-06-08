@@ -1883,6 +1883,12 @@ pub struct CardInstance {
     /// compare against `GameState.turn_number`. `None` for objects that never
     /// entered through the battlefield-entry path (hand/library/stack cards).
     pub entered_turn: Option<u32>,
+    /// CR 701.35 — Detain. `Some(detainer)` while this permanent is detained:
+    /// it can't attack or block and its activated abilities can't be activated
+    /// until the detaining player's next turn (cleared at the start of that
+    /// player's turn). `None` for the common undetained case. Round-trips with
+    /// `#[serde(default)]`.
+    pub detained_by: Option<usize>,
 }
 
 impl CardInstance {
@@ -1945,6 +1951,7 @@ impl CardInstance {
             saddled: false,
             split_cast: None,
             entered_turn: None,
+            detained_by: None,
         }
     }
 
@@ -2185,6 +2192,10 @@ struct CardInstanceWire {
     /// older snapshots load as `None`.
     #[serde(default)]
     entered_turn: Option<u32>,
+    /// CR 701.35 Detain marker. `#[serde(default)]` so older snapshots load as
+    /// `None`.
+    #[serde(default)]
+    detained_by: Option<usize>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -2238,6 +2249,7 @@ impl serde::Serialize for CardInstance {
             exiled_by: self.exiled_by,
             exiled_with: self.exiled_with,
             entered_turn: self.entered_turn,
+            detained_by: self.detained_by,
         };
         wire.serialize(ser)
     }
@@ -2291,6 +2303,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.exiled_by = wire.exiled_by;
         c.exiled_with = wire.exiled_with;
         c.entered_turn = wire.entered_turn;
+        c.detained_by = wire.detained_by;
         Ok(c)
     }
 }

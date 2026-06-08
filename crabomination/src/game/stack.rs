@@ -1120,6 +1120,11 @@ impl GameState {
         // creature so the must-attack requirement lifts.
         for card in &mut self.battlefield {
             card.goaded_by.retain(|&g| g != p);
+            // CR 701.35 — detain lasts "until your next turn"; lift it when the
+            // detaining player's (= active player p's) turn begins.
+            if card.detained_by == Some(p) {
+                card.detained_by = None;
+            }
             // CR 702.142 — "attacked this turn" (Boast gate) resets each turn.
             card.attacked_this_turn = false;
         }

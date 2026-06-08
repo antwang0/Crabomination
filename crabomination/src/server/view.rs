@@ -516,6 +516,7 @@ fn project_permanent(
         goaded: !card.goaded_by.is_empty(),
         monstrous: card.monstrous,
         suspected: card.suspected,
+        detained: card.detained_by.is_some(),
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
@@ -1384,6 +1385,17 @@ mod tests {
         let v = project(&state, 0);
         assert!(v.battlefield.iter().find(|p| p.id == a).unwrap().suspected);
         assert!(!v.battlefield.iter().find(|p| p.id == b).unwrap().suspected);
+    }
+
+    #[test]
+    fn detained_surfaces_in_the_view() {
+        let mut state = two_player_game();
+        let a = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let b = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        state.battlefield_find_mut(a).unwrap().detained_by = Some(1);
+        let v = project(&state, 0);
+        assert!(v.battlefield.iter().find(|p| p.id == a).unwrap().detained);
+        assert!(!v.battlefield.iter().find(|p| p.id == b).unwrap().detained);
     }
 
     #[test]

@@ -436,6 +436,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.monstrous {
         lines.push(String::from("(monstrous)"));
     }
+    // CR 701.35 Detain — can't attack/block and its abilities can't be
+    // activated until the detaining player's next turn.
+    if p.detained {
+        lines.push(String::from("(detained — can't attack/block/activate)"));
+    }
 
     // CR 714 — Saga chapter progress. The current chapter is the Lore counter
     // count; `saga_final_chapter` is the highest chapter number (sacrificed
@@ -795,6 +800,7 @@ mod tests {
             goaded: false,
             monstrous: false,
             suspected: false,
+            detained: false,
             pt_modified: false,
             mana_cost_display: String::new(),
             creature_types: vec![],

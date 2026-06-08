@@ -5265,6 +5265,16 @@ impl GameState {
             }
         }
 
+        // CR 701.35 — a detained permanent's activated abilities can't be
+        // activated (all of them, mana abilities included) until the detainer's
+        // next turn.
+        if !source_in_gy
+            && !source_in_hand
+            && self.battlefield_find(card_id).is_some_and(|c| c.detained_by.is_some())
+        {
+            return Err(GameError::AbilitySuppressedByNamedCard);
+        }
+
         // Cursed Totem / Damping Matrix lock: non-mana activated abilities of
         // creatures can't be activated while a
         // `CreatureActivatedAbilitiesLocked` static is in play (global).

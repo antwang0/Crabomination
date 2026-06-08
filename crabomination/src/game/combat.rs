@@ -230,6 +230,7 @@ impl GameState {
             let kws = computed_kw(id);
             let can_attack = is_creature_now
                 && !card.tapped
+                && card.detained_by.is_none()
                 && !kws.contains(&Keyword::Defender)
                 && !kws.contains(&Keyword::CantAttack)
                 && (!card.summoning_sick || kws.contains(&Keyword::Haste));
@@ -237,7 +238,11 @@ impl GameState {
                 if card.tapped {
                     return Err(GameError::CardIsTapped(id));
                 }
-                if kws.contains(&Keyword::Defender) || kws.contains(&Keyword::CantAttack) {
+                // CR 701.35 — a detained permanent can't attack.
+                if card.detained_by.is_some()
+                    || kws.contains(&Keyword::Defender)
+                    || kws.contains(&Keyword::CantAttack)
+                {
                     return Err(GameError::CannotAttack(id));
                 }
                 return Err(GameError::SummoningSickness(id));
@@ -457,6 +462,11 @@ impl GameState {
             }
 
             if !blocker.can_block() {
+                return Err(GameError::CannotBlock(blocker_id));
+            }
+
+            // CR 701.35 — a detained permanent can't block.
+            if blocker.detained_by.is_some() {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 

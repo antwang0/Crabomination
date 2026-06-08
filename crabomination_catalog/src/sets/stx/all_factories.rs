@@ -4273,5 +4273,10 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::thunderous_orator,
         super::venerable_warsinger,
         super::ardent_dustspeaker,
+        // ── extras_19 — final real-STX sweep ──
+        super::emergent_sequence,
+        super::augmenter_pugilist,
+        super::torrent_sculptor,
+        super::blex_vexing_pest,
     ]
 }

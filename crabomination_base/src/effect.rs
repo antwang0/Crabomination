@@ -1554,6 +1554,22 @@ pub enum Effect {
     /// `suspected` flag so it gains menace and can't block (injected as
     /// computed keywords). Repeat Offender, Reasonable Doubt.
     Suspect { what: Selector },
+    /// CR 701.35 — *detain* each permanent `what` resolves to: stamp
+    /// `detained_by = the effect's controller`. A detained permanent can't
+    /// attack or block and its activated abilities can't be activated until
+    /// the detainer's next turn (cleared at that turn's start). Lyev Skyknight.
+    Detain { what: Selector },
+    /// CR 701.29 — *fateseal N*: look at the top `amount` cards of each
+    /// targeted opponent's library and put any number of them on the bottom
+    /// (the rest stay on top). The library-side mirror of Scry. AutoDecider
+    /// bottoms nothing; a `wants_ui` controller / scripted decider chooses.
+    Fateseal { who: PlayerRef, amount: Value },
+    /// "Look at the top `count` cards of your library. Put any number of them
+    /// into your hand and the rest into your graveyard. You lose `life_per_card`
+    /// life for each card put into your hand this way." Search for Blex,
+    /// Painful Truths-family digs. AutoDecider takes none (the safe default);
+    /// a scripted/`wants_ui` decider picks the subset.
+    DigToHandLoseLife { count: Value, life_per_card: Value },
     /// CR 701.59 — *collect evidence N*: the controller may exile cards with
     /// total mana value `amount` or greater from their graveyard; if they do,
     /// `then` resolves (the "when you do" reflexive payoff). The exile is the
