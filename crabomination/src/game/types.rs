@@ -882,6 +882,11 @@ pub enum GameEvent {
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
+    /// CR 700.14 — `player` paid a spell cost, bringing their running
+    /// total of mana spent to cast spells this turn to `total`. "Whenever
+    /// you expend N" triggers (`EventKind::Expend` + `Predicate::
+    /// ExpendReached(n)`) fire when `total` first reaches N.
+    Expended { player: usize, total: u32 },
     /// CR 122 — a player got `amount` energy counters ({E}).
     EnergyGained { player: usize, amount: u32 },
     /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).

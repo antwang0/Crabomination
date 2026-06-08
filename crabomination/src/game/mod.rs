@@ -267,6 +267,17 @@ pub struct GameState {
     pub(crate) skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// CR 700.14 — running total of mana the active player has spent to
+    /// cast spells this turn (Expend). Bumped in `finalize_cast` by each
+    /// spell's `mana_spent`; reset at cleanup. `#[serde(default)]`.
+    #[serde(default)]
+    pub(crate) mana_spent_on_spells_this_turn: u32,
+    /// CR 700.14 — the spell-mana total *before* the cost that produced
+    /// the `Expended` event currently being dispatched. Read by
+    /// `Predicate::ExpendReached` to detect threshold crossings.
+    /// Transient scratch — `#[serde(skip)]`.
+    #[serde(skip)]
+    pub(crate) expend_prev_total: u32,
     /// Total spells cast during the previous turn (snapshotted from
     /// `spells_cast_this_turn` at Cleanup). Drives the classic Innistrad
     /// werewolf transform check ("if no spells were cast last turn …").
@@ -719,6 +730,8 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            mana_spent_on_spells_this_turn: self.mana_spent_on_spells_this_turn,
+            expend_prev_total: self.expend_prev_total,
             spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             delayed_triggers: self.delayed_triggers.clone(),
@@ -821,6 +834,8 @@ impl GameState {
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            mana_spent_on_spells_this_turn: 0,
+            expend_prev_total: 0,
             spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
             delayed_triggers: Vec::new(),
@@ -6165,6 +6180,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         | GameEvent::PoisonAdded { amount, .. }
         | GameEvent::EnergyGained { amount, .. } => *amount,
         GameEvent::CounterAdded { count, .. } => *count,
+        GameEvent::Expended { total, .. } => *total,
         _ => 0,
     }
 }

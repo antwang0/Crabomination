@@ -29098,3 +29098,41 @@ pub fn valley_questcaller() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Roughshod Duo — {2}{R} 3/2 Mouse Raccoon with Trample. Whenever you expend
+/// 4 (CR 700.14), target creature you control gets +1/+1 and gains trample
+/// until end of turn.
+pub fn roughshod_duo() -> CardDefinition {
+    CardDefinition {
+        name: "Roughshod Duo",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse, CreatureType::Raccoon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Expend, EventScope::YourControl)
+                .with_filter(Predicate::ExpendReached(4)),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

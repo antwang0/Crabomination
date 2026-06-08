@@ -403,6 +403,11 @@ impl GameState {
                     .map(|p| self.players[p].life_gained_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::ExpendReached(n) => {
+                // CR 700.14 — fired only on the cost-payment that pushes the
+                // turn's spell-mana total from below `n` up to at least `n`.
+                self.expend_prev_total < *n && ctx.event_amount >= *n
+            }
             Predicate::HasCityBlessing { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()

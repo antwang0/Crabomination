@@ -249,6 +249,7 @@ impl GameState {
                 // at the next upkeep) sees it.
                 self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
+                self.mana_spent_on_spells_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
                 self.give_priority_to_active();
             }

@@ -1438,6 +1438,9 @@ pub enum GameEventWire {
     /// can animate cycle activations distinctly from regular
     /// hand-discards. Per CR 702.29.
     CardCycled { player: usize, card_id: CardId },
+    /// Wire mirror of `GameEvent::Expended` (CR 700.14). `total` is the
+    /// player's running mana-spent-on-spells total this turn.
+    Expended { player: usize, total: u32 },
     /// Wire mirror of `GameEvent::PlayerConceded` (CR 104.3a). Lets client
     /// UIs log "Player N conceded" distinctly from a life-loss game end.
     PlayerConceded { player: usize },
@@ -1649,6 +1652,10 @@ impl From<&GameEvent> for GameEventWire {
                 player: *player,
                 card_id: *card_id,
             },
+            GameEvent::Expended { player, total } => GameEventWire::Expended {
+                player: *player,
+                total: *total,
+            },
             GameEvent::PlayerConceded { player } => {
                 GameEventWire::PlayerConceded { player: *player }
             }
@@ -1795,6 +1802,7 @@ impl GameEventWire {
             E::CardCycled { player, card_id } => {
                 format!("P{player} cycled {}", name(*card_id))
             }
+            E::Expended { player, total } => format!("P{player} expended (spell-mana {total})"),
             E::PlayerConceded { player } => format!("P{player} conceded"),
             E::GameOver { winner } => match winner {
                 Some(p) => format!("Game over — P{p} wins"),

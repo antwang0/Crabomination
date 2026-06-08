@@ -2825,6 +2825,16 @@ impl GameState {
         // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
         // observe the actual amount paid for *this* spell.
         self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value);
+        // CR 700.14 — Expend. Bump the caster's running spell-mana total and
+        // dispatch an `Expended` event so "Whenever you expend N" triggers
+        // fire on the cost-payment that first reaches their threshold.
+        if mana_spent > 0 {
+            self.expend_prev_total = self.mana_spent_on_spells_this_turn;
+            self.mana_spent_on_spells_this_turn =
+                self.mana_spent_on_spells_this_turn.saturating_add(mana_spent);
+            let total = self.mana_spent_on_spells_this_turn;
+            self.dispatch_triggers_for_events(&[GameEvent::Expended { player: p, total }]);
+        }
         // CR 702.62 suspend accelerants (Deep-Sea Kraken): an opponent's cast
         // ticks a time counter off their suspended accelerant cards.
         self.process_suspend_accelerants(p);

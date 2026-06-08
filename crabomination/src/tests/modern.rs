@@ -37244,3 +37244,44 @@ fn valley_questcaller_anthems_typal_creatures() {
     let cp = g.computed_permanent(mouse).unwrap();
     assert_eq!((cp.power, cp.toughness), (2, 2), "Mouse anthemed +1/+1");
 }
+
+/// Roughshod Duo's "expend 4" trigger (CR 700.14) fires once the turn's
+/// spell-mana total crosses four, pumping a creature you control.
+#[test]
+fn roughshod_duo_expend_four_pumps_creature() {
+    let mut g = two_player_game();
+    let duo = g.add_card_to_battlefield(0, catalog::roughshod_duo()); // 3/2
+    // Cast a 6-mana spell — crosses the expend-4 threshold (0 → 6).
+    let moose = g.add_card_to_hand(0, catalog::galewind_moose()); // {4}{G}{G}
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: moose, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Galewind Moose");
+    drain_stack(&mut g);
+    // The expend-4 trigger resolved above the Moose spell, pumping the only
+    // creature on the battlefield (Roughshod Duo) to 4/3.
+    assert_eq!(g.computed_permanent(duo).unwrap().power, 4, "expend-4 pumped the Duo");
+}
+
+/// Expend triggers fire on the crossing cast only, not on later casts that
+/// stay above the threshold.
+#[test]
+fn expend_threshold_fires_only_on_crossing() {
+    let mut g = two_player_game();
+    g.players[0].life = 20;
+    // prev<4, total reaches 5 → ExpendReached(4) true.
+    g.expend_prev_total = 2;
+    let pred_true = g.evaluate_predicate(
+        &crate::card::Predicate::ExpendReached(4),
+        &crate::game::effects::EffectContext { event_amount: 5, ..crate::game::effects::EffectContext::for_spell(0, None, 0, 0) },
+    );
+    assert!(pred_true, "crossing 4 fires");
+    // Already above 4 before this cast → no re-fire.
+    g.expend_prev_total = 5;
+    let pred_false = g.evaluate_predicate(
+        &crate::card::Predicate::ExpendReached(4),
+        &crate::game::effects::EffectContext { event_amount: 7, ..crate::game::effects::EffectContext::for_spell(0, None, 0, 0) },
+    );
+    assert!(!pred_false, "staying above 4 does not re-fire");
+}

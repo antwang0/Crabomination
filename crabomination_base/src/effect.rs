@@ -525,6 +525,12 @@ pub enum Predicate {
     /// Backed by `Player.life_gained_this_turn`. Used by Strixhaven's
     /// **Infusion** rider — "If you gained life this turn, …".
     LifeGainedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// CR 700.14 — true exactly on the spell-cast whose payment first
+    /// pushes the active player's running mana-spent-on-spells total to
+    /// `n` (i.e. prior total `< n` and new total `>= n`). Used as the
+    /// resolve-time filter on `EventKind::Expend` triggers (Roughshod Duo
+    /// "Whenever you expend 4").
+    ExpendReached(u32),
     /// CR 700.6 — `who` has the city's blessing. "As long as you have the
     /// city's blessing, …" (Ascend payoffs).
     HasCityBlessing { who: PlayerRef },
@@ -1006,6 +1012,11 @@ pub enum EventKind {
     DealtDamage,
     /// A player gained life.
     LifeGained,
+    /// CR 700.14 — "Whenever you expend N." Matched to
+    /// `GameEvent::Expended`; the threshold N rides the trigger's
+    /// `EventSpec.filter` as `Predicate::ExpendReached(n)` so the trigger
+    /// fires only when the turn's spell-mana total first reaches N.
+    Expend,
     /// A player lost life.
     LifeLost,
     /// The game entered a particular step.

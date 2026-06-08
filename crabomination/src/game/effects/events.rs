@@ -54,6 +54,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
+        (EventKind::Expend, GameEvent::Expended { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
         (EventKind::RolledDice, GameEvent::DiceRolled { .. }) => true,
@@ -270,6 +271,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::CardLeftGraveyard { player, .. }
         | GameEvent::CardCycled { player, .. }
         | GameEvent::EnergyGained { player, .. }
+        | GameEvent::Expended { player, .. }
         | GameEvent::CoinFlipWon { player }
         | GameEvent::CoinFlipLost { player }
         | GameEvent::DiceRolled { player, .. }
