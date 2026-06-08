@@ -806,6 +806,17 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.74 — Evoke** (`AlternativeCost.evoke_sacrifice` + ETB-then-
+  sacrifice on the stack; `shortcut::evoke`. Solitude, Fury, Mulldrifter,
+  Shriekmaw).
+- ✅ **CR 603.3d once-per-turn + exile triggers** — `EventKind::CardExiled`
+  (maps to the central exile-placement funnel's `PermanentExiled`) pairs with
+  `once_per_turn` + `IsTurnOf(You)` for "whenever one or more cards are put into
+  exile during your turn" (Stonebinder's Familiar).
+- ✅ **Cast-from-exile rider** — `CardInstance.cast_from_exile` (stamped in
+  `cast_card_for_free` for suspend/foretell/plot/impulse) + `Predicate::
+  CastSpellFromExile` (Nassari, Dean of Expression). Hone counters
+  (`CounterType::Hone` + `process_hone`) are the timed cast-from-exile path.
 - ✅ **CR 702.26 — Phasing** (`GameState.phased_out` side zone + `do_phasing`
   at the top of the untap step; `Effect::PhaseOut` for targeted phase-out.
   Tolarian Drake, Breezekeeper, Vodalian Illusionist, Reality Ripple).
