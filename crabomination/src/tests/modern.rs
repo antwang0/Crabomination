@@ -2926,6 +2926,69 @@ fn stonesplitter_bolt_bargained_deals_twice_x() {
 }
 
 #[test]
+fn glidedive_duo_drains_two() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::glidedive_duo());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let (my_life, opp_life) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Glidedive Duo");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 2, "opponent lost 2");
+    assert_eq!(g.players[0].life, my_life + 2, "you gained 2");
+}
+
+#[test]
+fn galewind_moose_has_flash_and_evasion_keywords() {
+    use crate::card::Keyword;
+    let m = catalog::galewind_moose();
+    for kw in [Keyword::Flash, Keyword::Vigilance, Keyword::Reach, Keyword::Trample] {
+        assert!(m.keywords.contains(&kw), "Galewind Moose has {kw:?}");
+    }
+    assert_eq!((m.power, m.toughness), (6, 6));
+}
+
+#[test]
+fn thieving_otter_draws_on_combat_damage() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let otter = g.add_card_to_battlefield(0, catalog::thieving_otter());
+    g.clear_sickness(otter);
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: otter, target: AttackTarget::Player(1),
+    }])).expect("Otter attacks");
+    drain_stack(&mut g);
+    // Pass through combat so damage is dealt.
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.len() > hand_before, "drew a card from combat damage");
+}
+
+#[test]
+fn bria_riptide_rogue_grants_prowess_to_other_creatures() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::bria_riptide_rogue());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let computed = g.compute_battlefield();
+    let b = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.keywords.contains(&Keyword::Prowess), "Bria grants prowess to other creatures");
+}
+
+#[test]
 fn cindering_cutthroat_enters_bigger_after_damage() {
     use crate::card::CounterType;
     let mut g = two_player_game();

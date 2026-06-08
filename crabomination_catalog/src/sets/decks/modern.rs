@@ -28623,3 +28623,95 @@ pub fn three_tree_mascot() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Glidedive Duo — {4}{B} 3/3 Bat Lizard with Flying. When it enters, each
+/// opponent loses 2 life and you gain 2 life.
+pub fn glidedive_duo() -> CardDefinition {
+    CardDefinition {
+        name: "Glidedive Duo",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat, CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(2) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Galewind Moose — {4}{G}{G} 6/6 Elemental Elk with Flash, Vigilance, Reach,
+/// and Trample.
+pub fn galewind_moose() -> CardDefinition {
+    CardDefinition {
+        name: "Galewind Moose",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Elk],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flash, Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Thieving Otter — {2}{U} 2/2 Otter. Whenever it deals combat damage to an
+/// opponent, draw a card.
+pub fn thieving_otter() -> CardDefinition {
+    CardDefinition {
+        name: "Thieving Otter",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bria, Riptide Rogue — {2}{U}{R} 3/3 Legendary Otter Rogue with Prowess.
+/// Other creatures you control have prowess.
+pub fn bria_riptide_rogue() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Bria, Riptide Rogue",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Prowess],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control have prowess.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Prowess,
+            },
+        }],
+        ..Default::default()
+    }
+}
