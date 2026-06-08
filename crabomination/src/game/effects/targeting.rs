@@ -403,6 +403,18 @@ impl GameState {
                         found = Some(c);
                     }
                 }
+                // Graveyard cards (e.g. an `InGraveyard` reflexive return —
+                // Curious Forager's "return target permanent card from your
+                // graveyard"). The battlefield walk above can't see them, so
+                // sweep every graveyard as a last resort.
+                if found.is_none() {
+                    found = self
+                        .players
+                        .iter()
+                        .flat_map(|p| p.graveyard.iter())
+                        .map(|c| Target::Permanent(c.id))
+                        .find(|t| is_legal(t));
+                }
                 found
             };
             match pick {

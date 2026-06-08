@@ -37610,6 +37610,64 @@ fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
     assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
 }
 
+/// Bake into a Pie destroys a creature and leaves a Food behind.
+#[test]
+fn bake_into_a_pie_destroys_and_makes_food() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::bake_into_a_pie());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Food").count(), 1, "Food token created");
+}
+
+/// Curious Forager: ETB forage (via graveyard) returns a permanent card to hand.
+#[test]
+fn curious_forager_returns_permanent_from_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::forest()); } // forage fodder
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // target
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_battlefield(0, catalog::curious_forager());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear_in_gy), "bear returned to hand");
+}
+
+/// Sandskitter Outrider: menace + ETB endure 2 (default → counters).
+#[test]
+fn sandskitter_outrider_has_menace_and_endures() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sandskitter_outrider());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("alive");
+    assert!(c.definition.keywords.contains(&crate::card::Keyword::Menace), "has menace");
+    assert_eq!(c.counter_count(crate::card::CounterType::PlusOnePlusOne), 2, "ETB endured 2");
+}
+
+/// Inspirited Vanguard endures 2 on enter AND again on attack.
+#[test]
+fn inspirited_vanguard_endures_on_enter_and_attack() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inspirited_vanguard());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 2, "ETB endured 2");
+    g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(crate::card::CounterType::PlusOnePlusOne), 4, "attack endured 2 more");
+}
+
 /// Forage (CR 701.61): pays by exiling three graveyard cards, then draws.
 #[test]
 fn forage_exiles_three_graveyard_cards_then_draws() {

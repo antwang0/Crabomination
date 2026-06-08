@@ -29644,6 +29644,107 @@ pub fn sunspine_lynx() -> CardDefinition {
     }
 }
 
+/// Bake into a Pie — {2}{B}{B} Instant. Destroy target creature; create a Food.
+pub fn bake_into_a_pie() -> CardDefinition {
+    CardDefinition {
+        name: "Bake into a Pie",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::food_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Curious Forager — {2}{G} 3/2 Squirrel Druid. ETB: you may forage; when you
+/// do, return target permanent card from your graveyard to your hand.
+pub fn curious_forager() -> CardDefinition {
+    CardDefinition {
+        name: "Curious Forager",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Forage {
+            then: Box::new(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::InGraveyard),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Kin-Tree Nurturer — {2}{B} 2/1 Human Druid with lifelink. ETB: endures 1.
+pub fn kin_tree_nurturer() -> CardDefinition {
+    CardDefinition {
+        name: "Kin-Tree Nurturer",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::Endure { target: Selector::This, n: Value::Const(1) })],
+        ..Default::default()
+    }
+}
+
+/// Sandskitter Outrider — {3}{B} 2/1 Goblin Soldier with menace. ETB: endures 2.
+pub fn sandskitter_outrider() -> CardDefinition {
+    CardDefinition {
+        name: "Sandskitter Outrider",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![etb(Effect::Endure { target: Selector::This, n: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Inspirited Vanguard — {4}{G} 3/2 Human Soldier. Whenever it enters or
+/// attacks, it endures 2 (CR 701.63).
+pub fn inspirited_vanguard() -> CardDefinition {
+    let endure2 = || Effect::Endure { target: Selector::This, n: Value::Const(2) };
+    CardDefinition {
+        name: "Inspirited Vanguard",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![
+            etb(endure2()),
+            crate::effect::shortcut::on_attack(endure2()),
+        ],
+        ..Default::default()
+    }
+}
+
 /// Treetop Sentries — {3}{G} 2/4 Squirrel Archer with reach. ETB: you may
 /// forage (CR 701.61); if you do, draw a card.
 pub fn treetop_sentries() -> CardDefinition {
