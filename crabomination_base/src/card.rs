@@ -1405,6 +1405,9 @@ pub enum DynamicPt {
     /// toughness = `base_t`. Vile Aggregate (*/5). "Colorless" is read as
     /// Devoid-or-no-colored-pips, covering every printed colorless creature.
     ColorlessCreaturesControlled { base_t: i32 },
+    /// Power = toughness = `base` + the number of creatures the controller
+    /// controls (counting the source itself). Burrowguard Mentor (base 0/0).
+    CreaturesControlled { base: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

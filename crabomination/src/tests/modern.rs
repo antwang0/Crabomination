@@ -3089,6 +3089,51 @@ fn valley_mightcaller_grows_when_a_frog_enters() {
 }
 
 #[test]
+fn lifecreed_duo_gains_life_when_another_creature_enters() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(0, catalog::lifecreed_duo());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a creature");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "gained 1 when another creature entered");
+}
+
+#[test]
+fn burrowguard_mentor_pt_equals_creatures_you_control() {
+    let mut g = two_player_game();
+    let bm = g.add_card_to_battlefield(0, catalog::burrowguard_mentor());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Three creatures you control (the Mentor + two Bears) → 3/3.
+    let computed = g.compute_battlefield();
+    let c = computed.iter().find(|c| c.id == bm).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "*/* = creatures you control");
+}
+
+#[test]
+fn manifold_mouse_grants_double_strike_at_combat() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let mm = g.add_card_to_battlefield(0, catalog::manifold_mouse());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mm).unwrap().has_keyword(&Keyword::DoubleStrike),
+        "the Mouse gained double strike at the beginning of combat");
+}
+
+#[test]
 fn spellgyre_counter_mode_counters_a_spell() {
     let mut g = two_player_game();
     let bears = g.add_card_to_hand(1, catalog::grizzly_bears());

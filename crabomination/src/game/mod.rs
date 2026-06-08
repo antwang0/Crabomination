@@ -2406,6 +2406,12 @@ impl GameState {
                     }).count() as i32;
                     (n, base_t)
                 }
+                crate::card::DynamicPt::CreaturesControlled { base } => {
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller && c.definition.is_creature()
+                    }).count() as i32;
+                    (base + n, base + n)
+                }
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.id.0 as u64,
@@ -6150,6 +6156,7 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
             base_p: 13, base_t: 13,
         }),
         "Vile Aggregate" => Some(DynamicPt::ColorlessCreaturesControlled { base_t: 5 }),
+        "Burrowguard Mentor" => Some(DynamicPt::CreaturesControlled { base: 0 }),
         _ => None,
     }
 }

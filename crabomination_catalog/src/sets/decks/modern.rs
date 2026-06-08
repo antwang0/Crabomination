@@ -28400,3 +28400,82 @@ pub fn spellgyre() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Lifecreed Duo — {1}{W} 1/2 Bat Bird with Flying. Whenever another creature
+/// you control enters, you gain 1 life.
+pub fn lifecreed_duo() -> CardDefinition {
+    CardDefinition {
+        name: "Lifecreed Duo",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Burrowguard Mentor — {G}{W} Rabbit Soldier with Trample. Its power and
+/// toughness are each equal to the number of creatures you control
+/// (`DynamicPt::CreaturesControlled`, injected in `compute_battlefield`).
+pub fn burrowguard_mentor() -> CardDefinition {
+    CardDefinition {
+        name: "Burrowguard Mentor",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Manifold Mouse — {1}{R} 1/2 Mouse Soldier with Offspring {2}. At the
+/// beginning of combat on your turn, target Mouse you control gains double
+/// strike until end of turn.
+pub fn manifold_mouse() -> CardDefinition {
+    CardDefinition {
+        name: "Manifold Mouse",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Offspring(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Mouse)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
