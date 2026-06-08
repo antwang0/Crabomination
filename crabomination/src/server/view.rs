@@ -574,6 +574,7 @@ fn project_permanent(
         },
         named_card: card.named_card.clone(),
         chosen_color: card.chosen_color,
+        chosen_creature_type: card.chosen_creature_type.map(|ct| format!("{ct:?}")),
         // Auras / Equipment / Fortifications attached to this permanent.
         attachments: battlefield
             .iter()

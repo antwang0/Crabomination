@@ -965,6 +965,13 @@ pub struct PermanentView {
     /// case. Populated by `project_permanent`.
     #[serde(default)]
     pub chosen_color: Option<crate::mana::Color>,
+    /// The creature type chosen as this permanent entered (Cavern of Souls,
+    /// Metallic Mimic, Adaptive Automaton, Patchwork Banner). Lets the client
+    /// badge "naming: <Type>" so the chosen-type anthem / uncounterable /
+    /// enters-with-counter rider is legible. `None` for the common case.
+    /// Populated by `project_permanent`.
+    #[serde(default)]
+    pub chosen_creature_type: Option<String>,
     /// Names of the Auras / Equipment / Fortifications attached to this
     /// permanent (CR 303 / 301). Lets the client list "Enchanted/Equipped by:
     /// …" in the tooltip without scanning the whole battlefield. Populated by

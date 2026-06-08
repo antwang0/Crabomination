@@ -177,6 +177,13 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Naming: {name}"));
     }
 
+    // Creature type chosen at ETB (Cavern of Souls, Metallic Mimic, Adaptive
+    // Automaton, Patchwork Banner) — drives the chosen-type anthem /
+    // uncounterable / enters-with-counter riders.
+    if let Some(ct) = &p.chosen_creature_type {
+        lines.push(format!("Chosen type: {ct}"));
+    }
+
     // Loyalty for planeswalkers (separate from counters list since it's
     // the headline number on every walker).
     if p.card_types.contains(&CardType::Planeswalker) {
@@ -834,6 +841,7 @@ mod tests {
             marked_lethal: false,
             named_card: None,
             chosen_color: None,
+            chosen_creature_type: None,
             attachments: vec![],
             soulbond_partner: None,
             saga_final_chapter: None,

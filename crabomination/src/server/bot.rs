@@ -1264,19 +1264,39 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
 /// (Embalm / Eternalize, Stone Docent-style recursion). Returns the activation
 /// for the first such card the bot can pay for.
 fn pick_graveyard_recursion(state: &GameState, seat: usize) -> Option<GameAction> {
+    // The bot's own creatures, highest-power first — candidate targets for
+    // abilities that need one (Scavenge's +1/+1 counters, Daring Fiendbonder's
+    // indestructible counter). For no-target recursion (Embalm / Eternalize /
+    // Stone Docent) we pass `None`.
+    let mut own: Vec<&crate::card::CardInstance> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_creature())
+        .collect();
+    own.sort_by_key(|c| std::cmp::Reverse(c.power()));
     for card in state.players[seat].graveyard.iter() {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
             if !(ab.from_graveyard && ab.exile_self_cost) {
                 continue;
             }
-            let action = GameAction::ActivateAbility {
-                card_id: card.id,
-                ability_index: idx,
-                target: None,
-                x_value: None,
+            // Only try a no-target activation when the effect needs none —
+            // otherwise `would_accept` (which doesn't re-derive targets) would
+            // wave through a wasted target-less activation.
+            let candidates: Vec<Option<crate::game::Target>> = if ab.effect.requires_target() {
+                own.iter().map(|c| Some(crate::game::Target::Permanent(c.id))).collect()
+            } else {
+                vec![None]
             };
-            if state.would_accept(action.clone()) {
-                return Some(action);
+            for target in candidates {
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target,
+                    x_value: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
             }
         }
     }
@@ -2282,6 +2302,30 @@ mod tests {
         // With no mana it leaves the card alone.
         g.players[0].mana_pool.empty();
         assert!(pick_graveyard_recursion(&g, 0).is_none(), "won't Embalm without mana");
+    }
+
+    /// The bot uses a *targeted* graveyard-activated ability (Scavenge),
+    /// auto-picking its own creature as the target.
+    #[test]
+    fn bot_scavenges_onto_own_creature() {
+        use crate::TurnStep;
+        let mut g = two_player_game();
+        let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let mangler = g.add_card_to_graveyard(0, catalog::dreg_mangler());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let action = pick_graveyard_recursion(&g, 0).expect("bot should Scavenge Dreg Mangler");
+        match action {
+            GameAction::ActivateAbility { card_id, target, .. } => {
+                assert_eq!(card_id, mangler);
+                assert_eq!(target, Some(crate::game::Target::Permanent(beater)),
+                    "auto-targets the bot's own creature");
+            }
+            _ => panic!("expected an activate-ability action"),
+        }
     }
 
     /// The bot also recognises the real-cost energy form
