@@ -5765,6 +5765,32 @@ impl GameState {
             None
         };
 
+        // Pre-flight tap-N gate (CR 602.5b "Tap N untapped … you control:").
+        // Confirm `count` untapped matching permanents the activator controls;
+        // the source itself may be one of them (Heritage Druid is an Elf).
+        // Auto-pick the lowest-power matches (preferring to keep the source).
+        let tap_n_picks: Vec<CardId> = if let Some((filter, count)) =
+            ability.tap_n_filter.as_ref()
+        {
+            let count = *count as usize;
+            let mut candidates: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.controller == p && !c.tapped)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            if candidates.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            // Sort the source last so it's tapped only if needed.
+            candidates.sort_by_key(|id| (*id == card_id, *id));
+            candidates.truncate(count);
+            candidates
+        } else {
+            Vec::new()
+        };
+
         // Pre-flight bounce-another gate (CR 602.5b "Return a [filter] you
         // control to its owner's hand:"). Confirm `count` battlefield
         // permanents (other than the source) the activator controls match the
@@ -6090,6 +6116,15 @@ impl GameState {
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid)
         {
             c.tapped = true;
+        }
+
+        // Tap-N-as-cost (CR 602.5b): with tap/mana/life paid, tap each
+        // pre-selected untapped permanent. Heritage Druid's "Tap three
+        // untapped Elves you control" cost runs here.
+        for other_cid in tap_n_picks {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid) {
+                c.tapped = true;
+            }
         }
 
         // Return-another-to-hand-as-cost (CR 602.5b): with tap/mana/life paid,

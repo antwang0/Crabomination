@@ -31706,3 +31706,31 @@ pub fn sigarda_host_of_herons() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Heritage Druid — {G} 1/1 Elf Druid. Tap three untapped Elves you control:
+/// Add {G}{G}{G}.
+pub fn heritage_druid() -> CardDefinition {
+    CardDefinition {
+        name: "Heritage Druid",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Elf),
+                3,
+            )),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Green, Color::Green, Color::Green]),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

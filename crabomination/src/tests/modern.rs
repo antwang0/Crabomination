@@ -38928,3 +38928,31 @@ fn sigarda_allows_your_own_sacrifice() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0),
         "your own sacrifice effect still resolves");
 }
+
+/// Heritage Druid taps three Elves to add {G}{G}{G}.
+#[test]
+fn heritage_druid_taps_three_elves_for_green() {
+    let mut g = two_player_game();
+    let druid = g.add_card_to_battlefield(0, catalog::heritage_druid());
+    let e1 = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let e2 = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    // Heritage Druid itself is an Elf; with two more that's three untapped Elves.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: druid, ability_index: 0, target: None, x_value: None,
+    }).expect("tap three Elves for GGG");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3, "added GGG");
+    let tapped = [druid, e1, e2].iter().filter(|id| g.battlefield_find(**id).unwrap().tapped).count();
+    assert_eq!(tapped, 3, "three Elves tapped as the cost");
+}
+
+/// Heritage Druid can't activate without three untapped Elves.
+#[test]
+fn heritage_druid_needs_three_elves() {
+    let mut g = two_player_game();
+    let druid = g.add_card_to_battlefield(0, catalog::heritage_druid());
+    g.add_card_to_battlefield(0, catalog::llanowar_elves()); // only two Elves total
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: druid, ability_index: 0, target: None, x_value: None,
+    });
+    assert!(res.is_err(), "fewer than three untapped Elves → cost unpayable");
+}

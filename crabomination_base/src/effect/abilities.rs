@@ -643,6 +643,14 @@ pub struct ActivatedAbility {
     /// when nothing matches. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub tap_other_filter: Option<SelectionRequirement>,
+    /// Optional cost: tap *N* untapped, different permanents the activator
+    /// controls matching this filter (CR 602.5b "Tap N untapped … you
+    /// control:" costs — Heritage Druid's "Tap three untapped Elves you
+    /// control: Add {G}{G}{G}."). The count-bearing sibling of
+    /// `tap_other_filter`; rejected when fewer than `u32` untapped matches
+    /// exist. Auto-picks the lowest-power matches. Defaults to None.
+    #[serde(default)]
+    pub tap_n_filter: Option<(SelectionRequirement, u32)>,
     /// Optional cost: return a *different* permanent the activator controls
     /// matching this filter to its owner's hand (CR 602.5b "Return a [filter]
     /// you control to its owner's hand:" costs). Mirrors `sac_other_filter`
