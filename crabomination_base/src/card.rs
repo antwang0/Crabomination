@@ -414,6 +414,11 @@ pub enum Keyword {
     /// instead of the graveyard as it resolves. Cast via
     /// `GameAction::CastSpellBuyback`.
     Buyback(crate::mana::ManaCost),
+    /// CR 702.176 — Bargain. An optional additional cost: as you cast the
+    /// spell you may sacrifice an artifact, enchantment, or token. If you do,
+    /// the spell is "bargained" (`Predicate::SpellWasBargained` gates the
+    /// bonus). Cast via `GameAction::CastSpellBargain`.
+    Bargain,
     /// CR 702.62 — Suspend N—[cost]. You may pay the suspend cost to exile
     /// the card from your hand with N time counters on it. At each of the
     /// owner's upkeeps a time counter is removed; when the last is removed
@@ -1727,6 +1732,10 @@ pub struct CardInstance {
     /// creature leaves the battlefield (SBA in `stack.rs`).
     pub soulbond_partner: Option<CardId>,
     pub kicked: bool,
+    /// CR 702.176 — true if this spell was cast paying its optional Bargain
+    /// cost (sacrifice an artifact, enchantment, or token). Read at resolution
+    /// by `Predicate::SpellWasBargained`.
+    pub bargained: bool,
     /// CR 702.27 — true if this spell was cast paying its optional Buyback
     /// cost. On resolution the resolver returns the card to its owner's
     /// hand instead of the graveyard.
@@ -1954,6 +1963,7 @@ impl CardInstance {
             attached_to: None,
             soulbond_partner: None,
             kicked: false,
+            bargained: false,
             bought_back: false,
             bestowed: false,
             face_down: false,

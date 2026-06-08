@@ -391,6 +391,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount: 0,
                     kicked: false,
+                    bargained: false,
                 };
                 if !self.evaluate_predicate(&predicate, &ctx) {
                     continue;

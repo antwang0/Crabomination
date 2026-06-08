@@ -1230,6 +1230,59 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.176 — cast a spell paying its optional Bargain cost. If
+    /// `sacrifice` is `Some`, that artifact/enchantment/token the caster
+    /// controls is sacrificed as an additional cost and the resolving spell is
+    /// stamped `bargained` (read by `Predicate::SpellWasBargained`).
+    pub(crate) fn cast_spell_bargain(
+        &mut self,
+        card_id: CardId,
+        sacrifice: Option<CardId>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::Keyword;
+        let p = self.priority.player_with_priority;
+        let has_bargain = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.keywords.contains(&Keyword::Bargain))
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        if !has_bargain {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        let mut events = Vec::new();
+        // Pay the optional Bargain cost: sacrifice one artifact / enchantment /
+        // token the caster controls.
+        if let Some(sac) = sacrifice {
+            let ok = self.battlefield.iter().any(|c| {
+                c.id == sac
+                    && c.controller == p
+                    && (c.definition.is_artifact()
+                        || c.definition.is_enchantment()
+                        || c.is_token)
+            });
+            if !ok {
+                return Err(GameError::InvalidTarget);
+            }
+            if let Some(c) = self.battlefield_find(sac) {
+                self.died_card_snapshots.insert(sac, c.clone());
+            }
+            events.push(GameEvent::PermanentSacrificed { card_id: sac, who: p });
+            let mut die = self.remove_to_graveyard_with_triggers(sac);
+            events.append(&mut die);
+            if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
+                c.bargained = true;
+            }
+        }
+        let mut cast = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        events.append(&mut cast);
+        Ok(events)
+    }
+
     /// CR 702.27 — cast a spell paying its optional Buyback cost. The
     /// resolving spell returns to its owner's hand instead of the
     /// graveyard (`continue_spell_resolution` consults `card.bought_back`).
@@ -2966,6 +3019,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount: 0,
                     kicked: false,
+                    bargained: false,
                 };
                 if !self.evaluate_predicate(pred, &ctx) {
                     continue;
@@ -3800,6 +3854,7 @@ impl GameState {
                 cast_from_hand: true,
                 event_amount: 0,
                 kicked: false,
+                bargained: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::NoAlternativeCost);
@@ -4366,6 +4421,7 @@ impl GameState {
                     cast_from_hand,
                     event_amount: 0,
                     kicked: false,
+                    bargained: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -5428,6 +5484,7 @@ impl GameState {
                 cast_from_hand: true,
                 event_amount: 0,
                 kicked: false,
+                bargained: false,
             };
             if !self.evaluate_predicate(cond, &ctx) {
                 return Err(GameError::AbilityConditionNotMet);

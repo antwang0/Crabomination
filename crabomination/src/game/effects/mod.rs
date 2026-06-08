@@ -103,6 +103,10 @@ pub struct EffectContext {
     /// `Predicate::SpellWasKicked`. Defaults to `false` for non-spell
     /// contexts.
     pub kicked: bool,
+    /// True if the resolving spell was bargained (CR 702.176). Stamped from
+    /// the resolving `CardInstance.bargained` flag; read by
+    /// `Predicate::SpellWasBargained`. Defaults to `false`.
+    pub bargained: bool,
 }
 
 impl EffectContext {
@@ -120,6 +124,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            bargained: false,
         }
     }
     /// Spell-resolution context with the resolving spell's
@@ -196,6 +201,7 @@ impl EffectContext {
             cast_from_hand,
             event_amount: 0,
             kicked: false,
+            bargained: false,
         }
     }
     pub fn for_trigger(
@@ -217,6 +223,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            bargained: false,
         }
     }
     pub fn for_ability(
@@ -237,6 +244,7 @@ impl EffectContext {
             cast_from_hand: true,
             event_amount: 0,
             kicked: false,
+            bargained: false,
         }
     }
 }

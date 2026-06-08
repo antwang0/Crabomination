@@ -746,6 +746,10 @@ pub enum Predicate {
     /// "if this spell was kicked, …" riders (Tear Asunder). Non-spell
     /// contexts default `kicked` to `false`.
     SpellWasKicked,
+    /// CR 702.176 — true iff the Bargain additional cost was paid (an
+    /// artifact, enchantment, or token sacrificed) at cast time. Reads
+    /// `EffectContext.bargained`, stamped from `CardInstance.bargained`.
+    SpellWasBargained,
     /// True if any opponent of `ctx.controller` controls more lands
     /// than `ctx.controller` does. Backed by walking the battlefield
     /// and counting `Land` permanents per seat. Used by catch-up ramp

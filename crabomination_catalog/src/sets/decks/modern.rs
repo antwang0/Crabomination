@@ -1140,6 +1140,96 @@ pub fn mental_misstep() -> CardDefinition {
     }
 }
 
+// ── Bargain (Wilds of Eldraine, CR 702.176) ─────────────────────────────────
+// Cast via `GameAction::CastSpellBargain`; the bonus rides
+// `If(SpellWasBargained, …)`.
+
+/// Torch the Tower — {R} Instant with Bargain. Deals 2 damage to target
+/// creature or planeswalker; 3 if it was bargained. (The "exile if it would
+/// die" rider on the bargained mode is dropped.)
+pub fn torch_the_tower() -> CardDefinition {
+    CardDefinition {
+        name: "Torch the Tower",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Bargain],
+        effect: Effect::If {
+            cond: Predicate::SpellWasBargained,
+            then: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            }),
+            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Candy Grapple — {1}{B} Instant with Bargain. Target creature gets -3/-3
+/// until end of turn, or -5/-5 if it was bargained.
+pub fn candy_grapple() -> CardDefinition {
+    CardDefinition {
+        name: "Candy Grapple",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Bargain],
+        effect: Effect::If {
+            cond: Predicate::SpellWasBargained,
+            then: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-5),
+                toughness: Value::Const(-5),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Archon's Glory — {W} Instant with Bargain. Target creature gets +2/+2 until
+/// end of turn; if bargained it also gains flying and first strike.
+pub fn archons_glory() -> CardDefinition {
+    CardDefinition {
+        name: "Archon's Glory",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Bargain],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SpellWasBargained,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Flying,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::FirstStrike,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Wrangle — {2}{R} Sorcery. Gain control of target creature until end of turn,
 /// untap it, and it gains haste.
 pub fn wrangle() -> CardDefinition {

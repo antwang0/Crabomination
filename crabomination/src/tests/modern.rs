@@ -2815,6 +2815,78 @@ fn mental_misstep_counters_a_one_mana_spell() {
 }
 
 #[test]
+fn torch_the_tower_bargained_deals_three() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well()); // artifact
+    let id = g.add_card_to_hand(0, catalog::torch_the_tower());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Torch the Tower bargained");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().damage, 3, "bargained = 3 damage");
+    assert!(g.battlefield_find(fodder).is_none(), "the artifact was sacrificed");
+}
+
+#[test]
+fn torch_the_tower_unbargained_deals_two() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::torch_the_tower());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Torch the Tower normally");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(target).unwrap().damage, 2, "no bargain = 2 damage");
+}
+
+#[test]
+fn candy_grapple_bargained_gives_minus_five() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::candy_grapple());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Candy Grapple bargained");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "-5/-5 killed the 4/4");
+}
+
+#[test]
+fn archons_glory_bargained_grants_flying() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::archons_glory());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Archon's Glory bargained");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4), "+2/+2");
+    assert!(c.has_keyword(&Keyword::Flying), "bargained grants flying");
+}
+
+#[test]
 fn mutagenic_growth_payable_with_two_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

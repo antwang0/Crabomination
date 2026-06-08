@@ -3109,6 +3109,16 @@ impl GameState {
             } => self.cast_spell_sacrifice_reduce(
                 card_id, sacrifices, target, additional_targets, mode, x_value,
             ),
+            GameAction::CastSpellBargain {
+                card_id,
+                sacrifice,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_bargain(
+                card_id, sacrifice, target, additional_targets, mode, x_value,
+            ),
             GameAction::Plot { card_id } => self.plot_card(card_id),
             GameAction::CastPlotted {
                 card_id,
@@ -4401,6 +4411,7 @@ impl GameState {
                     cast_from_hand: true,
                     event_amount,
                     kicked: false,
+                    bargained: false,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
@@ -5644,6 +5655,7 @@ impl GameState {
             card.cast_from_hand,
         );
         ctx.kicked = card.kicked;
+        ctx.bargained = card.bargained;
         let mut events = self.resolve_effect(&effect, &ctx)?;
         // CR 709 / 702.102 — a fused split cast resolves its right half in a
         // second pass, reading its target from `additional_targets` slot 0
@@ -5834,6 +5846,7 @@ impl GameState {
         // riders (Goblin Bushwhacker) can branch on `SpellWasKicked`.
         if let Some(src) = self.battlefield.iter().find(|c| c.id == source) {
             ctx.kicked = src.kicked;
+            ctx.bargained = src.bargained;
         }
         if let Some(ts) = trigger_source_ent {
             ctx.trigger_source = Some(ts);

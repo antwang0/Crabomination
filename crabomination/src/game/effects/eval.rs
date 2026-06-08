@@ -706,6 +706,11 @@ impl GameState {
                 // `CardInstance.kicked` flag.
                 ctx.kicked
             }
+            Predicate::SpellWasBargained => {
+                // CR 702.176 — true iff the Bargain cost was paid (an
+                // artifact/enchantment/token sacrificed) at cast time.
+                ctx.bargained
+            }
             Predicate::OpponentControlsMoreLandsThanYou => {
                 // Walk the battlefield, count lands per seat. True iff
                 // any opponent of `ctx.controller` has strictly more

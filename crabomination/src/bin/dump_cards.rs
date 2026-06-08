@@ -132,6 +132,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantBeBlockedByMoreThanOne | Keyword::CantBeBlockedExceptByN(_)
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
         Keyword::Unleash => "Unleash",
+        Keyword::Bargain => "Bargain",
         Keyword::Ninjutsu(_) => "Ninjutsu",
         Keyword::Suspend(..) => "Suspend",
         Keyword::SuspendAccelerant => "Suspend accelerant",

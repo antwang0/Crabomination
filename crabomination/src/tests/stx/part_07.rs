@@ -2042,6 +2042,7 @@ fn move_counter_transfers_counters_between_permanents() {
         cast_from_hand: true,
         event_amount: 0,
         kicked: false,
+        bargained: false,
     };
     let effect = Effect::MoveCounter {
         from: Selector::This,
@@ -2082,6 +2083,7 @@ fn move_counter_clamps_at_source_pool() {
         cast_from_hand: true,
         event_amount: 0,
         kicked: false,
+        bargained: false,
     };
     let effect = Effect::MoveCounter {
         from: Selector::This,

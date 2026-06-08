@@ -169,6 +169,19 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.176 — cast a spell paying its optional Bargain cost. If
+    /// `sacrifice` is `Some`, that artifact/enchantment/token you control is
+    /// sacrificed as an additional cost and the spell is stamped "bargained"
+    /// (`Predicate::SpellWasBargained`).
+    CastSpellBargain {
+        card_id: CardId,
+        sacrifice: Option<CardId>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
     /// creatures, {N} less each" additional cost. Each id in `sacrifices`
     /// (a creature you control) is sacrificed as an additional cost and the

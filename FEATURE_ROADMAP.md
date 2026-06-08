@@ -263,7 +263,10 @@ feature; sweep card-batch by card-batch.
   Cryptomancer), ✅ Backup (CR 702.164 — `shortcut::backup` /
   `backup_with`; ETB +N/+N + granted keywords *and* triggered abilities to a
   backed-up other creature; Conclave Sledge-Captain, Bola Slinger),
-  ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ✅ Plot (CR 702.170 —
+  ✅ Bargain (CR 702.176 — `Keyword::Bargain` + `GameAction::CastSpellBargain`:
+  optional sacrifice-an-artifact/enchantment/token additional cost;
+  `Predicate::SpellWasBargained` gates the payoff; Torch the Tower, Candy
+  Grapple, Archon's Glory), ⏳ Craft, ⏳ Disguise/Cloak, ✅ Plot (CR 702.170 —
   `CardDefinition.plot_cost` + `GameState.{plotted_cards,plotted_this_turn}`
   + `GameAction::Plot` / `CastPlotted`: exile face-up for the plot cost, cast
   free on a later turn; Spinewoods Paladin, Vault Plunderer),

@@ -1151,6 +1151,7 @@ fn until_end_of_combat_expires_when_combat_phase_ends() {
         cast_from_hand: true,
         event_amount: 0,
         kicked: false,
+        bargained: false,
     };
     // Use SetBasePT with Duration::EndOfCombat so the layer-system
     // pathway exercises the mapping under test (PumpPT writes to the
