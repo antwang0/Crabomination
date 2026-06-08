@@ -27751,8 +27751,8 @@ pub fn kruin_outlaw() -> CardDefinition {
 
 /// Outland Liberator // Frenzied Trapbreaker — {1}{G} Human Werewolf 2/2
 /// (Daybound). `{1}, Sacrifice this creature: Destroy target artifact or
-/// enchantment.` Back: Frenzied Trapbreaker, 3/3 Nightbound with the same
-/// sacrifice ability (the on-attack destroy rider is dropped).
+/// enchantment.` Back: Frenzied Trapbreaker, 3/3 Nightbound that also destroys
+/// an artifact/enchantment the defending player controls when it attacks.
 pub fn outland_liberator() -> CardDefinition {
     use crate::card::ActivatedAbility;
     let sac_destroy = || ActivatedAbility {
@@ -27773,6 +27773,16 @@ pub fn outland_liberator() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Nightbound],
         activated_abilities: vec![sac_destroy()],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Enchantment)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
         ..Default::default()
     };
     CardDefinition {
@@ -27793,8 +27803,8 @@ pub fn outland_liberator() -> CardDefinition {
 }
 
 /// Geier Reach Bandit // Vildin-Pack Alpha — {2}{R} Human Rogue Werewolf 3/2
-/// Haste // 4/3 Werewolf. (The back's "when a Werewolf you control enters, you
-/// may transform it" rider is dropped; the day/night flips ship.)
+/// Haste // 4/3 Werewolf. The back may transform any Werewolf you control as it
+/// enters; both day/night flips ship.
 pub fn geier_reach_bandit() -> CardDefinition {
     use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
     let alpha = CardDefinition {
@@ -27803,7 +27813,21 @@ pub fn geier_reach_bandit() -> CardDefinition {
         subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
         power: 4,
         toughness: 3,
-        triggered_abilities: vec![werewolf_night_transform()],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Werewolf)),
+                    }),
+                effect: Effect::MayDo {
+                    description: "Transform the Werewolf that entered.".into(),
+                    body: Box::new(Effect::Transform { what: Selector::TriggerSource }),
+                },
+            },
+            werewolf_night_transform(),
+        ],
         ..Default::default()
     };
     CardDefinition {

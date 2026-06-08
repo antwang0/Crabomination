@@ -8,12 +8,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Transform-DFC batch (this run) — dropped riders to revisit:**
-  - Vildin-Pack Alpha's "when a Werewolf you control enters, you may transform
-    it"; Frenzied Trapbreaker's on-attack "destroy target artifact/enchantment";
-    The Myriad Pools' "copy a permanent spell" cast trigger; Azcanta's "you
-    *may* transform" (auto-transforms now); Search for Azcanta back-face dig
-    ships but the "may reveal" is auto.
+- ⏳ **Transform-DFC batch — dropped riders to revisit:**
+  - ✅ Vildin-Pack Alpha's "when a Werewolf you control enters, you may
+    transform it" (MayDo + `Transform { TriggerSource }`); ✅ Frenzied
+    Trapbreaker's on-attack "destroy target artifact/enchantment defending
+    player controls". Remaining: The Myriad Pools' "copy a permanent spell"
+    cast trigger; Azcanta's "you *may* transform" (auto-transforms now);
+    Search for Azcanta back-face dig ships but the "may reveal" is auto.
   - Daybound (CR 702.146): only the ETB "becomes day" half is wired; the
     "casting a daybound spell while neither day nor night makes it day" half
     and the per-player night-entry rule beyond CR 502.2 are still ⏳.

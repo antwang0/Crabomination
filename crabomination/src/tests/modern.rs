@@ -23443,6 +23443,46 @@ fn geier_reach_bandit_flips_to_a_four_three() {
 }
 
 #[test]
+fn vildin_pack_alpha_transforms_an_entering_werewolf() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let alpha = *catalog::geier_reach_bandit().back_face.unwrap();
+    g.add_card_to_battlefield(0, alpha);
+    let pariah = g.add_card_to_hand(0, catalog::tormented_pariah());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pariah, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tormented Pariah");
+    drain_stack(&mut g);
+    let entered = g.battlefield_find(pariah).unwrap();
+    assert_eq!(entered.definition.name, "Rampaging Werewolf", "Alpha transformed the new Werewolf");
+    assert_eq!((entered.power(), entered.toughness()), (6, 4));
+}
+
+#[test]
+fn frenzied_trapbreaker_destroys_an_artifact_on_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let artifact = g.add_card_to_battlefield(1, catalog::the_everflowing_well());
+    let frenzied = *catalog::outland_liberator().back_face.unwrap();
+    let ft = g.add_card_to_battlefield(0, frenzied);
+    g.clear_sickness(ft);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ft, target: AttackTarget::Player(1),
+    }])).expect("Frenzied Trapbreaker attacks");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(artifact).is_none(), "on-attack trigger destroyed the artifact");
+}
+
+#[test]
 fn mondronen_shaman_back_pings_opponent_casters() {
     let mut g = two_player_game();
     g.active_player_idx = 1;
