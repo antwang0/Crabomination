@@ -10,7 +10,7 @@ use crate::card::{
     WardCost, Zone,
 };
 use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft, target_filtered};
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 /// Emergent Sequence — {1}{G} Sorcery. Search your library for a basic land,
@@ -156,6 +156,131 @@ pub fn torrent_sculptor() -> CardDefinition {
             },
         ]))],
         back_face: Some(Box::new(flamethrower_sonata())),
+        ..Default::default()
+    }
+}
+
+/// Lukka, Wayward Bonder — {4}{R}{R} Lukka planeswalker (back of Mila), 5
+/// loyalty. +1: you may discard a card; if you do, draw a card (two if a
+/// creature card was discarded). −2: reanimate a creature card with haste,
+/// exiled at your next upkeep. −7: an emblem firing power-damage on each
+/// creature you control entering.
+fn lukka_wayward_bonder() -> CardDefinition {
+    CardDefinition {
+        name: "Lukka, Wayward Bonder",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Lukka],
+            ..Default::default()
+        },
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::MayDo {
+                    description: "Discard a card; draw one (two if it was a creature).".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                        Effect::If {
+                            cond: Predicate::ValueAtLeast(
+                                Value::CreatureCardsDiscardedThisEffect,
+                                Value::Const(1),
+                            ),
+                            then: Box::new(draw(2)),
+                            else_: Box::new(draw(1)),
+                        },
+                    ])),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Seq(vec![
+                    Effect::Move {
+                        what: target_filtered(SelectionRequirement::Creature),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::DelayUntil {
+                        kind: DelayedTriggerKind::YourNextUpkeep,
+                        body: Box::new(Effect::Exile { what: Selector::Target(0) }),
+                    },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Lukka, Wayward Bonder".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                            .with_filter(Predicate::EntityMatches {
+                                what: Selector::TriggerSource,
+                                filter: SelectionRequirement::Creature,
+                            }),
+                        effect: Effect::DealDamage {
+                            to: target_filtered(
+                                SelectionRequirement::Creature
+                                    .or(SelectionRequirement::Player)
+                                    .or(SelectionRequirement::Planeswalker),
+                            ),
+                            amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
+                        },
+                    }],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mila, Crafty Companion // Lukka, Wayward Bonder — {1}{W}{W} 2/3 Legendary
+/// Fox. When an opponent attacks a planeswalker you control, add a loyalty
+/// counter to each planeswalker you control; when a permanent you control
+/// becomes the target of an opponent's spell or ability, you may draw a card.
+pub fn mila_crafty_companion() -> CardDefinition {
+    CardDefinition {
+        name: "Mila, Crafty Companion",
+        cost: cost(&[generic(1), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fox],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![
+            // Over-fires slightly: ControllerAttackedByOpponent also covers
+            // attacks on the player, not just their planeswalkers.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::ControllerAttackedByOpponent),
+                effect: Effect::AddCounter {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::Planeswalker
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::Loyalty,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::YourPermanentTargetedByOpponent),
+                effect: Effect::MayDo {
+                    description: "Draw a card.".into(),
+                    body: Box::new(draw(1)),
+                },
+            },
+        ],
+        back_face: Some(Box::new(lukka_wayward_bonder())),
         ..Default::default()
     }
 }

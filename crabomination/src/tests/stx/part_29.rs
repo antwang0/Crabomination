@@ -228,3 +228,37 @@ fn will_plus_one_sets_base_zero_two_and_minus_three_draws_two() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 2);
 }
+
+// ── Mila, Crafty Companion // Lukka, Wayward Bonder ────────────────────────────
+
+#[test]
+fn mila_draws_when_your_permanent_targeted_by_opponent() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mila_crafty_companion());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 1;
+    // Opponent bolts your bear → Mila offers a draw (auto-accepted here).
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+    let hand_before = g.players[0].hand.len();
+    crate::game::cast_at(&mut g, bolt, Target::Permanent(bear));
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Mila draws on opponent targeting");
+}
+
+#[test]
+fn lukka_minus_two_reanimates_with_haste() {
+    let mut g = two_player_game();
+    let lukka = g.add_card_to_battlefield(0, *catalog::mila_crafty_companion().back_face.unwrap());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: lukka, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Lukka -2 reanimates");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).expect("bear reanimated to battlefield");
+    assert!(b.has_keyword(&Keyword::Haste), "reanimated creature has haste");
+}
