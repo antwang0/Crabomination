@@ -29801,6 +29801,38 @@ pub fn patchwork_banner() -> CardDefinition {
     }
 }
 
+/// Daring Fiendbonder — {3}{B} 5/1 Human Warlock with Haste that attacks each
+/// combat if able. {1}{B}, Exile this from your graveyard: put an indestructible
+/// counter on target creature. Sorcery speed.
+pub fn daring_fiendbonder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Daring Fiendbonder",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 1,
+        keywords: vec![Keyword::Haste, Keyword::MustAttack],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            sorcery_speed: true,
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::Indestructible,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.

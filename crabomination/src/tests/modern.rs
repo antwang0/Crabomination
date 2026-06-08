@@ -37696,6 +37696,34 @@ fn patchwork_banner_anthems_chosen_type() {
         "opponent's Goblin unaffected (creatures you control)");
 }
 
+/// Daring Fiendbonder activates from the graveyard, exiling itself to put an
+/// indestructible counter on a creature. Sorcery speed only.
+#[test]
+fn daring_fiendbonder_exiles_self_to_grant_indestructible() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let fiend = g.add_card_to_graveyard(0, catalog::daring_fiendbonder());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fiend,
+        ability_index: 0,
+        target: Some(crate::game::Target::Permanent(target)),
+        x_value: None,
+    }).expect("activate from graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == fiend), "source exiled as cost");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == fiend));
+    assert_eq!(
+        g.battlefield_find(target).unwrap().counter_count(CounterType::Indestructible),
+        1,
+        "indestructible counter placed on target",
+    );
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {

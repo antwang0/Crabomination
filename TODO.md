@@ -21,10 +21,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   `Predicate::DeliriumActive` (Spineseeker Centipede +1/+2 + vigilance) and
   `Predicate::ValueAtLeast(GraveyardSizeOf(You), 7)` (Mind Drill Assailant +3/+0)
   both ride it — no new primitive needed.
-- ⏳ **Exile-from-graveyard activation cost.** Daring Fiendbonder / Daring
-  Waverider-style "{cost}, Exile this from your graveyard: …" abilities need a
-  graveyard-activated ability path (activate while in graveyard, paying an
-  exile-self cost).
+- ✅ **Exile-from-graveyard activation cost.** Rides the existing
+  `ActivatedAbility { from_graveyard, exile_self_cost, sorcery_speed }` path
+  (Stone Docent / Eternal Student shape). Daring Fiendbonder ships
+  ("{1}{B}, Exile this from your graveyard: indestructible counter on target
+  creature"). Daring Waverider's ETB cast-from-graveyard is a separate
+  primitive (cast-IS-from-gy-for-free) still ⏳.
 - ⏳ **Bloomburrow follow-ups (noticed this run):**
   - **Expend** (CR 700.14) ships (`mana_spent_on_spells_this_turn` +
     `EventKind::Expend` + `Predicate::ExpendReached`; Roughshod Duo). Remaining:
