@@ -499,6 +499,8 @@ impl GameState {
                     .map(|p| self.players[p].spells_cast_this_turn == n)
                     .unwrap_or(false)
             }
+            Predicate::NoSpellsCastLastTurn => self.spells_cast_last_turn == 0,
+            Predicate::TwoOrMoreSpellsCastLastTurn => self.spells_cast_last_turn >= 2,
             Predicate::CreaturesDiedThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)

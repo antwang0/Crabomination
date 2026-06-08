@@ -389,12 +389,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Assault) — these need the extra combat (and main) inserted after the
   *current main phase*, not the End of Combat loop. Likely a small phase-queue
   on `GameState` consulted at both the main-phase and combat-phase exits.
-- **Daybound / Nightbound DFC transform** (CR 702.145). The day/night game
-  state + the CR 502.2 transition now ship (`GameState.day_night`,
-  `Effect::BecomeDay`/`BecomeNight`, `Predicate::IsDay`/`IsNight`); what
-  remains is the keyword that transforms a daybound/nightbound DFC as it
-  becomes night/day, and the "any daybound permanent → it becomes day" /
-  "any nightbound, no daybound → it becomes night" entry rules (702.145d/g).
+- **Daybound / Nightbound DFC transform** (CR 702.146) — ✅ DONE.
+  `Keyword::{Daybound,Nightbound}` ride the transform engine (CR 712):
+  `set_day_night` flips daybound→nightbound DFCs to their back face when it
+  becomes night and back when it becomes day; a daybound permanent entering
+  while it's neither day nor night makes it day (702.146e). Ships Village Watch
+  // Village Reavers. Remaining ⏳: the "casting a daybound spell makes it day"
+  half (only the ETB rule is wired), and the no-spells-cast night entry rule
+  beyond the existing CR 502.2 turn check.
 - **The Initiative** (CR 726) reuses the monarch infrastructure (designation +
   combat-damage steal + leaves-game transfer) but needs Venture into the
   Dungeon / the Undercity (CR 701.49) for its payoff — implement the dungeon
@@ -857,6 +859,8 @@ picking an item up.
 - ✅ **CR 709 — Split Cards** + **702.102 Fuse** + **702.127 Aftermath** (~23 cards; client half-picker modal + multi-target fused halves still ⏳; 709.4/709.4b dual-name/combined-MV-in-non-stack-zones not modeled).
 - ✅ **CR 510 — Combat Damage Step** (player damage-assignment order/over-assign; a `DecisionWire::AssignCombatDamage` client modal for a networked human still ⏳).
 - ✅ **CR 114 — Emblems** (`Player.emblems` + `Effect::CreateEmblem`; supersedes the old ⏳ audit row — see FEATURE_ROADMAP Tier 3).
+- ✅ **CR 712 — Transforming Permanents** — `Effect::Transform` toggles a DFC permanent's active face in place (same object; counters/tapped/attachments persist), fires `EventKind::Transformed` for "when this transforms," and round-trips through serde + `GameSnapshot` (front name + `transformed` flag rebuild the back face). Concealing Curtains, Delver of Secrets, Thing in the Ice, The Everflowing Well, Search for Azcanta, Growing Rites of Itlimoc, Kessig Prowler, Village Watch. Still ⏳: DFC sagas, meld, manifest/disguise face-down.
+- ✅ **CR 702.146 — Daybound/Nightbound** — `Keyword::{Daybound,Nightbound}` flip with the day/night cycle (`set_day_night`); daybound entrant makes it day (702.146e). Village Watch // Village Reavers. Still ⏳: cast-a-daybound-spell day entry; the full no-spells night-entry beyond CR 502.2.
 - ✅ **CR 702.114 — Devoid** — `Keyword::Devoid` CDA honored in `colors_from_card` (color base returns empty); colorless despite colored pips. Mist Intruder, Sludge Crawler, Reality Hemorrhage, Touch of the Void.
 - ✅ **CR 702.115 — Ingest** — `shortcut::ingest()` combat-damage trigger + `Effect::ExileTopOfLibrary { who, amount }` (Mill routed to exile). Mist Intruder, Sludge Crawler.
 - ✅ **CR 701.x — Process** (BFZ/OGW) — `Effect::Process { count, then }`: move N exile cards an opponent owns to their graveyards, run `then` only if any were processed ("if you do" rider, reading the trigger's target). Wasteland Strangler, Mind Raker, Blight Herder. Still ⏳: process-onto-battlefield (Oblivion Sower) and process-as-additional-cost (Processor Assault).
@@ -886,7 +890,8 @@ picking an item up.
   and phasing back in everything they control there — modelled as a side zone
   so every battlefield query ignores phased-out cards and no ETB/LTB fires, all
   state retained (Tolarian Drake). Targeted phase-out ✅ via `Effect::PhaseOut`
-  (Vodalian Illusionist). Daybound/Nightbound DFC transform (502.2) still ⏳.
+  (Vodalian Illusionist). Daybound/Nightbound DFC transform (502.2) ✅ — see
+  CR 712 below.
   `StaticEffect::PreventUntap` honors `Selector::This` (Basalt/Grim Monolith)
   and `Selector::AttachedTo(This)` (Claustrophobia/Dehydration).
 - 🟡 **CR 509 — Declare Blockers** — cost-to-block (509.1d-f); put-onto-battlefield-blocking (509.4); "blocks two or more" batch counting (509.3e). ("Can't be blocked except by N or more creatures" ✅ via `Keyword::CantBeBlockedExceptByN` — Pathrazer of Ulamog, generalizing Menace.) Per-pair block restriction (509.1b — "target creature can't block this creature this turn") ✅ via `Effect::CantBlockSourceThisTurn` + `GameState.cant_block_pairs` (Kozilek's Pathfinder); "must be blocked if able" (509.1c) ✅ via `Keyword::MustBeBlocked` (Loathsome Catoblepas).

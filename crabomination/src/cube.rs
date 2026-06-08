@@ -855,6 +855,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(watchwolf);
         v.push(kessig_prowler);
         v.push(growing_rites_of_itlimoc);
+        v.push(gatstaf_shepherd);
+        v.push(mayor_of_avabruck);
+        v.push(ulvenwald_captive);
+        v.push(outland_liberator);
         v.push(thornglint_bridge);
         v.push(lush_portico);
         // ── Cube expansion: GW cards ──
@@ -865,6 +869,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     if pair_contains(pair, Color::Red) {
         v.push(lightning_helix);
         v.push(village_watch);
+        v.push(reckless_waif);
+        v.push(village_messenger);
+        v.push(kruin_outlaw);
+        v.push(geier_reach_bandit);
+        v.push(mondronen_shaman);
         v.push(onward_victory);
         v.push(talisman_of_conviction);
         v.push(rustvale_bridge);

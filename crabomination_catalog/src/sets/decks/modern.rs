@@ -27483,3 +27483,381 @@ pub fn growing_rites_of_itlimoc() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Classic Innistrad werewolves (transform on the spells-cast-last-turn
+// check; CR 712 transform + the new NoSpellsCastLastTurn / TwoOrMore
+// predicates). Each front face flips to its back when no spells were cast
+// last turn; each back flips home when a player cast two or more. ─────────────
+
+/// Reckless Waif // Merciless Predator — {R} Human Rogue Werewolf 1/1 // 3/2.
+pub fn reckless_waif() -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    let predator = CardDefinition {
+        name: "Merciless Predator",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![werewolf_night_transform()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Reckless Waif",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(predator)),
+        ..Default::default()
+    }
+}
+
+/// Gatstaf Shepherd // Gatstaf Howler — {1}{G} Human Werewolf 2/2 // 3/3
+/// Intimidate.
+pub fn gatstaf_shepherd() -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    let howler = CardDefinition {
+        name: "Gatstaf Howler",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Intimidate],
+        triggered_abilities: vec![werewolf_night_transform()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Gatstaf Shepherd",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(howler)),
+        ..Default::default()
+    }
+}
+
+/// Village Messenger // Moonrise Intruder — {R} Human Werewolf 1/1 Haste //
+/// 2/2 Menace.
+pub fn village_messenger() -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    let intruder = CardDefinition {
+        name: "Moonrise Intruder",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![werewolf_night_transform()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Village Messenger",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(intruder)),
+        ..Default::default()
+    }
+}
+
+/// Mayor of Avabruck // Howlpack Alpha — {1}{G} Human Advisor Werewolf 1/1
+/// (Humans you control get +1/+1) // 3/3 (Werewolves/Wolves you control get
+/// +1/+1; make a 2/2 Wolf each end step).
+pub fn mayor_of_avabruck() -> CardDefinition {
+    use crate::card::{StaticAbility, TokenDefinition};
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    use crate::effect::StaticEffect;
+    let wolf = TokenDefinition {
+        name: "Wolf".into(),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wolf], ..Default::default() },
+        colors: vec![Color::Green],
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    };
+    let howlpack_alpha = CardDefinition {
+        name: "Howlpack Alpha",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Each other Werewolf or Wolf you control gets +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Werewolf)
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Wolf))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: wolf,
+                },
+            },
+            werewolf_night_transform(),
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mayor of Avabruck",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Other Human creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Human)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(howlpack_alpha)),
+        ..Default::default()
+    }
+}
+
+/// Ulvenwald Captive // Ulvenwald Abomination — {1}{G} Werewolf Horror 1/2
+/// Defender mana dork (`{T}`: Add {G}; `{5}{G}{G}`: Transform) // 4/6 Eldrazi
+/// Werewolf (`{T}`: Add {C}{C}).
+pub fn ulvenwald_captive() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let abomination = CardDefinition {
+        name: "Ulvenwald Abomination",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 6,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Ulvenwald Captive",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Werewolf, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add(Color::Green),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(5), g(), g()]),
+                effect: Effect::Transform { what: Selector::This },
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(abomination)),
+        ..Default::default()
+    }
+}
+
+/// Kruin Outlaw // Terror of Kruin Pass — {1}{R}{R} Human Rogue Werewolf 2/2
+/// First strike // 3/3 Double strike (Werewolves you control have menace).
+pub fn kruin_outlaw() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    use crate::effect::StaticEffect;
+    let terror = CardDefinition {
+        name: "Terror of Kruin Pass",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::DoubleStrike],
+        static_abilities: vec![StaticAbility {
+            description: "Other Werewolves you control have menace.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Werewolf)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Menace,
+            },
+        }],
+        triggered_abilities: vec![werewolf_night_transform()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kruin Outlaw",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(terror)),
+        ..Default::default()
+    }
+}
+
+/// Outland Liberator // Frenzied Trapbreaker — {1}{G} Human Werewolf 2/2
+/// (Daybound). `{1}, Sacrifice this creature: Destroy target artifact or
+/// enchantment.` Back: Frenzied Trapbreaker, 3/3 Nightbound with the same
+/// sacrifice ability (the on-attack destroy rider is dropped).
+pub fn outland_liberator() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let sac_destroy = || ActivatedAbility {
+        mana_cost: cost(&[generic(1)]),
+        sac_cost: true,
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+            ),
+        },
+        ..Default::default()
+    };
+    let frenzied = CardDefinition {
+        name: "Frenzied Trapbreaker",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Nightbound],
+        activated_abilities: vec![sac_destroy()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Outland Liberator",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Daybound],
+        activated_abilities: vec![sac_destroy()],
+        back_face: Some(Box::new(frenzied)),
+        ..Default::default()
+    }
+}
+
+/// Geier Reach Bandit // Vildin-Pack Alpha — {2}{R} Human Rogue Werewolf 3/2
+/// Haste // 4/3 Werewolf. (The back's "when a Werewolf you control enters, you
+/// may transform it" rider is dropped; the day/night flips ship.)
+pub fn geier_reach_bandit() -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    let alpha = CardDefinition {
+        name: "Vildin-Pack Alpha",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        triggered_abilities: vec![werewolf_night_transform()],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Geier Reach Bandit",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(alpha)),
+        ..Default::default()
+    }
+}
+
+/// Mondronen Shaman // Tovolar's Magehunter — {3}{R} Human Shaman Werewolf 3/2
+/// // 5/5 Werewolf. Back: "Whenever an opponent casts a spell, deal 2 damage
+/// to that player."
+pub fn mondronen_shaman() -> CardDefinition {
+    use crate::effect::shortcut::{werewolf_day_transform, werewolf_night_transform};
+    let magehunter = CardDefinition {
+        name: "Tovolar's Magehunter",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Werewolf], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl),
+                effect: Effect::DealDamage {
+                    amount: Value::Const(2),
+                    to: Selector::Player(PlayerRef::Triggerer),
+                },
+            },
+            werewolf_night_transform(),
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mondronen Shaman",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![werewolf_day_transform()],
+        back_face: Some(Box::new(magehunter)),
+        ..Default::default()
+    }
+}

@@ -264,6 +264,12 @@ pub struct GameState {
     pub(crate) skip_first_draw: bool,
     /// Count of spells cast this turn (for Storm and related effects).
     pub spells_cast_this_turn: u32,
+    /// Total spells cast during the previous turn (snapshotted from
+    /// `spells_cast_this_turn` at Cleanup). Drives the classic Innistrad
+    /// werewolf transform check ("if no spells were cast last turn …").
+    /// `#[serde(default)]` so older snapshots load as 0.
+    #[serde(default)]
+    pub spells_cast_last_turn: u32,
     /// CR 702.69 — count of permanents put into a graveyard from the
     /// battlefield this turn (any controller, any type). Drives Gravestorm
     /// copy counts; reset at each turn's untap step.
@@ -687,6 +693,7 @@ impl Clone for GameState {
             blockers_declared: self.blockers_declared,
             skip_first_draw: self.skip_first_draw,
             spells_cast_this_turn: self.spells_cast_this_turn,
+            spells_cast_last_turn: self.spells_cast_last_turn,
             permanents_to_graveyard_this_turn: self.permanents_to_graveyard_this_turn,
             delayed_triggers: self.delayed_triggers.clone(),
             attacking_token_cleanup: self.attacking_token_cleanup.clone(),
@@ -785,6 +792,7 @@ impl GameState {
             // starting player does.
             skip_first_draw: n <= 2,
             spells_cast_this_turn: 0,
+            spells_cast_last_turn: 0,
             permanents_to_graveyard_this_turn: 0,
             delayed_triggers: Vec::new(),
             attacking_token_cleanup: Vec::new(),

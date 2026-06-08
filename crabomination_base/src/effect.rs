@@ -616,6 +616,14 @@ pub enum Predicate {
     /// `PlayerRef::Triggerer` + `EventScope::AnyPlayer` so it reads the
     /// caster's own count and fires exactly on the Nth spell.
     SpellsCastThisTurnEquals { who: PlayerRef, count: Value },
+    /// No spells were cast by any player during the previous turn — the
+    /// classic Innistrad day-side werewolf transform check. Backed by
+    /// `GameState.spells_cast_last_turn == 0`.
+    NoSpellsCastLastTurn,
+    /// Two or more spells were cast during the previous turn — the night-side
+    /// werewolf "transform back" check. Backed by
+    /// `GameState.spells_cast_last_turn >= 2`.
+    TwoOrMoreSpellsCastLastTurn,
     /// At least `at_least` creatures controlled by `who` died this turn.
     /// Backed by `Player.creatures_died_this_turn` (bumped from the SBA
     /// dies handler and `remove_to_graveyard_with_triggers`). Used by

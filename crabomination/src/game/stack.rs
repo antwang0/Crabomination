@@ -244,7 +244,10 @@ impl GameState {
             }
             TurnStep::Cleanup => {
                 // Reset per-turn spell counter and the Gravestorm
-                // permanents-died tally.
+                // permanents-died tally. Snapshot the turn's total first so
+                // the classic werewolf "no spells cast last turn" check (read
+                // at the next upkeep) sees it.
+                self.spells_cast_last_turn = self.spells_cast_this_turn;
                 self.spells_cast_this_turn = 0;
                 self.permanents_to_graveyard_this_turn = 0;
                 self.give_priority_to_active();

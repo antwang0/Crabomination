@@ -1159,3 +1159,29 @@ fn beastmaster_ascension_accrues_quest_counter_on_attack() {
     assert_eq!(g.battlefield_find(asc).unwrap().counter_count(CounterType::Quest), 1,
         "one quest counter per attacking creature");
 }
+
+/// CR 509.1g — "can't be blocked by more than one creature": a second blocker
+/// on the same attacker is rejected; a single block is legal.
+#[test]
+fn cr_509_1g_cant_be_blocked_by_more_than_one() {
+    use crate::card::Keyword;
+    use crate::game::types::{AttackTarget, Attack};
+    let mut g = two_player_game();
+    let mut def = body("Sleek Skulker", 3, 3, vec![]);
+    def.keywords = vec![Keyword::CantBeBlockedByMoreThanOne];
+    let atk = g.add_card_to_battlefield(0, def);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    assert!(
+        g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk), (b2, atk)])).is_err(),
+        "two blockers on a single-block-only attacker is illegal"
+    );
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk)])).expect("one blocker is fine");
+}

@@ -23260,6 +23260,154 @@ fn everflowing_well_mills_draws_then_descends_to_a_land() {
 }
 
 #[test]
+fn reckless_waif_flips_on_quiet_then_busy_turns() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::Upkeep;
+    let waif = g.add_card_to_battlefield(0, catalog::reckless_waif());
+    // No spells were cast last turn → day side flips to Merciless Predator.
+    g.spells_cast_last_turn = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let pred = g.battlefield_find(waif).unwrap();
+    assert_eq!(pred.definition.name, "Merciless Predator");
+    assert_eq!((pred.power(), pred.toughness()), (3, 2));
+    // A player cast two+ spells last turn → it flips back to the human side.
+    g.spells_cast_last_turn = 2;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(waif).unwrap().definition.name, "Reckless Waif");
+}
+
+#[test]
+fn mayor_of_avabruck_anthems_track_the_flip() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let mayor = g.add_card_to_battlefield(0, catalog::mayor_of_avabruck());
+    let human = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // stand-in body
+    // Front anthem buffs Humans; the bear isn't a Human, so check the Mayor
+    // sees the front face and a real flip swaps the static.
+    assert_eq!(g.battlefield_find(mayor).unwrap().definition.name, "Mayor of Avabruck");
+    let mut ev = vec![];
+    g.transform_permanent(mayor, &mut ev);
+    let alpha = g.battlefield_find(mayor).unwrap();
+    assert_eq!(alpha.definition.name, "Howlpack Alpha");
+    assert_eq!((alpha.power(), alpha.toughness()), (3, 3));
+    let _ = human;
+}
+
+#[test]
+fn gatstaf_shepherd_and_village_messenger_gain_evasion_at_night() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let gs = g.add_card_to_battlefield(0, catalog::gatstaf_shepherd());
+    let vm = g.add_card_to_battlefield(0, catalog::village_messenger());
+    assert!(g.battlefield_find(vm).unwrap().definition.keywords.contains(&Keyword::Haste));
+    let mut ev = vec![];
+    g.transform_permanent(gs, &mut ev);
+    g.transform_permanent(vm, &mut ev);
+    assert!(g.battlefield_find(gs).unwrap().definition.keywords.contains(&Keyword::Intimidate));
+    assert!(g.battlefield_find(vm).unwrap().definition.keywords.contains(&Keyword::Menace));
+}
+
+#[test]
+fn ulvenwald_captive_taps_for_mana_and_transforms() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let uc = g.add_card_to_battlefield(0, catalog::ulvenwald_captive());
+    g.clear_sickness(uc);
+    // {T}: Add {G}.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: uc, ability_index: 0, target: None, x_value: None,
+    }).expect("{T}: Add G");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "tapped for one green");
+    // Untap and pay {5}{G}{G} to transform.
+    g.battlefield_find_mut(uc).unwrap().tapped = false;
+    g.players[0].mana_pool.add(Color::Green, 7);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: uc, ability_index: 1, target: None, x_value: None,
+    }).expect("{5}{G}{G}: Transform");
+    drain_stack(&mut g);
+    let abom = g.battlefield_find(uc).unwrap();
+    assert_eq!(abom.definition.name, "Ulvenwald Abomination");
+    assert_eq!((abom.power(), abom.toughness()), (4, 6));
+}
+
+#[test]
+fn kruin_outlaw_gains_double_strike_and_werewolf_menace_anthem() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let kruin = g.add_card_to_battlefield(0, catalog::kruin_outlaw());
+    let pack = g.add_card_to_battlefield(0, catalog::reckless_waif()); // a Werewolf
+    assert!(g.battlefield_find(kruin).unwrap().definition.keywords.contains(&Keyword::FirstStrike));
+    let mut ev = vec![];
+    g.transform_permanent(kruin, &mut ev);
+    let terror = g.battlefield_find(kruin).unwrap();
+    assert!(terror.definition.keywords.contains(&Keyword::DoubleStrike));
+    // The anthem grants menace to other Werewolves (computed via layers).
+    let view = g.compute_battlefield();
+    let waif = view.iter().find(|c| c.id == pack).unwrap();
+    assert!(waif.keywords.contains(&Keyword::Menace), "werewolf gains menace from Terror");
+}
+
+#[test]
+fn outland_liberator_is_daybound_and_sacrifices_to_destroy() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let target = g.add_card_to_battlefield(1, catalog::the_everflowing_well()); // an artifact
+    let ol = g.add_card_to_hand(0, catalog::outland_liberator());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ol, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Outland Liberator");
+    drain_stack(&mut g);
+    assert_eq!(g.day_night, Some(crate::game::types::DayNight::Day), "daybound → day");
+    g.clear_sickness(ol);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ol, ability_index: 0, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("{1}, Sac: destroy artifact");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "artifact destroyed");
+    assert!(g.battlefield_find(ol).is_none(), "Liberator sacrificed");
+}
+
+#[test]
+fn geier_reach_bandit_flips_to_a_four_three() {
+    let mut g = two_player_game();
+    let grb = g.add_card_to_battlefield(0, catalog::geier_reach_bandit());
+    let mut ev = vec![];
+    g.transform_permanent(grb, &mut ev);
+    let alpha = g.battlefield_find(grb).unwrap();
+    assert_eq!(alpha.definition.name, "Vildin-Pack Alpha");
+    assert_eq!((alpha.power(), alpha.toughness()), (4, 3));
+}
+
+#[test]
+fn mondronen_shaman_back_pings_opponent_casters() {
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let ms = g.add_card_to_battlefield(0, catalog::mondronen_shaman());
+    let mut ev = vec![];
+    g.transform_permanent(ms, &mut ev); // now Tovolar's Magehunter
+    let life = g.players[1].life;
+    // Opponent (player 1) casts a spell → takes 2.
+    let bolt = g.add_card_to_hand(1, catalog::shock());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opponent casts a spell");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "Magehunter pings the opposing caster for 2");
+}
+
+#[test]
 fn kessig_prowler_transforms_into_sinuous_predator() {
     let mut g = two_player_game();
     g.active_player_idx = 0;

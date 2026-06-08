@@ -709,6 +709,29 @@ pub fn magecraft_self_untap() -> TriggeredAbility {
     })
 }
 
+/// Classic Innistrad werewolf day-side transform: "At the beginning of each
+/// upkeep, if no spells were cast last turn, transform this creature."
+pub fn werewolf_day_transform() -> TriggeredAbility {
+    use crate::turn_step::TurnStep;
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+            .with_filter(Predicate::NoSpellsCastLastTurn),
+        effect: Effect::Transform { what: Selector::This },
+    }
+}
+
+/// Classic Innistrad werewolf night-side transform back: "At the beginning of
+/// each upkeep, if a player cast two or more spells last turn, transform this
+/// creature."
+pub fn werewolf_night_transform() -> TriggeredAbility {
+    use crate::turn_step::TurnStep;
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer)
+            .with_filter(Predicate::TwoOrMoreSpellsCastLastTurn),
+        effect: Effect::Transform { what: Selector::This },
+    }
+}
+
 /// Convenience: a Magecraft trigger that drains `amount` life from
 /// each opponent into the controller.
 pub fn magecraft_drain_each_opp(amount: i32) -> TriggeredAbility {
