@@ -38029,6 +38029,59 @@ fn death_baron_buffs_zombies_and_skeletons() {
     }
 }
 
+/// Thoughtcast's affinity discounts it by {1} per artifact; it draws two.
+#[test]
+fn thoughtcast_affinity_discounts_and_draws_two() {
+    let mut g = two_player_game();
+    // Two artifacts → {2} off, so {2}{U} pays for {4}{U}.
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_library(0, catalog::ponder());
+    g.add_card_to_library(0, catalog::index());
+    let id = g.add_card_to_hand(0, catalog::thoughtcast());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{U} = 4U - {2} affinity
+    let hand0 = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("affinity-discounted Thoughtcast castable for {2}{U}");
+    drain_stack(&mut g);
+    // -1 for Thoughtcast leaving hand, +2 drawn → net +1.
+    assert_eq!(g.players[0].hand.len(), hand0 - 1 + 2, "drew two cards");
+}
+
+/// Etched Champion gains protection from all colors only with Metalcraft (3+ artifacts).
+#[test]
+fn etched_champion_metalcraft_grants_protection() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let champ = g.add_card_to_battlefield(0, catalog::etched_champion()); // 1 artifact (itself)
+    let no_metalcraft = g.computed_permanent(champ).unwrap().keywords;
+    assert!(!no_metalcraft.contains(&Keyword::Protection(Color::Red)), "no protection below 3 artifacts");
+    // Add two more artifacts → metalcraft on.
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    let kws = g.computed_permanent(champ).unwrap().keywords;
+    for c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+        assert!(kws.contains(&Keyword::Protection(c)), "metalcraft grants protection from {c:?}");
+    }
+}
+
+/// Sai mints a Thopter whenever you cast an artifact spell.
+#[test]
+fn sai_makes_thopter_on_artifact_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sai_master_thopterist());
+    let orn = g.add_card_to_hand(0, catalog::ornithopter()); // {0} artifact
+    let thopters0 = g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: orn, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ornithopter");
+    drain_stack(&mut g);
+    let thopters1 = g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count();
+    assert_eq!(thopters1, thopters0 + 1, "Sai mints a Thopter on the artifact cast");
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {

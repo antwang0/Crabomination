@@ -30281,6 +30281,100 @@ pub fn death_baron() -> CardDefinition {
     }
 }
 
+/// Thoughtcast — {4}{U} Sorcery with Affinity for artifacts. Draw two cards.
+pub fn thoughtcast() -> CardDefinition {
+    CardDefinition {
+        name: "Thoughtcast",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Sorcery],
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Etched Champion — {3} 2/2 Artifact Creature Soldier. Metalcraft — has
+/// protection from each color while you control three or more artifacts.
+pub fn etched_champion() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Etched Champion",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Metalcraft — protection from each color while you control 3+ artifacts.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(3),
+                },
+                power: 0,
+                toughness: 0,
+                keywords: vec![
+                    Keyword::Protection(Color::White),
+                    Keyword::Protection(Color::Blue),
+                    Keyword::Protection(Color::Black),
+                    Keyword::Protection(Color::Red),
+                    Keyword::Protection(Color::Green),
+                ],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sai, Master Thopterist — {2}{U} 1/4 Legendary Human Artificer. Whenever you
+/// cast an artifact spell, create a 1/1 flying Thopter. {1}{U}, Sacrifice two
+/// artifacts: Draw a card.
+pub fn sai_master_thopterist() -> CardDefinition {
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Thopter], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Sai, Master Thopterist",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Artifact,
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: thopter,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), u()]),
+            sac_other_filter: Some((SelectionRequirement::Artifact, 2)),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.

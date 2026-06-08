@@ -437,7 +437,10 @@ feature; sweep card-batch by card-batch.
   ⏳ Bloodrush, ✅ Unleash (`Keyword::Unleash` + `shortcut::unleash()` — CR
   702.98: ETB "may enter with a +1/+1 counter" + computed `CantBlock` while it
   has one; Rakdos Cackler, Gore-House Chainwalker, Spawn of Rix Maadi),
-  ⏳ Scavenge,
+  ✅ Scavenge (`shortcut::scavenge` — CR 702.97, gy-activated exile-self for
+  +1/+1 counters = the exiled card's power; Dreg Mangler),
+  ✅ Transmute (`shortcut::transmute` — CR 702.53, from-hand discard-self MV
+  tutor; Drift of Phantasms),
   ✅ Bestow (`CardDefinition.bestow` + `GameAction::CastBestow` +
   `CardInstance.bestowed` — CR 702.103; cast an enchantment-creature as an
   Aura for its bestow cost, granting its `equipped_bonus`; not a creature
