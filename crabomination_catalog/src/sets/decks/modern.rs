@@ -29644,6 +29644,92 @@ pub fn sunspine_lynx() -> CardDefinition {
     }
 }
 
+/// Treetop Sentries — {3}{G} 2/4 Squirrel Archer with reach. ETB: you may
+/// forage (CR 701.61); if you do, draw a card.
+pub fn treetop_sentries() -> CardDefinition {
+    CardDefinition {
+        name: "Treetop Sentries",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::Forage {
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bushy Bodyguard — {1}{G} 2/1 Squirrel Warrior. ETB: you may forage; if you
+/// do, put two +1/+1 counters on it. (Offspring rider dropped.)
+pub fn bushy_bodyguard() -> CardDefinition {
+    CardDefinition {
+        name: "Bushy Bodyguard",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Squirrel, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Forage {
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Fortress Kin-Guard — {1}{W} 1/2 Dog Soldier. ETB: it endures 1 (CR 701.63).
+pub fn fortress_kin_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Fortress Kin-Guard",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Endure {
+            target: Selector::This,
+            n: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Dusyut Earthcarver — {5}{G} 4/4 Elephant Druid with reach. ETB: endures 3.
+pub fn dusyut_earthcarver() -> CardDefinition {
+    CardDefinition {
+        name: "Dusyut Earthcarver",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::Endure {
+            target: Selector::This,
+            n: Value::Const(3),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Conduct Electricity — {4}{R} Instant. Deals 6 damage to target creature.
 /// (The secondary "2 damage to up to one target creature token" is dropped —
 /// optional secondary targets aren't modeled here.)

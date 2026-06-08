@@ -50,6 +50,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
+        (EventKind::PhasesIn, GameEvent::PermanentPhasedIn { .. }) => true,
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
@@ -136,6 +137,11 @@ pub(crate) fn event_matches_spec(
             // "Whenever this creature becomes tapped" (Vampire Envoy).
             event,
             GameEvent::PermanentTapped { card_id } if *card_id == source.id
+        ) || matches!(
+            // CR 702.26 — "When this phases in." Source must equal the
+            // phasing-in permanent.
+            event,
+            GameEvent::PermanentPhasedIn { card_id } if *card_id == source.id
         ) || matches!(
             // CR 701.40 — "Whenever this creature explores." Source must
             // equal the exploring permanent.
@@ -320,6 +326,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::PermanentPhasedIn { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BecameMonstrous { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
@@ -407,6 +414,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::PermanentTapped { card_id }
         | GameEvent::PermanentUntapped { card_id }
+        | GameEvent::PermanentPhasedIn { card_id }
         | GameEvent::Explored { card_id, .. }
         | GameEvent::BecameMonstrous { card_id }
         | GameEvent::Transformed { card_id }

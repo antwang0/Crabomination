@@ -133,13 +133,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     Frost Trickster / Eager First-Year / Owlin Shieldmage / Promising Duskmage /
     Rise of Extus / Verdant Mastery / Illuminate History were already faithful.
     Re-verify before picking a sweep target.
-- ⏳ **Phasing (CR 702.26) follow-ups** (engine shipped this run): a permanent
-  that **enters phased out** (Reality Ripple-adjacent / Teferi's Veil grant);
-  phasing **grant** to other permanents (Teferi's Veil "attacking creatures
-  gain phasing"); a creature phasing out mid-combat (remove from the combat
-  arrays cleanly — today `do_phasing` only runs in the untap step so this can't
-  arise yet, but `Effect::PhaseOut` could be cast in combat); "when this phases
-  in" triggers (rare). The side-zone model (`GameState.phased_out`) is the hook.
+- ⏳ **Phasing (CR 702.26) follow-ups**: a permanent that **enters phased out**
+  (Reality Ripple-adjacent / Teferi's Veil grant); phasing **grant** to other
+  permanents (Teferi's Veil "attacking creatures gain phasing"); a creature
+  phasing out mid-combat (remove from the combat arrays cleanly — today
+  `do_phasing` only runs in the untap step so this can't arise yet, but
+  `Effect::PhaseOut` could be cast in combat). **"When this phases in" triggers
+  ✅** — `EventKind::PhasesIn` + `GameEvent::PermanentPhasedIn`; `do_phasing`
+  dispatches them on return. The side-zone model (`GameState.phased_out`) is the hook.
 - ✅ **Changeling (CR 702.73) honored in general type-filter eval** (this run).
   Both `effects/eval.rs` `R::HasCreatureType` sites now OR in
   `has_keyword(Changeling)`, matching the block-restriction path — a Changeling

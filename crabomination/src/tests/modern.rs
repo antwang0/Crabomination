@@ -36624,6 +36624,37 @@ fn tolarian_drake_phases_out_and_back_in_on_untap() {
     assert!(g.phased_out.is_empty(), "side zone emptied");
 }
 
+/// CR 702.26 — a "when this phases in" trigger fires when the permanent
+/// returns during its controller's untap step.
+#[test]
+fn phasing_in_fires_when_this_phases_in_trigger() {
+    use crate::card::{CardDefinition, CardType, Keyword, TriggeredAbility};
+    use crate::effect::{Effect, EventKind, EventScope, EventSpec, PlayerRef, Selector, Value};
+    let def = CardDefinition {
+        name: "Phase Sentinel",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Phasing],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PhasesIn, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    };
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, def);
+    g.add_card_to_library(0, catalog::forest());
+    g.active_player_idx = 0;
+    let hand0 = g.players[0].hand.len();
+    g.do_phasing(); // out — no trigger
+    assert_eq!(g.players[0].hand.len(), hand0, "no draw on phase-out");
+    g.do_phasing(); // in — trigger fires
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "phased back in");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "phase-in trigger drew a card");
+}
+
 /// Phasing is not a zone change — counters and damage are retained across a
 /// phase-out/phase-in cycle (CR 702.26e).
 #[test]
@@ -37577,6 +37608,66 @@ fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
     assert_eq!(g.players[0].life, life0 + 3, "gained 3 life");
     let after_sac = g.battlefield.iter().filter(|c| c.definition.name == "Rabbit").count();
     assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
+}
+
+/// Forage (CR 701.61): pays by exiling three graveyard cards, then draws.
+#[test]
+fn forage_exiles_three_graveyard_cards_then_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_graveyard(0, catalog::forest()); }
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let hand0 = g.players[0].hand.len();
+    let sentry = g.add_card_to_battlefield(0, catalog::treetop_sentries());
+    g.fire_self_etb_triggers(sentry, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 0, "three cards left the graveyard");
+    assert_eq!(g.exile.len(), 3, "they went to exile");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "foraged → drew a card");
+}
+
+/// Forage (CR 701.61): with an empty graveyard, falls back to sacrificing a
+/// Food, then the payoff (two +1/+1 counters) resolves.
+#[test]
+fn forage_sacrifices_a_food_when_graveyard_too_small() {
+    let mut g = two_player_game();
+    let food = g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let body = g.add_card_to_battlefield(0, catalog::bushy_bodyguard());
+    g.fire_self_etb_triggers(body, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(food).is_none(), "Food was sacrificed to forage");
+    let c = g.battlefield_find(body).expect("bodyguard alive");
+    assert_eq!(c.counter_count(crate::card::CounterType::PlusOnePlusOne), 2, "foraged → +2 counters");
+}
+
+/// Endure (CR 701.63): default (AutoDecider) puts the +1/+1 counters on the
+/// enduring creature rather than minting a Spirit.
+#[test]
+fn endure_default_grows_the_creature_with_counters() {
+    let mut g = two_player_game();
+    let guard = g.add_card_to_battlefield(0, catalog::dusyut_earthcarver()); // endure 3
+    g.fire_self_etb_triggers(guard, 0);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(guard).expect("guard alive");
+    assert_eq!(c.counter_count(crate::card::CounterType::PlusOnePlusOne), 3, "endure 3 added counters");
+    let spirits = g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 0, "no token when counters chosen");
+}
+
+/// Endure (CR 701.63): the controller may instead create an N/N white Spirit.
+#[test]
+fn endure_can_mint_an_nn_spirit() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let guard = g.add_card_to_battlefield(0, catalog::fortress_kin_guard()); // endure 1
+    g.fire_self_etb_triggers(guard, 0);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(guard).expect("guard alive");
+    assert_eq!(c.counter_count(crate::card::CounterType::PlusOnePlusOne), 0, "no counters when token chosen");
+    let spirit = g.battlefield.iter().find(|c| c.definition.name == "Spirit").expect("Spirit minted");
+    assert_eq!((spirit.definition.power, spirit.definition.toughness), (1, 1), "1/1 Spirit");
+    assert_eq!(spirit.controller, 0, "controller owns the Spirit");
 }
 
 /// Sunspine Lynx pings each player for their nonbasic-land count, locks

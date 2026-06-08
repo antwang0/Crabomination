@@ -1077,6 +1077,9 @@ pub enum EventKind {
     /// A permanent became tapped (Magda, Brazen Outlaw). The tapped
     /// permanent is the event subject; matched to `GameEvent::PermanentTapped`.
     Tapped,
+    /// CR 702.26 — a permanent phased in. The phasing-in permanent is the
+    /// event subject; matched to `GameEvent::PermanentPhasedIn`.
+    PhasesIn,
     /// CR 701.40 — a permanent explored (Wildgrowth Walker, Tishana's
     /// Wayfinder payoffs). The exploring permanent is the event subject;
     /// matched to `GameEvent::Explored`.
@@ -1623,6 +1626,11 @@ pub enum Effect {
     /// engine auto-picks the cheapest qualifying set to exile; `then`'s
     /// targets are chosen when the ability goes on the stack.)
     CollectEvidence { amount: Value, then: Box<Effect> },
+    /// CR 701.61 — *forage*: as an optional cost, exile three cards from your
+    /// graveyard **or** sacrifice a Food. If paid, the reflexive `then` payoff
+    /// resolves. Engine prefers exiling three graveyard cards; falls back to
+    /// sacrificing a Food. Ships Bloomburrow forage payoffs.
+    Forage { then: Box<Effect> },
     /// CR 701.57 — *discover N*: exile cards from the top of the controller's
     /// library until exiling a nonland card with mana value `n` or less, then
     /// either cast it without paying its mana cost or put it into hand; the
@@ -1891,6 +1899,11 @@ pub enum Effect {
     LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
+    /// CR 701.63 — *endure N*: the controller of `target` either puts N
+    /// +1/+1 counters on it, or creates an N/N white Spirit creature token.
+    /// The choice is the controller's (AutoDecider keeps the counters so the
+    /// enduring permanent grows). N=0 does nothing (CR 701.63b).
+    Endure { target: Selector, n: Value },
     /// Remove every counter of every kind from `what` (CR 122.6 — Vampire
     /// Hexmage's "remove all counters from target permanent").
     RemoveAllCounters { what: Selector },

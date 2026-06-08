@@ -991,10 +991,12 @@ impl GameState {
             to_phase_out.extend(attached);
         }
         // Phase IN: every phased-out permanent this player controls returns.
+        let mut phased_in: Vec<crate::card::CardId> = Vec::new();
         let mut i = 0;
         while i < self.phased_out.len() {
             if self.phased_out[i].controller == p {
                 let c = self.phased_out.remove(i);
+                phased_in.push(c.id);
                 self.battlefield.push(c);
             } else {
                 i += 1;
@@ -1011,6 +1013,15 @@ impl GameState {
                     idx += 1;
                 }
             }
+        }
+        // CR 702.26 — "when this phases in" triggers. Phasing in isn't an ETB,
+        // so we dispatch a dedicated `PermanentPhasedIn` event for each.
+        if !phased_in.is_empty() {
+            let evs: Vec<GameEvent> = phased_in
+                .into_iter()
+                .map(|card_id| GameEvent::PermanentPhasedIn { card_id })
+                .collect();
+            self.dispatch_triggers_for_events(&evs);
         }
     }
 

@@ -355,7 +355,11 @@ feature; sweep card-batch by card-batch.
   ✅ Afterlife (`shortcut::afterlife` — CR 702.135),
   ✅ Explore (`Effect::Explore` + `EventKind::Explored`, CR 701.40 — Merfolk
   Branchwalker, Jadelight Ranger, Wildgrowth Walker, Seekers' Squire,
-  Emperor's Vanguard, Path of Discovery), ⏳ Squad, ⏳ Forage,
+  Emperor's Vanguard, Path of Discovery), ⏳ Squad,
+  ✅ Forage (CR 701.61 — `Effect::Forage { then }`: exile three graveyard
+  cards or sacrifice a Food, then run the payoff; Treetop Sentries, Bushy
+  Bodyguard), ✅ Endure (CR 701.63 — `Effect::Endure { target, n }`: counters
+  or an N/N Spirit; Fortress Kin-Guard, Dusyut Earthcarver),
   ✅ Exploit (`shortcut::exploit(payoff)` — CR 702.105, ETB `MayDo`
   sacrifice-a-creature → run payoff; declining skips it),
   ✅ Extort (`shortcut::extort` — CR 702.99, SpellCast

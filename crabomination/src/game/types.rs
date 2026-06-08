@@ -920,6 +920,9 @@ pub enum GameEvent {
     PermanentUntapped { card_id: CardId },
     /// CR 702.26 — a permanent phased out (moved to `GameState.phased_out`).
     PermanentPhasedOut { card_id: CardId },
+    /// CR 702.26 — a permanent phased in (returned from `phased_out` during its
+    /// controller's untap step). Fires "when this phases in" triggers.
+    PermanentPhasedIn { card_id: CardId },
     /// CR 701.40 — a permanent explored. `card_id` is the exploring
     /// permanent; `controller` is its controller (whose library was
     /// revealed).

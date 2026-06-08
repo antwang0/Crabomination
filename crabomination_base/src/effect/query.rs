@@ -151,6 +151,8 @@ impl Effect {
             Effect::CollectEvidence { amount, then } => {
                 value_has_target(amount) || then.requires_target()
             }
+            Effect::Forage { then } => then.requires_target(),
+            Effect::Endure { target, n } => sel_has_target(target) || value_has_target(n),
             Effect::IfRevealFromHand { then, else_, .. } => {
                 then.requires_target() || else_.requires_target()
             }

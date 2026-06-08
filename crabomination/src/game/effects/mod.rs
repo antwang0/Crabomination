@@ -3210,6 +3210,57 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 701.63 — endure N: controller of `target` either grows it
+            // with N +1/+1 counters or mints an N/N white Spirit. AutoDecider
+            // (Bool(false)) keeps the counters; Bool(true) takes the token.
+            Effect::Endure { target, n } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let amt = self.evaluate_value(n, ctx).max(0);
+                if amt == 0 { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                let make_token = matches!(
+                    self.decider.decide(&Decision::OptionalTrigger {
+                        source,
+                        description: "Endure: create an N/N Spirit instead of counters?".into(),
+                    }),
+                    DecisionAnswer::Bool(true)
+                );
+                if make_token {
+                    let token = crate::card::TokenDefinition {
+                        name: "Spirit".into(),
+                        power: amt,
+                        toughness: amt,
+                        card_types: vec![crate::card::CardType::Creature],
+                        colors: vec![crate::mana::Color::White],
+                        subtypes: crate::card::Subtypes {
+                            creature_types: vec![crate::card::CreatureType::Spirit],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+                    self.run_effect(
+                        &Effect::CreateToken {
+                            who: crate::effect::PlayerRef::You,
+                            count: crate::effect::Value::Const(1),
+                            definition: token,
+                        },
+                        ctx,
+                        events,
+                    )?;
+                } else {
+                    self.run_effect(
+                        &Effect::AddCounter {
+                            what: target.clone(),
+                            kind: crate::card::CounterType::PlusOnePlusOne,
+                            amount: crate::effect::Value::Const(amt),
+                        },
+                        ctx,
+                        events,
+                    )?;
+                }
+                Ok(())
+            }
+
             Effect::AddCounter { what, kind, amount } => {
                 let base = self.evaluate_value(amount, ctx).max(0) as u32;
                 if base == 0 { return Ok(()); }
@@ -6356,6 +6407,51 @@ impl GameState {
                 // The "when you do" payoff is a reflexive trigger: its targets
                 // are chosen now, after collecting. Auto-target `then` and
                 // thread the picks through a derived context.
+                let (slot0, additional) =
+                    self.auto_targets_for_effect_all_slots(then, p, None);
+                let mut then_ctx = ctx.clone();
+                then_ctx.targets = slot0.into_iter().chain(additional).collect();
+                self.run_effect(then, &then_ctx, events)?;
+                Ok(())
+            }
+
+            Effect::Forage { then } => {
+                // CR 701.61 — exile three cards from your graveyard or sacrifice
+                // a Food. Optional: ask the controller; on yes, pay (prefer
+                // exiling three graveyard cards, else sacrifice a Food) and run
+                // the reflexive payoff.
+                use crate::card::ArtifactSubtype;
+                use crate::decision::{Decision, DecisionAnswer};
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let gy_ids: Vec<CardId> =
+                    self.players[p].graveyard.iter().map(|c| c.id).collect();
+                let food = self.battlefield.iter().find(|c| {
+                    c.controller == p
+                        && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Food)
+                }).map(|c| c.id);
+                let can_exile = gy_ids.len() >= 3;
+                if !can_exile && food.is_none() {
+                    return Ok(()); // can't forage
+                }
+                let src = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source: src,
+                    description: "Forage? (exile three cards from your graveyard \
+                        or sacrifice a Food)".into(),
+                });
+                if !matches!(answer, DecisionAnswer::Bool(true)) {
+                    return Ok(());
+                }
+                if can_exile {
+                    for cid in gy_ids.into_iter().take(3) {
+                        self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    }
+                } else if let Some(fid) = food {
+                    events.push(GameEvent::PermanentSacrificed { card_id: fid, who: p });
+                    let mut die = self.remove_to_graveyard_with_triggers(fid);
+                    events.append(&mut die);
+                }
                 let (slot0, additional) =
                     self.auto_targets_for_effect_all_slots(then, p, None);
                 let mut then_ctx = ctx.clone();

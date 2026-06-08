@@ -1402,6 +1402,7 @@ pub enum GameEventWire {
     PermanentTapped { card_id: CardId },
     PermanentUntapped { card_id: CardId },
     PermanentPhasedOut { card_id: CardId },
+    PermanentPhasedIn { card_id: CardId },
     Explored { card_id: CardId, controller: usize },
     BecameMonstrous { card_id: CardId },
     Transformed { card_id: CardId },
@@ -1553,6 +1554,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::PermanentPhasedOut { card_id } => {
                 GameEventWire::PermanentPhasedOut { card_id: *card_id }
+            }
+            GameEvent::PermanentPhasedIn { card_id } => {
+                GameEventWire::PermanentPhasedIn { card_id: *card_id }
             }
             GameEvent::Explored { card_id, controller } => {
                 GameEventWire::Explored { card_id: *card_id, controller: *controller }
@@ -1736,6 +1740,7 @@ impl GameEventWire {
             E::PermanentTapped { card_id } => format!("{} tapped", name(*card_id)),
             E::PermanentUntapped { card_id } => format!("{} untapped", name(*card_id)),
             E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
+            E::PermanentPhasedIn { card_id } => format!("{} phased in", name(*card_id)),
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),
             E::Transformed { card_id } => format!("{} transformed", name(*card_id)),
