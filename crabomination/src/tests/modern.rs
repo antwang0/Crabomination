@@ -35903,3 +35903,46 @@ fn rolling_thunder_deals_x_damage() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1 - 4, "X=4 damage to a single target player");
 }
+
+/// The bot's optional-trigger screen now inspects a static-ability reflexive
+/// (`ExileDyingOpponentCreatures.when_you_do`): it takes a pure-upside body
+/// (Valentin's make-a-Pest) but declines one with a self-cost.
+#[test]
+fn bot_declines_self_costly_static_reflexive() {
+    use crate::card::{CardDefinition, CardType, Supertype};
+    use crate::effect::{Effect, PlayerRef, Selector, StaticAbility, StaticEffect, Value};
+    use crate::server::bot::optional_trigger_beneficial;
+
+    let mut g = two_player_game();
+    // Real Valentin: reflexive makes a Pest (upside) → bot takes it.
+    let valentin = g.add_card_to_battlefield(0, catalog::valentin_dean_of_the_vein());
+    assert!(
+        optional_trigger_beneficial(&g, valentin, "Pay {2} to create a 1/1 BG Pest."),
+        "bot takes the upside Pest reflexive"
+    );
+
+    // Synthetic variant whose static reflexive loses you life → bot declines.
+    let costly = CardDefinition {
+        name: "Costly Reaper",
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "test",
+            effect: StaticEffect::ExileDyingOpponentCreatures {
+                when_you_do: Some(Box::new(Effect::MayPay {
+                    description: "Pay {2}: lose 5 life.".into(),
+                    mana_cost: crate::mana::cost(&[crate::mana::generic(2)]),
+                    body: Box::new(Effect::LoseLife { who: Selector::You, amount: Value::Const(5) }),
+                })),
+            },
+        }],
+        ..Default::default()
+    };
+    let reaper = g.add_card_to_battlefield(0, costly);
+    assert!(
+        !optional_trigger_beneficial(&g, reaper, "Pay {2}: lose 5 life."),
+        "bot declines a self-costly static reflexive"
+    );
+}

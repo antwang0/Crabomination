@@ -1173,6 +1173,14 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Enlist => "Enlist",
         Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => "Discount next spell",
         Effect::SupportCounters { .. } => "Support",
+        Effect::Detain { .. } => "Detain",
+        Effect::Fateseal { .. } => "Fateseal",
+        Effect::Discover { .. } => "Discover",
+        Effect::Cascade { .. } => "Cascade",
+        Effect::CollectEvidence { .. } => "Collect evidence",
+        Effect::DigToHandLoseLife { .. } => "Dig, lose life per card kept",
+        Effect::Suspect { .. } => "Suspect",
+        Effect::Ascend { .. } => "Ascend",
         _ => "Activate",
     }
 }
@@ -2044,6 +2052,17 @@ mod tests {
         assert_eq!(costs, vec![1, -1, -2]);
         // The -2 ability creates a token; pre-rendered label should reflect that.
         assert_eq!(perm.loyalty_abilities[2].effect_label, "Create token");
+    }
+
+    /// Recently-added keyword-action effects surface descriptive ability
+    /// labels (not the generic "Activate" catch-all) so the client tooltip is
+    /// informative.
+    #[test]
+    fn keyword_action_effects_have_descriptive_labels() {
+        use crate::effect::{Effect, PlayerRef, Value};
+        assert_eq!(ability_effect_label(&Effect::Fateseal {
+            who: PlayerRef::EachOpponent, amount: Value::Const(2) }), "Fateseal");
+        assert_eq!(ability_effect_label(&Effect::Discover { n: Value::Const(3) }), "Discover");
     }
 
     /// A variable `-X` loyalty ability surfaces with `x_cost: true` so the

@@ -487,7 +487,7 @@ fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
 /// discard on the bot). `AutoDecider` declines *every* optional trigger,
 /// which means a bot would never take a beneficial "you may" (Provoke's
 /// "you may", Boast token riders, etc.); this makes those fire.
-fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &str) -> bool {
+pub(crate) fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &str) -> bool {
     // Locate the source card's definition in any zone the bot can see.
     let def = state
         .battlefield
@@ -503,11 +503,26 @@ fn optional_trigger_beneficial(state: &GameState, source: CardId, description: &
                 .map(|c| &c.definition)
         });
     let Some(def) = def else { return true };
-    // Find the `MayDo` body whose description matches the prompt.
+    // Find the `MayDo` body whose description matches the prompt. Scan the
+    // card's spell effect, its triggered abilities, and any static-ability
+    // reflexive (`when_you_do`) — the prompt can originate from any of these
+    // (e.g. Valentin's exile-replacement reflexive lives on a static).
     let mut body = find_maydo_body(&def.effect, description);
     if body.is_none() {
         for t in &def.triggered_abilities {
             if let Some(b) = find_maydo_body(&t.effect, description) {
+                body = Some(b);
+                break;
+            }
+        }
+    }
+    if body.is_none() {
+        for sa in &def.static_abilities {
+            if let crate::effect::StaticEffect::ExileDyingOpponentCreatures {
+                when_you_do: Some(eff),
+            } = &sa.effect
+                && let Some(b) = find_maydo_body(eff, description)
+            {
                 body = Some(b);
                 break;
             }
