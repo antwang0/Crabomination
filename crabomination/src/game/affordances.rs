@@ -367,6 +367,44 @@ impl GameState {
         self.buyback_hand_cards_on(&self.affordance_probe_template(), caster)
     }
 
+    /// CR 702.176 — hand cards with Bargain the caster could cast right now
+    /// (probed at `sacrifice: None`, since the Bargain cost is optional).
+    /// Mirrors `buyback_hand_cards`.
+    fn bargainable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        use crate::card::Keyword;
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.keywords.contains(&Keyword::Bargain))
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, needs_target, effect) in &hand {
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellBargain {
+                card_id: *id,
+                sacrifice: None,
+                target,
+                additional_targets,
+                mode: None,
+                x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// [`buyback_hand_cards`] against a prebuilt probe template; the caller
     /// owns the priority short-circuit.
     ///
@@ -700,6 +738,7 @@ impl GameState {
             plottable: self.plottable_hand_cards_on(&template, seat),
             adventurable: self.adventurable_hand_cards_on(&template, seat),
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),
+            bargainable: self.bargainable_hand_cards_on(&template, seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
         }
     }

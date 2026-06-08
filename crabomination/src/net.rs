@@ -279,6 +279,11 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub bestowable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with Bargain they could cast right now
+    /// (CR 702.176), so the client can offer a "sacrifice for Bargain?"
+    /// toggle. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub bargainable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast via their Dash
     /// alternative cost right now (CR 702.110). Lets the client offer a
     /// "dash?" affordance distinct from the plain castable highlight.

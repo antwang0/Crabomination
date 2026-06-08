@@ -211,6 +211,7 @@ mod tests {
             kickable_hand: vec![],
             buyback_hand: vec![],
             bestowable_hand: vec![],
+            bargainable_hand: vec![],
             dashable_hand: vec![],
             blitzable_hand: vec![],
             suspendable_hand: vec![],

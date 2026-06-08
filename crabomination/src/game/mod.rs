@@ -193,6 +193,9 @@ pub struct HandAffordances {
     pub adventurable: Vec<CardId>,
     /// CR 709 — split cards whose **right** half is castable right now.
     pub splittable_right: Vec<CardId>,
+    /// CR 702.176 — hand cards with Bargain that are castable right now, so the
+    /// client can offer a "sacrifice an artifact/enchantment/token?" toggle.
+    pub bargainable: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
 }
 
