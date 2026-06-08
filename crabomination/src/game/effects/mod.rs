@@ -512,10 +512,11 @@ impl GameState {
         effect: &Effect,
         ctx: &EffectContext,
     ) -> Result<Vec<GameEvent>, GameError> {
-        // Reset sacrificed-power / sacrificed-toughness scratch for this
-        // independent resolution.
+        // Reset sacrificed-power / sacrificed-toughness / sacrificed-mana-value
+        // scratch for this independent resolution.
         self.sacrificed_power = None;
         self.sacrificed_toughness = None;
+        self.sacrificed_mana_value = None;
         // Reset last-created-token scratch — `Selector::LastCreatedToken`
         // (singular) and `Selector::LastCreatedTokens` (plural) only refer
         // to tokens created by *this* resolution.
@@ -2128,6 +2129,16 @@ impl GameState {
                             .unwrap_or_default();
                         if legal.is_empty() {
                             return Ok(()); // no imprint / colorless → no mana
+                        }
+                        if self.players[p].wants_ui {
+                            // Surface the color choice to the UI (mirrors the
+                            // AnyOneColor arm); resume adds 1 of the chosen color.
+                            self.suspend_signal = Some((
+                                crate::decision::Decision::ChooseColor { source, legal },
+                                PendingEffectState::AnyOneColorPending { player: p, count: 1, restriction },
+                                Effect::Noop,
+                            ));
+                            return Ok(());
                         }
                         let answer = self.decider.decide(
                             &crate::decision::Decision::ChooseColor { source, legal: legal.clone() },

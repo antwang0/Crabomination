@@ -145,6 +145,12 @@ pub struct CardSnapshot {
     /// back-compat.
     #[serde(default)]
     pub exiled_by: Option<crate::card::ExileLink>,
+    /// CR 603.6e linked exile — the permanent this card is *imprinted on* /
+    /// linked to (Chrome Mox, Isochron Scepter, Keen-Eyed Curator). Without
+    /// this the imprint/link is lost on save/load. `#[serde(default)]` for
+    /// back-compat.
+    #[serde(default)]
+    pub exiled_with: Option<crate::card::CardId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -278,6 +284,7 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
             .collect(),
         granted_keywords_eot: c.granted_keywords_eot.clone(),
         exiled_by: c.exiled_by,
+        exiled_with: c.exiled_with,
     }
 }
 
@@ -444,6 +451,7 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.keyword_counters = cs.keyword_counters.into_iter().collect();
     c.granted_keywords_eot = cs.granted_keywords_eot;
     c.exiled_by = cs.exiled_by;
+    c.exiled_with = cs.exiled_with;
     Ok(c)
 }
 
@@ -517,6 +525,31 @@ mod tests {
             .expect("Mindful Biomancer should round-trip");
         assert_eq!(bio_back.once_per_turn_used, vec![0],
             "Once-per-turn tracker must persist through snapshot/restore");
+    }
+
+    #[test]
+    fn snapshot_round_trips_imprinted_exiled_with() {
+        // Chrome Mox imprints (exiles, tagged) a card on ETB. The exiled_with
+        // link must survive snapshot/restore or the Mox taps for nothing.
+        let mut g = two_player_game();
+        g.players[0].hand.clear();
+        let mox = g.add_card_to_hand(0, catalog::chrome_mox());
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: mox, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast Chrome Mox");
+        while !g.stack.is_empty() {
+            g.perform_action(GameAction::PassPriority).unwrap();
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        let mox_id = g.battlefield.iter().find(|c| c.definition.name == "Chrome Mox").unwrap().id;
+        assert!(g.exile.iter().any(|c| c.id == bolt && c.exiled_with == Some(mox_id)),
+            "imprinted before snapshot");
+        let restored = GameSnapshot::capture(&g).restore().expect("restore");
+        assert!(restored.exile.iter().any(|c| c.id == bolt && c.exiled_with == Some(mox_id)),
+            "exiled_with (imprint link) must survive snapshot/restore");
     }
 
     #[test]
@@ -779,6 +812,7 @@ mod tests {
             keyword_counters: vec![],
             granted_keywords_eot: vec![],
             exiled_by: None,
+            exiled_with: None,
         };
         match restore_card(cs) {
             Err(LoadError::UnknownCard(name)) => {

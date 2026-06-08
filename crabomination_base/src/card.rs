@@ -2148,6 +2148,15 @@ struct CardInstanceWire {
     /// as `None`.
     #[serde(default)]
     split_cast: Option<u8>,
+    /// CR 603.6e linked-exile state. `exiled_by` powers "return when source
+    /// leaves" (Banisher Priest); `exiled_with` powers imprint / linked-exile
+    /// reads (Chrome Mox, Isochron Scepter, Keen-Eyed Curator). Persisted so
+    /// mid-game name→factory snapshots keep the links. `#[serde(default)]` for
+    /// back-compat.
+    #[serde(default)]
+    exiled_by: Option<ExileLink>,
+    #[serde(default)]
+    exiled_with: Option<CardId>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -2198,6 +2207,8 @@ impl serde::Serialize for CardInstance {
             on_adventure: self.on_adventure,
             saddled: self.saddled,
             split_cast: self.split_cast,
+            exiled_by: self.exiled_by.clone(),
+            exiled_with: self.exiled_with,
         };
         wire.serialize(ser)
     }
@@ -2248,6 +2259,8 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.on_adventure = wire.on_adventure;
         c.saddled = wire.saddled;
         c.split_cast = wire.split_cast;
+        c.exiled_by = wire.exiled_by;
+        c.exiled_with = wire.exiled_with;
         Ok(c)
     }
 }

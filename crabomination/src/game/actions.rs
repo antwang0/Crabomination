@@ -5757,10 +5757,11 @@ impl GameState {
                 // `Effect::SacrificeAndRemember`.
                 let snap_pt = self
                     .battlefield_find(card_id)
-                    .map(|c| (c.power(), c.toughness(), c.clone()));
-                if let Some((p_val, t_val, snap)) = snap_pt {
+                    .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
+                if let Some((p_val, t_val, mv, snap)) = snap_pt {
                     self.sacrificed_power = Some(p_val);
                     self.sacrificed_toughness = Some(t_val);
+                    self.sacrificed_mana_value = Some(mv);
                     // Cache the dying card's snapshot so AnotherOfYours
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
@@ -5815,10 +5816,11 @@ impl GameState {
             if is_creature {
                 let snap_pt = self
                     .battlefield_find(other_cid)
-                    .map(|c| (c.power(), c.toughness(), c.clone()));
-                if let Some((p_val, t_val, snap)) = snap_pt {
+                    .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
+                if let Some((p_val, t_val, mv, snap)) = snap_pt {
                     self.sacrificed_power = Some(p_val);
                     self.sacrificed_toughness = Some(t_val);
+                    self.sacrificed_mana_value = Some(mv);
                     self.died_card_snapshots.insert(other_cid, snap);
                 }
                 events.push(GameEvent::CreatureSacrificed { card_id: other_cid, who: sac_who });
