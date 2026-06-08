@@ -3387,21 +3387,23 @@ fn humiliate_strips_opp_nonland_and_gains_two_life() {
 // ── Elite Spellbinder (modern_decks push) ───────────────────────────────
 
 #[test]
-fn elite_spellbinder_etb_strips_opp_nonland() {
+fn elite_spellbinder_exiles_opp_nonland_with_owner_may_play_tax() {
     let mut g = two_player_game();
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt()); // {R}
     let id = g.add_card_to_hand(0, catalog::elite_spellbinder());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Elite Spellbinder castable");
+    }).expect("Elite Spellbinder castable for {1}{W}{W}");
     drain_stack(&mut g);
 
-    let bolt_in_hand = g.players[1].hand.iter().any(|c| c.id == bolt);
-    assert!(!bolt_in_hand, "Bolt removed from opp's hand");
+    assert!(!g.players[1].hand.iter().any(|c| c.id == bolt), "Bolt left opp's hand");
+    let exiled = g.exile.iter().find(|c| c.id == bolt).expect("Bolt exiled");
+    assert_eq!(exiled.may_play_until.unwrap().player, 1, "owner may play it");
+    // {R} + {2} tax = mv 3 while exiled.
+    assert_eq!(exiled.granted_alt_cast_cost_eot.as_ref().unwrap().cmc(), 3);
 }
 
 // ── Waker of Waves (modern_decks push) ──────────────────────────────────

@@ -767,6 +767,10 @@ pub enum PendingEffectState {
     /// The owner picks an instant/sorcery from their hand; the apply step
     /// exiles it with `count` hone counters.
     HoneFromHandPending { target_player: usize, count: u32 },
+    /// Suspended on an `ExileFromHandTaxed` decision (Elite Spellbinder). The
+    /// caster picks card(s) from `target_player`'s hand; the apply step exiles
+    /// each and grants the owner a may-play permission taxed `extra_cost` more.
+    ExileFromHandTaxedPending { target_player: usize, extra_cost: u32 },
     /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.

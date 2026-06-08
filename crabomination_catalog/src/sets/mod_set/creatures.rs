@@ -5128,21 +5128,14 @@ pub fn descendant_of_storms() -> CardDefinition {
     }
 }
 
-/// Elite Spellbinder — {1}{W}{W}, 3/1 Human Cleric with Flying and Flash.
-///
-/// Approximation: body-only. The full Oracle text ("When this creature
-/// enters, look at target opponent's hand, exile a nonland card from it;
-/// that card costs {2} more to cast") is omitted — the engine has no
-/// look-at-opponent-hand primitive and no per-card cost-tax static tied
-/// to an exiled card. The 3/1 Flying Flash body is the load-bearing part
-/// for the cube (efficient tempo creature).
-/// Elite Spellbinder — {1}{W}{W}, 3/1 Human Cleric. Flash, Flying.
-/// ETB: look at target opponent's hand and exile a nonland card.
-/// Approximated as ETB discard-opponent-nonland.
+/// Elite Spellbinder — {1}{W}{W} 3/1 Human Cleric. Flash, Flying. ETB: look at
+/// target opponent's hand, exile a nonland card; its owner may play it and it
+/// costs {2} more while exiled. (The "for as long as exiled" window is modeled
+/// as a may-play grant through the owner's next turn.)
 pub fn elite_spellbinder() -> CardDefinition {
     CardDefinition {
         name: "Elite Spellbinder",
-        cost: cost(&[generic(1), w(), b()]),
+        cost: cost(&[generic(1), w(), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -5153,10 +5146,11 @@ pub fn elite_spellbinder() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Flash],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
+            effect: Effect::ExileFromHandTaxed {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
+                extra_cost: 2,
             },
         }],
         ..Default::default()

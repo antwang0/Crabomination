@@ -2346,6 +2346,17 @@ pub enum Effect {
         count: Value,
         filter: SelectionRequirement,
     },
+    /// "Look at `from`'s hand. Exile a card matching `filter`; its owner may
+    /// play it, and it costs `extra_cost` more for as long as it remains
+    /// exiled." Elite Spellbinder. The owner keeps a may-play grant (with an
+    /// added generic tax) through their next turn — an approximation of the
+    /// printed "for as long as it remains exiled".
+    ExileFromHandTaxed {
+        from: Selector,
+        count: Value,
+        filter: SelectionRequirement,
+        extra_cost: u32,
+    },
     /// CR 603.6e — "Target player reveals their hand; you choose [count]
     /// card(s) matching [filter]. Exile [them] until [this] leaves the
     /// battlefield." The caster picks from `from`'s hand; the chosen

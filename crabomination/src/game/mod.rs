@@ -5465,6 +5465,36 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::ExileFromHandTaxedPending { target_player, extra_cost } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let turn = self.turn_number;
+                let mut events = Vec::new();
+                for cid in card_ids {
+                    if let Some(pos) =
+                        self.players[target_player].hand.iter().position(|c| c.id == *cid)
+                    {
+                        let mut card = self.players[target_player].hand.remove(pos);
+                        let owner = card.owner;
+                        // Owner may play it, taxed `extra_cost` more, while exiled.
+                        let mut taxed = card.definition.cost.clone();
+                        if extra_cost > 0 {
+                            taxed.symbols.push(crate::mana::ManaSymbol::Generic(extra_cost));
+                        }
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: owner,
+                            granted_turn: turn,
+                            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                            exile_after: false,
+                        });
+                        card.granted_alt_cast_cost_eot = Some(taxed);
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: *cid });
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::ChooseCreatureTypePending { target_id } => {
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

@@ -117,6 +117,7 @@ impl Effect {
             Effect::ExileTopWithCounters { .. } => false,
             Effect::HoneFromHand { .. } => false,
             Effect::CatchUpBasicLands => false,
+            Effect::ExileFromHandTaxed { .. } => false,
             Effect::SacrificeSource => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
