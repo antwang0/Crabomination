@@ -570,6 +570,11 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::MustBlock | K::AllMustBlock | K::MustBeBlocked => "Is forced into combat by a block/attack requirement.",
         K::CantBeCopied => "Can't be copied.",
         K::DealsNoCombatDamage => "Assigns no combat damage.",
+        K::Offspring(_) => {
+            "You may pay an additional cost as you cast this; if you do, it enters making a 1/1 token copy of itself."
+        }
+        K::Daybound => "If it's neither day nor night, it becomes day; transforms when it becomes night.",
+        K::Nightbound => "Transforms back when it becomes day.",
         _ => return None,
     })
 }

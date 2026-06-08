@@ -234,6 +234,8 @@ pub enum LossReason {
     Poison,
     /// Tried to draw from an empty library (CR 104.3a / 704.5c).
     Decked,
+    /// Took 21+ combat damage from a single commander (CR 903.10a).
+    CommanderDamage,
     /// Eliminated for some other reason (concession, "you lose the
     /// game" effect, etc.) not distinguishable from final state alone.
     Other,
@@ -244,7 +246,7 @@ pub enum LossReason {
 /// reported as `LifeDepleted` even if their library also happens to be
 /// empty, matching the order in which state-based actions would have
 /// fired.
-fn classify_loss(p: &crate::player::Player) -> Option<LossReason> {
+fn classify_loss(p: &crate::player::Player, took_commander_damage: bool) -> Option<LossReason> {
     if !p.eliminated {
         return None;
     }
@@ -252,6 +254,11 @@ fn classify_loss(p: &crate::player::Player) -> Option<LossReason> {
         Some(LossReason::LifeDepleted)
     } else if p.poison_counters >= 10 {
         Some(LossReason::Poison)
+    } else if took_commander_damage {
+        // CR 903.10a — 21+ combat damage from one commander eliminates a
+        // player even at positive life; classified ahead of `Decked` so a
+        // commander kill on an empty-library seat still reads correctly.
+        Some(LossReason::CommanderDamage)
     } else if p.library.is_empty() {
         Some(LossReason::Decked)
     } else {
@@ -267,7 +274,19 @@ fn capture_outcome(state: &GameState) -> MatchOutcome {
         final_turn: state.turn_number,
         winner: state.game_over,
         final_life_totals: state.players.iter().map(|p| p.life).collect(),
-        loss_reasons: state.players.iter().map(classify_loss).collect(),
+        loss_reasons: state
+            .players
+            .iter()
+            .enumerate()
+            .map(|(seat, p)| {
+                // CR 903.10a — did any single commander deal this seat 21+?
+                let took_cmd = state
+                    .commander_damage
+                    .iter()
+                    .any(|(&(victim, _), &amt)| victim == seat && amt >= 21);
+                classify_loss(p, took_cmd)
+            })
+            .collect(),
         final_library_sizes: state.players.iter().map(|p| p.library.len()).collect(),
         final_graveyard_sizes: state.players.iter().map(|p| p.graveyard.len()).collect(),
         final_board_sizes: (0..state.players.len())
@@ -1023,22 +1042,22 @@ mod tests {
         // Not eliminated → None regardless of life.
         let mut p = Player::new(0, "P0");
         p.life = 5;
-        assert_eq!(classify_loss(&p), None);
+        assert_eq!(classify_loss(&p, false), None);
 
         // Life depleted takes priority.
         p.eliminated = true;
         p.life = 0;
-        assert_eq!(classify_loss(&p), Some(LossReason::LifeDepleted));
+        assert_eq!(classify_loss(&p, false), Some(LossReason::LifeDepleted));
 
         // Poison while still at positive life.
         p.life = 7;
         p.poison_counters = 10;
-        assert_eq!(classify_loss(&p), Some(LossReason::Poison));
+        assert_eq!(classify_loss(&p, false), Some(LossReason::Poison));
 
         // Deck-out: alive, un-poisoned, empty library.
         p.poison_counters = 0;
         assert!(p.library.is_empty());
-        assert_eq!(classify_loss(&p), Some(LossReason::Decked));
+        assert_eq!(classify_loss(&p, false), Some(LossReason::Decked));
 
         // Otherwise: a non-empty library with no other lethal condition.
         p.library.push(crate::card::CardInstance::new(
@@ -1046,7 +1065,27 @@ mod tests {
             catalog::grizzly_bears(),
             0,
         ));
-        assert_eq!(classify_loss(&p), Some(LossReason::Other));
+        assert_eq!(classify_loss(&p, false), Some(LossReason::Other));
+
+        // 21+ commander damage at positive life → CommanderDamage, even with
+        // an empty library (classified ahead of Decked).
+        let mut q = Player::new(1, "P1");
+        q.eliminated = true;
+        q.life = 14;
+        assert_eq!(classify_loss(&q, true), Some(LossReason::CommanderDamage));
+    }
+
+    /// `capture_outcome` reads the commander-damage map to tag a seat killed
+    /// by 21+ commander damage (CR 903.10a) rather than the generic `Other`.
+    #[test]
+    fn capture_outcome_tags_commander_damage_elimination() {
+        let mut state = two_player_game();
+        let cmd = CardId(4242);
+        state.players[1].eliminated = true;
+        state.players[1].life = 9; // positive — not a life-depletion loss
+        state.commander_damage.insert((1, cmd), 21);
+        let outcome = capture_outcome(&state);
+        assert_eq!(outcome.loss_reasons[1], Some(LossReason::CommanderDamage));
     }
 
     #[test]

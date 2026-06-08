@@ -262,6 +262,11 @@ struct MatchStats {
     /// this bucket; reading it next to `poison_wins` splits the umbrella
     /// non-damage win count into its two main alternate paths.
     deck_wins: u64,
+    /// Subset of `deckout_wins` where at least one losing seat was killed by
+    /// 21+ combat damage from a single commander (CR 903.10a). Relevant to
+    /// the Commander/Brawl formats; reads alongside `poison_wins`/`deck_wins`
+    /// as a third distinct alternate-win path.
+    commander_damage_wins: u64,
     /// Running sum of squared final turn counts (`Σ turns²`). Paired with
     /// `total_turns` (`Σ turns`) and the match count it yields the
     /// population standard deviation of game length via
@@ -510,6 +515,9 @@ impl MatchStats {
             if reasons.contains(&LossReason::Decked) {
                 self.deck_wins = self.deck_wins.saturating_add(1);
             }
+            if reasons.contains(&LossReason::CommanderDamage) {
+                self.commander_damage_wins = self.commander_damage_wins.saturating_add(1);
+            }
             return;
         }
         // Fallback: no reason data → infer from life totals (every losing
@@ -582,6 +590,11 @@ impl MatchStats {
     /// A sub-split of `deckout_pct`; 0 when no wins recorded.
     fn deck_pct(&self) -> u64 {
         if self.wins == 0 { 0 } else { self.deck_wins.saturating_mul(100) / self.wins }
+    }
+    /// Percent of wins via 21+ commander damage (CR 903.10a).
+    /// A sub-split of `deckout_pct`; 0 when no wins recorded.
+    fn commander_damage_pct(&self) -> u64 {
+        if self.wins == 0 { 0 } else { self.commander_damage_wins.saturating_mul(100) / self.wins }
     }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator
@@ -832,6 +845,13 @@ fn format_match_stats(s: &MatchStats) -> String {
             }
             if s.deck_wins > 0 {
                 out.push_str(&format!(" deck={} ({}%)", s.deck_wins, s.deck_pct()));
+            }
+            if s.commander_damage_wins > 0 {
+                out.push_str(&format!(
+                    " cmdr_dmg={} ({}%)",
+                    s.commander_damage_wins,
+                    s.commander_damage_pct()
+                ));
             }
         }
         // Stuck/disconnected matches: prefer the explicit `inconclusive`
