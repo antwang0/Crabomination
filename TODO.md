@@ -82,8 +82,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   Client-only changes can't be compile-verified in this environment; keep them
   to small, pattern-matching-consistent edits and rely on review.
 - ⏳ **Discovered this run (allied-color card batch):**
-  - **Evoke keyword** — `AlternativeCost.evoke_sacrifice` exists but no
-    `shortcut::evoke`; blocks Inner-Flame Acolyte and the Lorwyn evoke cycle.
+  - ✅ **Evoke keyword** — fully wired (`AlternativeCost.evoke_sacrifice` +
+    ETB-then-sacrifice on the stack; Solitude/Fury/Mulldrifter tested). Now has
+    `shortcut::evoke(mana_cost)` for terse card defs.
   - **Multikicker + kick-count `Value`** — Wolfbriar Elemental ("a 2/2 Wolf for
     each time it was kicked") needs a multikicker count surfaced as a `Value`.
   - **"Draw your second card each turn" trigger** — Faerie Vandal, Mad Ratter,

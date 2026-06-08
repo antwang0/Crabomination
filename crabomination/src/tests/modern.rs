@@ -19834,6 +19834,24 @@ fn mulldrifter_etb_draws_two() {
 }
 
 #[test]
+fn mulldrifter_evoke_draws_two_then_sacrifices_self() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::mulldrifter());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mulldrifter evoke for {2}{U}");
+    drain_stack(&mut g);
+    // ETB draw two fires, then evoke sacrifices it to the graveyard.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "cast(-1) + draw(+2)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "evoked Mulldrifter sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == id));
+}
+
+#[test]
 fn thragtusk_etb_gains_five_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::thragtusk());

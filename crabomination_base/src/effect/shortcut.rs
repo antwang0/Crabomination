@@ -111,6 +111,12 @@ pub fn blitz(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, blitz: true, ..Default::default() }
 }
 
+/// Evoke (CR 702.74) alternative cost: cast for `mana_cost`; the creature is
+/// sacrificed when it enters, after its ETB triggers resolve.
+pub fn evoke(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost { mana_cost, evoke_sacrifice: true, ..Default::default() }
+}
+
 /// Surge (CR 702.108) alternative cost: cast for `mana_cost` if you or a
 /// teammate cast another spell this turn. `with_rider` stamps the spell
 /// "kicked" so "if its surge cost was paid" ETB riders fire.

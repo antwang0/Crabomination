@@ -14194,7 +14194,6 @@ pub fn ravens_crime() -> CardDefinition {
 /// Mulldrifter — {4}{U} Creature 2/2 Elemental. Flying. When this enters,
 /// draw two cards. Evoke {2}{U}.
 pub fn mulldrifter() -> CardDefinition {
-    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Mulldrifter",
         cost: cost(&[generic(4), u()]),
@@ -14210,15 +14209,7 @@ pub fn mulldrifter() -> CardDefinition {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
         }],
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(2), u()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: true,
-            not_your_turn_only: false,
-            target_filter: None,
-            ..Default::default()
-        }),
+        alternative_cost: Some(crate::effect::shortcut::evoke(cost(&[generic(2), u()]))),
         ..Default::default()
     }
 }
