@@ -23260,6 +23260,72 @@ fn everflowing_well_mills_draws_then_descends_to_a_land() {
 }
 
 #[test]
+fn kessig_prowler_transforms_into_sinuous_predator() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let kp = g.add_card_to_battlefield(0, catalog::kessig_prowler());
+    g.clear_sickness(kp);
+    g.players[0].mana_pool.add(Color::Green, 5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kp, ability_index: 0, target: None, x_value: None,
+    }).expect("{4}{G}: Transform");
+    drain_stack(&mut g);
+    let pred = g.battlefield_find(kp).unwrap();
+    assert_eq!(pred.definition.name, "Sinuous Predator");
+    assert_eq!((pred.power(), pred.toughness()), (4, 4));
+    assert!(pred.definition.keywords.contains(&crate::card::Keyword::CantBeBlockedByMoreThanOne));
+}
+
+#[test]
+fn search_for_azcanta_flips_when_graveyard_is_full() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::Upkeep;
+    let sfa = g.add_card_to_battlefield(0, catalog::search_for_azcanta());
+    g.add_card_to_library(0, catalog::island()); // for surveil
+    for _ in 0..7 { g.add_card_to_graveyard(0, catalog::island()); }
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let land = g.battlefield_find(sfa).unwrap();
+    assert_eq!(land.definition.name, "Azcanta, the Sunken Ruin");
+    assert!(land.definition.card_types.contains(&crate::card::CardType::Land));
+}
+
+#[test]
+fn growing_rites_of_itlimoc_transforms_with_four_creatures() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::End;
+    let gri = g.add_card_to_battlefield(0, catalog::growing_rites_of_itlimoc());
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::grizzly_bears()); }
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gri).unwrap().definition.name, "Itlimoc, Cradle of the Sun");
+}
+
+#[test]
+fn transformed_permanent_view_exposes_dfc_hints() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let cc = g.add_card_to_battlefield(0, catalog::concealing_curtains());
+    // Front face: a DFC that hasn't flipped yet.
+    let v = crate::server::view::project(&g, 0);
+    let p = v.battlefield.iter().find(|p| p.id == cc).unwrap();
+    assert!(p.has_other_face && !p.transformed, "front face: DFC but not transformed");
+    // Transform it and re-project.
+    let mut ev = vec![];
+    g.transform_permanent(cc, &mut ev);
+    let v = crate::server::view::project(&g, 0);
+    let p = v.battlefield.iter().find(|p| p.id == cc).unwrap();
+    assert_eq!(p.name, "Revealing Eye");
+    assert!(p.has_other_face && p.transformed, "back face: transformed DFC");
+}
+
+#[test]
 fn village_watch_flips_with_day_and_night() {
     use crate::game::types::DayNight;
     let mut g = two_player_game();

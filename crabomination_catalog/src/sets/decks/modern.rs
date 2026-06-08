@@ -27319,3 +27319,167 @@ pub fn village_watch() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kessig Prowler // Sinuous Predator — {G} Creature — Werewolf Horror
+/// (transform DFC). Front: 2/1, `{4}{G}`: Transform. Back: Sinuous Predator,
+/// 4/4 Eldrazi Werewolf that can't be blocked by more than one creature.
+pub fn kessig_prowler() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let sinuous_predator = CardDefinition {
+        name: "Sinuous Predator",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Werewolf],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::CantBeBlockedByMoreThanOne],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kessig Prowler",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Werewolf, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4), g()]),
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(sinuous_predator)),
+        ..Default::default()
+    }
+}
+
+/// Search for Azcanta // Azcanta, the Sunken Ruin — {1}{U} Legendary
+/// Enchantment (transform DFC). Front: at your upkeep, surveil 1, then if you
+/// have seven or more cards in your graveyard, transform it. Back: a Legendary
+/// Land tapping for {U} plus `{2}{U},{T}`: look at the top four cards, take a
+/// noncreature/nonland card, bottom the rest.
+pub fn search_for_azcanta() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Supertype};
+    use crate::effect::Predicate;
+    let azcanta = CardDefinition {
+        name: "Azcanta, the Sunken Ruin",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add(Color::Blue),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), u()]),
+                tap_cost: true,
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(
+                        SelectionRequirement::Creature
+                            .negate()
+                            .and(SelectionRequirement::Nonland),
+                    ),
+                    take: None,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Search for Azcanta",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+                Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::GraveyardSizeOf(PlayerRef::You),
+                        Value::Const(7),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        back_face: Some(Box::new(azcanta)),
+        ..Default::default()
+    }
+}
+
+/// Growing Rites of Itlimoc // Itlimoc, Cradle of the Sun — {2}{G} Legendary
+/// Enchantment (transform DFC). Front ETB: look at the top four, take a
+/// creature, bottom the rest. At your end step, if you control four or more
+/// creatures, transform it. Back: a Gaea's-Cradle land — `{T}`: Add {G};
+/// `{T}`: Add {G} for each creature you control.
+pub fn growing_rites_of_itlimoc() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Supertype};
+    use crate::effect::Predicate;
+    let itlimoc = CardDefinition {
+        name: "Itlimoc, Cradle of the Sun",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add(Color::Green),
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: crate::effect::ManaPayload::OfColor(
+                        Color::Green,
+                        Value::CreatureCountControlledBy(PlayerRef::You),
+                    ),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Growing Rites of Itlimoc",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::LookPickToHand {
+                    who: PlayerRef::You,
+                    count: Value::Const(4),
+                    rest_to_graveyard: false,
+                    pick_filter: Some(SelectionRequirement::Creature),
+                    take: None,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::SelectorCountAtLeast {
+                        sel: Selector::EachPermanent(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        n: Value::Const(4),
+                    },
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        back_face: Some(Box::new(itlimoc)),
+        ..Default::default()
+    }
+}

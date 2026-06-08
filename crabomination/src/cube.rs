@@ -853,6 +853,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
+        v.push(kessig_prowler);
+        v.push(growing_rites_of_itlimoc);
         v.push(thornglint_bridge);
         v.push(lush_portico);
         // ── Cube expansion: GW cards ──
@@ -1104,6 +1106,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         delver_of_secrets,
         the_everflowing_well,
         thing_in_the_ice,
+        search_for_azcanta,
         repeal,
         anticipate,
         divination,

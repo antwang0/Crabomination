@@ -587,6 +587,10 @@ fn project_permanent(
             .iter()
             .map(|(n, _)| *n)
             .max(),
+        // CR 712 — DFC / transform UI hints. A transformed permanent's active
+        // definition is the back face, so it always carries a `front_face`.
+        has_other_face: card.definition.back_face.is_some() || card.front_face.is_some(),
+        transformed: card.transformed,
     }
 }
 

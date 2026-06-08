@@ -972,6 +972,16 @@ pub struct PermanentView {
     /// `None` for non-Sagas. Populated by `project_permanent`.
     #[serde(default)]
     pub saga_final_chapter: Option<u32>,
+    /// True when this permanent is a double-faced card (it has an other
+    /// face). Lets the client badge it with a flip icon. Populated by
+    /// `project_permanent`.
+    #[serde(default)]
+    pub has_other_face: bool,
+    /// CR 712 — true when this DFC permanent is currently showing its back
+    /// face (transformed). With `has_other_face`, the client can render a
+    /// "⭯ transformed" indicator. Populated by `project_permanent`.
+    #[serde(default)]
+    pub transformed: bool,
 }
 
 impl PermanentView {

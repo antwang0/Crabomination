@@ -647,6 +647,8 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Exert => "Exert".into(),
         K::Inspired => "Inspired".into(),
         K::Changeling => "Changeling".into(),
+        K::Daybound => "Daybound".into(),
+        K::Nightbound => "Nightbound".into(),
         K::Phasing => "Phasing".into(),
         K::Banding => "Banding".into(),
         K::Rebound => "Rebound".into(),
