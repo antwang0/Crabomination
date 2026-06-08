@@ -10526,6 +10526,123 @@ pub fn temur_battle_rage() -> CardDefinition {
     }
 }
 
+/// Troublemaker Ouphe — {1}{G} 2/2 Ouphe with Bargain. When it enters, if it
+/// was bargained, exile target artifact or enchantment an opponent controls.
+pub fn troublemaker_ouphe() -> CardDefinition {
+    CardDefinition {
+        name: "Troublemaker Ouphe",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ouphe],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Bargain],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::SpellWasBargained),
+            effect: Effect::If {
+                cond: Predicate::SpellWasBargained,
+                then: Box::new(Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Enchantment)
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tenacious Tomeseeker — {2}{U} 3/2 Human Knight with Bargain. When it enters,
+/// if it was bargained, return target instant or sorcery card from your
+/// graveyard to your hand.
+pub fn tenacious_tomeseeker() -> CardDefinition {
+    CardDefinition {
+        name: "Tenacious Tomeseeker",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Bargain],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                .with_filter(Predicate::SpellWasBargained),
+            effect: Effect::If {
+                cond: Predicate::SpellWasBargained,
+                then: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    }),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kellan's Lightblades — {1}{W} Instant with Bargain. Deals 3 damage to
+/// target attacking or blocking creature; if bargained, destroy it instead.
+pub fn kellans_lightblades() -> CardDefinition {
+    CardDefinition {
+        name: "Kellan's Lightblades",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Bargain],
+        effect: Effect::If {
+            cond: Predicate::SpellWasBargained,
+            then: Box::new(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(
+                        SelectionRequirement::IsAttacking.or(SelectionRequirement::IsBlocking),
+                    ),
+                ),
+            }),
+            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Stonesplitter Bolt — {X}{R} Instant with Bargain. Deals X damage to target
+/// creature or planeswalker; if bargained, it deals twice X instead.
+pub fn stonesplitter_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Stonesplitter Bolt",
+        cost: cost(&[x(), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Bargain],
+        effect: Effect::If {
+            cond: Predicate::SpellWasBargained,
+            then: Box::new(Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::XFromCost,
+                },
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost },
+            ])),
+            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::XFromCost }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Mutagenic Growth — {G/P} Instant. Target creature gets +2/+2 until end of
 /// turn. The Phyrexian pip can be paid with {G} or 2 life.
 pub fn mutagenic_growth() -> CardDefinition {

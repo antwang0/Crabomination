@@ -2887,6 +2887,100 @@ fn archons_glory_bargained_grants_flying() {
 }
 
 #[test]
+fn kellans_lightblades_bargained_destroys_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::kellans_lightblades());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: Some(Target::Permanent(attacker)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Kellan's Lightblades bargained");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "bargained destroyed the 4/4 attacker");
+}
+
+#[test]
+fn stonesplitter_bolt_bargained_deals_twice_x() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::stonesplitter_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2); // {2}{R}, X = 2
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("cast Stonesplitter Bolt bargained, X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "twice X = 4 damage killed the 4/4");
+}
+
+#[test]
+fn troublemaker_ouphe_bargained_exiles_opponent_artifact() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let opp_art = g.add_card_to_battlefield(1, catalog::the_everflowing_well());
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::troublemaker_ouphe());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Troublemaker Ouphe bargained");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_art).is_none(), "bargained ETB exiled the opponent's artifact");
+}
+
+#[test]
+fn troublemaker_ouphe_unbargained_does_not_exile() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let opp_art = g.add_card_to_battlefield(1, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::troublemaker_ouphe());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Troublemaker Ouphe normally");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_art).is_some(), "unbargained: no ETB exile");
+}
+
+#[test]
+fn tenacious_tomeseeker_bargained_returns_instant_from_graveyard() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Seed an instant in P0's graveyard.
+    let inst = g.add_card_to_hand(0, catalog::mental_misstep());
+    let card = g.players[0].hand.iter().position(|c| c.id == inst).map(|i| g.players[0].hand.remove(i)).unwrap();
+    g.players[0].graveyard.push(card);
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::tenacious_tomeseeker());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tenacious Tomeseeker bargained");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == inst), "bargained ETB returned the instant to hand");
+}
+
+#[test]
 fn mutagenic_growth_payable_with_two_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
