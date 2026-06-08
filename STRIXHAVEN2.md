@@ -31,8 +31,10 @@ Sequence, Torrent Sculptor // Flamethrower Sonata, Blex // Search for Blex.
 (`StaticEffect::ExileDyingOpponentCreatures` death-replacement + reflexive).
 
 ⏳ work remaining printed STX cards, grouped by blocker:
-- **Study/hone counters** (a new counter type + cast-from-exile-with-counter):
-  Kianne//Imbraham, Uvilda//Nassari.
+- **Hone counters** (cast-from-exile-with-counter + upkeep tick + {4}-less):
+  Uvilda//Nassari. (Study counters ✅ — `CounterType::Study`,
+  `Effect::{StudyTopCard,ExileTopWithCounters}`,
+  `Value::DistinctManaValuesInExileWithCounter`; Kianne//Imbraham shipped.)
 - **Continuous "becomes a copy" layer-1**: Echoing Equation (Augmenter's back).
 - **Cast-from-top impulse + can't-cast-permanents static**: Codie.
 - 🟡 **Awaken the Blood Avatar**: the optional "sacrifice any number, {2} less

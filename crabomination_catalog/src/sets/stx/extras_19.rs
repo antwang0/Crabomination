@@ -4,14 +4,14 @@
 //! `crate::tests::stx`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate, Selector,
-    SelectionRequirement, StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition,
-    TriggeredAbility, Value, WardCost, Zone,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate,
+    Selector, SelectionRequirement, StaticAbility, StaticEffect, Subtypes, Supertype,
+    TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
 };
 use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft, target_filtered};
 use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w, Color};
+use crate::mana::{b, cost, g, generic, r, u, w, x, Color};
 
 /// Emergent Sequence — {1}{G} Sorcery. Search your library for a basic land,
 /// put it onto the battlefield tapped, then shuffle. That land becomes a 0/0
@@ -156,6 +156,89 @@ pub fn torrent_sculptor() -> CardDefinition {
             },
         ]))],
         back_face: Some(Box::new(flamethrower_sonata())),
+        ..Default::default()
+    }
+}
+
+/// Imbraham, Dean of Theory — {2}{U}{U} 3/3 Bird Wizard with flying (back of
+/// Kianne). {X}{U}{U}, {T}: exile the top X cards of your library with a study
+/// counter on each, then you may put a study-countered card you own in exile
+/// into your hand.
+fn imbraham_dean_of_theory() -> CardDefinition {
+    CardDefinition {
+        name: "Imbraham, Dean of Theory",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x(), u(), u()]),
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::ExileTopWithCounters { count: Value::XFromCost, counter: CounterType::Study },
+                Effect::MayDo {
+                    description: "Put a study-countered card you own in exile into your hand.".into(),
+                    body: Box::new(Effect::ReturnFromExileWithCounter { counter: CounterType::Study }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kianne, Dean of Substance // Imbraham, Dean of Theory — {2}{G} 2/2 Elf
+/// Druid. {T}: exile the top card of your library — a land goes to your hand,
+/// otherwise it stays exiled with a study counter. {4}{G}: create a 0/0 GU
+/// Fractal with a +1/+1 counter for each different mana value among nonland
+/// cards you own in exile with study counters.
+pub fn kianne_dean_of_substance() -> CardDefinition {
+    let fractal = TokenDefinition {
+        name: "Fractal".into(),
+        power: 0,
+        toughness: 0,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fractal], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kianne, Dean of Substance",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::StudyTopCard { counter: CounterType::Study },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), g()]),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: fractal },
+                    Effect::AddCounter {
+                        what: Selector::LastCreatedToken,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::DistinctManaValuesInExileWithCounter { counter: CounterType::Study },
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(imbraham_dean_of_theory())),
         ..Default::default()
     }
 }

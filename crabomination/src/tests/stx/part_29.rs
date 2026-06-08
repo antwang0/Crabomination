@@ -342,3 +342,74 @@ fn radiant_scrollwielder_upkeep_exiles_instant_and_grants_replay() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bolt), "instant exiled from graveyard");
 }
+
+// ── Kianne, Dean of Substance // Imbraham, Dean of Theory ──────────────────────
+
+#[test]
+fn kianne_studies_top_card_land_to_hand_else_study_counter() {
+    let mut g = two_player_game();
+    let kianne = g.add_card_to_battlefield(0, catalog::kianne_dean_of_substance());
+    g.clear_sickness(kianne);
+    // Top is a nonland (bears) → exiled with a study counter.
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kianne, ability_index: 0, target: None, x_value: None,
+    }).expect("Kianne study");
+    drain_stack(&mut g);
+    let e = g.exile.iter().find(|c| c.id == bears).expect("nonland exiled");
+    assert_eq!(e.counter_count(CounterType::Study), 1);
+
+    // Top is a land → goes to hand (no study counter, no exile).
+    g.battlefield_find_mut(kianne).unwrap().tapped = false;
+    let isl = g.add_card_to_library(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kianne, ability_index: 0, target: None, x_value: None,
+    }).expect("Kianne study a land");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == isl), "land studied into hand");
+}
+
+#[test]
+fn kianne_fractal_counts_distinct_study_mana_values() {
+    let mut g = two_player_game();
+    let kianne = g.add_card_to_battlefield(0, catalog::kianne_dean_of_substance());
+    g.clear_sickness(kianne);
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    // Two study-countered nonland cards of distinct MV (bolt=1, bears=2) and a
+    // duplicate MV (another bolt) → 2 distinct mana values.
+    for c in [catalog::lightning_bolt(), catalog::grizzly_bears(), catalog::lightning_bolt()] {
+        let id = g.next_id();
+        let mut card = crate::card::CardInstance::new(id, c, 0);
+        card.add_counters(CounterType::Study, 1);
+        g.exile.push(card);
+    }
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kianne, ability_index: 1, target: None, x_value: None,
+    }).expect("Kianne fractal");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter().find(|c| c.definition.name == "Fractal").expect("fractal");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 2, "two distinct study MVs");
+}
+
+#[test]
+fn imbraham_exiles_top_x_with_study_counters() {
+    let mut g = two_player_game();
+    let imb = g.add_card_to_battlefield(0, *catalog::kianne_dean_of_substance().back_face.unwrap());
+    g.clear_sickness(imb);
+    let ids: Vec<_> = (0..2).map(|_| g.add_card_to_library(0, catalog::grizzly_bears())).collect();
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    // Decline the optional "return one to hand".
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(false),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: imb, ability_index: 0, target: None, x_value: Some(2),
+    }).expect("Imbraham X=2");
+    drain_stack(&mut g);
+    for id in ids {
+        let e = g.exile.iter().find(|c| c.id == id).expect("exiled");
+        assert_eq!(e.counter_count(CounterType::Study), 1);
+    }
+}

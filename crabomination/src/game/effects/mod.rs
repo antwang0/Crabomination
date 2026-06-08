@@ -4742,6 +4742,39 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::StudyTopCard { counter } => {
+                let p = ctx.controller;
+                let Some(top) = self.players[p].library.first().map(|c| c.id) else {
+                    return Ok(());
+                };
+                let is_land = self.players[p].library.first()
+                    .map(|c| c.definition.is_land())
+                    .unwrap_or(false);
+                if is_land {
+                    self.move_card_to(top, &ZoneDest::Hand(PlayerRef::You), ctx, events);
+                } else {
+                    self.move_card_to(top, &ZoneDest::Exile, ctx, events);
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == top) {
+                        c.add_counters(*counter, 1);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileTopWithCounters { count, counter } => {
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let ids: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                for id in ids {
+                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == id) {
+                        c.add_counters(*counter, 1);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Attach { what, to } => {
                 let anchor = self.resolve_selector(to, ctx)
                     .into_iter()

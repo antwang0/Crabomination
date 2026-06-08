@@ -362,6 +362,10 @@ pub enum Value {
     /// rider — gates an `Effect::If { ValueAtLeast(this, 1), ... }`.
     /// Reset to 0 between independent resolutions.
     CreatureCardsDiscardedThisEffect,
+    /// Number of *distinct* mana values among nonland cards the controller owns
+    /// in exile that carry one or more `counter` counters. Kianne's Fractal
+    /// (`CounterType::Study`).
+    DistinctManaValuesInExileWithCounter { counter: crate::card::CounterType },
     /// Mana value (CMC) of the first card the selector resolves to.
     /// Looks the card up across the battlefield, graveyards, exile, and
     /// hands. Used by Wrath of the Skies (destroy each nonland with mana
@@ -2292,6 +2296,15 @@ pub enum Effect {
     /// from exile to their hand (removing the counter). Karn's −1. When more
     /// than one qualifies the controller takes the highest-value one.
     ReturnFromExileWithCounter { counter: crate::card::CounterType },
+
+    /// Kianne, Dean of Substance — exile the top card of the controller's
+    /// library; if it's a land card, put it into their hand, otherwise leave it
+    /// exiled with one `counter` counter on it.
+    StudyTopCard { counter: crate::card::CounterType },
+
+    /// Imbraham, Dean of Theory — exile the top `count` cards of the
+    /// controller's library, each with one `counter` counter on it.
+    ExileTopWithCounters { count: Value, counter: crate::card::CounterType },
 
     /// Controller chooses `count` cards from their hand and puts them on top of
     /// their library in a chosen order (first chosen = topmost).

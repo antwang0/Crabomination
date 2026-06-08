@@ -188,6 +188,18 @@ impl GameState {
             Value::CreatureCardsDiscardedThisEffect => {
                 self.creature_cards_discarded_this_resolution as i32
             }
+            Value::DistinctManaValuesInExileWithCounter { counter } => {
+                let p = ctx.controller;
+                let mut mvs: Vec<u32> = self.exile.iter()
+                    .filter(|c| c.owner == p
+                        && !c.definition.is_land()
+                        && c.counter_count(*counter) > 0)
+                    .map(|c| c.definition.cost.cmc())
+                    .collect();
+                mvs.sort_unstable();
+                mvs.dedup();
+                mvs.len() as i32
+            }
             Value::PermanentsDestroyedThisResolution => {
                 self.permanents_destroyed_this_resolution as i32
             }

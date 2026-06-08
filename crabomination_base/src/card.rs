@@ -251,6 +251,11 @@ pub enum CounterType {
     /// one per creature you control that attacks; at 7+ counters its team
     /// anthem switches on via a `StaticEffect::PumpTeamIf` threshold).
     Quest,
+    /// Study counter — Strixhaven bookkeeping marker on cards in exile
+    /// (Kianne // Imbraham). Cards exiled with study counters are tallied by
+    /// `Value::DistinctManaValuesInExileWithCounter` (Kianne's Fractal) and
+    /// returned via `Effect::ReturnFromExileWithCounter` (Imbraham).
+    Study,
 }
 
 /// Every zone a card can occupy.

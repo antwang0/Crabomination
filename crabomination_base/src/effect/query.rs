@@ -113,6 +113,8 @@ impl Effect {
             Effect::Noop => false,
             Effect::Myriad => false,
             Effect::Enlist => false,
+            Effect::StudyTopCard { .. } => false,
+            Effect::ExileTopWithCounters { .. } => false,
             Effect::SacrificeSource => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,

@@ -9,11 +9,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 ## Follow-ups noticed (not yet done)
 
 - ⏳ **Remaining STX printed cards (each needs a new primitive):**
-  - **Study / hone counters + cast-from-exile-with-counter** — a new
-    `CounterType::{Study,Hone}` plus a "cast a card you own in exile with a
-    [counter] counter" pathway (incl. `AddCounter` on exile-zone cards + a
-    distinct-mana-value-among-exile `Value`). Unblocks Kianne//Imbraham (study)
-    and Uvilda//Nassari (hone), the last two Dean MDFCs.
+  - **Hone counters + cast-from-exile-with-counter** — `CounterType::Hone` plus
+    "cast a card you own in exile with a hone counter for {4} less" + an upkeep
+    tick-down. Unblocks Uvilda//Nassari (the study half shipped this run:
+    `CounterType::Study` + `Effect::{StudyTopCard,ExileTopWithCounters}` +
+    `Value::DistinctManaValuesInExileWithCounter`, Kianne//Imbraham).
   - **Continuous "becomes a copy of" (layer 1)** — until-EOT/permanent copy of
     a chosen permanent (Echoing Equation, Helm of the Host loop, Mirrorform).
   - **Fixed alternative cost "cast for {N} instead"** + **put-lands-from-hand-
