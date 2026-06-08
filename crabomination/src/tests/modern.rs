@@ -37064,3 +37064,36 @@ fn bot_declines_self_costly_static_reflexive() {
         "bot declines a self-costly static reflexive"
     );
 }
+
+/// Cacophony Scamp's dies-trigger deals its *last-known* (counter-boosted)
+/// power to any target via CR 603.10 LKI — not the 1 printed power its
+/// graveyard copy would report.
+#[test]
+fn cacophony_scamp_dies_deals_power_to_target() {
+    let mut g = two_player_game();
+    let scamp = g.add_card_to_battlefield(0, catalog::cacophony_scamp());
+    // Two +1/+1 counters → 3/3.
+    g.battlefield_find_mut(scamp).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.players[1].life = 20;
+    // Lethal damage → dies; the dies-trigger auto-targets the opponent.
+    g.battlefield_find_mut(scamp).unwrap().damage = 3;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "3-power scamp dies → 3 damage to opponent");
+}
+
+/// Heartfire Hero's Valiant grows it the first time each turn it's targeted by
+/// a spell/ability you control, and only once per turn (CR 603.3d).
+#[test]
+fn heartfire_hero_valiant_grows_once_per_turn() {
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::heartfire_hero());
+    // First friendly target this turn → +1/+1.
+    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: hero, caster: 0 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(hero).unwrap().power, 2, "Valiant added a counter");
+    // Second friendly target same turn → no additional counter.
+    g.dispatch_triggers_for_events(&[GameEvent::BecameTarget { target: hero, caster: 0 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(hero).unwrap().power, 2, "Valiant only fires once per turn");
+}

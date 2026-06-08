@@ -58,6 +58,17 @@ impl GameState {
             Value::PowerOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
                     let cid = e.as_permanent_id()?;
+                    // CR 603.10 — a leaves-battlefield trigger ("when this
+                    // dies, deals damage equal to its power") reads the
+                    // dying object's last-known power, counters/pumps
+                    // included, in preference to the graveyard's printed P/T.
+                    if self.resolving_lki_source == Some(cid)
+                        && self.battlefield_find(cid).is_none()
+                    {
+                        if let Some(snap) = self.leaves_bf_lki.get(&cid) {
+                            return Some(snap.power());
+                        }
+                    }
                     // CR 121 / Lorehold Excavation: read power from the
                     // battlefield first (live `power()` includes
                     // counters), then fall through to graveyard / exile /
@@ -88,6 +99,13 @@ impl GameState {
             Value::ToughnessOf(s) => self.resolve_selector(s, ctx).iter()
                 .filter_map(|e| {
                     let cid = e.as_permanent_id()?;
+                    if self.resolving_lki_source == Some(cid)
+                        && self.battlefield_find(cid).is_none()
+                    {
+                        if let Some(snap) = self.leaves_bf_lki.get(&cid) {
+                            return Some(snap.toughness());
+                        }
+                    }
                     if let Some(c) = self.battlefield_find(cid) {
                         return Some(c.toughness());
                     }

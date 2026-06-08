@@ -13,7 +13,7 @@ use crate::card::{
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{
-    each_your_creature, etb, etb_explore, explore, investigate, target_filtered,
+    each_your_creature, etb, etb_explore, explore, investigate, on_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, colorless, cost, g, generic, r, u, w, x};
@@ -28712,6 +28712,81 @@ pub fn bria_riptide_rogue() -> CardDefinition {
                 keyword: Keyword::Prowess,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Cacophony Scamp — {R} 1/1 Phyrexian Goblin Warrior. Whenever it deals
+/// combat damage to a player, you may sacrifice it; if you do, proliferate.
+/// When it dies, it deals damage equal to its power to any target (its
+/// last-known counter-boosted power, via CR 603.10 LKI).
+pub fn cacophony_scamp() -> CardDefinition {
+    CardDefinition {
+        name: "Cacophony Scamp",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Sacrifice Cacophony Scamp; if you do, proliferate.".into(),
+                    body: Box::new(Effect::Seq(vec![Effect::SacrificeSource, Effect::Proliferate])),
+                },
+            },
+            on_dies(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Heartfire Hero — {R} 1/1 Mouse Soldier. Valiant — the first time each turn
+/// it becomes the target of a spell or ability you control, put a +1/+1
+/// counter on it. When it dies, it deals damage equal to its power to any
+/// target (last-known power, CR 603.10 LKI). Valiant rides
+/// `BecameTarget + YourControl` with `once_per_turn` (CR 603.3d).
+pub fn heartfire_hero() -> CardDefinition {
+    CardDefinition {
+        name: "Heartfire Hero",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl)
+                    .once_per_turn(),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            on_dies(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            }),
+        ],
         ..Default::default()
     }
 }

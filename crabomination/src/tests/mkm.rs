@@ -416,6 +416,28 @@ fn goldvein_hydra_enters_with_x_counters() {
     assert!(cp.keywords.contains(&Keyword::Trample) && cp.keywords.contains(&Keyword::Haste));
 }
 
+/// Goldvein Hydra's dies-trigger reads its *last-known* (counter-boosted)
+/// power via CR 603.10 LKI, minting that many Treasures — not the 0 printed
+/// power its graveyard copy would otherwise report.
+#[test]
+fn goldvein_hydra_dies_mints_power_many_treasures() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::goldvein_hydra());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4); // X = 4
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("cast Goldvein Hydra for X=4");
+    drain_stack(&mut g);
+    // Lethal damage → dies via SBA, dies-trigger goes on the stack.
+    g.battlefield_find_mut(id).unwrap().damage = 4;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 4, "4-power hydra dies → four Treasures");
+}
+
 /// Slimy Dualleech buffs a small creature at the start of combat.
 #[test]
 fn slimy_dualleech_buffs_small_creature_at_combat() {

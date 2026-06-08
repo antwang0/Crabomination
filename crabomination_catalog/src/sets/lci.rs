@@ -5,9 +5,9 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement, Selector,
     Subtypes, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{etb, on_dies, target_filtered};
 use crate::effect::{Effect, PlayerRef, ZoneDest};
-use crate::game::effects::map_token;
+use crate::game::effects::{map_token, treasure_token};
 use crate::mana::{b, cost, g, generic, r, u, x};
 
 /// Geological Appraiser — {2}{R}{R} 3/2 Human Artificer. "When this enters,
@@ -93,12 +93,8 @@ pub fn defossilize() -> CardDefinition {
 }
 
 /// Goldvein Hydra — {X}{G} 0/0 Hydra with vigilance, trample, haste. Enters
-/// with X +1/+1 counters.
-///
-/// The printed "when it dies, create power-many tapped Treasures" rider is
-/// dropped: the dies trigger resolves off the stack after the death snapshot
-/// is cleared, so `Value::PowerOf(This)` can't recover the counter-boosted
-/// power (LKI for stack-resolution is unmodeled — CR 603.10, tracked in TODO).
+/// with X +1/+1 counters. When it dies, create Treasures equal to its power
+/// (its last-known counter-boosted power, via CR 603.10 leaves-battlefield LKI).
 pub fn goldvein_hydra() -> CardDefinition {
     CardDefinition {
         name: "Goldvein Hydra",
@@ -109,6 +105,11 @@ pub fn goldvein_hydra() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::PowerOf(Box::new(Selector::This)),
+            definition: treasure_token(),
+        })],
         ..Default::default()
     }
 }

@@ -583,6 +583,23 @@ pub struct GameState {
     /// don't need to preserve mid-SBA state.
     #[serde(skip)]
     pub(crate) died_card_snapshots: HashMap<CardId, CardInstance>,
+    /// CR 603.10 / 608.2h — last-known-information snapshots for
+    /// leaves-the-battlefield triggers that read the dying object's
+    /// characteristics *as they last existed on the battlefield* (e.g.
+    /// "when this dies, it deals damage equal to its power" — counters
+    /// and pumps included). Keyed by the trigger's source CardId.
+    /// Populated when such a trigger is pushed (`push_pending_trigger`)
+    /// and removed once it resolves. `Value::PowerOf`/`ToughnessOf`
+    /// consult it (priority over the graveyard's printed P/T) while
+    /// `resolving_lki_source` names the trigger currently resolving.
+    /// Transient scratch — `#[serde(skip)]`.
+    #[serde(skip)]
+    pub(crate) leaves_bf_lki: HashMap<CardId, CardInstance>,
+    /// The source CardId of the leaves-battlefield trigger currently
+    /// resolving, if it has a `leaves_bf_lki` snapshot. Scopes the LKI
+    /// power/toughness read to that one resolution. `#[serde(skip)]`.
+    #[serde(skip)]
+    pub(crate) resolving_lki_source: Option<CardId>,
     /// Set of permanent CardIds that gained one or more counters during
     /// the current turn. Bumped in `Effect::AddCounter`'s resolver
     /// whenever a permanent gains counters; reset to empty in
@@ -745,6 +762,8 @@ impl Clone for GameState {
             commander_cast_count: self.commander_cast_count.clone(),
             commander_damage: self.commander_damage.clone(),
             died_card_snapshots: self.died_card_snapshots.clone(),
+            leaves_bf_lki: self.leaves_bf_lki.clone(),
+            resolving_lki_source: self.resolving_lki_source,
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
@@ -845,6 +864,8 @@ impl GameState {
             commander_cast_count: HashMap::new(),
             commander_damage: HashMap::new(),
             died_card_snapshots: HashMap::new(),
+            leaves_bf_lki: HashMap::new(),
+            resolving_lki_source: None,
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
@@ -4645,6 +4666,14 @@ impl GameState {
             mode,
             intervening_if,
         } = pending;
+        // CR 603.10 — if this trigger's source just left the battlefield
+        // (it's in the die-snapshot cache), stash its last-known instance
+        // so a "deals damage equal to its power" body reads the
+        // counter/pump-boosted P/T rather than the graveyard's printed
+        // value. Removed when the trigger resolves (`resolve_stack_item`).
+        if let Some(snap) = self.died_card_snapshots.get(&source) {
+            self.leaves_bf_lki.insert(source, snap.clone());
+        }
         self.stack.push(StackItem::Trigger {
             source,
             controller,

@@ -891,6 +891,13 @@ impl GameState {
                     }
                 }
                 let chosen_mode = mode.unwrap_or(0);
+                // CR 603.10 — scope the leaves-battlefield LKI read to this
+                // resolution so `Value::PowerOf(This)` on a "when this dies"
+                // body sees the dying object's last on-battlefield P/T.
+                let had_lki = self.leaves_bf_lki.contains_key(&source);
+                if had_lki {
+                    self.resolving_lki_source = Some(source);
+                }
                 let mut trig_events = self.continue_trigger_resolution_with_source(
                     source,
                     controller,
@@ -903,6 +910,10 @@ impl GameState {
                     trigger_source,
                     event_amount,
                 )?;
+                if had_lki {
+                    self.resolving_lki_source = None;
+                    self.leaves_bf_lki.remove(&source);
+                }
                 events.append(&mut trig_events);
                 if self.pending_decision.is_some() {
                     return Ok(events);
@@ -1826,6 +1837,15 @@ impl GameState {
                 self.players[controller_idx].creatures_died_this_turn =
                     self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
             }
+            // CR 603.10 — stash an LKI snapshot before the creature leaves
+            // so a "deals damage / makes tokens equal to its power" dies
+            // body reads its counter-boosted P/T (Goldvein Hydra). Removed
+            // when the trigger resolves (`resolve_top_of_stack`).
+            if !die_triggers.is_empty()
+                && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
+            {
+                self.leaves_bf_lki.insert(id, c.clone());
+            }
             self.remove_from_battlefield_to_graveyard(id);
             // Push Dies triggers to the stack for resolution.
             for (source, effect, controller) in die_triggers {
@@ -2287,6 +2307,11 @@ impl GameState {
             && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
         {
             self.died_card_snapshots.insert(id, c.clone());
+            // CR 603.10 — keep a longer-lived LKI snapshot so a
+            // "deals damage / makes tokens equal to its power" body reads
+            // the counter-boosted P/T at resolution (Goldvein Hydra,
+            // Cacophony Scamp). Removed when the trigger resolves.
+            self.leaves_bf_lki.insert(id, c.clone());
         }
         self.remove_from_battlefield_to_graveyard(id);
         let mut out = Vec::new();
