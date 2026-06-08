@@ -38576,3 +38576,275 @@ fn take_out_the_trash_pings_and_loots_with_raccoon() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "3 damage kills the 2/2");
 }
+
+// ── Tribal / value batch ─────────────────────────────────────────────────────
+
+/// Geralf's Messenger enters tapped and drains the opponent for 2.
+#[test]
+fn geralfs_messenger_etb_drains_two() {
+    let mut g = two_player_game();
+    let life = g.players[1].life;
+    let m = g.add_card_to_battlefield(0, catalog::geralfs_messenger());
+    g.fire_self_etb_triggers(m, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "opponent lost 2 life");
+    assert!(g.battlefield_find(m).unwrap().tapped, "entered tapped");
+}
+
+/// Geralf's Messenger returns with a +1/+1 counter via Undying.
+#[test]
+fn geralfs_messenger_undying_returns() {
+    let mut g = two_player_game();
+    let m = g.add_card_to_battlefield(0, catalog::geralfs_messenger());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(m)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let back = g.battlefield.iter().find(|c| c.definition.name == "Geralf's Messenger");
+    assert!(back.is_some(), "returned via Undying");
+    assert_eq!(back.unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "with a +1/+1 counter");
+}
+
+/// Cauldron Familiar returns from the graveyard by sacrificing a Food.
+#[test]
+fn cauldron_familiar_returns_by_sacrificing_food() {
+    let mut g = two_player_game();
+    let cat = g.add_card_to_graveyard(0, catalog::cauldron_familiar());
+    // Put a Food token on the battlefield to pay the sacrifice cost.
+    let food_def = crabomination_base::tokens::token_to_card_definition(
+        &crabomination_base::tokens::food_token(),
+    );
+    let _food = g.add_card_to_battlefield(0, food_def);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cat, ability_index: 0, target: None, x_value: None,
+    }).expect("sac Food to return Cauldron Familiar");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == cat), "Cauldron Familiar back on battlefield");
+}
+
+/// Witch's Oven turns a sacrificed creature into a Food token.
+#[test]
+fn witchs_oven_bakes_a_food() {
+    let mut g = two_player_game();
+    let oven = g.add_card_to_battlefield(0, catalog::witchs_oven());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: oven, ability_index: 0, target: None, x_value: None,
+    }).expect("bake");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "Food token created");
+}
+
+/// Goblin Ringleader rakes Goblins off the top of the library into hand.
+#[test]
+fn goblin_ringleader_reveals_goblins_to_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let gob = g.add_card_to_library(0, catalog::goblin_ringleader()); // a Goblin on top
+    let rl = g.add_card_to_battlefield(0, catalog::goblin_ringleader());
+    g.fire_self_etb_triggers(rl, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == gob), "Goblin pulled to hand");
+}
+
+/// Recruiter of the Guard tutors a low-toughness creature.
+#[test]
+fn recruiter_of_the_guard_tutors_small_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears()); // 2/2, toughness 2
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(bear))]));
+    let r = g.add_card_to_battlefield(0, catalog::recruiter_of_the_guard());
+    g.fire_self_etb_triggers(r, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear), "tutored the creature to hand");
+}
+
+/// Squadron Hawk fetches a copy of itself.
+#[test]
+fn squadron_hawk_fetches_itself() {
+    let mut g = two_player_game();
+    let other = g.add_card_to_library(0, catalog::squadron_hawk());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(other))]));
+    let h = g.add_card_to_battlefield(0, catalog::squadron_hawk());
+    g.fire_self_etb_triggers(h, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == other), "fetched a Squadron Hawk");
+}
+
+/// Felidar Guardian blinks another permanent you control.
+#[test]
+fn felidar_guardian_blinks_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
+    let f = g.add_card_to_battlefield(0, catalog::felidar_guardian());
+    g.fire_self_etb_triggers(f, 0);
+    drain_stack(&mut g);
+    // The original bear id leaves and a fresh copy returns; assert a Grizzly Bears is present.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear blinked back");
+}
+
+/// Village Bell-Ringer untaps all your creatures on ETB.
+#[test]
+fn village_bell_ringer_untaps_team() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let b = g.add_card_to_battlefield(0, catalog::village_bell_ringer());
+    g.fire_self_etb_triggers(b, 0);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "bear untapped");
+}
+
+/// Deceiver Exarch untaps a permanent you control (mode 0 default).
+#[test]
+fn deceiver_exarch_untaps_your_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Modes(vec![0]),
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    let e = g.add_card_to_battlefield(0, catalog::deceiver_exarch());
+    g.fire_self_etb_triggers(e, 0);
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "permanent untapped");
+}
+
+/// Pashalik Mons pings when a Goblin you control dies.
+#[test]
+fn pashalik_mons_pings_on_goblin_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::pashalik_mons());
+    let gob = g.add_card_to_battlefield(0, catalog::goblin_ringleader());
+    let foe_life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    // Kill the Goblin.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(gob)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt goblin");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 1, "Pashalik pinged for 1");
+}
+
+/// Sling-Gang Lieutenant makes two Goblins and drains via sacrifice.
+#[test]
+fn sling_gang_lieutenant_etb_and_sacrifice() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::sling_gang_lieutenant());
+    g.fire_self_etb_triggers(s, 0);
+    drain_stack(&mut g);
+    let goblins = g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count();
+    assert_eq!(goblins, 2, "two Goblin tokens");
+    let foe_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: s, ability_index: 0, target: None, x_value: None,
+    }).expect("sac a goblin to drain");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 1, "opp lost 1");
+    assert_eq!(g.players[0].life, my_life + 1, "you gained 1");
+}
+
+/// Regal Force draws a card per green creature you control.
+#[test]
+fn regal_force_draws_per_green_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // green
+    g.add_card_to_battlefield(0, catalog::llanowar_elves()); // green
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    g.add_card_to_library(0, catalog::forest());
+    let hand0 = g.players[0].hand.len();
+    let rf = g.add_card_to_battlefield(0, catalog::regal_force());
+    g.fire_self_etb_triggers(rf, 0);
+    drain_stack(&mut g);
+    // Regal Force itself is green → 3 green creatures → draw 3.
+    assert_eq!(g.players[0].hand.len(), hand0 + 3, "drew per green creature");
+}
+
+/// Wirewood Hivemaster makes an Insect when another nontoken Elf enters.
+#[test]
+fn wirewood_hivemaster_spawns_insect() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wirewood_hivemaster());
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast elf");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Insect"), "Insect token made");
+}
+
+/// Ezuri's overrun pumps your Elves +3/+3.
+#[test]
+fn ezuri_overrun_pumps_elves() {
+    let mut g = two_player_game();
+    let ez = g.add_card_to_battlefield(0, catalog::ezuri_renegade_leader());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ez, ability_index: 1, target: None, x_value: None,
+    }).expect("overrun");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(elf).unwrap().power(), 1 + 3, "Elf pumped +3");
+}
+
+/// Kiki-Jiki makes a hasty token copy of a nonlegendary creature.
+#[test]
+fn kiki_jiki_copies_creature_with_haste() {
+    let mut g = two_player_game();
+    let kiki = g.add_card_to_battlefield(0, catalog::kiki_jiki_mirror_breaker());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(bear)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: kiki, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("kiki copy");
+    drain_stack(&mut g);
+    let bears = g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    assert_eq!(bears, 2, "a token copy was made");
+}
+
+/// Kalitas exiles a dying opponent creature and mints a Zombie.
+#[test]
+fn kalitas_exiles_and_makes_zombie() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kalitas_traitor_of_ghet());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt foe");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == foe), "creature exiled");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Zombie"), "Zombie token made");
+}
+
+/// Stormwing Entity scries on ETB and is a 3/3 flyer with prowess.
+#[test]
+fn stormwing_entity_scries_on_etb() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let s = g.add_card_to_battlefield(0, catalog::stormwing_entity());
+    assert!(g.battlefield_find(s).unwrap().definition.keywords.contains(&Keyword::Prowess));
+    g.fire_self_etb_triggers(s, 0);
+    drain_stack(&mut g); // scry auto-resolves; no panic = pass
+}

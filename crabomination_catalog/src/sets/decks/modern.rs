@@ -31072,3 +31072,554 @@ pub fn conduct_electricity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Tribal / value batch (push claude/modern_decks) ──────────────────────────
+
+/// 1/1 red Goblin creature token.
+fn goblin_1_1_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Goblin".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Geralf's Messenger — {B}{B}{B} 3/2 Zombie. Enters tapped; ETB target
+/// opponent loses 2 life. Undying.
+pub fn geralfs_messenger() -> CardDefinition {
+    CardDefinition {
+        name: "Geralf's Messenger",
+        cost: cost(&[b(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Undying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: Selector::This },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Cauldron Familiar — {B} 1/1 Cat. ETB: each opponent loses 1 life and you
+/// gain 1. Sacrifice a Food: return this from your graveyard to the battlefield.
+pub fn cauldron_familiar() -> CardDefinition {
+    CardDefinition {
+        name: "Cauldron Familiar",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            from_graveyard: true,
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food),
+                1,
+            )),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Witch's Oven — {1} Artifact. {T}, Sacrifice a creature: create a Food token.
+/// (The "two Food if the sacrificed creature's toughness was 4+" rider is
+/// dropped — always one Food.)
+pub fn witchs_oven() -> CardDefinition {
+    CardDefinition {
+        name: "Witch's Oven",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crabomination_base::tokens::food_token(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Ringleader — {3}{R} 2/2 Goblin with Haste. ETB: reveal the top four
+/// cards of your library; put all Goblin cards into your hand, rest on bottom.
+pub fn goblin_ringleader() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Ringleader",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![etb(Effect::RevealTopTakeMatchingToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Recruiter of the Guard — {2}{W} 1/1 Human Soldier. ETB: you may search your
+/// library for a creature card with toughness 2 or less, reveal it, and put it
+/// into your hand.
+pub fn recruiter_of_the_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Recruiter of the Guard",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ToughnessAtMost(2)),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Squadron Hawk — {1}{W} 1/1 Bird with Flying. ETB: you may search your library
+/// for a card named Squadron Hawk and put it into your hand. (Printed text
+/// fetches up to three; the single-card Search primitive fetches one.)
+pub fn squadron_hawk() -> CardDefinition {
+    CardDefinition {
+        name: "Squadron Hawk",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasName("Squadron Hawk".into()),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Felidar Guardian — {3}{W} 1/4 Cat Beast. ETB: you may exile another target
+/// permanent you control, then return it to the battlefield under its owner's
+/// control (a blink).
+pub fn felidar_guardian() -> CardDefinition {
+    CardDefinition {
+        name: "Felidar Guardian",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::ControlledByYou
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Village Bell-Ringer — {2}{W} 1/4 Human Scout with Flash. ETB: untap all
+/// creatures you control.
+pub fn village_bell_ringer() -> CardDefinition {
+    CardDefinition {
+        name: "Village Bell-Ringer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Untap {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            up_to: None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Deceiver Exarch — {2}{U} 1/4 Phyrexian Cleric with Flash. ETB choose one —
+/// untap target permanent you control; or tap target permanent an opponent
+/// controls.
+pub fn deceiver_exarch() -> CardDefinition {
+    CardDefinition {
+        name: "Deceiver Exarch",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::Untap {
+                    what: target_filtered(SelectionRequirement::ControlledByYou),
+                    up_to: None,
+                },
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::ControlledByOpponent),
+                },
+            ],
+        })],
+        ..Default::default()
+    }
+}
+
+/// Pashalik Mons — {2}{R} 2/2 Legendary Goblin Warrior. Whenever Pashalik Mons
+/// or another Goblin you control dies, deal 1 damage to any target. {3}{R},
+/// Sacrifice a Goblin: create two 1/1 red Goblin tokens.
+pub fn pashalik_mons() -> CardDefinition {
+    CardDefinition {
+        name: "Pashalik Mons",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                },
+            ),
+            effect: Effect::DealDamage {
+                to: crate::effect::shortcut::target_any(),
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), r()]),
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                1,
+            )),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: goblin_1_1_token(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sling-Gang Lieutenant — {3}{B} 2/2 Goblin. ETB: create two 1/1 red Goblin
+/// tokens. Sacrifice a Goblin: each opponent loses 1 life and you gain 1 life.
+pub fn sling_gang_lieutenant() -> CardDefinition {
+    CardDefinition {
+        name: "Sling-Gang Lieutenant",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: goblin_1_1_token(),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                1,
+            )),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Regal Force — {4}{G}{G}{G} 5/5 Elemental. ETB: draw a card for each green
+/// creature you control.
+pub fn regal_force() -> CardDefinition {
+    CardDefinition {
+        name: "Regal Force",
+        cost: cost(&[generic(4), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::HasColor(Color::Green)),
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Wirewood Hivemaster — {1}{G} 1/1 Elf. Whenever another nontoken Elf you
+/// control enters, you may create a 1/1 green Insect creature token.
+pub fn wirewood_hivemaster() -> CardDefinition {
+    CardDefinition {
+        name: "Wirewood Hivemaster",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::NotToken),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Insect".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Insect],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ezuri, Renegade Leader — {1}{G}{G} 2/2 Legendary Elf Warrior. {G}: regenerate
+/// another target Elf. {2}{G}{G}{G}: Elves you control get +3/+3 and gain
+/// trample until end of turn (Overrun).
+pub fn ezuri_renegade_leader() -> CardDefinition {
+    use crate::effect::Duration;
+    let elves_you_control = || SelectionRequirement::HasCreatureType(CreatureType::Elf)
+        .and(SelectionRequirement::ControlledByYou);
+    CardDefinition {
+        name: "Ezuri, Renegade Leader",
+        cost: cost(&[generic(1), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[g()]),
+                effect: Effect::Regenerate {
+                    what: target_filtered(
+                        SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), g(), g(), g()]),
+                effect: Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::EachPermanent(elves_you_control()),
+                        power: Value::Const(3),
+                        toughness: Value::Const(3),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::EachPermanent(elves_you_control()),
+                        keyword: Keyword::Trample,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Kiki-Jiki, Mirror Breaker — {2}{R}{R}{R} 2/2 Legendary Goblin Shaman with
+/// Haste. {T}: create a token that's a copy of target nonlegendary creature you
+/// control, except it has haste. (Modeled, like Saheeli's copy, as exile at the
+/// next end step.)
+pub fn kiki_jiki_mirror_breaker() -> CardDefinition {
+    use crate::effect::{DelayedTriggerKind, Duration};
+    CardDefinition {
+        name: "Kiki-Jiki, Mirror Breaker",
+        cost: cost(&[generic(2), r(), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::HasSupertype(Supertype::Legendary).negate()),
+                    ),
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                    non_legendary: false,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedToken,
+                    keyword: Keyword::Haste,
+                    duration: Duration::Permanent,
+                },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Exile { what: Selector::LastCreatedToken }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// 2/2 black Zombie creature token.
+fn zombie_2_2_black_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Kalitas, Traitor of Ghet — {2}{B}{B} 3/4 Legendary Vampire Warrior with
+/// Lifelink. If a nontoken creature an opponent controls would die, exile it
+/// and create a 2/2 black Zombie. {2}{B}, Sacrifice another Vampire or Zombie:
+/// put two +1/+1 counters on Kalitas.
+pub fn kalitas_traitor_of_ghet() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Kalitas, Traitor of Ghet",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        static_abilities: vec![StaticAbility {
+            description: "If a nontoken creature an opponent controls would die, exile it and create a 2/2 Zombie.",
+            effect: StaticEffect::ExileDyingOpponentCreatures {
+                when_you_do: Some(Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: zombie_2_2_black_token(),
+                })),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Zombie)),
+                1,
+            )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stormwing Entity — {3}{U}{U} 3/3 Elemental with Flying and Prowess. ETB:
+/// scry 2. (The "costs {2}{U} less if you've cast an instant or sorcery this
+/// turn" reduction is dropped.)
+pub fn stormwing_entity() -> CardDefinition {
+    CardDefinition {
+        name: "Stormwing Entity",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Prowess],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        ..Default::default()
+    }
+}
