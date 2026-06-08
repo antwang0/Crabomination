@@ -37610,6 +37610,72 @@ fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
     assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
 }
 
+/// Spineseeker Centipede tutors a basic land to hand on ETB.
+#[test]
+fn spineseeker_centipede_tutors_basic_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let hand0 = g.players[0].hand.len();
+    let id = g.add_card_to_battlefield(0, catalog::spineseeker_centipede());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "fetched a basic land");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "Forest in hand");
+}
+
+/// Bushwhack mode 1 fights: your creature trades with theirs.
+#[test]
+fn bushwhack_fight_mode_trades_creatures() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::bushwhack());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(mine)),
+        additional_targets: vec![crate::game::Target::Permanent(theirs)], mode: Some(1), x_value: None,
+    }).expect("cast fight mode");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(), "both 2/2s trade");
+}
+
+/// Gnaw to the Bone gains 2 life per creature card in the graveyard.
+#[test]
+fn gnaw_to_the_bone_gains_life_per_graveyard_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::forest()); // not a creature — ignored
+    let id = g.add_card_to_hand(0, catalog::gnaw_to_the_bone());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 4, "2 life x 2 creature cards");
+}
+
+/// Hardened-Scale Armor attaches and grants +3/+3.
+#[test]
+fn hardened_scale_armor_buffs_enchanted_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::hardened_scale_armor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    drain_stack(&mut g);
+    let computed = g.compute_battlefield();
+    let c = computed.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power, c.toughness), (5, 5), "bear is 5/5 with the aura");
+}
+
 /// Repel the Vile mode 0 exiles a power-4+ creature.
 #[test]
 fn repel_the_vile_exiles_big_creature() {

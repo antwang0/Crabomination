@@ -29687,6 +29687,99 @@ pub fn curious_forager() -> CardDefinition {
     }
 }
 
+/// Spineseeker Centipede — {2}{G} 2/1 Insect. ETB: search your library for a
+/// basic land card and put it into your hand. (Delirium rider dropped.)
+pub fn spineseeker_centipede() -> CardDefinition {
+    CardDefinition {
+        name: "Spineseeker Centipede",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
+/// card and put it into your hand; or target creature you control fights target
+/// creature you don't control.
+pub fn bushwhack() -> CardDefinition {
+    CardDefinition {
+        name: "Bushwhack",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Fight {
+                attacker: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                },
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gnaw to the Bone — {2}{G} Instant. Gain 2 life for each creature card in
+/// your graveyard. Flashback {2}{G}.
+pub fn gnaw_to_the_bone() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Gnaw to the Bone",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Flashback(cost(&[generic(2), g()]))],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }))),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Hardened-Scale Armor — {2}{G} Aura. Enchant creature; it gets +3/+3.
+pub fn hardened_scale_armor() -> CardDefinition {
+    CardDefinition {
+        name: "Hardened-Scale Armor",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 3, toughness: 3, keywords: vec![], scale: None, triggered_abilities: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
 /// Repel the Vile — {3}{W} Instant. Choose one — exile target creature with
 /// power 4 or greater; or exile target enchantment.
 pub fn repel_the_vile() -> CardDefinition {
