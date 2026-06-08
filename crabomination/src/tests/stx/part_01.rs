@@ -279,30 +279,35 @@ fn hall_monitor_makes_a_creature_unable_to_block() {
 }
 
 #[test]
-fn stonebinders_familiar_gains_counter_on_card_leaving_graveyard() {
+fn stonebinders_familiar_gains_counter_once_per_turn_on_exile() {
     let mut g = two_player_game();
-    // Seed P0 library so Glorious Decay's "draw a card" rider doesn't
-    // deck them out (which would short-circuit the test with GameAlreadyOver).
-    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
     let sf = g.add_card_to_battlefield(0, catalog::stonebinders_familiar());
     g.clear_sickness(sf);
-    // Put a card in P0's graveyard, then exile it via Glorious Decay's
-    // mode 2 (exile target card from a graveyard, draw a card).
+    let count = |g: &crate::game::GameState| {
+        g.battlefield.iter().find(|c| c.id == sf).unwrap().counter_count(CounterType::PlusOnePlusOne)
+    };
+    // Exile a card during P0's turn → one +1/+1 counter.
     let bait = g.add_card_to_graveyard(0, catalog::island());
     let decay = g.add_card_to_hand(0, catalog::glorious_decay());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
-    let counters_before = g.battlefield.iter().find(|c| c.id == sf).unwrap()
-        .counter_count(CounterType::PlusOnePlusOne);
     g.perform_action(GameAction::CastSpell {
         card_id: decay, target: Some(Target::Permanent(bait)), additional_targets: vec![], mode: Some(2), x_value: None,
-    })
-    .expect("Glorious Decay castable for {1}{G}");
+    }).expect("Glorious Decay castable");
     drain_stack(&mut g);
-    let counters_after = g.battlefield.iter().find(|c| c.id == sf).unwrap()
-        .counter_count(CounterType::PlusOnePlusOne);
-    assert_eq!(counters_after, counters_before + 1,
-        "Stonebinder's Familiar should gain a +1/+1 counter on card leaving graveyard");
+    assert_eq!(count(&g), 1, "first exile this turn grants a counter");
+
+    // A second exile the same turn does nothing (CR 603.3d once-per-turn).
+    let bait2 = g.add_card_to_graveyard(0, catalog::island());
+    let decay2 = g.add_card_to_hand(0, catalog::glorious_decay());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: decay2, target: Some(Target::Permanent(bait2)), additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("Glorious Decay castable");
+    drain_stack(&mut g);
+    assert_eq!(count(&g), 1, "second exile the same turn is ignored");
 }
 
 #[test]
@@ -1012,32 +1017,24 @@ fn prismari_apprentice_modal_magecraft_pumps_via_scripted_mode_pick() {
 /// A fresh-cast Professor Dellian Fel has 5 loyalty → mode 2 sends 5
 /// damage. Since CR 120.3c routes PW damage into loyalty-counter
 /// removal, the PW ends with 0 loyalty and is destroyed by SBA.
+/// Confront the Past mode 1 — remove twice X loyalty from target opponent PW.
 #[test]
-fn confront_the_past_mode_2_uses_loyalty_counter_x() {
+fn confront_the_past_mode_1_removes_twice_x_loyalty() {
     let mut g = two_player_game();
-    let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
-    // Professor Dellian Fel comes in with 5 base loyalty.
-    let pw_card = g.battlefield.iter().find(|c| c.id == pw).unwrap();
-    assert_eq!(
-        pw_card.counter_count(crate::card::CounterType::Loyalty),
-        5,
-        "Professor Dellian Fel should have 5 starting loyalty"
-    );
-
+    let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel()); // 5 loyalty
     let id = g.add_card_to_hand(0, catalog::confront_the_past());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
 
+    // X = 2 → remove 4 loyalty; the PW survives with 1.
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(pw)),
         additional_targets: vec![],
-        mode: Some(2), x_value: None,
-    }).expect("Confront the Past castable for {3}{R}");
+        mode: Some(1), x_value: Some(2),
+    }).expect("Confront the Past castable for {2}{B}");
     drain_stack(&mut g);
-
-    // 5 damage → 5 loyalty removed → PW dies via SBA.
-    assert!(!g.battlefield.iter().any(|c| c.id == pw),
-        "Mode 2 should remove all 5 loyalty and bury the PW");
+    let p = g.battlefield_find(pw).expect("PW survives 4 loyalty loss");
+    assert_eq!(p.counter_count(crate::card::CounterType::Loyalty), 1, "5 - 2X(=4) = 1");
 }
 
 /// Tempted by the Oriq — body sanity: target enemy creature swaps to

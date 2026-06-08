@@ -2830,9 +2830,9 @@ fn tempted_by_the_oriq_cannot_steal_high_mv_creature() {
 }
 
 #[test]
-fn confront_the_past_bounces_planeswalker_via_mode_1() {
+fn confront_the_past_mode_0_reanimates_planeswalker_from_graveyard() {
     let mut g = two_player_game();
-    let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+    let pw = g.add_card_to_graveyard(0, catalog::professor_dellian_fel());
     let id = g.add_card_to_hand(0, catalog::confront_the_past());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
@@ -2841,13 +2841,13 @@ fn confront_the_past_bounces_planeswalker_via_mode_1() {
         card_id: id,
         target: Some(Target::Permanent(pw)),
         additional_targets: vec![],
-        mode: Some(1),
-        x_value: None,
-    }).expect("Confront the Past castable for {3}{R}");
+        mode: Some(0),
+        x_value: Some(0),
+    }).expect("Confront the Past castable for {X}{B}");
     drain_stack(&mut g);
 
-    assert!(!g.battlefield.iter().any(|c| c.id == pw), "PW off battlefield");
-    assert!(g.players[1].hand.iter().any(|c| c.id == pw), "PW in opp's hand");
+    let p = g.battlefield_find(pw).expect("PW reanimated to battlefield");
+    assert_eq!(p.controller, 0, "reanimated under your control");
 }
 
 #[test]

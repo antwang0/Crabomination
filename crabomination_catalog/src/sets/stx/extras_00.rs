@@ -1225,73 +1225,34 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
 }
 
 
-/// Confront the Past — {X}{B} Sorcery.
-/// "Choose one — / • Put target planeswalker card from your graveyard
-/// onto the battlefield. / • Return target planeswalker to its
-/// owner's hand. / • Confront the Past deals damage to target
-/// planeswalker equal to the number of loyalty counters on it."
-///
-/// ✅ Three-mode `ChooseMode`: mode 0 reanimates a PW from your
-/// graveyard (auto-decider picks the only PW in gy), mode 1 bounces
-/// an opp PW, mode 2 deals damage = the target PW's current loyalty
-/// counters via the new `Value::LoyaltyOf(Target(0))` primitive (push
-/// XXXIII). The damage value is computed at resolution time from the
-/// `CounterType::Loyalty` counter pool on the targeted planeswalker;
-/// since damage to a planeswalker comes off as loyalty loss (CR
-/// 120.3c), the effect strictly removes all remaining loyalty —
-/// matching the printed "lethal-to-the-PW" Oracle behavior. (For an
-/// opponent's PW the practical effect is also lethal because loyalty
-/// loss exactly equals current loyalty.)
+/// Confront the Past — {X}{B} Sorcery — Lesson. Choose one — return target
+/// planeswalker card from your graveyard to the battlefield; or remove twice X
+/// loyalty counters from target planeswalker an opponent controls. (The "mana
+/// value X or less" gate on the reanimation target is dropped — no X-aware MV
+/// target filter yet; since you set X, it's rarely binding.)
 pub fn confront_the_past() -> CardDefinition {
     CardDefinition {
         name: "Confront the Past",
         cost: cost(&[x(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
+        subtypes: Subtypes { spell_subtypes: vec![SpellSubtype::Lesson], ..Default::default() },
         effect: Effect::ChooseMode(vec![
             Effect::Move {
-                what: target_filtered(SelectionRequirement::Planeswalker),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
+                what: target_filtered(
+                    SelectionRequirement::Planeswalker.and(SelectionRequirement::InGraveyard),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::Planeswalker),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-            },
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Planeswalker),
-                amount: Value::LoyaltyOf(Box::new(Selector::Target(0))),
+            Effect::RemoveCounter {
+                what: target_filtered(
+                    SelectionRequirement::Planeswalker
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                kind: CounterType::Loyalty,
+                amount: Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
@@ -2467,61 +2428,31 @@ pub fn hall_monitor() -> CardDefinition {
 
 // ── Stonebinder's Familiar ──────────────────────────────────────────────────
 
-/// Stonebinder's Familiar — {W} Artifact Creature — Spirit, 1/1.
-/// "Whenever one or more cards leave your graveyard, put a +1/+1
-/// counter on Stonebinder's Familiar."
-///
-/// ✅ Wired against `EventKind::CardLeftGraveyard` (per-card emission;
-/// the printed "one or more" wording is approximated per-card, matching
-/// the SOS Spirit Mascot / Owlin Historian pattern). Trigger source is
-/// `Selector::This`. Pairs naturally with the Lorehold cycle.
+/// Stonebinder's Familiar — {W} 1/1 Spirit Dog. Whenever one or more cards are
+/// put into exile during your turn, put a +1/+1 counter on this creature. This
+/// ability triggers only once each turn.
 pub fn stonebinders_familiar() -> CardDefinition {
     CardDefinition {
         name: "Stonebinder's Familiar",
         cost: cost(&[w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
+            creature_types: vec![CreatureType::Spirit, CreatureType::Dog],
             ..Default::default()
         },
         power: 1,
         toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
-            // CR 603.10a — leaves-graveyard triggers fire when the
-            // event's player matches; `YourControl` matches when the
-            // gy-leave was from the controller's own graveyard.
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
+            event: EventSpec::new(EventKind::CardExiled, EventScope::AnyPlayer)
+                .with_filter(Predicate::IsTurnOf(PlayerRef::You))
+                .once_per_turn(),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 

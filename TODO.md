@@ -41,9 +41,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     variant (or a `Vec<AdditionalCastCost>` "choose one" wrapper). Makes Bayou
     Groff faithful (today the pay-{3} alternative is dropped) and unblocks the
     Eldraine/STX "sac or pay" cycle.
-  - **Generic `CardExiled` event** (`EventKind::CardExiled` + a `GameEvent`
-    fired from every move-to-exile site) — Stonebinder's Familiar's "whenever
-    one or more cards are exiled during your turn" once-per-turn trigger.
+  - ✅ **Generic `CardExiled` event** — `EventKind::CardExiled` maps to the
+    `GameEvent::PermanentExiled` emitted by the central exile-placement funnel.
+    Pair with `once_per_turn` + `IsTurnOf(You)` for "whenever one or more cards
+    are put into exile during your turn" (Stonebinder's Familiar shipped).
   - ✅ **Turn-scoped ETB delayed trigger** — `Effect::CreaturesYouControl
     EnteringThisTurn` + `DelayedKind::CreatureYouControlEntersThisTurn`, fired
     from the dispatcher and expiring at cleanup; First Day of Class.
@@ -925,11 +926,13 @@ picking an item up.
   `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
   keep it at zero after adding cards.
   **Still wrong on the *effect body*** (cost/PT right, oracle text invented or
-  blocked on a primitive): Stonebinder's Familiar (needs a generic `CardExiled`
-  event), Hofri Ghostforge (Spirit-copy reanimation), Confront the Past
-  (needs X-aware MV target filter + 2X loyalty removal), Fervent Mastery
-  (alt-cost-was-paid rider), Strixhaven Stadium (point counters + "that player
-  loses" combat trigger). Per card:
+  blocked on a primitive): Hofri Ghostforge (Spirit-copy reanimation), Fervent
+  Mastery (alt-cost-was-paid rider), Strixhaven Stadium (point counters + "that
+  player loses" combat trigger). ✅ this run: **Stonebinder's Familiar**
+  (`EventKind::CardExiled` once-per-turn-during-your-turn trigger, retyped Spirit
+  Dog), **Confront the Past** (faithful 2-mode: reanimate gy PW + remove 2X
+  loyalty from an opp PW — the "MV X or less" reanimation gate is dropped, no
+  X-aware MV target filter yet). Per card:
   replace the body with the Scryfall text and rewrite its test(s); watch for
   fixture coupling. Swept faithful this run: **Mage Duel** (+1/+2 then fight),
   **Tempted by the Oriq** (permanent MV≤3 steal), **Mentor's Guidance**

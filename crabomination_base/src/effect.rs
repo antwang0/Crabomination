@@ -1012,6 +1012,11 @@ pub enum EventKind {
     /// across batches (Strixhaven cards say "one or more cards" but the
     /// engine fires per-card and lets the trigger fire as many times).
     CardLeftGraveyard,
+    /// One or more cards were put into exile (from any zone). Fires per card
+    /// on the central exile-placement funnel. Pair with `once_per_turn` +
+    /// `IsTurnOf(You)` for "whenever one or more cards are put into exile
+    /// during your turn" (Stonebinder's Familiar).
+    CardExiled,
     /// A permanent became the target of a spell or activated ability.
     /// Fires once per Permanent target at announce-time (when the spell
     /// hits the stack or the activated ability is pushed). Multi-target

@@ -45,6 +45,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
+        (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
