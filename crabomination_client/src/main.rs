@@ -66,8 +66,9 @@ use systems::game_ui::{
 };
 use systems::gizmos::{
     draw_attack_plan_gizmos, draw_attacker_overlays, draw_blocking_gizmos,
-    draw_legal_target_rings, draw_pt_modified_overlays, draw_stack_arrows, AttackPlanGizmos,
-    AttackerGizmos, BlockingGizmos, LegalTargetGizmos, PtModifiedGizmos, StackGizmos,
+    draw_legal_target_rings, draw_pt_modified_overlays, draw_stack_arrows, draw_target_arrow,
+    AttackPlanGizmos, AttackerGizmos, BlockingGizmos, LegalTargetGizmos, PtModifiedGizmos,
+    StackGizmos, TargetArrowGizmos,
 };
 use systems::quality::{
     handle_leave_game_button, handle_quality_buttons, handle_settings_toggle, handle_speed_slider,
@@ -268,6 +269,8 @@ fn main() {
         .init_gizmo_group::<PtModifiedGizmos>()
         .init_gizmo_group::<AttackPlanGizmos>()
         .init_gizmo_group::<LegalTargetGizmos>()
+        .init_gizmo_group::<TargetArrowGizmos>()
+        .init_gizmo_group::<crate::systems::impact::ImpactGizmos>()
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: RenderQuality::default().shadow_map_size() })
         .insert_resource(gfx)
@@ -514,6 +517,23 @@ fn main() {
             crate::systems::counter_coins::sync_counter_coins
                 .run_if(in_state(AppState::InGame)),
         )
+        // Impact feedback: death bursts, damage sparks, life-loss vignette.
+        .add_systems(
+            Update,
+            (
+                crate::systems::impact::spawn_impact_effects,
+                crate::systems::impact::spawn_mana_motes,
+                crate::systems::impact::animate_impact_bursts,
+                crate::systems::impact::animate_hit_vignettes,
+                crate::systems::impact::animate_damage_numerals,
+                crate::systems::impact::animate_mana_motes,
+            )
+                // After sync_game_visuals so freshly-cast spells have their
+                // StackCard entity (mote destinations) and dying creatures
+                // still have their battlefield entity (burst positions).
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Screen-space "<type> ×N" labels naming each counter and its count.
         .add_systems(
             Update,
@@ -532,6 +552,12 @@ fn main() {
             crate::systems::pt_label::sync_pt_labels
                 .run_if(in_state(AppState::InGame)),
         )
+        // Floating keyword-flag strip ("Fly DT LL") over creatures.
+        .add_systems(
+            Update,
+            crate::systems::keyword_label::sync_keyword_labels
+                .run_if(in_state(AppState::InGame)),
+        )
         // Hold-Ctrl camera zoom onto the cursor / highlighted card.
         .add_systems(
             Update,
@@ -548,7 +574,7 @@ fn main() {
         )
         .add_systems(
             Update,
-            draw_legal_target_rings.run_if(in_state(AppState::InGame)),
+            (draw_legal_target_rings, draw_target_arrow).run_if(in_state(AppState::InGame)),
         )
         .add_systems(
             Update,

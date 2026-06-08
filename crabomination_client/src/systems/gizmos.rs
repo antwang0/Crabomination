@@ -5,14 +5,19 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 use crabomination::card::CardId;
 use crabomination::game::{AttackTarget, Target, TurnStep};
 use crabomination::net::StackItemView;
 
-use crate::card::{BattlefieldCard, CardOwner, GameCardId, StackCard};
+use crate::card::{
+    BattlefieldCard, CardHovered, CardOwner, GameCardId, HandCard, PlayerTargetZone, StackCard,
+};
 use crate::card::layout::player_hand_anchor;
-use crate::game::{AttackingState, BlockingState};
+use crate::game::{AttackingState, BlockingState, TargetingState};
 use crate::net_plugin::CurrentView;
+use crate::systems::game_ui::PlayerHudPanel;
+use crate::MainCamera;
 
 /// Scale a colour into the HDR range (linear space, alpha preserved) so it
 /// exceeds the bloom prefilter threshold (~1.0, see `RenderQuality::bloom`)
@@ -52,6 +57,103 @@ pub struct AttackPlanGizmos;
 /// vocabulary (player chip outline, blocker selection diamond).
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct LegalTargetGizmos;
+
+/// Overlay for the interactive "drag" arrow that runs from the targeting
+/// source to the cursor (or the hovered target it snaps to) while the viewer
+/// is picking a spell/ability target.
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct TargetArrowGizmos;
+
+/// Project the cursor onto a horizontal plane at `plane_y` through the main
+/// camera, for use as the live endpoint of the target-drag arrow. `None` when
+/// there's no cursor in the window or the ray runs parallel to / away from the
+/// plane.
+fn cursor_on_plane(
+    plane_y: f32,
+    windows: &Query<&Window, With<PrimaryWindow>>,
+    camera_q: &Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+) -> Option<Vec3> {
+    let cursor = windows.single().ok()?.cursor_position()?;
+    let (camera, cam_xform) = camera_q.single().ok()?;
+    let ray = camera.viewport_to_world(cam_xform, cursor).ok()?;
+    let denom = ray.direction.y;
+    if denom.abs() < 1e-5 {
+        return None;
+    }
+    let t = (plane_y - ray.origin.y) / denom;
+    (t >= 0.0).then(|| ray.origin + ray.direction * t)
+}
+
+/// Draw the live target-selection arrow: anchored at whatever is doing the
+/// targeting (the spell in hand, the ability/equip source on the battlefield,
+/// or — for stack-driven decision targets with no on-table source — the
+/// viewer's own side of the table) and pointing at the cursor. When the cursor
+/// is over a battlefield card or a player zone, the head snaps to it, matching
+/// exactly what a click would resolve to. Glows like the other cues, so it
+/// reads as a beam of light on HDR tiers.
+#[allow(clippy::too_many_arguments)]
+pub fn draw_target_arrow(
+    targeting: Res<TargetingState>,
+    view: Res<CurrentView>,
+    windows: Query<&Window, With<PrimaryWindow>>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    hand_cards: Query<(&Transform, &GameCardId), With<HandCard>>,
+    hovered_bf: Query<&GameCardId, (With<CardHovered>, With<BattlefieldCard>)>,
+    hovered_zone: Query<&PlayerTargetZone, With<CardHovered>>,
+    chips: Query<(&Interaction, &PlayerHudPanel)>,
+    mut gizmos: Gizmos<TargetArrowGizmos>,
+) {
+    if !targeting.active {
+        return;
+    }
+    let Some(cv) = &view.0 else { return };
+    let (viewer, n_seats) = (cv.your_seat, cv.players.len());
+
+    // Held a touch off the table so the arrow floats clearly above the cards.
+    const ARROW_Y: f32 = 0.4;
+
+    let bf_pos = |id: CardId| bf_cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation);
+    let hand_pos =
+        |id: CardId| hand_cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation);
+
+    let mut source = targeting
+        .pending_card_id
+        .and_then(hand_pos)
+        .or_else(|| targeting.pending_ability_source.and_then(bf_pos))
+        .or_else(|| targeting.pending_equip_source.and_then(bf_pos))
+        .unwrap_or_else(|| player_hand_anchor(viewer, viewer, n_seats));
+    source.y = ARROW_Y;
+
+    // A player can be targeted via their 3-D table zone *or* their 2-D HUD
+    // chip (top-corner panels). Snap to the seat's table anchor for either so
+    // the head doesn't dangle over the HUD when the cursor leaves the board.
+    let hovered_chip_seat = chips.iter().find_map(|(i, panel)| {
+        (matches!(i, Interaction::Hovered | Interaction::Pressed) && panel.seat < n_seats)
+            .then_some(panel.seat)
+    });
+
+    let end = if let Ok(gid) = hovered_bf.single() {
+        bf_pos(gid.0)
+    } else if let Ok(zone) = hovered_zone.single() {
+        Some(player_hand_anchor(zone.0, viewer, n_seats))
+    } else if let Some(seat) = hovered_chip_seat {
+        Some(player_hand_anchor(seat, viewer, n_seats))
+    } else {
+        cursor_on_plane(ARROW_Y, &windows, &camera_q)
+    };
+    let Some(mut end) = end else { return };
+    end.y = ARROW_Y;
+
+    // Skip degenerate arrows (cursor sitting on the source) so we don't draw a
+    // zero-length stub with a stray arrowhead.
+    if source.distance(end) < 0.3 {
+        return;
+    }
+
+    let color = glow(Color::srgb(1.0, 0.88, 0.0), CUE_GLOW);
+    gizmos.arrow(source, end, color).with_tip_length(0.8);
+}
 
 pub fn draw_legal_target_rings(
     view: Res<CurrentView>,
