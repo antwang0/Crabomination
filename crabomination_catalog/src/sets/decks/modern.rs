@@ -27861,3 +27861,64 @@ pub fn mondronen_shaman() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Legion's Landing // Adanto, the First Fort — {W} Legendary Enchantment
+/// (transform DFC). ETB: make a 1/1 white lifelink Vampire. When you attack
+/// with three or more creatures, transform it. Back: Adanto, the First Fort —
+/// a Legendary Land; `{T}`: Add {W}; `{2}{W},{T}`: make a 1/1 lifelink Vampire.
+pub fn legions_landing() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Supertype, TokenDefinition};
+    use crate::effect::Predicate;
+    let vampire = || TokenDefinition {
+        name: "Vampire".into(),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        colors: vec![Color::White],
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        ..Default::default()
+    };
+    let adanto = CardDefinition {
+        name: "Adanto, the First Fort",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add(Color::White),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), w()]),
+                tap_cost: true,
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: vampire(),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Legion's Landing",
+        cost: cost(&[w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: vampire(),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                    .with_filter(Predicate::AttackingWithAtLeast(3)),
+                effect: Effect::Transform { what: Selector::This },
+            },
+        ],
+        back_face: Some(Box::new(adanto)),
+        ..Default::default()
+    }
+}

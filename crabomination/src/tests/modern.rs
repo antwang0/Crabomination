@@ -23377,6 +23377,38 @@ fn outland_liberator_is_daybound_and_sacrifices_to_destroy() {
 }
 
 #[test]
+fn legions_landing_makes_a_vampire_then_transforms_on_a_wide_attack() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Cast it (ETB makes a 1/1 lifelink Vampire).
+    let ll = g.add_card_to_hand(0, catalog::legions_landing());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ll, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Legion's Landing");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Vampire"), "ETB Vampire token");
+    // Attack with three creatures → transform into Adanto.
+    let a: Vec<_> = (0..3).map(|_| {
+        let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(c);
+        c
+    }).collect();
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    g.perform_action(GameAction::DeclareAttackers(
+        a.iter().map(|&c| Attack { attacker: c, target: AttackTarget::Player(1) }).collect(),
+    )).expect("attack with three");
+    drain_stack(&mut g);
+    let adanto = g.battlefield_find(ll).unwrap();
+    assert_eq!(adanto.definition.name, "Adanto, the First Fort");
+    assert!(adanto.definition.card_types.contains(&crate::card::CardType::Land));
+}
+
+#[test]
 fn geier_reach_bandit_flips_to_a_four_three() {
     let mut g = two_player_game();
     let grb = g.add_card_to_battlefield(0, catalog::geier_reach_bandit());

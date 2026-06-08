@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Transform-DFC batch (this run) — dropped riders to revisit:**
+  - Vildin-Pack Alpha's "when a Werewolf you control enters, you may transform
+    it"; Frenzied Trapbreaker's on-attack "destroy target artifact/enchantment";
+    The Myriad Pools' "copy a permanent spell" cast trigger; Azcanta's "you
+    *may* transform" (auto-transforms now); Search for Azcanta back-face dig
+    ships but the "may reveal" is auto.
+  - Daybound (CR 702.146): only the ETB "becomes day" half is wired; the
+    "casting a daybound spell while neither day nor night makes it day" half
+    and the per-player night-entry rule beyond CR 502.2 are still ⏳.
+  - Werewolf night→day check approximates "a player cast two or more spells
+    last turn" as the global `spells_cast_last_turn >= 2`; a true per-player
+    last-turn tally would be more faithful.
+  - Manifest dread (Hauntwoods Shrieker) + DFC sagas + Rooms (Unholy Annex)
+    + meld (Westvale/Hanweir, Mightstone/Weakstone) still need their own
+    subsystems on top of the transform engine.
+
 - ⏳ **Remaining STX printed cards (each needs a new primitive):**
   - ✅ **Hone counters + cast-from-exile** — `CounterType::Hone` +
     `Effect::HoneFromHand` + `GameState::process_hone` (upkeep tick → {4}-less

@@ -1226,6 +1226,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(expressive_iteration);
     }
     if pair_contains(pair, Color::White) {
+        v.push(legions_landing);
         v.push(teferi_time_raveler);
         v.push(dovins_veto);
         v.push(razortide_bridge);
