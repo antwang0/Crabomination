@@ -109,6 +109,12 @@ pub enum StaticEffect {
     /// permanents), so it only discounts its own cast. Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByGreatestPower,
+    /// CR 601.2b — card-intrinsic optional additional cost: "you may sacrifice
+    /// any number of creatures; this spell costs {N} less to cast for each."
+    /// `per` is the per-creature generic reduction. Carried on the spell's own
+    /// `static_abilities`; cast via `GameAction::CastSpellSacrificeReduce`
+    /// (Awaken the Blood Avatar). No continuous-layer effect.
+    SacrificeCostReduction { per: u32 },
     /// Leyline-of-Sanctity-style "you have hexproof": opponents can't
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.

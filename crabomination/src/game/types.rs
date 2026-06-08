@@ -169,6 +169,19 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
+    /// creatures, {N} less each" additional cost. Each id in `sacrifices`
+    /// (a creature you control) is sacrificed as an additional cost and the
+    /// generic cost drops by `sacrifice_cost_reduction` per creature.
+    CastSpellSacrificeReduce {
+        card_id: CardId,
+        sacrifices: Vec<CardId>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.170 — Plot a card from hand: pay its plot cost and exile it
     /// face-up. Special action, main phase + empty stack only.
     Plot { card_id: CardId },

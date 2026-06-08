@@ -716,8 +716,8 @@ pub fn rowan_scholar_of_sparks() -> CardDefinition {
 /// Awaken the Blood Avatar — {6}{B}{R} Sorcery, back face of Extus. Each
 /// opponent sacrifices a creature of their choice; create a 3/6 black-and-red
 /// Avatar with haste and an attack trigger that deals 3 to each opponent.
-/// (The optional "sacrifice any number of creatures, {2} less each" cast cost
-/// is dropped — the engine has no variable-sacrifice cost reduction yet.)
+/// Optional additional cost: sacrifice any number of creatures, {2} less each
+/// (`StaticEffect::SacrificeCostReduction`, cast via `CastSpellSacrificeReduce`).
 fn awaken_the_blood_avatar() -> CardDefinition {
     let avatar = TokenDefinition {
         name: "Avatar".into(),
@@ -740,6 +740,10 @@ fn awaken_the_blood_avatar() -> CardDefinition {
         name: "Awaken the Blood Avatar",
         cost: cost(&[generic(6), b(), r()]),
         card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "As an additional cost, you may sacrifice any number of creatures. This spell costs {2} less to cast for each creature sacrificed this way.",
+            effect: StaticEffect::SacrificeCostReduction { per: 2 },
+        }],
         effect: Effect::Seq(vec![
             Effect::Sacrifice {
                 who: Selector::Player(PlayerRef::EachOpponent),

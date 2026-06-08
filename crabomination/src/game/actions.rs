@@ -282,6 +282,10 @@ pub(crate) fn cost_reduction_for_spell(
             }
         }
     }
+    // Transient "sacrifice any number, {N} less each" additional-cost
+    // reduction (Awaken the Blood Avatar). Stamped on the state for the
+    // duration of one cast by `cast_spell_sacrifice_reduce`.
+    reduction = reduction.saturating_add(state.extra_cast_reduction);
     reduction
 }
 
@@ -1162,6 +1166,67 @@ impl GameState {
         let mut cast_events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
         events.append(&mut cast_events);
         self.copy_stack_spell(card_id, 1, true, &mut events);
+        Ok(events)
+    }
+
+    /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
+    /// creatures, {N} less each" additional cost (Awaken the Blood Avatar).
+    /// Each creature in `sacrifices` is sacrificed before the spell is put on
+    /// the stack; the generic cost drops by the card's
+    /// `sacrifice_cost_reduction` per creature, threaded through the normal
+    /// cast path via the transient `extra_cast_reduction`.
+    pub(crate) fn cast_spell_sacrifice_reduce(
+        &mut self,
+        card_id: CardId,
+        sacrifices: Vec<CardId>,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::effect::StaticEffect;
+        let p = self.priority.player_with_priority;
+        // Validate the card is in hand and carries the optional cost.
+        let per = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| {
+                c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                    StaticEffect::SacrificeCostReduction { per } => Some(per),
+                    _ => None,
+                })
+            })
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Validate every sacrifice is a distinct creature the caster controls.
+        for sac in &sacrifices {
+            let ok = self
+                .battlefield
+                .iter()
+                .any(|c| c.id == *sac && c.controller == p && c.definition.is_creature());
+            if !ok {
+                return Err(GameError::InvalidTarget);
+            }
+        }
+        // Sacrifice the chosen creatures as an additional cost (their death
+        // triggers go on the stack under the spell).
+        let mut events = Vec::new();
+        for sac in &sacrifices {
+            if let Some(c) = self.battlefield_find(*sac) {
+                self.died_card_snapshots.insert(*sac, c.clone());
+            }
+            events.push(GameEvent::CreatureSacrificed { card_id: *sac, who: p });
+            events.push(GameEvent::CreatureDied { card_id: *sac });
+            events.push(GameEvent::PermanentSacrificed { card_id: *sac, who: p });
+            let mut die = self.remove_to_graveyard_with_triggers(*sac);
+            events.append(&mut die);
+        }
+        // Stamp the transient reduction, cast through the normal path, clear.
+        self.extra_cast_reduction = per.saturating_mul(sacrifices.len() as u32);
+        let cast = self.cast_spell(card_id, target, additional_targets, mode, x_value);
+        self.extra_cast_reduction = 0;
+        let mut cast_events = cast?;
+        events.append(&mut cast_events);
         Ok(events)
     }
 

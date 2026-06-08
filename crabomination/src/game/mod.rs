@@ -314,6 +314,12 @@ pub struct GameState {
     /// `Value::LastDieRoll`. Set by the `Effect::RollDie` resolver.
     #[serde(skip)]
     pub(crate) last_die_roll: u8,
+    /// Transient generic cost-reduction folded into the next spell cast
+    /// (CR 601.2f). Set by `cast_spell_sacrifice_reduce` to "{N} less per
+    /// creature sacrificed" before delegating to the normal cast path, read
+    /// in `cost_reduction_for_spell`, and cleared immediately after the cast.
+    #[serde(skip)]
+    pub(crate) extra_cast_reduction: u32,
     /// Transient: ids of all tokens created within the current effect
     /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
@@ -702,6 +708,7 @@ impl Clone for GameState {
             sacrificed_mana_value: self.sacrificed_mana_value,
             last_created_token: self.last_created_token,
             last_die_roll: self.last_die_roll,
+            extra_cast_reduction: self.extra_cast_reduction,
             last_created_tokens: self.last_created_tokens.clone(),
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
@@ -801,6 +808,7 @@ impl GameState {
             sacrificed_mana_value: None,
             last_created_token: None,
             last_die_roll: 0,
+            extra_cast_reduction: 0,
             last_created_tokens: Vec::new(),
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
@@ -3091,6 +3099,16 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_casualty(card_id, sacrifice, target, additional_targets, mode, x_value),
+            GameAction::CastSpellSacrificeReduce {
+                card_id,
+                sacrifices,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_sacrifice_reduce(
+                card_id, sacrifices, target, additional_targets, mode, x_value,
+            ),
             GameAction::Plot { card_id } => self.plot_card(card_id),
             GameAction::CastPlotted {
                 card_id,
@@ -6484,7 +6502,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::YourInstantSorcerySpellsHaveLifelink
             // SelfCostReducedByGreatestPower (The Great Henge) — read by
             // `cost_reduction_for_spell` off the spell being cast; no layer.
-            | StaticEffect::SelfCostReducedByGreatestPower => vec![],
+            | StaticEffect::SelfCostReducedByGreatestPower
+            // SacrificeCostReduction (Awaken the Blood Avatar) — an optional
+            // additional cost consulted by `cast_spell_sacrifice_reduce`; no
+            // continuous-layer effect.
+            | StaticEffect::SacrificeCostReduction { .. } => vec![],
         })
         .collect()
 }

@@ -175,6 +175,36 @@ fn awaken_the_blood_avatar_forces_sacrifice_and_mints_avatar() {
     assert!(avatar.has_keyword(&Keyword::Haste));
 }
 
+/// Awaken's optional additional cost — sacrifice two creatures to pay {4}
+/// less, so {6}{B}{R} resolves off only {2}{B}{R} in pool.
+#[test]
+fn awaken_sacrifice_cost_reduction_makes_it_cheaper() {
+    let mut g = two_player_game();
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let sac1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sac2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = *catalog::extus_oriq_overlord().back_face.unwrap();
+    let id = g.add_card_to_hand(0, spell);
+    // Only {2}{B}{R} — four short of the printed {6}{B}{R}.
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellSacrificeReduce {
+        card_id: id,
+        sacrifices: vec![sac1, sac2],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Awaken castable for {2}{B}{R} after sacrificing two creatures");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == sac1 || c.id == sac2), "both sacrifices left play");
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_creature), "opponent sacrificed too");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Avatar"), "Avatar minted");
+}
+
 // ── Rowan, Scholar of Sparks // Will, Scholar of Frost ─────────────────────────
 
 #[test]
