@@ -282,6 +282,14 @@ pub enum StaticEffect {
     /// `chosen_creature_type == None` falls back to "unrestricted" so
     /// legacy test fixtures that bypass the ETB still work.
     UncounterableCreaturesOfChosenType,
+    /// "Creatures you control of the chosen type get +P/+T" — a tribal anthem
+    /// keyed to the source permanent's `chosen_creature_type` (set at ETB via
+    /// `Effect::NameCreatureType`). Resolved live in `gather_continuous_effects`
+    /// (reads the source's chosen type), emitting a layer-7 pump over the
+    /// controller's matching creatures. `exclude_source: true` skips the source
+    /// itself ("**other** creatures …" — Adaptive Automaton); `false` includes
+    /// it (Patchwork Banner). No effect while no type has been chosen.
+    AnthemForChosenType { power: i32, toughness: i32, #[serde(default)] exclude_source: bool },
     /// CR 702.66 — "Spells you cast have delve." Teval, Arbiter of Virtue.
     /// Read at cast time by `controller_grants_spells_delve`: a delve-cards
     /// list is accepted on any spell whose controller has this static, not

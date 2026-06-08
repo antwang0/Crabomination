@@ -8,16 +8,19 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Chosen-creature-type anthem static.** `Effect::NameCreatureType` stores a
-  `chosen_creature_type` (Cavern of Souls), but there's no anthem static that
-  reads it — blocks Adaptive Automaton / Metallic Mimic / Patchwork Banner
-  ("creatures you control of the chosen type get +1/+1"). Add a
-  `StaticEffect::AnthemForChosenType { power, toughness }` applied through the
-  layer system.
-- ⏳ **Delirium conditional static** (four+ card types in graveyard → P/T
-  buff/keywords). Spineseeker Centipede shipped without its Delirium rider; a
-  reusable "while predicate, +X/+Y and gains K" conditional static would also
-  cover Mind Drill Assailant's Threshold (+3/+0 at 7+ gy).
+- ✅ **Chosen-creature-type anthem static.** `StaticEffect::AnthemForChosenType
+  { power, toughness, exclude_source }` reads the source's live
+  `chosen_creature_type` (set at ETB via `Effect::NameCreatureType`) and emits a
+  layer-7 pump over the controller's matching creatures in
+  `gather_continuous_effects`. Ships Adaptive Automaton (`exclude_source`) and
+  Patchwork Banner. Remaining: Metallic Mimic's enters-with-a-counter rider (a
+  chosen-type ETB-counter replacement, not an anthem) and the "this is the
+  chosen type in addition to its other types" self-type-add layer-4 effect.
+- ✅ **Delirium / Threshold conditional static** — handled by the existing
+  `StaticEffect::PumpSelfIf { condition, power, toughness, keywords }`:
+  `Predicate::DeliriumActive` (Spineseeker Centipede +1/+2 + vigilance) and
+  `Predicate::ValueAtLeast(GraveyardSizeOf(You), 7)` (Mind Drill Assailant +3/+0)
+  both ride it — no new primitive needed.
 - ⏳ **Exile-from-graveyard activation cost.** Daring Fiendbonder / Daring
   Waverider-style "{cost}, Exile this from your graveyard: …" abilities need a
   graveyard-activated ability path (activate while in graveyard, paying an

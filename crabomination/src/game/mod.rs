@@ -2419,6 +2419,33 @@ impl GameState {
                 }
             }
         }
+        // Chosen-type tribal anthem (`StaticEffect::AnthemForChosenType`) —
+        // pumps the controller's creatures of the type named at the source's
+        // ETB (`CardInstance.chosen_creature_type`). Adaptive Automaton,
+        // Patchwork Banner.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::AnthemForChosenType { power, toughness, exclude_source } =
+                    &sa.effect
+                else {
+                    continue;
+                };
+                let Some(ct) = card.chosen_creature_type else { continue };
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::AllWithCreatureType {
+                        controller: Some(card.controller),
+                        creature_type: ct,
+                        exclude_source: *exclude_source,
+                    },
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(*power, *toughness),
+                });
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -6556,6 +6583,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PumpTeamIf — conditional team anthem, resolved in
             // `gather_continuous_effects` (needs live predicate eval).
             | StaticEffect::PumpTeamIf { .. }
+            // AnthemForChosenType — reads the source's live chosen creature
+            // type; resolved in `gather_continuous_effects`.
+            | StaticEffect::AnthemForChosenType { .. }
             // ExileNontokenCreaturesNotCast (Containment Priest) — read at
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.

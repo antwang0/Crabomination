@@ -29687,9 +29687,11 @@ pub fn curious_forager() -> CardDefinition {
     }
 }
 
-/// Spineseeker Centipede — {2}{G} 2/1 Insect. ETB: search your library for a
-/// basic land card and put it into your hand. (Delirium rider dropped.)
+/// Spineseeker Centipede — {2}{G} 2/1 Insect. ETB: tutor a basic land to hand.
+/// Delirium — +1/+2 and vigilance while 4+ card types are in your graveyard.
 pub fn spineseeker_centipede() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Spineseeker Centipede",
         cost: cost(&[generic(2), g()]),
@@ -29702,6 +29704,99 @@ pub fn spineseeker_centipede() -> CardDefinition {
             filter: SelectionRequirement::IsBasicLand,
             to: ZoneDest::Hand(PlayerRef::You),
         })],
+        static_abilities: vec![StaticAbility {
+            description: "Delirium — +1/+2 and vigilance while 4+ card types are in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DeliriumActive { who: PlayerRef::You },
+                power: 1,
+                toughness: 2,
+                keywords: vec![Keyword::Vigilance],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mind Drill Assailant — {2}{U/B}{U/B} 2/5 Rat Warlock. Threshold — +3/+0
+/// while 7+ cards are in your graveyard. {2}{U/B}: Surveil 1.
+pub fn mind_drill_assailant() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    use crate::mana::hybrid;
+    CardDefinition {
+        name: "Mind Drill Assailant",
+        cost: cost(&[generic(2), hybrid(Color::Blue, Color::Black), hybrid(Color::Blue, Color::Black)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rat, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        static_abilities: vec![StaticAbility {
+            description: "Threshold — +3/+0 while 7+ cards are in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                    Value::Const(7),
+                ),
+                power: 3,
+                toughness: 0,
+                keywords: vec![],
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), hybrid(Color::Blue, Color::Black)]),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Adaptive Automaton — {3} 2/2 Artifact Creature Construct. As it enters,
+/// choose a creature type. Other creatures you control of that type get +1/+1.
+pub fn adaptive_automaton() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Adaptive Automaton",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control of the chosen type get +1/+1.",
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: true },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Patchwork Banner — {3} Artifact. As it enters, choose a creature type.
+/// Creatures you control of that type get +1/+1. {T}: Add one mana of any color.
+pub fn patchwork_banner() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Patchwork Banner",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control of the chosen type get +1/+1.",
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

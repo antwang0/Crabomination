@@ -37624,6 +37624,78 @@ fn spineseeker_centipede_tutors_basic_land() {
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "Forest in hand");
 }
 
+/// Spineseeker Centipede's Delirium grants +1/+2 and vigilance at 4+ types.
+#[test]
+fn spineseeker_centipede_delirium_pumps_and_grants_vigilance() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spineseeker_centipede());
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 1), "base 2/1 without delirium");
+    assert!(!c.keywords.contains(&Keyword::Vigilance));
+    // Four card types in graveyard: Creature, Land, Sorcery, Instant.
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::ponder());
+    g.add_card_to_graveyard(0, catalog::manamorphose());
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "delirium +1/+2");
+    assert!(c.keywords.contains(&Keyword::Vigilance), "delirium grants vigilance");
+}
+
+/// Mind Drill Assailant gets +3/+0 once seven cards are in your graveyard.
+#[test]
+fn mind_drill_assailant_threshold_pumps_power() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::mind_drill_assailant());
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((2, 5)));
+    for _ in 0..7 { g.add_card_to_graveyard(0, catalog::forest()); }
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == id).map(|c| (c.power, c.toughness)), Some((5, 5)),
+        "Threshold grants +3/+0");
+}
+
+/// Adaptive Automaton pumps other creatures of the chosen type, not itself.
+#[test]
+fn adaptive_automaton_anthems_chosen_type() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let auto = g.add_card_to_battlefield(0, catalog::adaptive_automaton());
+    let goblin = g.add_card_to_battlefield(0, catalog::goblin_bushwhacker()); // 1/1 Goblin
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 non-Goblin
+    // Stamp the chosen type directly (the ETB NameCreatureType path is tested
+    // separately for Cavern of Souls).
+    g.battlefield.iter_mut().find(|c| c.id == auto).unwrap().chosen_creature_type =
+        Some(CreatureType::Goblin);
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == goblin).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "other Goblin +1/+1");
+    assert_eq!(cp.iter().find(|c| c.id == bear).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "non-Goblin unaffected");
+    assert_eq!(cp.iter().find(|c| c.id == auto).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "Automaton excludes itself (Other ...)");
+}
+
+/// Patchwork Banner pumps every creature of the chosen type (no self-exclude).
+#[test]
+fn patchwork_banner_anthems_chosen_type() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let banner = g.add_card_to_battlefield(0, catalog::patchwork_banner());
+    let goblin = g.add_card_to_battlefield(0, catalog::goblin_bushwhacker());
+    let theirs = g.add_card_to_battlefield(1, catalog::goblin_bushwhacker()); // opp's Goblin
+    g.battlefield.iter_mut().find(|c| c.id == banner).unwrap().chosen_creature_type =
+        Some(CreatureType::Goblin);
+    let cp = g.compute_battlefield();
+    assert_eq!(cp.iter().find(|c| c.id == goblin).map(|c| (c.power, c.toughness)), Some((2, 2)),
+        "your Goblin +1/+1");
+    assert_eq!(cp.iter().find(|c| c.id == theirs).map(|c| (c.power, c.toughness)), Some((1, 1)),
+        "opponent's Goblin unaffected (creatures you control)");
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {
