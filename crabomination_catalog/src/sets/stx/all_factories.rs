@@ -4265,5 +4265,10 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::harness_infinity,
         super::kasmina_enigma_sage,
         super::the_biblioplex,
+        // ── extras_17 — remaining single-faced STX printed cards ──
+        super::efreet_flamepainter,
+        super::thunderous_orator,
+        super::venerable_warsinger,
+        super::ardent_dustspeaker,
     ]
 }

@@ -466,6 +466,7 @@ impl GameState {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 
+
             // "Can't block unless it has an even number of counters on it"
             // (Sab-Sunen). Zero is even; reject an odd total counter count.
             if kws_of(blocker_id).contains(&Keyword::CantAttackOrBlockUnlessEvenCounters)
@@ -1742,11 +1743,23 @@ impl GameState {
         }
 
         for (trig_source, effect, controller) in triggers {
+            // Most combat-damage triggers implicitly target the damaged player
+            // (drain riders, "that player discards / loses life"). But some
+            // target a *graveyard* card instead — Efreet Flamepainter re-casts
+            // an instant, Venerable Warsinger reanimates a creature. For those,
+            // auto-pick the graveyard target rather than mis-binding slot 0 to
+            // the damaged player.
+            let target = if effect.prefers_graveyard_target() {
+                self.auto_target_for_effect_avoiding(&effect, controller, Some(trig_source))
+                    .or(Some(Target::Player(damaged_player)))
+            } else {
+                Some(Target::Player(damaged_player))
+            };
             self.stack.push(StackItem::Trigger {
                 source: trig_source,
                 controller,
                 effect: Box::new(effect),
-                target: Some(Target::Player(damaged_player)),
+                target,
                 mode: None,
                 x_value: 0,
                 converged_value: 0,

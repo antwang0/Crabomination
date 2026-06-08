@@ -452,6 +452,9 @@ impl Effect {
             | Effect::CounterAbility { what }
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
+            | Effect::CastWithoutPayingImmediate { what, .. }
+            | Effect::CopySpell { what, .. }
+            | Effect::CopySpellMayChooseTargets { what, .. }
             | Effect::GainControl { what, .. } => sel_filter(what),
             Effect::UnlessPlayerPays { then, .. } => then.primary_target_filter(),
             Effect::AddCounter { what, .. }
@@ -630,6 +633,11 @@ impl Effect {
             | Effect::ForEach { body, .. }
             | Effect::MayDo { body, .. } => body.prefers_graveyard_target(),
             Effect::Process { then, .. } => then.prefers_graveyard_target(),
+            // Recasting a target card *from the graveyard* (Efreet Flamepainter,
+            // The Dawning Archaic) wants the graveyard walked for the target.
+            Effect::CastWithoutPayingImmediate { source_zone, .. } => {
+                matches!(source_zone, crate::card::Zone::Graveyard)
+            }
             _ => false,
         }
     }
@@ -863,6 +871,8 @@ impl Effect {
             | Effect::CounterUnlessPaid { .. }
             | Effect::CounterUnless { .. } => false,
             Effect::UnlessPlayerPays { then, .. } => then.accepts_player_target(),
+            // Targets a card to recast (graveyard/exile), not a player.
+            Effect::CastWithoutPayingImmediate { .. } => false,
             // Permanent-targeting effects: skip Player.
             Effect::Destroy { .. }
             | Effect::DestroyNoRegen { .. }

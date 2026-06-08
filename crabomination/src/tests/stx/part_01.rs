@@ -1041,14 +1041,12 @@ fn confront_the_past_mode_2_uses_loyalty_counter_x() {
 }
 
 /// Tempted by the Oriq — body sanity: target enemy creature swaps to
-/// caster control, is untapped, and gains haste. This locks in the
-/// closing of the STX Witherbloom school (the doc-only promotion in
-/// push XXXIII relies on the printed body being faithful).
+/// caster control permanently (MV ≤ 3 gate). Faithful steal — no untap/haste
+/// rider (that was an old approximation).
 #[test]
-fn tempted_by_the_oriq_steals_untaps_and_grants_haste_witherbloom_closer() {
+fn tempted_by_the_oriq_steals_low_mv_creature_permanently() {
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
 
     let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
@@ -1057,13 +1055,11 @@ fn tempted_by_the_oriq_steals_untaps_and_grants_haste_witherbloom_closer() {
         card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Tempted by the Oriq castable for {2}{B}");
+    }).expect("Tempted by the Oriq castable");
     drain_stack(&mut g);
 
     let b = g.battlefield_find(bear).expect("bear still on bf");
-    assert_eq!(b.controller, 0, "controlled by caster EOT");
-    assert!(!b.tapped, "untapped");
-    assert!(b.has_keyword(&Keyword::Haste));
+    assert_eq!(b.controller, 0, "controlled by caster");
 }
 
 /// Quandrix Charm mode 2 promoted to `SetBasePT` — a 1/1 with a +1/+1
@@ -1735,33 +1731,30 @@ fn mage_hunters_mark_pumps_target_and_grants_menace() {
 }
 
 /// Mage Duel: friendly creature deals damage equal to its power to opp
-/// creature. A 5/5 friendly Wurm (Bookwurm-style) wipes a 2/2 Bear.
+/// Mage Duel pumps your creature +1/+2 then has it fight the opponent's. A
+/// pumped 3/4 Bear (2/2 + 1/2) kills a 2/2 Bear and survives the 2 back.
 #[test]
-fn mage_duel_friendly_burns_opp_creature_by_friendly_power() {
+fn mage_duel_pumps_and_fights() {
     let mut g = two_player_game();
-    let friendly = g.add_card_to_battlefield(0, catalog::tarmogoyf());
-    // Tarmogoyf without any types in any graveyard is 0/1; let's seed a
-    // graveyard card so its power becomes 1.
-    let _ = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.clear_sickness(opp_bear);
 
     let id = g.add_card_to_hand(0, catalog::mage_duel());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
-    // Slot 0 = opp victim; slot 1 = friendly dealer.
+    // Slot 0 = friendly creature (pumped, attacker); slot 1 = opp victim.
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(opp_bear)),
-        additional_targets: vec![Target::Permanent(friendly)],
+        card_id: id, target: Some(Target::Permanent(friendly)),
+        additional_targets: vec![Target::Permanent(opp_bear)],
         mode: None, x_value: None,
-    }).expect("Mage Duel castable for {1}{R}");
+    }).expect("Mage Duel castable");
     drain_stack(&mut g);
 
-    // Tarmogoyf at 1/2 (with 1 type in gy: Instant) deals 1 to the bear;
-    // bear survives but takes 1 damage.
-    let bear_card = g.battlefield.iter().find(|c| c.id == opp_bear)
-        .expect("bear still alive (1 damage on a 2-toughness body)");
-    assert_eq!(bear_card.damage, 1, "bear took 1 damage from friendly power 1");
+    // The pumped 3/4 deals 3 to the 2/2 (dies); takes 2 back and survives.
+    assert!(g.battlefield_find(opp_bear).is_none(), "opp bear dies to the fight");
+    let me = g.battlefield_find(friendly).expect("our pumped creature survives");
+    assert_eq!(me.damage, 2, "took 2 from the fight (4 toughness survives)");
 }
 
 /// Eccentric Apprentice's magecraft trigger pumps the source +1/+0 EOT
@@ -1790,38 +1783,33 @@ fn eccentric_apprentice_pumps_on_instant_cast() {
 }
 
 /// Illuminate History: discard a card from hand and create two 2/2 R/W
-/// Spirit tokens with flying.
+/// Illuminate History — discard any number, draw that many, then if 7+ cards
+/// in your graveyard create a single 3/2 Spirit.
 #[test]
-fn illuminate_history_discards_and_creates_two_spirits() {
+fn illuminate_history_loots_then_makes_a_spirit_when_graveyard_full() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    // Seed a card in hand to be discarded.
-    let _fodder = g.add_card_to_hand(0, catalog::island());
+    for _ in 0..6 { g.add_card_to_graveyard(0, catalog::island()); } // 6 + the discard = 7
+    let fodder = g.add_card_to_hand(0, catalog::island());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::illuminate_history());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
     let hand_before = g.players[0].hand.len();
-
+    // Discard the one fodder card.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![fodder])]));
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Illuminate History castable for {1}{R}{W}");
+    }).expect("Illuminate History castable");
     drain_stack(&mut g);
-
-    // Hand: -1 (cast) -1 (discard) = -2 from before.
-    assert_eq!(g.players[0].hand.len(), hand_before - 2,
-        "should cast + discard, net -2 hand cards");
-
+    // -1 (cast) -1 (discard) +1 (draw) = net -1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "looted one card");
     let spirits: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Spirit"
-            && c.controller == 0)
+        .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
         .collect();
-    assert_eq!(spirits.len(), 2, "should mint two Spirits");
-    for s in &spirits {
-        assert!(s.has_keyword(&Keyword::Flying),
-            "spirit token should have flying");
-        assert_eq!(s.power(), 2);
-        assert_eq!(s.toughness(), 2);
-    }
+    assert_eq!(spirits.len(), 1, "one 3/2 Spirit (graveyard reached 7)");
+    assert_eq!(spirits[0].power(), 3);
+    assert_eq!(spirits[0].toughness(), 2);
 }
 
 /// Brilliant Plan: a {3}{U}{U} Sorcery — Lesson. Scry 3 + Draw 3.

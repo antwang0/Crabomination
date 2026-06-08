@@ -1201,55 +1201,26 @@ pub fn hofri_ghostforge() -> CardDefinition {
 /// Full printed Threaten template: `GainControl` (EOT) +
 /// `Untap(Target)` + `GrantKeyword(Haste, EOT)`.
 pub fn tempted_by_the_oriq() -> CardDefinition {
-    use crate::effect::Duration;
     CardDefinition {
         name: "Tempted by the Oriq",
         cost: cost(&[generic(1), u(), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::GainControl {
-                what: target_filtered(SelectionRequirement::Creature),
-                to: None,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Untap {
-                what: Selector::Target(0),
-                up_to: None,
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Haste,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        // Permanently gain control of a creature/PW (MV 3 or less) an opponent
+        // controls. Printed text is per-opponent; with single-target engine
+        // targeting this grabs one such permanent (exact in 1v1).
+        effect: Effect::GainControl {
+            what: target_filtered(
+                SelectionRequirement::ControlledByOpponent
+                    .and(SelectionRequirement::ManaValueAtMost(3))
+                    .and(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+            ),
+            to: None,
+            duration: Duration::Permanent,
+        },
+        ..Default::default()
     }
 }
 
@@ -1715,62 +1686,37 @@ pub fn crackle_with_power() -> CardDefinition {
 /// a target creature an opponent controls (`ControlledByOpponent` filter).
 /// Mode 1 draws `CountOf(YourCreatures WithCounter(+1/+1))` cards.
 pub fn mentors_guidance() -> CardDefinition {
+    use crate::card::{CreatureType, Predicate};
+    use crate::effect::shortcut::on_cast;
     CardDefinition {
         name: "Mentor's Guidance",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: damage equal to N creatures you control.
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
-                ),
-                amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                ))),
-            },
-            // Mode 1: draw N where N = creatures you control with a +1/+1.
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::CountOf(Box::new(Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::WithCounter(
-                            CounterType::PlusOnePlusOne,
-                        )),
-                ))),
-            },
+        // Scry 1, then draw a card.
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        // "When you cast this spell, copy it if you control a planeswalker,
+        // Cleric, Druid, Shaman, Warlock, or Wizard."
+        triggered_abilities: vec![on_cast(Effect::If {
+            cond: Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::ControlledByYou.and(
+                    SelectionRequirement::Planeswalker
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Cleric))
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Druid))
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Shaman))
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Warlock))
+                        .or(SelectionRequirement::HasCreatureType(CreatureType::Wizard)),
+                ),
+            )),
+            then: Box::new(Effect::CopySpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+                count: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
     }
 }
 
@@ -2797,31 +2743,36 @@ pub fn mage_hunters_mark() -> CardDefinition {
 
 // ── Mage Duel ───────────────────────────────────────────────────────────────
 
-/// Mage Duel — {2}{G} Sorcery.
-/// "Target creature you control deals damage equal to its power to
-/// target creature you don't control."
+/// Mage Duel — {2}{G} Sorcery. Target creature you control gets +1/+2 until
+/// end of turn, then it fights target creature you don't control.
 ///
-/// Mage Duel — {1}{R} Sorcery. Target creature you control deals damage
-/// equal to its power to target creature you don't control.
-///
-/// Two-slot spell: slot 0 is the hostile victim (auto-picked hostile),
-/// slot 1 (`additional_targets[0]`) is the friendly dealer. The fight
-/// is one-sided — only the dealer's power is dealt, so it survives.
+/// Two-slot spell: slot 0 is the friendly creature (pumped, then the fight's
+/// attacker), slot 1 (`additional_targets[0]`) is the opponent's victim. The
+/// "{2} less if you've cast another instant/sorcery this turn" discount is
+/// dropped.
 pub fn mage_duel() -> CardDefinition {
     CardDefinition {
         name: "Mage Duel",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
-            ),
-            amount: Value::PowerOf(Box::new(Selector::TargetFiltered {
-                slot: 1,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            })),
-        },
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Fight {
+                attacker: Selector::Target(0),
+                defender: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                },
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -3035,29 +2986,34 @@ pub fn wandering_archaic() -> CardDefinition {
 /// 2/2 red and white Spirit creature tokens with flying." Discard is a
 /// real cast-time cost via `AdditionalCastCost::Discard`.
 pub fn illuminate_history() -> CardDefinition {
-    let lorehold_spirit_flying = TokenDefinition {
-        name: "Spirit".to_string(),
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Flying],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Red, Color::White],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
-            ..Default::default()
-        },
-        ..Default::default()
-    };
+    use crabomination_base::tokens::lorehold_spirit_3_2_token;
     CardDefinition {
         name: "Illuminate History",
-        cost: cost(&[generic(1), r(), w()]),
+        cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
-        additional_cast_cost: vec![AdditionalCastCost::Discard { count: 1 }],
-        effect: Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            definition: lorehold_spirit_flying,
-        },
+        // Discard any number, then draw that many. Then if 7+ cards in your
+        // graveyard, create a 3/2 red-and-white Spirit.
+        effect: Effect::Seq(vec![
+            Effect::DiscardAnyNumber { who: Selector::You },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::DiscardedThisResolution {
+                    filter: SelectionRequirement::Any,
+                })),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::GraveyardSizeOf(PlayerRef::You),
+                    Value::Const(7),
+                ),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lorehold_spirit_3_2_token(),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
         ..Default::default()
     }
 }
