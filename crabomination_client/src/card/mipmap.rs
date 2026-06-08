@@ -220,7 +220,7 @@ mod tests {
         // A solid fill must average to (within sRGB round-trip rounding) the
         // same colour at every level.
         for (got, want) in img.data.as_ref().unwrap()[..4].iter().zip([200, 100, 50, 255]) {
-            assert!((*got as i32 - want as i32).abs() <= 1, "got {got}, want ~{want}");
+            assert!((*got as i32 - want).abs() <= 1, "got {got}, want ~{want}");
         }
         // Second pass is a no-op.
         assert!(!generate_mipmaps(&mut img));

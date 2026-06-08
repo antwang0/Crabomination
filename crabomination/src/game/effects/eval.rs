@@ -64,10 +64,9 @@ impl GameState {
                     // included, in preference to the graveyard's printed P/T.
                     if self.resolving_lki_source == Some(cid)
                         && self.battlefield_find(cid).is_none()
+                        && let Some(snap) = self.leaves_bf_lki.get(&cid)
                     {
-                        if let Some(snap) = self.leaves_bf_lki.get(&cid) {
-                            return Some(snap.power());
-                        }
+                        return Some(snap.power());
                     }
                     // CR 121 / Lorehold Excavation: read power from the
                     // battlefield first (live `power()` includes
@@ -101,10 +100,9 @@ impl GameState {
                     let cid = e.as_permanent_id()?;
                     if self.resolving_lki_source == Some(cid)
                         && self.battlefield_find(cid).is_none()
+                        && let Some(snap) = self.leaves_bf_lki.get(&cid)
                     {
-                        if let Some(snap) = self.leaves_bf_lki.get(&cid) {
-                            return Some(snap.toughness());
-                        }
+                        return Some(snap.toughness());
                     }
                     if let Some(c) = self.battlefield_find(cid) {
                         return Some(c.toughness());
