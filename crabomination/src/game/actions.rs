@@ -5751,6 +5751,30 @@ impl GameState {
             None
         };
 
+        // Pre-flight bounce-another gate (CR 602.5b "Return a [filter] you
+        // control to its owner's hand:"). Confirm `count` battlefield
+        // permanents (other than the source) the activator controls match the
+        // filter; auto-pick the lowest-power match. Quirion Ranger, Wirewood
+        // Symbiote. (No interactive picker yet — bots/auto only.)
+        let bounce_other_picks: Vec<CardId> = if let Some((filter, count)) =
+            ability.bounce_other_filter.as_ref()
+        {
+            let count = *count as usize;
+            let candidates: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| c.id)
+                .collect();
+            if candidates.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            self.auto_pick_lowest_power(&candidates, count)
+        } else {
+            Vec::new()
+        };
+
         // Pre-flight discard-cost gate (CR 602.5b "Discard a [filter] card:").
         // Confirm `count` matching cards in the activator's hand; pick the
         // lowest-CMC matches so higher-value cards stay. Discarded after
@@ -6052,6 +6076,18 @@ impl GameState {
             && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid)
         {
             c.tapped = true;
+        }
+
+        // Return-another-to-hand-as-cost (CR 602.5b): with tap/mana/life paid,
+        // bounce each cost-picked permanent to its owner's hand. Quirion
+        // Ranger, Wirewood Symbiote.
+        for other_cid in bounce_other_picks {
+            self.move_card_to(
+                other_cid,
+                &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOfMoved),
+                &crate::game::effects::EffectContext::for_ability(card_id, p, None),
+                &mut events,
+            );
         }
 
         // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile

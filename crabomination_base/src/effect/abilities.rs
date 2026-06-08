@@ -637,6 +637,18 @@ pub struct ActivatedAbility {
     /// when nothing matches. Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub tap_other_filter: Option<SelectionRequirement>,
+    /// Optional cost: return a *different* permanent the activator controls
+    /// matching this filter to its owner's hand (CR 602.5b "Return a [filter]
+    /// you control to its owner's hand:" costs). Mirrors `sac_other_filter`
+    /// but bounces rather than sacrifices. Powers Quirion Ranger ("Return a
+    /// Forest you control …"), Wirewood Symbiote ("Return an Elf you control
+    /// …"), Scryb Ranger, etc. The auto-picker takes the lowest-power match
+    /// (or first matching noncreature) so higher-value permanents stay put.
+    /// Rejected with `GameError::SelectionRequirementViolated` when nothing
+    /// matches. The bounce is applied after tap / mana / life payments
+    /// succeed but before the effect resolves. Defaults to None.
+    #[serde(default)]
+    pub bounce_other_filter: Option<(SelectionRequirement, u32)>,
     /// True if this ability is activated from the controller's hand
     /// rather than the battlefield. The activation walker searches the
     /// hand for the source instead of the battlefield. Pairs with

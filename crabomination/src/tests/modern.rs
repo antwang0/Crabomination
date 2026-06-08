@@ -38848,3 +38848,45 @@ fn stormwing_entity_scries_on_etb() {
     g.fire_self_etb_triggers(s, 0);
     drain_stack(&mut g); // scry auto-resolves; no panic = pass
 }
+
+/// Quirion Ranger untaps a creature by bouncing a Forest you control.
+#[test]
+fn quirion_ranger_bounces_forest_to_untap() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let ranger = g.add_card_to_battlefield(0, catalog::quirion_ranger());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ranger, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate Quirion Ranger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_none(), "Forest returned to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "Forest in hand");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "target creature untapped");
+}
+
+/// Wirewood Symbiote can't activate without an Elf to return.
+#[test]
+fn wirewood_symbiote_requires_an_elf_to_bounce() {
+    let mut g = two_player_game();
+    let symb = g.add_card_to_battlefield(0, catalog::wirewood_symbiote()); // an Insect, not an Elf
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    // No other Elf on the battlefield → activation rejected.
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: symb, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    });
+    assert!(res.is_err(), "no Elf to return → cost unpayable");
+    // Add an Elf; now it works.
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: symb, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate with an Elf available");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf), "Elf returned to hand");
+    assert!(!g.battlefield_find(bear).unwrap().tapped, "creature untapped");
+}

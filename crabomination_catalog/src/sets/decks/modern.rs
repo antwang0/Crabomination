@@ -31623,3 +31623,58 @@ pub fn stormwing_entity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Quirion Ranger — {G} 1/1 Elf Ranger. Return a Forest you control to its
+/// owner's hand: Untap target creature. Activate only once each turn.
+pub fn quirion_ranger() -> CardDefinition {
+    CardDefinition {
+        name: "Quirion Ranger",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Ranger],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            bounce_other_filter: Some((
+                SelectionRequirement::HasLandType(LandType::Forest),
+                1,
+            )),
+            effect: Effect::Untap {
+                what: target_filtered(SelectionRequirement::Creature),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wirewood Symbiote — {G} 1/1 Insect. Return an Elf you control to its owner's
+/// hand: Untap target creature. Activate only once each turn.
+pub fn wirewood_symbiote() -> CardDefinition {
+    CardDefinition {
+        name: "Wirewood Symbiote",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            once_per_turn: true,
+            bounce_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Elf),
+                1,
+            )),
+            effect: Effect::Untap {
+                what: target_filtered(SelectionRequirement::Creature),
+                up_to: None,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
