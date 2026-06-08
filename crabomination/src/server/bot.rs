@@ -1480,7 +1480,15 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = state
         .battlefield
         .iter()
-        .filter(|c| c.controller == seat && c.can_block())
+        // `can_block()` only checks creature-ness + untapped; also exclude
+        // creatures that genuinely can't block (Decayed CR 702.147, or a
+        // granted "can't block") so the bot never submits an illegal block.
+        .filter(|c| {
+            c.controller == seat
+                && c.can_block()
+                && !c.has_keyword(&Keyword::Decayed)
+                && !c.has_keyword(&Keyword::CantBlock)
+        })
         .map(|c| {
             (
                 c.id,
@@ -2551,6 +2559,29 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(wall, vanilla)],
             "chump the non-trampler (saves 4) over the trampler (saves only 3)");
+    }
+
+    /// CR 702.147 — a Decayed creature can't block, so the bot must never
+    /// offer it as a blocker even when life-threatened (an illegal block
+    /// would get the whole DeclareBlockers batch rejected).
+    #[test]
+    fn bot_never_blocks_with_a_decayed_creature() {
+        use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+        use crate::game::types::{Attack, AttackTarget};
+        let mut g = two_player_game();
+        let atk = g.add_card_to_battlefield(0, CardDefinition {
+            name: "Beater", card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(), power: 4, toughness: 4, ..Default::default()
+        });
+        let zombie = g.add_card_to_battlefield(1, CardDefinition {
+            name: "Decayed Zombie", card_types: vec![CardType::Creature],
+            subtypes: Subtypes::default(), power: 2, toughness: 2,
+            keywords: vec![Keyword::Decayed], ..Default::default()
+        });
+        g.players[1].life = 1; // life-threatened → the bot would chump if it could
+        g.attacking = vec![Attack { attacker: atk, target: AttackTarget::Player(1) }];
+        let blocks = pick_blocks_for_test(&g, 1);
+        assert!(!blocks.iter().any(|(b, _)| *b == zombie), "decayed creature is never declared as a blocker");
     }
 
     /// CR 702.16e — the bot treats a block by a protection-from-the-attacker's
