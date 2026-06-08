@@ -87,7 +87,11 @@ not how Magic works" moments.
    `apply_enters_tapped_replacement` (CR 614.13 — Imposing Sovereign,
    Authority of the Consuls, Blind Obedience, Kismet); "exile non-cast
    nontoken creatures instead" ships via
-   `StaticEffect::ExileNontokenCreaturesNotCast` — Containment Priest),
+   `StaticEffect::ExileNontokenCreaturesNotCast` — Containment Priest;
+   **opponent's nontoken creature would-die → exile instead** ships via
+   `StaticEffect::ExileDyingOpponentCreatures { when_you_do }` checked at the
+   shared `remove_from_battlefield_to_graveyard` funnel, with an optional
+   reflexive "when you do" — Valentin, Dean of the Vein),
    damage *redirection* (Maze of Ith) and draw/skip replacement.
    **Graveyard→exile hate** ships via
    `StaticEffect::ExileCardsBoundForGraveyard { opponents_only }` +

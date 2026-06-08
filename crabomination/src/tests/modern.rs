@@ -35910,7 +35910,7 @@ fn rolling_thunder_deals_x_damage() {
 #[test]
 fn bot_declines_self_costly_static_reflexive() {
     use crate::card::{CardDefinition, CardType, Supertype};
-    use crate::effect::{Effect, PlayerRef, Selector, StaticAbility, StaticEffect, Value};
+    use crate::effect::{Effect, Selector, StaticAbility, StaticEffect, Value};
     use crate::server::bot::optional_trigger_beneficial;
 
     let mut g = two_player_game();

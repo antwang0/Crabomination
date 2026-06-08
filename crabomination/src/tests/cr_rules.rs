@@ -5,7 +5,7 @@
 
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget};
-use crate::game::{drain_stack, two_player_game};
+use crate::game::two_player_game;
 use super::*;
 
 // ── CR 701.35 — Detain ────────────────────────────────────────────────────────

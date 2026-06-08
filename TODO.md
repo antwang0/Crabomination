@@ -8,15 +8,26 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Discovered this run (final STX sweep):**
+- ⏳ **Remaining STX printed cards (each needs a new primitive):**
   - **Study / hone counters + cast-from-exile-with-counter** — a new
     `CounterType::{Study,Hone}` plus a "cast a card you own in exile with a
-    [counter] counter" pathway. Unblocks Kianne//Imbraham (study) and
-    Uvilda//Nassari (hone), the last two Dean MDFCs.
+    [counter] counter" pathway (incl. `AddCounter` on exile-zone cards + a
+    distinct-mana-value-among-exile `Value`). Unblocks Kianne//Imbraham (study)
+    and Uvilda//Nassari (hone), the last two Dean MDFCs.
   - **Continuous "becomes a copy of" (layer 1)** — until-EOT/permanent copy of
     a chosen permanent (Echoing Equation, Helm of the Host loop, Mirrorform).
-  - **Death-replacement "exile instead" for opponents' creatures** + reflexive
-    trigger — Valentin, Dean of the Vein.
+  - **Fixed alternative cost "cast for {N} instead"** + **put-lands-from-hand-
+    onto-battlefield** — Jadzi // Journey to the Oracle.
+  - **`StaticEffect::CantCastPermanentSpells`** + a next-spell-cast reflexive
+    impulse keyed to the cast spell's MV — Codie, Vociferous Codex.
+  - **Up-to-N variable targets + opponent-split** — Ecological Appreciation.
+  - **Variable-sacrifice cost reduction** ("sacrifice any number, {N} less
+    each") — Awaken the Blood Avatar (currently 🟡: flat cost, sac dropped).
+  - **Opponent-ability-activation trigger + spell-lock** — Flamescroll // Revel.
+  - ✅ done this run: Plargg//Augusta, Extus//Awaken (🟡), Rowan//Will,
+    Mila//Lukka, Valentin//Lisette (exile-instead + reflexive),
+    Radiant Scrollwielder (non-combat lifelink, CR 702.15), Mascot Exhibition
+    (corrected), tapped/untapped anthem filters, cross-type legend-rule fix.
   - **`Effect::Fateseal` / `Effect::DigToHandLoseLife` `wants_ui` suspend path**
     — both currently decide inline (the bot/scripted path); a networked human
     isn't prompted. Same gap as the existing inline pickers.
