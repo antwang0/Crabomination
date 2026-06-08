@@ -3602,30 +3602,28 @@ fn fervent_mastery_tutors_three_cards_from_library() {
 }
 
 #[test]
-fn verdant_mastery_fetches_basic_for_you_and_opponent() {
+fn verdant_mastery_alt_cost_distributes_basics() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
-    let forest = g.add_card_to_library(0, catalog::forest());
-    let island = g.add_card_to_library(1, catalog::island());
-    g.decider = Box::new(ScriptedDecider::new([
-        DecisionAnswer::Search(Some(forest)),
-        DecisionAnswer::Search(Some(island)),
-    ]));
+    // Four basics in your library; the alt cast distributes them
+    // opp-bf / your-bf / your-bf / your-hand.
+    let f: Vec<_> = (0..4).map(|_| g.add_card_to_library(0, catalog::forest())).collect();
+    g.decider = Box::new(ScriptedDecider::new(
+        f.iter().map(|&id| DecisionAnswer::Search(Some(id))).collect::<Vec<_>>(),
+    ));
     let id = g.add_card_to_hand(0, catalog::verdant_mastery());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
 
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Verdant Mastery castable");
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Verdant Mastery alt cost {3}{G}");
     drain_stack(&mut g);
 
-    // You should now have a Forest in play.
-    assert!(g.battlefield.iter().any(|c| c.id == forest && c.controller == 0),
-        "you fetched Forest");
-    // Opponent fetched an Island tapped.
-    assert!(g.battlefield.iter().any(|c| c.id == island && c.controller == 1),
-        "opponent fetched Island");
+    // One basic under the opponent's control, two under yours, one in hand.
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_land()).count(), 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count(), 2);
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.is_land()).count(), 1);
 }
 
 #[test]

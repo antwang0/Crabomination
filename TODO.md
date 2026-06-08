@@ -56,10 +56,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     Past's "planeswalker with mana value X or less" reanimate mode.
   - ✅ **Mastery alt-cost rider** — handled by the existing
     `AlternativeCost.effect_override` (the alt cast runs a different effect).
-    Ships **Fervent Mastery** (Baleful Mastery already used the same hook).
-    Remaining: **Verdant Mastery** still collapses its "if the {3}{G} cost was
-    paid" branch (both clauses always fire) — give it an `effect_override` and a
-    faithful "search up to four basics, distribute" body.
+    Ships **Fervent Mastery** and **Verdant Mastery** (✅ this run — its
+    `effect_override` now distributes basics opp-bf / your-bf×2 / hand on the
+    {3}{G} alt-cast, vs your-bf×2 / hand×2 on the full cast). Baleful Mastery
+    uses the same hook.
   - The STX "still wrong" list in *Suggested next-up tasks* was largely stale:
     Frost Trickster / Eager First-Year / Owlin Shieldmage / Promising Duskmage /
     Rise of Extus / Verdant Mastery / Illuminate History were already faithful.

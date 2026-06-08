@@ -2129,59 +2129,43 @@ pub fn first_day_of_class() -> CardDefinition {
 /// the regular cast covers the headline ramp play pattern. Tracked
 /// in TODO.md.
 pub fn verdant_mastery() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    let basic = || SelectionRequirement::IsBasicLand;
+    let to_your_bf = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true };
+    let to_hand = || ZoneDest::Hand(PlayerRef::You);
+    // Base: put two basics onto the battlefield tapped under your control and
+    // the rest (up to two) into your hand.
+    let base = || {
+        Effect::Seq(vec![
+            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
+            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
+            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_hand() },
+            Effect::Search { who: PlayerRef::You, filter: basic(), to: to_hand() },
+        ])
+    };
+    // Alt ({3}{G} paid): one basic goes onto the battlefield tapped under an
+    // opponent's control, two under yours, the rest into your hand.
+    let alt = Effect::Seq(vec![
+        Effect::Search {
+            who: PlayerRef::You,
+            filter: basic(),
+            to: ZoneDest::Battlefield { controller: PlayerRef::EachOpponent, tapped: true },
+        },
+        Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
+        Effect::Search { who: PlayerRef::You, filter: basic(), to: to_your_bf() },
+        Effect::Search { who: PlayerRef::You, filter: basic(), to: to_hand() },
+    ]);
     CardDefinition {
         name: "Verdant Mastery",
         cost: cost(&[generic(5), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-            Effect::ForEach {
-                selector: Selector::Player(PlayerRef::EachOpponent),
-                body: Box::new(Effect::Search {
-                    who: PlayerRef::Triggerer,
-                    filter: SelectionRequirement::IsBasicLand,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::Triggerer,
-                        tapped: true,
-                    },
-                }),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        effect: base(),
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(3), g()]),
+            effect_override: Some(alt),
+            ..Default::default()
+        }),
+        ..Default::default()
     }
 }
 
