@@ -30549,6 +30549,147 @@ pub fn inspiring_overseer() -> CardDefinition {
     }
 }
 
+/// Tukatongue Thallid — {G} 1/1 Fungus. Dies: create a 1/1 green Saproling.
+pub fn tukatongue_thallid() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Tukatongue Thallid",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fungus], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Saproling".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Green],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Saproling], ..Default::default() },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Hanged Executioner — {2}{W} 1/1 Spirit with Flying. ETB: make a 1/1 flying
+/// Spirit. {3}{W}, Exile this: exile target creature.
+pub fn hanged_executioner() -> CardDefinition {
+    CardDefinition {
+        name: "Hanged Executioner",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+                keywords: vec![Keyword::Flying],
+                ..Default::default()
+            },
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            exile_self_cost: true,
+            effect: Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Steelshaper's Gift — {W} Sorcery. Search your library for an Equipment card
+/// and put it into your hand.
+pub fn steelshapers_gift() -> CardDefinition {
+    CardDefinition {
+        name: "Steelshaper's Gift",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Ballyrush Banneret — {1}{W} 2/1 Kithkin Soldier. Kithkin and Soldier spells
+/// you cast cost {1} less.
+pub fn ballyrush_banneret() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Ballyrush Banneret",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Kithkin and Soldier spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Kithkin)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Soldier)),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Anafenza, the Foremost — {W}{B}{G} 4/4 Legendary Human Soldier. On attack,
+/// put a +1/+1 counter on another tapped creature you control. Opponents'
+/// nontoken creatures that would die are exiled instead.
+pub fn anafenza_the_foremost() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Anafenza, the Foremost",
+        cost: cost(&[w(), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::Tapped)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "If a nontoken creature an opponent owns would die, exile it instead.",
+            effect: StaticEffect::ExileDyingOpponentCreatures { when_you_do: None },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.

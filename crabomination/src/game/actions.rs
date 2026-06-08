@@ -6122,6 +6122,20 @@ impl GameState {
             }
         }
 
+        // Exile-self-as-cost (battlefield activations): the "Exile this
+        // creature:" cost line on a permanent (Hanged Executioner). With
+        // tap/mana/life paid, route the source battlefield → exile via the
+        // shared move funnel so linked-exile returns / leaves triggers /
+        // combat removal stay consistent, mirroring `return_self_cost`.
+        if ability.exile_self_cost
+            && !source_in_gy
+            && !source_in_hand
+            && let Some(owner) = self.battlefield_find(card_id).map(|c| c.owner)
+        {
+            let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
+            self.move_card_to(card_id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+        }
+
         // Discard-self-as-cost (hand activations): the "Discard this card:"
         // cost line of Elemental Masterpiece. Routes hand → graveyard via the
         // shared discard path (CardDiscarded event, madness, etc.) after mana

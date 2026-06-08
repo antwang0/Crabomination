@@ -38183,6 +38183,92 @@ fn inspiring_overseer_gains_life_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
 }
 
+/// Tukatongue Thallid leaves a Saproling behind when it dies.
+#[test]
+fn tukatongue_thallid_dies_into_saproling() {
+    let mut g = two_player_game();
+    let thallid = g.add_card_to_battlefield(0, catalog::tukatongue_thallid());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(thallid)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt thallid");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Saproling"), "Saproling token left behind");
+}
+
+/// Hanged Executioner makes a Spirit on ETB and exiles itself to exile a creature.
+#[test]
+fn hanged_executioner_etb_token_and_exile_ability() {
+    use crate::TurnStep;
+    let mut g = two_player_game();
+    let exec = g.add_card_to_battlefield(0, catalog::hanged_executioner());
+    g.fire_self_etb_triggers(exec, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"), "ETB Spirit token");
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: exec, ability_index: 0,
+        target: Some(crate::game::Target::Permanent(foe)), x_value: None,
+    }).expect("exile ability");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == exec), "Executioner exiled as cost");
+    assert!(g.battlefield_find(foe).is_none(), "target creature exiled");
+}
+
+/// Steelshaper's Gift tutors an Equipment to hand.
+#[test]
+fn steelshapers_gift_tutors_equipment() {
+    let mut g = two_player_game();
+    let sword = g.add_card_to_library(0, catalog::bonesplitter()); // Equipment
+    g.add_card_to_library(0, catalog::forest()); // non-equipment decoy
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(sword)),
+    ]));
+    let id = g.add_card_to_hand(0, catalog::steelshapers_gift());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Steelshaper's Gift");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == sword), "tutored the Equipment");
+}
+
+/// Ballyrush Banneret reduces a Soldier spell's cost by {1}.
+#[test]
+fn ballyrush_banneret_discounts_soldier_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ballyrush_banneret());
+    // A Soldier creature in hand: a {1}{W} 2/1 should be castable for just {W}.
+    let soldier = g.add_card_to_hand(0, catalog::ballyrush_banneret());
+    g.players[0].mana_pool.add(Color::White, 1); // only {W}, no generic
+    g.perform_action(GameAction::CastSpell {
+        card_id: soldier, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Soldier spell discounted to {W}");
+}
+
+/// Anafenza exiles an opponent's dying nontoken creature instead of graveyard.
+#[test]
+fn anafenza_exiles_opponents_dying_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::anafenza_the_foremost());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt opponent creature");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == foe), "opponent's creature exiled, not in graveyard");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == foe), "not in opponent graveyard");
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {
