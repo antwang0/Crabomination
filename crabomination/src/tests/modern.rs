@@ -37490,3 +37490,38 @@ fn might_of_the_meek_pumps_with_mouse() {
     assert_eq!(cp.power, 3, "+1/+0 because you control a Mouse");
     assert_eq!(g.players[0].hand.len(), hand0, "cast one, drew one (net even)");
 }
+
+/// Daggerfang Duo enters with deathtouch and may mill two.
+#[test]
+fn daggerfang_duo_mills_two_on_etb() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_battlefield(0, catalog::daggerfang_duo());
+    assert!(g.battlefield_find(id).unwrap().definition.keywords.contains(&Keyword::Deathtouch));
+    let gy0 = g.players[0].graveyard.len();
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 2, "milled two cards");
+}
+
+/// Valley Rotcaller drains for each other Squirrel/Bat/Lizard/Rat on attack.
+#[test]
+fn valley_rotcaller_drains_per_tribal_creature() {
+    let mut g = two_player_game();
+    let rot = g.add_card_to_battlefield(0, catalog::valley_rotcaller());
+    g.add_card_to_battlefield(0, catalog::daggerfang_duo()); // Rat Squirrel
+    g.add_card_to_battlefield(0, catalog::iridescent_vinelasher()); // Lizard
+    g.battlefield_find_mut(rot).unwrap().summoning_sick = false;
+    g.players[0].life = 20;
+    g.players[1].life = 20;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: rot, target: AttackTarget::Player(1) }])
+        .expect("Rotcaller attacks");
+    drain_stack(&mut g);
+    // Two other tribal creatures → drain 2.
+    assert_eq!(g.players[1].life, 18, "opponent lost 2");
+    assert_eq!(g.players[0].life, 22, "you gained 2");
+}

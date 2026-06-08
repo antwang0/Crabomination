@@ -29468,3 +29468,55 @@ pub fn might_of_the_meek() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Daggerfang Duo — {2}{B} 3/2 Rat Squirrel with Deathtouch. When it enters,
+/// you may mill two cards.
+pub fn daggerfang_duo() -> CardDefinition {
+    CardDefinition {
+        name: "Daggerfang Duo",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rat, CreatureType::Squirrel], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Mill two cards.".into(),
+            body: Box::new(Effect::Mill { who: Selector::You, amount: Value::Const(2) }),
+        })],
+        ..Default::default()
+    }
+}
+
+
+/// Valley Rotcaller — {1}{B} 1/3 Squirrel Warlock with Menace. Whenever it
+/// attacks, each opponent loses X life and you gain X life, where X is the
+/// number of other Squirrels, Bats, Lizards, and Rats you control.
+pub fn valley_rotcaller() -> CardDefinition {
+    let x = || Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+        filter: SelectionRequirement::HasCreatureType(CreatureType::Squirrel)
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Bat))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Lizard))
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Rat))
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    };
+    CardDefinition {
+        name: "Valley Rotcaller",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Squirrel, CreatureType::Warlock], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: x() },
+                Effect::GainLife { who: Selector::You, amount: x() },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
