@@ -37,10 +37,13 @@ pub fn init_shared_assets(
     // Lives at the asset-dir root rather than under `cards/` because
     // `cards/` is gitignored (downloaded card art).
     let back_texture: Handle<Image> = asset_server.load("cardback.png");
+    // Unlit so the card back shows its art at full fidelity, matching the
+    // unlit faces (see `card_front_material`). A lit PBR face is dimmed by
+    // the angled key light and has its blacks lifted by ambient, which reads
+    // as washed-out / faint — exactly what we don't want on text-heavy art.
     let back_material = materials.add(StandardMaterial {
         base_color_texture: Some(back_texture),
-        perceptual_roughness: 0.9,
-        metallic: 0.0,
+        unlit: true,
         ..default()
     });
 
@@ -213,10 +216,15 @@ pub fn card_front_material(
 ) -> Handle<StandardMaterial> {
     let asset_path = scryfall::card_asset_path(name);
     let texture: Handle<Image> = asset_server.load(&asset_path);
+    // Unlit: render the card art exactly as authored, like the Alt-zoom
+    // popup (a screen-space `ImageNode`). A lit PBR material dims the flat,
+    // angled face below full white and lets ambient light lift the dark text
+    // toward gray — both of which make the text read as faint. The card is
+    // pre-rendered art, not a surface we want physically shaded; showing it
+    // unlit keeps full contrast on every quality tier.
     materials.add(StandardMaterial {
         base_color_texture: Some(texture),
-        perceptual_roughness: 0.85,
-        metallic: 0.0,
+        unlit: true,
         ..default()
     })
 }
@@ -231,10 +239,10 @@ pub fn card_back_face_material(
 ) -> Handle<StandardMaterial> {
     let asset_path = scryfall::card_back_face_asset_path(name);
     let texture: Handle<Image> = asset_server.load(&asset_path);
+    // Unlit for full-fidelity art, same rationale as `card_front_material`.
     materials.add(StandardMaterial {
         base_color_texture: Some(texture),
-        perceptual_roughness: 0.85,
-        metallic: 0.0,
+        unlit: true,
         ..default()
     })
 }

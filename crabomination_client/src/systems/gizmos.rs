@@ -14,6 +14,20 @@ use crate::card::layout::player_hand_anchor;
 use crate::game::{AttackingState, BlockingState};
 use crate::net_plugin::CurrentView;
 
+/// Scale a colour into the HDR range (linear space, alpha preserved) so it
+/// exceeds the bloom prefilter threshold (~1.0, see `RenderQuality::bloom`)
+/// and reads as emitted *light* rather than a flat line on HDR tiers. On Low
+/// (no bloom) it just draws a brighter line, which is still perfectly legible.
+fn glow(color: Color, intensity: f32) -> Color {
+    let l = color.to_linear();
+    LinearRgba::new(l.red * intensity, l.green * intensity, l.blue * intensity, l.alpha).into()
+}
+
+/// Standard glow strength for the gameplay-cue overlays. Picked so a fully
+/// saturated cue (yellow/green/orange) lands comfortably past the bloom
+/// threshold without becoming a fireball.
+const CUE_GLOW: f32 = 2.6;
+
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct BlockingGizmos;
 
@@ -61,7 +75,9 @@ pub fn draw_legal_target_rings(
         return;
     }
     let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
-    let color = Color::srgb(pulse, pulse * 0.88, 0.0);
+    // Pulse drives both hue brightness and the HDR glow, so the ring visibly
+    // breathes light in and out as it pulses.
+    let color = glow(Color::srgb(pulse, pulse * 0.88, 0.0), 3.0);
     for (t, gid) in &bf_cards {
         if !legal.permanents.contains(&gid.0) {
             continue;
@@ -100,19 +116,19 @@ pub fn draw_blocking_gizmos(
     for &attacker_id in &attacking {
         let is_blocked = blocking.assignments.iter().any(|(_, a)| *a == attacker_id);
         if let Some(&pos) = positions.get(&attacker_id) {
-            let color = if is_blocked { Color::srgb(0.0, 0.9, 0.3) } else { Color::srgb(1.0, 0.2, 0.2) };
-            draw_diamond(&mut gizmos, pos, 1.1, color);
+            let base = if is_blocked { Color::srgb(0.0, 0.9, 0.3) } else { Color::srgb(1.0, 0.2, 0.2) };
+            draw_diamond(&mut gizmos, pos, 1.1, glow(base, CUE_GLOW));
         }
     }
 
     if let Some(blocker_id) = blocking.selected_blocker
         && let Some(&pos) = positions.get(&blocker_id)
     {
-        draw_diamond(&mut gizmos, pos, 1.1, Color::srgb(1.0, 0.88, 0.0));
+        draw_diamond(&mut gizmos, pos, 1.1, glow(Color::srgb(1.0, 0.88, 0.0), CUE_GLOW));
         for &attacker_id in &attacking {
             let already_assigned = blocking.assignments.iter().any(|(_, a)| *a == attacker_id);
             if !already_assigned && let Some(&att_pos) = positions.get(&attacker_id) {
-                gizmos.arrow(pos, att_pos, Color::srgba(1.0, 0.88, 0.0, 0.7)).with_tip_length(0.6);
+                gizmos.arrow(pos, att_pos, glow(Color::srgba(1.0, 0.88, 0.0, 0.7), CUE_GLOW)).with_tip_length(0.6);
             }
         }
     }
@@ -121,8 +137,9 @@ pub fn draw_blocking_gizmos(
         if let Some(&b_pos) = positions.get(&blocker_id)
             && let Some(&a_pos) = positions.get(&attacker_id)
         {
-            gizmos.arrow(b_pos, a_pos, Color::srgb(0.0, 0.9, 0.3)).with_tip_length(0.6);
-            draw_diamond(&mut gizmos, b_pos, 1.1, Color::srgb(0.0, 0.9, 0.3));
+            let green = glow(Color::srgb(0.0, 0.9, 0.3), CUE_GLOW);
+            gizmos.arrow(b_pos, a_pos, green).with_tip_length(0.6);
+            draw_diamond(&mut gizmos, b_pos, 1.1, green);
         }
     }
 }
@@ -143,7 +160,7 @@ pub fn draw_attacker_overlays(
 
     for attacker_id in attacking {
         if let Some(&pos) = positions.get(&attacker_id) {
-            draw_crossed_swords(&mut gizmos, pos, Color::srgb(1.0, 0.35, 0.05));
+            draw_crossed_swords(&mut gizmos, pos, glow(Color::srgb(1.0, 0.35, 0.05), CUE_GLOW));
         }
     }
 }
@@ -168,7 +185,7 @@ pub fn draw_stack_arrows(
 
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
-    let color = Color::srgba(1.0, 0.6, 0.05, 0.9);
+    let color = glow(Color::srgba(1.0, 0.6, 0.05, 0.9), CUE_GLOW);
 
     for item in &cv.stack {
         let StackItemView::Known(known) = item else { continue };
@@ -232,13 +249,16 @@ pub fn draw_pt_modified_overlays(
         let counter_delta = plus - minus;
         if dp == counter_delta && dt == counter_delta { continue; }
         let Some(&pos) = positions.get(&p.id) else { continue };
-        let color = if dp > 0 && dt > 0 {
+        let base = if dp > 0 && dt > 0 {
             Color::srgb(0.2, 0.95, 0.35)
         } else if dp < 0 || dt < 0 {
             Color::srgb(0.95, 0.25, 0.2)
         } else {
             Color::srgb(0.95, 0.85, 0.15)
         };
+        // Gentler glow than the action cues — this is a passive "stats
+        // changed" marker, not something the player must act on.
+        let color = glow(base, 1.8);
         let center = pos + Vec3::Y * 0.18;
         let n = 24;
         let r = 1.05;
@@ -309,8 +329,8 @@ pub fn draw_attack_plan_gizmos(
 
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
-    let yellow = Color::srgb(1.0, 0.88, 0.0);
-    let pending = Color::srgba(1.0, 0.88, 0.0, 0.5);
+    let yellow = glow(Color::srgb(1.0, 0.88, 0.0), CUE_GLOW);
+    let pending = glow(Color::srgba(1.0, 0.88, 0.0, 0.5), CUE_GLOW);
 
     let mut positions: HashMap<CardId, Vec3> = HashMap::new();
     for (t, gid) in &bf_cards {

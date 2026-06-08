@@ -6,7 +6,10 @@ use bevy::asset::AssetApp;
 use bevy::asset::io::{AssetSource, AssetSourceBuilder, AssetSourceId, ErasedAssetReader};
 use bevy::image::{ImageFilterMode, ImageSamplerDescriptor};
 use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalAmbientLight};
+use bevy::anti_alias::contrast_adaptive_sharpening::ContrastAdaptiveSharpening;
 use bevy::picking::mesh_picking::MeshPickingPlugin;
+use bevy::post_process::bloom::Bloom;
+use bevy::render::view::Hdr;
 use bevy::{anti_alias::smaa::Smaa, color::palettes::basic::SILVER, prelude::*};
 
 mod audit;
@@ -500,6 +503,11 @@ fn main() {
         // animating, so chained transitions (e.g. play-then-tap on a
         // freshly-played land) play sequentially.
         .add_systems(Update, dispatch_animation_queue.run_if(in_state(AppState::InGame)))
+        // Give every freshly-loaded card-face texture a mip chain so the
+        // sampler's 16× anisotropy keeps text legible at the table's oblique
+        // angle. Ungated: card images load during draft/menu as well as in a
+        // match, and the system self-skips anything already mipmapped.
+        .add_systems(Update, crate::card::mipmap::generate_card_mipmaps)
         // Counter coins (3-D cylinders on top of permanents).
         .add_systems(
             Update,
@@ -774,6 +782,17 @@ fn setup(
     if let Some(preset) = quality.smaa_preset() {
         commands.entity(cam).insert(Smaa { preset });
     }
+    // Bloom needs an HDR camera; the `Hdr` marker switches the camera to an
+    // intermediate HDR render target. Both gate on the same Low-disabled
+    // preset as SMAA so the cheapest path skips the extra target + mip chain.
+    if let Some(bloom) = quality.bloom() {
+        commands.entity(cam).insert((Hdr, bloom));
+    }
+    // Contrast-adaptive sharpening — crisps up the (minified, tonemapped)
+    // 3-D card faces. Gated off on Low like SMAA; see `RenderQuality::sharpening`.
+    if let Some(cas) = quality.sharpening() {
+        commands.entity(cam).insert(cas);
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -821,6 +840,16 @@ fn apply_render_quality_change(
         match new_quality.smaa_preset() {
             Some(preset) => { commands.entity(cam).insert(Smaa { preset }); }
             None => { commands.entity(cam).remove::<Smaa>(); }
+        }
+        // Add/remove HDR + bloom together; the `Hdr` marker toggles the
+        // camera's intermediate HDR render target that bloom requires.
+        match new_quality.bloom() {
+            Some(bloom) => { commands.entity(cam).insert((Hdr, bloom)); }
+            None => { commands.entity(cam).remove::<(Hdr, Bloom)>(); }
+        }
+        match new_quality.sharpening() {
+            Some(cas) => { commands.entity(cam).insert(cas); }
+            None => { commands.entity(cam).remove::<ContrastAdaptiveSharpening>(); }
         }
     }
 }

@@ -1,6 +1,7 @@
 mod components;
 pub mod layout;
 mod mesh;
+pub mod mipmap;
 mod observers;
 pub mod spawn;
 

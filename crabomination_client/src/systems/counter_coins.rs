@@ -73,6 +73,12 @@ const OUTLINE_HEIGHT: f32 = COIN_HEIGHT * 0.7;
 /// entirely on top of itself. A hair under a full diameter leaves a
 /// small rim of each lower coin visible so the stack is countable.
 const COIN_STACK_STEP: f32 = COIN_RADIUS * 1.7 + COIN_GAP_Y;
+/// Peak emissive magnitude (linear) for a coin fill. Pushed past the bloom
+/// prefilter threshold (~1.0, see `RenderQuality::bloom`) so each coin glows
+/// its own colour on HDR tiers. Normalised per-hue (see the `mat` closure) so
+/// a dark-green +1/+1 and a bright-gold loyalty bloom at the same intensity.
+/// On Low (no HDR/bloom) this is just a slightly brighter self-lit coin.
+const COIN_GLOW: f32 = 1.7;
 
 pub fn init_counter_coin_assets(
     commands: &mut Commands,
@@ -94,16 +100,22 @@ pub fn init_counter_coin_assets(
     });
 
     // Deep, saturated coin fills — darker than before so they read as
-    // solid chips rather than washing out against bright card art. A
-    // faint self-coloured emissive keeps them from going flat-black in
-    // shadow; the bright outline ring (below) supplies the real contrast.
+    // solid chips rather than washing out against bright card art. Each fill
+    // carries a self-coloured emissive normalised to `COIN_GLOW`, so on HDR
+    // tiers the coin glows its own colour (and trips bloom) at a brightness
+    // that's consistent across hues regardless of how dark the base fill is;
+    // the bright outline ring (below) still supplies the hard edge contrast.
     let mut mat = |color: Color, metallic: f32| -> Handle<StandardMaterial> {
         let lin = color.to_linear();
+        // Scale the hue so its brightest channel hits COIN_GLOW; keeps a deep
+        // fill and a bright fill blooming at the same intensity.
+        let peak = lin.red.max(lin.green).max(lin.blue).max(1e-4);
+        let g = COIN_GLOW / peak;
         materials.add(StandardMaterial {
             base_color: color,
             perceptual_roughness: 0.40,
             metallic,
-            emissive: LinearRgba::new(lin.red * 0.12, lin.green * 0.12, lin.blue * 0.12, 1.0),
+            emissive: LinearRgba::new(lin.red * g, lin.green * g, lin.blue * g, 1.0),
             ..default()
         })
     };
