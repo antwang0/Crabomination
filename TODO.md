@@ -956,6 +956,9 @@ picking an item up.
 - ✅ **CR 603.3d — "Triggers only once each turn"** — `EventSpec::once_per_turn` tracked via `GameState::triggered_once_per_turn_used` (also collapses same-batch fan-out to a single fire). Dramatic Finale.
 - ✅ **CR 602.5 — "Only your opponents may activate"** — `ActivatedAbility.opponents_only` bars the source's controller and lets an opponent activate; affordances surface it cross-seat. Detention Vortex's `{3}: Destroy this Aura`.
 - ✅ **CR 602.5b — Discard-self activation cost** — `ActivatedAbility.discard_self_cost` routes the source hand→graveyard via the shared discard path. Elemental Masterpiece's `{U/R}{U/R}, Discard this card: Treasure`.
+- ✅ **CR 702.97 — Scavenge** — `shortcut::scavenge(cost)` rides the gy-activation + exile-self-cost path; counters = `Value::PowerOf(This)` read off the exiled card's printed power. Dreg Mangler.
+- ✅ **CR 702.53 — Transmute** — `shortcut::transmute(cost, mv)` rides the from-hand + discard-self path; tutors a `ManaValueExactly(mv)` card to hand at sorcery speed. Drift of Phantasms.
+- ✅ **CR 122 / 614.13 — chosen-type enters-with-counter** — `StaticEffect::ChosenTypeEntersWithCounter { kind }` + `chosen_type_etb_counter_specs`, applied at both ETB-counter sites (spell-resolve + move-to-battlefield, so tokens/reanimation count). Metallic Mimic. Counter-doubling (Doubling Season) composes.
 
 ### Partial (🟡) — remaining gap noted
 - 🟡 **CR 303 — Auras** — replacement-style Aura ETB (enters attached under another rule) + bestow type-switch corners.

@@ -2736,6 +2736,44 @@ fn embalm_like(
     }
 }
 
+/// Scavenge (CR 702.97): "[cost], Exile this card from your graveyard: Put a
+/// number of +1/+1 counters equal to this card's power on target creature.
+/// Activate only as a sorcery." Rides the gy-activation + exile-self-cost path;
+/// the counter count reads the exiled card's printed power via `Value::PowerOf`.
+pub fn scavenge(cost: crate::mana::ManaCost) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        from_graveyard: true,
+        exile_self_cost: true,
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Transmute (CR 702.53): "[cost], Discard this card: Search your library for a
+/// card with the same mana value as this card, reveal it, put it into your
+/// hand, then shuffle. Activate only as a sorcery." `mv` is the card's own mana
+/// value (the filter the search uses). Rides the from-hand discard-self path.
+pub fn transmute(cost: crate::mana::ManaCost, mv: u32) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost,
+        sorcery_speed: true,
+        from_hand: true,
+        discard_self_cost: true,
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::ManaValueExactly(mv),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
 /// Graft N (CR 702.57) — the trigger half: "Whenever another creature
 /// enters, you may move a +1/+1 counter from this creature onto it."
 /// Pair with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`.

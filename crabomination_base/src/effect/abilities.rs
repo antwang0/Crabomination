@@ -327,6 +327,16 @@ pub enum StaticEffect {
         kind: CounterType,
         value: Value,
     },
+    /// "Each other creature you control of the chosen type enters with an
+    /// additional counter of `kind` on it" (Metallic Mimic). Keyed to the
+    /// source permanent's `chosen_creature_type` (set at ETB via
+    /// `Effect::NameCreatureType`). Unlike `ExtraEtbCountersForCreatureCasts`
+    /// this fires for *any* matching creature entry the controller makes
+    /// (casts, tokens, reanimation), gated on the entering creature being a
+    /// different object whose creature types include the chosen type. Read at
+    /// both ETB-counter sites (`stack.rs` spell-resolve and `movement.rs`
+    /// move-to-battlefield) via `chosen_type_etb_counter_specs`.
+    ChosenTypeEntersWithCounter { kind: CounterType },
     /// Strict Proctor — "If a permanent entering the battlefield causes
     /// a triggered ability of a permanent to trigger, that ability's
     /// controller sacrifices the permanent unless they pay {amount}."

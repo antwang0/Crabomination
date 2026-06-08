@@ -1856,7 +1856,8 @@ pub fn sustainer_of_the_realm() -> CardDefinition {
 }
 
 /// Containment Membrane — {2}{U} Aura. Enchanted creature doesn't untap during
-/// its controller's untap step. (Surge is dropped — no Surge primitive yet.)
+/// its controller's untap step. Surge {U} (CR 702.123, alt cost if you cast
+/// another spell this turn).
 pub fn containment_membrane() -> CardDefinition {
     use crate::card::{EnchantmentSubtype, SelectionRequirement, StaticAbility, StaticEffect};
     use crate::effect::Selector;

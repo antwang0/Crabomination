@@ -29833,6 +29833,65 @@ pub fn daring_fiendbonder() -> CardDefinition {
     }
 }
 
+/// Dreg Mangler — {1}{B}{G} 3/3 Plant Zombie with Haste. Scavenge {3}{B}{G}
+/// (CR 702.97 — exile from gy: +1/+1 counters equal to its power on target).
+pub fn dreg_mangler() -> CardDefinition {
+    use crate::effect::shortcut::scavenge;
+    CardDefinition {
+        name: "Dreg Mangler",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![scavenge(cost(&[generic(3), b(), g()]))],
+        ..Default::default()
+    }
+}
+
+/// Drift of Phantasms — {2}{U} 0/5 Spirit with Defender and Flying. Transmute
+/// {1}{U}{U} (CR 702.53 — discard from hand: tutor a card with the same MV, 3).
+pub fn drift_of_phantasms() -> CardDefinition {
+    use crate::effect::shortcut::transmute;
+    CardDefinition {
+        name: "Drift of Phantasms",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 0,
+        toughness: 5,
+        keywords: vec![Keyword::Defender, Keyword::Flying],
+        activated_abilities: vec![transmute(cost(&[generic(1), u(), u()]), 3)],
+        ..Default::default()
+    }
+}
+
+/// Metallic Mimic — {2} 2/1 Artifact Creature Shapeshifter. As it enters,
+/// choose a creature type. Each other creature you control of that type enters
+/// with an additional +1/+1 counter.
+pub fn metallic_mimic() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Metallic Mimic",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Shapeshifter], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Each other creature you control of the chosen type enters with an additional +1/+1 counter.",
+            effect: StaticEffect::ChosenTypeEntersWithCounter { kind: CounterType::PlusOnePlusOne },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.

@@ -1509,6 +1509,42 @@ impl GameState {
             .sum()
     }
 
+    /// Extra ETB counters granted by `StaticEffect::ChosenTypeEntersWithCounter`
+    /// (Metallic Mimic). For a creature `entering` under `controller`, returns
+    /// one counter spec per matching source: a *different* permanent the same
+    /// player controls whose chosen creature type is among the entering
+    /// creature's types. The entering card must already be on the battlefield.
+    pub(crate) fn chosen_type_etb_counter_specs(
+        &self,
+        entering: CardId,
+        controller: usize,
+    ) -> Vec<crate::card::CounterType> {
+        use crate::effect::StaticEffect;
+        let Some(ec) = self.battlefield.iter().find(|c| c.id == entering) else {
+            return vec![];
+        };
+        if !ec.definition.is_creature() {
+            return vec![];
+        }
+        let entering_types = ec.definition.subtypes.creature_types.clone();
+        let mut specs = vec![];
+        for src in &self.battlefield {
+            if src.controller != controller || src.id == entering {
+                continue;
+            }
+            let Some(ct) = src.chosen_creature_type else { continue };
+            if !entering_types.contains(&ct) {
+                continue;
+            }
+            for sa in &src.definition.static_abilities {
+                if let StaticEffect::ChosenTypeEntersWithCounter { kind } = &sa.effect {
+                    specs.push(*kind);
+                }
+            }
+        }
+        specs
+    }
+
     /// CR 702.32 / 702.62 — a permanent with Fading N / Vanishing N enters
     /// with N fade / time counters. Called from both ETB paths after the
     /// permanent is on the battlefield.
@@ -2902,6 +2938,29 @@ impl GameState {
         let def = crate::game::effects::token_to_card_definition(token);
         self.battlefield
             .push(CardInstance::new_token(id, def, player_idx));
+        id
+    }
+
+    /// Put a card onto the battlefield through the real ETB movement funnel
+    /// (`move_card_to`), so enters-with-counters / chosen-type / fading
+    /// replacements and self-source ETB triggers all fire — unlike
+    /// `add_card_to_battlefield`, which pushes directly. Test fixture for
+    /// exercising entry-replacement statics (Metallic Mimic).
+    pub fn move_card_to_battlefield_for_test(
+        &mut self,
+        player_idx: usize,
+        def: CardDefinition,
+    ) -> CardId {
+        let id = self.next_id();
+        self.players[player_idx].graveyard.push(CardInstance::new(id, def, player_idx));
+        let ctx = crate::game::effects::EffectContext::for_ability(id, player_idx, None);
+        let mut events = Vec::new();
+        self.move_card_to(
+            id,
+            &crate::effect::ZoneDest::Battlefield { controller: crate::effect::PlayerRef::You, tapped: false },
+            &ctx,
+            &mut events,
+        );
         id
     }
 
@@ -6586,6 +6645,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // AnthemForChosenType — reads the source's live chosen creature
             // type; resolved in `gather_continuous_effects`.
             | StaticEffect::AnthemForChosenType { .. }
+            // ChosenTypeEntersWithCounter — read at ETB-counter time via
+            // `chosen_type_etb_counter_specs`; no continuous-layer effect.
+            | StaticEffect::ChosenTypeEntersWithCounter { .. }
             // ExileNontokenCreaturesNotCast (Containment Priest) — read at
             // battlefield-entry time by `nontoken_creature_etb_exile_active`;
             // no layer effect.

@@ -569,7 +569,18 @@ impl GameState {
                 let enters_spec = card.definition.enters_with_counters.clone();
                 self.battlefield.push(card);
                 // CR 122.1 — Solemnity drops the enters-with-counters too.
-                if let Some((kind, value)) = enters_spec.filter(|_| !self.counters_locked()) {
+                let mut counter_specs: Vec<(crate::card::CounterType, crate::effect::Value)> =
+                    Vec::new();
+                if let Some(spec) = enters_spec {
+                    counter_specs.push(spec);
+                }
+                // Metallic Mimic-style chosen-type ETB counters (any matching
+                // creature entry — tokens, reanimation, search-to-battlefield).
+                for kind in self.chosen_type_etb_counter_specs(cid, p) {
+                    counter_specs.push((kind, crate::effect::Value::Const(1)));
+                }
+                if self.counters_locked() { counter_specs.clear(); }
+                for (kind, value) in counter_specs {
                     let etb_ctx = crate::game::effects::EffectContext::for_ability(cid, p, None);
                     let base = self.evaluate_value(&value, &etb_ctx);
                     if base > 0 {

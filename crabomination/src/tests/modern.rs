@@ -37724,6 +37724,84 @@ fn daring_fiendbonder_exiles_self_to_grant_indestructible() {
     );
 }
 
+/// Dreg Mangler scavenges from the graveyard: exile it for 3 +1/+1 counters
+/// (equal to its power) on a target creature.
+#[test]
+fn dreg_mangler_scavenge_grants_counters_equal_to_power() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mangler = g.add_card_to_graveyard(0, catalog::dreg_mangler());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mangler,
+        ability_index: 0,
+        target: Some(crate::game::Target::Permanent(target)),
+        x_value: None,
+    }).expect("scavenge from graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == mangler), "source exiled");
+    assert_eq!(
+        g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        3,
+        "+1/+1 counters equal to Dreg Mangler's power (3)",
+    );
+}
+
+/// Drift of Phantasms transmutes: discard it to tutor an MV-3 card to hand.
+#[test]
+fn drift_of_phantasms_transmute_tutors_same_mv() {
+    let mut g = two_player_game();
+    // An MV-3 card and an MV-1 card in library; transmute should fetch the MV-3.
+    let mv3 = g.add_card_to_library(0, catalog::heros_downfall()); // {1}{B}{B} = MV 3
+    let _mv1 = g.add_card_to_library(0, catalog::ponder()); // {U} = MV 1
+    let drift = g.add_card_to_hand(0, catalog::drift_of_phantasms());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Search(Some(mv3)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: drift,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    }).expect("transmute");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == drift), "Drift discarded");
+    assert!(g.players[0].hand.iter().any(|c| c.id == mv3), "MV-3 card tutored to hand");
+}
+
+/// Metallic Mimic: a creature of the chosen type entering under your control
+/// gets an extra +1/+1 counter — for tokens and reanimation too.
+#[test]
+fn metallic_mimic_chosen_type_enters_with_extra_counter() {
+    use crate::card::{CounterType, CreatureType};
+    let mut g = two_player_game();
+    let mimic = g.add_card_to_battlefield(0, catalog::metallic_mimic());
+    g.battlefield.iter_mut().find(|c| c.id == mimic).unwrap().chosen_creature_type =
+        Some(CreatureType::Goblin);
+    // A Goblin entering via reanimation/move gains the counter.
+    let goblin = g.move_card_to_battlefield_for_test(0, catalog::goblin_bushwhacker());
+    assert_eq!(
+        g.battlefield_find(goblin).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "chosen-type Goblin enters with an extra +1/+1 counter",
+    );
+    // A non-Goblin gets nothing.
+    let bear = g.move_card_to_battlefield_for_test(0, catalog::grizzly_bears());
+    assert_eq!(
+        g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        0,
+    );
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {
