@@ -39205,3 +39205,97 @@ fn quirion_dryad_grows_on_colored_spell() {
     assert_eq!(g.battlefield_find(dryad).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "Dryad grew on a red spell");
 }
+
+// ── Elf/ETB value batch 4 ────────────────────────────────────────────────────
+
+/// Impact Tremors pings each opponent when a creature you control enters.
+#[test]
+fn impact_tremors_pings_on_creature_enter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::impact_tremors());
+    let life = g.players[1].life;
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast elf");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "opponent pinged for 1");
+}
+
+/// Wellwisher gains life equal to the number of Elves.
+#[test]
+fn wellwisher_gains_life_per_elf() {
+    let mut g = two_player_game();
+    let well = g.add_card_to_battlefield(0, catalog::wellwisher());
+    g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    g.add_card_to_battlefield(1, catalog::llanowar_elves()); // counts all Elves
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: well, ability_index: 0, target: None, x_value: None,
+    }).expect("wellwisher");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "1 life per Elf (3 Elves)");
+}
+
+/// Timberwatch Elf pumps a creature by the Elf count.
+#[test]
+fn timberwatch_elf_pumps_by_elf_count() {
+    let mut g = two_player_game();
+    let timber = g.add_card_to_battlefield(0, catalog::timberwatch_elf());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::llanowar_elves()); // 2 Elves total
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: timber, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + 2, "+X/+X where X = 2 Elves");
+}
+
+/// Lys Alana Huntmaster makes an Elf token when you cast an Elf spell.
+#[test]
+fn lys_alana_makes_token_on_elf_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lys_alana_huntmaster());
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast elf spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Elf Warrior"), "Elf token made");
+}
+
+/// Soul of the Harvest draws when another nontoken creature enters.
+#[test]
+fn soul_of_the_harvest_draws_on_creature_enter() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::soul_of_the_harvest());
+    g.add_card_to_library(0, catalog::forest());
+    let drawn_lib = g.players[0].library.len();
+    let elf = g.add_card_to_hand(0, catalog::llanowar_elves());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast elf");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), drawn_lib - 1, "drew a card");
+}
+
+/// Wirewood Herald tutors an Elf to hand when it dies.
+#[test]
+fn wirewood_herald_tutors_elf_on_death() {
+    let mut g = two_player_game();
+    let herald = g.add_card_to_battlefield(0, catalog::wirewood_herald());
+    let elf = g.add_card_to_library(0, catalog::ezuri_renegade_leader()); // an Elf
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(herald)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt herald");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf), "tutored an Elf to hand");
+}

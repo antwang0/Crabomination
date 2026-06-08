@@ -32269,3 +32269,169 @@ pub fn quirion_dryad() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Elf/ETB value batch 4 (push claude/modern_decks) ─────────────────────────
+
+/// 1/1 green Elf Warrior creature token.
+fn elf_warrior_1_1_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Elf Warrior".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+/// Impact Tremors — {1}{R} Enchantment. Whenever a creature you control enters,
+/// deal 1 damage to each opponent.
+pub fn impact_tremors() -> CardDefinition {
+    CardDefinition {
+        name: "Impact Tremors",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wellwisher — {1}{G} 1/1 Elf. {T}: You gain 1 life for each Elf on the
+/// battlefield.
+pub fn wellwisher() -> CardDefinition {
+    CardDefinition {
+        name: "Wellwisher",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountMatching {
+                    sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Elf),
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Timberwatch Elf — {2}{G} 1/2 Elf. {T}: Target creature gets +X/+X until end
+/// of turn, where X is the number of Elves on the battlefield.
+pub fn timberwatch_elf() -> CardDefinition {
+    use crate::effect::Duration;
+    let elf_count = || Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+        filter: SelectionRequirement::HasCreatureType(CreatureType::Elf),
+    };
+    CardDefinition {
+        name: "Timberwatch Elf",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: elf_count(),
+                toughness: elf_count(),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lys Alana Huntmaster — {2}{G}{G} 3/3 Elf Warrior. Whenever you cast an Elf
+/// spell, create a 1/1 green Elf Warrior token.
+pub fn lys_alana_huntmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Lys Alana Huntmaster",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Elf),
+                }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: elf_warrior_1_1_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soul of the Harvest — {4}{G}{G} 6/6 Elemental with Trample. Whenever another
+/// nontoken creature you control enters, you may draw a card.
+pub fn soul_of_the_harvest() -> CardDefinition {
+    CardDefinition {
+        name: "Soul of the Harvest",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature.and(SelectionRequirement::NotToken),
+                }),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wirewood Herald — {1}{G} 1/1 Elf. When it dies, you may search your library
+/// for an Elf card, reveal it, and put it into your hand.
+pub fn wirewood_herald() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Wirewood Herald",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasCreatureType(CreatureType::Elf),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
