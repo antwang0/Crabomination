@@ -832,6 +832,8 @@ mod tests {
             attachments: vec![],
             soulbond_partner: None,
             saga_final_chapter: None,
+            has_other_face: false,
+            transformed: false,
         }
     }
 

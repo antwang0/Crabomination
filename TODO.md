@@ -8,6 +8,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Bargain / Eldraine follow-ups (this run):**
+  - "This spell costs {N} less if it's bargained" (Ice Out, Johann's Stopgap,
+    Hamlet Glutton) — needs a bargained-conditional cost reduction applied at
+    cast time (fold into `cast_spell_bargain` via the transient
+    `extra_cast_reduction` keyed on a per-card amount).
+  - Cacophony Scamp / Heartfire Hero "when this dies, deals damage equal to its
+    power" needs LKI power on the dies trigger (CR 603.10 gap, see Goldvein
+    Hydra note) before it's faithful.
+  - Heartfire Hero / Pawpatch Recruit **Valiant** ("becomes the target of a
+    spell/ability you control the first time each turn") needs a
+    becomes-targeted trigger event.
+  - **Gift** (Wilds of Eldraine; Sazacap's Brew, Coiling Rebirth) — promise an
+    opponent a gift as an optional rider.
+  - The bot never pays Bargain (always casts the base spell); a client
+    "sacrifice for Bargain?" picker + bot fodder-choice are both unwired —
+    `PlayerView.bargainable_hand` is surfaced but unused by the UI.
 - ⏳ **Transform-DFC batch — dropped riders to revisit:**
   - ✅ Vildin-Pack Alpha's "when a Werewolf you control enters, you may
     transform it" (MayDo + `Transform { TriggerSource }`); ✅ Frenzied
@@ -840,6 +856,16 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.176 — Bargain** (`Keyword::Bargain` + `GameAction::
+  CastSpellBargain`: optional "sacrifice an artifact, enchantment, or token"
+  additional cost; `CardInstance.bargained` + `Predicate::SpellWasBargained`
+  gate the payoff, surfaced as `PlayerView.bargainable_hand`. Torch the Tower,
+  Candy Grapple, Archon's Glory, Kellan's Lightblades, Stonesplitter Bolt,
+  Troublemaker Ouphe, Tenacious Tomeseeker).
+- ✅ **CR 601.2b — variable-sacrifice cost reduction** (`StaticEffect::
+  SacrificeCostReduction { per }` + `GameAction::CastSpellSacrificeReduce`:
+  sacrifice any number of creatures, {N} less each, threaded through the cast
+  path via a transient `extra_cast_reduction`. Awaken the Blood Avatar).
 - ✅ **CR 702.74 — Evoke** (`AlternativeCost.evoke_sacrifice` + ETB-then-
   sacrifice on the stack; `shortcut::evoke`. Solitude, Fury, Mulldrifter,
   Shriekmaw).
