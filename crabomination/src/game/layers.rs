@@ -545,6 +545,10 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         | R::Planeswalker | R::Land | R::Nonland | R::Noncreature | R::IsBasicLand
         | R::IsNonbasicLand | R::IsToken | R::NotToken | R::ControlledByYou
         | R::ControlledByOpponent | R::Colorless => true,
+        // Tap state is a live `CardInstance` field, re-read on every layer
+        // recompute — safe to route through the dynamic CardMatch path
+        // (Augusta, Dean of Order's tapped/untapped anthems).
+        R::Tapped | R::Untapped => true,
         R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
         | R::HasKeyword(_) => true,
@@ -596,6 +600,8 @@ pub(crate) fn requirement_matches_card(
         R::IsNonbasicLand => def.is_land() && !def.supertypes.contains(&Supertype::Basic),
         R::IsToken => card.is_token,
         R::NotToken => !card.is_token,
+        R::Tapped => card.tapped,
+        R::Untapped => !card.tapped,
         R::ControlledByYou => card.controller == source_controller,
         R::ControlledByOpponent => card.controller != source_controller,
         R::HasCardType(t) => def.card_types.contains(t),

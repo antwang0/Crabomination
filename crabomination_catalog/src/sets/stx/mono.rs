@@ -33,90 +33,38 @@ pub fn pop_quiz() -> CardDefinition {
 
 // ── Mascot Exhibition ───────────────────────────────────────────────────────
 
-/// Mascot Exhibition — {5}{W}{W} Sorcery. "Create a 3/3 white Elephant
-/// creature token, a 2/2 white Cat creature token with lifelink, and a
-/// 1/1 white Bird creature token with flying."
+/// Mascot Exhibition — {7} Sorcery — Lesson. Create a 2/1 white-and-black
+/// Inkling with flying, a 3/2 red-and-white Spirit, and a 4/4 blue-and-red
+/// Elemental.
 pub fn mascot_exhibition() -> CardDefinition {
-    let elephant = TokenDefinition {
-        name: "Elephant".to_string(),
-        power: 3,
-        toughness: 3,
-        keywords: vec![],
+    let token = |name: &str, power, toughness, colors, ctype, keywords| TokenDefinition {
+        name: name.to_string(),
+        power,
+        toughness,
+        keywords,
         card_types: vec![CardType::Creature],
-        colors: vec![Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elephant],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
+        colors,
+        subtypes: Subtypes { creature_types: vec![ctype], ..Default::default() },
+        ..Default::default()
     };
-    let cat = TokenDefinition {
-        name: "Cat".to_string(),
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Lifelink],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Cat],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
-    };
-    let bird = TokenDefinition {
-        name: "Bird".to_string(),
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Bird],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    
-        static_abilities: vec![],
+    let mint = |t: TokenDefinition| Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: t,
     };
     CardDefinition {
         name: "Mascot Exhibition",
-        cost: cost(&[generic(5), w(), w()]),
+        cost: cost(&[generic(7)]),
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: elephant,
-            },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: cat,
-            },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: bird,
-            },
+            mint(token("Inkling", 2, 1, vec![Color::White, Color::Black], CreatureType::Inkling, vec![Keyword::Flying])),
+            mint(token("Spirit", 3, 2, vec![Color::Red, Color::White], CreatureType::Spirit, vec![])),
+            mint(token("Elemental", 4, 4, vec![Color::Blue, Color::Red], CreatureType::Elemental, vec![])),
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

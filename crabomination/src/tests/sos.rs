@@ -11645,16 +11645,14 @@ fn pensive_professor_secondary_counter_trigger_skips_under_auto_decider() {
 fn textbook_tabulator_increment_buffs_self_on_big_spell() {
     let mut g = two_player_game();
     let tab = place_creature(&mut g, 0, catalog::textbook_tabulator());
-    // 5-mana spell to definitely beat the 0/3.
+    // 7-mana spell to definitely beat the 0/3.
     let mascot = g.add_card_to_hand(0, catalog::mascot_exhibition());
-    // {5}{W}{W} = 7 generic + 2 white.
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add_colorless(7);
 
     g.perform_action(GameAction::CastSpell {
         card_id: mascot, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Mascot Exhibition castable for {5}{W}{W}");
+    .expect("Mascot Exhibition castable for {7}");
     drain_stack(&mut g);
 
     let c = g.battlefield_find(tab).expect("Tabulator alive");

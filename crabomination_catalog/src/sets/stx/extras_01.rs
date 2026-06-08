@@ -680,110 +680,60 @@ pub fn crux_of_fate() -> CardDefinition {
 
 // ── Plargg, Dean of Chaos ───────────────────────────────────────────────────
 
-/// Plargg, Dean of Chaos — {1}{R}, 2/2 Legendary Human Cleric.
-///
-/// "{T}: Discard a card, then draw a card. If a creature card was
-/// discarded this way, Plargg, Dean of Chaos deals 2 damage to any
-/// target."
-///
-/// Push (modern_decks, this revision): the conditional damage rider is
-/// **now wired** via the new `Value::CreatureCardsDiscardedThisEffect`
-/// primitive. After the `Discard 1 + Draw 1` chain, an
-/// `Effect::If { cond: ValueAtLeast(CreatureCardsDiscardedThisEffect, 1),
-/// then: DealDamage(2), else_: Noop }` fires the 2 damage only when a
-/// creature card was the one discarded. AutoDecider chose the first card
-/// (which is what `Discard { random: false }` does on AutoDecider paths
-/// — surfaces a `Decision::Discard` and AutoDecider answers with the
-/// first hand-card matching `count`). The "any target" slot is reserved
-/// via `target_filtered(Creature ∨ Player ∨ Planeswalker)` so the
-/// activation requires a target up front (auto-target picker reads the
-/// trigger's slot 0). The "Partner with Augusta, Dean of Order" rider
-/// is still omitted — engine has no Partner-pair primitive (only the
-/// singleton legend constraint is enforced).
-///
-/// Tests: `plargg_dean_of_chaos_taps_to_loot` (no-creature discard path,
-/// damage skipped), `plargg_dean_of_chaos_deals_two_damage_when_creature_discarded`
-/// (scripted-decider picks the creature in hand, damage fires).
+/// Plargg, Dean of Chaos // Augusta, Dean of Order — {1}{R} 2/2 Legendary
+/// Orc Shaman. `{T}, Discard a card: Draw a card.` and `{4}{R}, {T}: Reveal
+/// from the top of your library until a nonlegendary, nonland card with mana
+/// value 3 or less; you may cast it without paying its mana cost; put the
+/// rest on the bottom in a random order.`
 pub fn plargg_dean_of_chaos() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
+    let nonleg_cheap = SelectionRequirement::Nonland
+        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasSupertype(
+            crate::card::Supertype::Legendary,
+        ))))
+        .and(SelectionRequirement::ManaValueAtMost(3));
     CardDefinition {
         name: "Plargg, Dean of Chaos",
         cost: cost(&[generic(1), r()]),
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            creature_types: vec![CreatureType::Orc, CreatureType::Shaman],
             ..Default::default()
         },
         power: 2,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: vec![ActivatedAbility {
-            energy_cost: 0,
-            discard_cost: None,
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::If {
-                    cond: crate::card::Predicate::ValueAtLeast(
-                        Value::CreatureCardsDiscardedThisEffect,
-                        Value::Const(1),
-                    ),
-                    then: Box::new(Effect::DealDamage {
-                        to: target_filtered(
-                            SelectionRequirement::Creature
-                                .or(SelectionRequirement::Player)
-                                .or(SelectionRequirement::Planeswalker),
-                        ),
-                        amount: Value::Const(2),
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None, from_hand: false,
-            ..Default::default()
-        }],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        activated_abilities: vec![
+            // {T}, Discard a card: Draw a card.
+            ActivatedAbility {
+                tap_cost: true,
+                discard_cost: Some((SelectionRequirement::Any, 1)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ..Default::default()
+            },
+            // {4}{R}, {T}: reveal-until cheap nonlegendary nonland, cast it free.
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4), r()]),
+                tap_cost: true,
+                effect: Effect::Seq(vec![
+                    Effect::RevealUntilFind {
+                        who: PlayerRef::You,
+                        find: nonleg_cheap,
+                        to: ZoneDest::Exile,
+                        cap: Value::Const(60),
+                        life_per_revealed: 0,
+                        miss_dest: crate::effect::RevealMissDest::BottomRandom,
+                    },
+                    Effect::CastWithoutPayingImmediate {
+                        what: Selector::LastMoved,
+                        source_zone: crate::card::Zone::Exile,
+                        exile_after: false,
+                    },
+                ]),
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(augusta_dean_of_order())),
+        ..Default::default()
     }
 }
 
@@ -924,79 +874,58 @@ pub fn pestilent_cauldron() -> CardDefinition {
 
 // ── Augusta, Dean of Order ──────────────────────────────────────────────────
 
-/// Augusta, Dean of Order — {1}{R}, 2/2 Legendary Human Cleric.
-///
-/// "Whenever you attack with three or more creatures with the same
-/// power, each of those creatures gets +1/+1 and gains your choice of
-/// flying, first strike, vigilance, or lifelink until end of turn."
-///
-/// Push (modern_decks): partial promotion — the trigger now fires
-/// per-attacker via `Attacks/AnotherOfYours` (the same per-attacker
-/// emission model as Sparring Regimen). For each attacker, the
-/// attacker gets +1/+1 EOT and gains Vigilance EOT — a simplified
-/// stand-in for the printed "choose flying/first-strike/vigilance/
-/// lifelink" rider (auto-pick: Vigilance, the most generally useful
-/// for chained attacks). The "three or more with same power" gate is
-/// omitted (engine has no "attacking creatures with same power"
-/// predicate), so the trigger fires unconditionally per-attacker.
-/// Net effect: every friendly attacker becomes a +1/+1/+vigilance
-/// version of itself.
-///
-/// The "Partner with Plargg, Dean of Chaos" rider is still omitted
-/// (no Partner-pair primitive — only the singleton legendary rule
-/// is enforced).
+/// Augusta, Dean of Order — {2}{W} 1/3 Legendary Human Cleric (back face of
+/// Plargg). Other tapped creatures you control get +1/+0; other untapped
+/// creatures get +0/+1; whenever you attack, untap each creature you control.
+/// (The optional "then tap any number" rider auto-resolves to no re-taps.)
 pub fn augusta_dean_of_order() -> CardDefinition {
+    let other_mine = |extra: SelectionRequirement| {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource)
+                .and(extra),
+        )
+    };
     CardDefinition {
         name: "Augusta, Dean of Order",
-        cost: cost(&[generic(1), r()]),
+        cost: cost(&[generic(2), w()]),
         supertypes: vec![crate::card::Supertype::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 2,
-        toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other tapped creatures you control get +1/+0.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: other_mine(SelectionRequirement::Tapped),
+                    power: 1,
+                    toughness: 0,
+                },
+            },
+            StaticAbility {
+                description: "Other untapped creatures you control get +0/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: other_mine(SelectionRequirement::Untapped),
+                    power: 0,
+                    toughness: 1,
+                },
+            },
+        ],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
-            effect: Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: Selector::TriggerSource,
-                    power: Value::Const(1),
-                    toughness: Value::Const(1),
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::GrantKeyword {
-                    what: Selector::TriggerSource,
-                    keyword: Keyword::Vigilance,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 

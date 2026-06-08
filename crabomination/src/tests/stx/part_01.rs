@@ -2806,13 +2806,11 @@ fn crux_of_fate_modes_destroy_dragons_or_non_dragons() {
     }
 }
 
-/// Plargg, Dean of Chaos taps to loot one card.
+/// Plargg, Dean of Chaos — `{T}, Discard a card: Draw a card.` (loot).
 #[test]
-fn plargg_dean_of_chaos_taps_to_loot() {
+fn plargg_dean_of_chaos_taps_and_discards_to_loot() {
     let mut g = two_player_game();
-    // Seed library so the draw resolves.
     g.add_card_to_library(0, catalog::island());
-    // Discard fodder.
     g.add_card_to_hand(0, catalog::grizzly_bears());
     let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
     g.clear_sickness(plargg);
@@ -2823,65 +2821,62 @@ fn plargg_dean_of_chaos_taps_to_loot() {
         card_id: plargg,
         ability_index: 0,
         target: None, x_value: None })
-    .expect("Plargg activation");
+    .expect("Plargg loot activation");
     drain_stack(&mut g);
 
-    // -1 discard, +1 draw → net hand unchanged.
+    // -1 discard (cost), +1 draw → net hand unchanged; library -1; tapped.
     assert_eq!(g.players[0].hand.len(), hand_before);
     assert_eq!(g.players[0].library.len(), lib_before - 1);
-    let on_bf = g.battlefield.iter().find(|c| c.id == plargg).expect("Plargg alive");
-    assert!(on_bf.tapped, "Plargg should be tapped");
+    assert!(g.battlefield.iter().find(|c| c.id == plargg).unwrap().tapped);
 }
 
-/// Plargg's "if a creature card was discarded" rider fires when the
-/// auto-decider discards Grizzly Bears (the only card in hand) and the
-/// activation targets an opposing player — 2 damage drops their life
-/// from 20 → 18.
+/// Plargg's second ability reveals from the top until a nonlegendary nonland
+/// MV≤3 card, then free-casts it. A Grizzly Bears under a legend on top is
+/// found and enters the battlefield without paying mana.
 #[test]
-fn plargg_dean_of_chaos_deals_two_damage_when_creature_discarded() {
-    use crate::game::types::Target;
+fn plargg_dean_of_chaos_reveals_and_free_casts_cheap_card() {
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    // Only-hand card is a creature, so AutoDecider's Discard picks it.
-    g.add_card_to_hand(0, catalog::grizzly_bears());
+    // Top of library: a too-expensive card, then Grizzly Bears (MV 2).
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::serra_angel()); // MV 5 — skipped to bottom.
     let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
     g.clear_sickness(plargg);
-    let life_before = g.players[1].life;
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Accept the optional "cast it without paying" offer.
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
-        ability_index: 0,
-        target: Some(Target::Player(1)), x_value: None })
-    .expect("Plargg activation");
+        ability_index: 1,
+        target: None, x_value: None })
+    .expect("Plargg reveal-cast activation");
     drain_stack(&mut g);
 
-    // Bear discarded → 2 damage to P1.
-    assert_eq!(g.players[1].life, life_before - 2);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Grizzly Bears"),
+        "Grizzly Bears should be free-cast onto the battlefield"
+    );
 }
 
-/// Plargg's conditional rider does *not* fire when the discarded card is
-/// a noncreature — the damage is gated by
-/// `Value::CreatureCardsDiscardedThisEffect ≥ 1`.
+/// Augusta, Dean of Order (back face) anthems: an untapped friendly creature
+/// gets +0/+1; tapping it flips the bonus to +1/+0.
 #[test]
-fn plargg_dean_of_chaos_no_damage_when_noncreature_discarded() {
-    use crate::game::types::Target;
+fn augusta_dean_of_order_tapped_untapped_anthems() {
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    // Discard a land — non-creature.
-    g.add_card_to_hand(0, catalog::island());
-    let plargg = g.add_card_to_battlefield(0, catalog::plargg_dean_of_chaos());
-    g.clear_sickness(plargg);
-    let life_before = g.players[1].life;
+    g.add_card_to_battlefield(0, catalog::augusta_dean_of_order());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
 
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: plargg,
-        ability_index: 0,
-        target: Some(Target::Player(1)), x_value: None })
-    .expect("Plargg activation");
-    drain_stack(&mut g);
+    // Untapped: +0/+1 → 2/3.
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 3));
 
-    // Island discarded → no damage.
-    assert_eq!(g.players[1].life, life_before);
+    // Tapped: +1/+0 → 3/2.
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let c = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 2), "tapped → +1/+0");
 }
 
 /// Pestilent Cauldron's sac activation mills 4 from each player and

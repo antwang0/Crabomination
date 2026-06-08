@@ -2365,7 +2365,6 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::crux_of_fate,
         super::plargg_dean_of_chaos,
         super::pestilent_cauldron,
-        super::augusta_dean_of_order,
         super::sky_diamond,
         super::marble_diamond,
         super::fire_diamond,

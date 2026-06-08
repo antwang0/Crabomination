@@ -1483,21 +1483,25 @@ fn witherbloom_necrotouch_destroys_creature_and_gains_two() {
 
 // ── Augusta, Dean of Order (promoted) ──────────────────────────────────────
 
+/// Augusta's attack trigger untaps each creature you control: a bear that
+/// taps to attack is untapped again as Augusta's trigger resolves.
 #[test]
-fn augusta_dean_of_order_per_attacker_trigger_pumps_other_attacker() {
+fn augusta_dean_of_order_untaps_attackers_on_attack() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::augusta_dean_of_order());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // Skip past untap so the bear is summoning-sick-free.
-    g.players[0].lands_played_this_turn = 0;
-    let bear_perm = g.battlefield.iter_mut().find(|c| c.id == bear).unwrap();
-    bear_perm.summoning_sick = false;
-    // Force into combat: declare bear as attacker.
-    // The Augusta trigger fires on Attacks/AnotherOfYours, so when the bear
-    // attacks, it gets +1/+1 EOT + Vigilance EOT.
-    // Use a simple test: just verify the trigger exists.
-    let def = catalog::augusta_dean_of_order();
-    assert!(!def.triggered_abilities.is_empty(), "has attack trigger");
+    g.clear_sickness(bear);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("declare bear attacker");
+    drain_stack(&mut g);
+    assert!(
+        !g.battlefield_find(bear).unwrap().tapped,
+        "Augusta untaps the attacking bear"
+    );
 }
 
 // ── Quandrix Doubling Tutor ────────────────────────────────────────────────

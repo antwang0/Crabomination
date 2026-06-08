@@ -631,27 +631,26 @@ fn pop_quiz_draws_a_card_and_learns() {
 fn mascot_exhibition_creates_three_distinct_tokens() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mascot_exhibition());
-    g.players[0].mana_pool.add(Color::White, 2);
-    g.players[0].mana_pool.add_colorless(5);
+    g.players[0].mana_pool.add_colorless(7);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Mascot Exhibition castable for {5}{W}{W}");
+    .expect("Mascot Exhibition castable for {7}");
     drain_stack(&mut g);
 
     let tokens: Vec<_> = g.battlefield.iter().filter(|c| c.is_token).collect();
     assert_eq!(tokens.len(), 3, "should mint exactly three tokens");
-    let elephant = tokens.iter().find(|c| c.definition.name == "Elephant")
-        .expect("3/3 Elephant present");
-    assert_eq!(elephant.power(), 3);
-    assert_eq!(elephant.toughness(), 3);
-    let cat = tokens.iter().find(|c| c.definition.name == "Cat")
-        .expect("2/2 Cat with lifelink present");
-    assert!(cat.has_keyword(&Keyword::Lifelink));
-    let bird = tokens.iter().find(|c| c.definition.name == "Bird")
-        .expect("1/1 Bird with flying present");
-    assert!(bird.has_keyword(&Keyword::Flying));
+    let inkling = tokens.iter().find(|c| c.definition.name == "Inkling")
+        .expect("2/1 Inkling flyer present");
+    assert_eq!((inkling.power(), inkling.toughness()), (2, 1));
+    assert!(inkling.has_keyword(&Keyword::Flying));
+    let spirit = tokens.iter().find(|c| c.definition.name == "Spirit")
+        .expect("3/2 Spirit present");
+    assert_eq!((spirit.power(), spirit.toughness()), (3, 2));
+    let elemental = tokens.iter().find(|c| c.definition.name == "Elemental")
+        .expect("4/4 Elemental present");
+    assert_eq!((elemental.power(), elemental.toughness()), (4, 4));
 }
 
 #[test]
