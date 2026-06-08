@@ -38169,6 +38169,20 @@ fn kalonian_hydra_doubles_counters_on_attack() {
     );
 }
 
+/// Inspiring Overseer gains a life and draws on ETB.
+#[test]
+fn inspiring_overseer_gains_life_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::ponder());
+    let life0 = g.players[0].life;
+    let hand0 = g.players[0].hand.len();
+    let id = g.add_card_to_battlefield(0, catalog::inspiring_overseer());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 1, "gained 1 life");
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "drew a card");
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {

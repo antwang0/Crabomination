@@ -8,6 +8,19 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Immediate (non-EOT) blink.** `Effect::ExileReturnNextEndStep` returns at
+  the next end step; there's no "exile then return *immediately*" primitive, so
+  Felidar Guardian / Restoration-style instant flicker can't be carded
+  faithfully (the combo timing differs). Add `Effect::FlickerImmediate { what }`.
+- ⏳ **Cast-from-exile (any color) rider on linked exile.** `ExileUntilSourceLeaves`
+  has no may-play grant, so Hostage Taker ("exile … you may cast it, any mana
+  type") and similar can only ship the exile half. Pair the linked-exile with a
+  grant-may-play-from-exile + any-color spend permission.
+- ⏳ **Snow permanent count** `Value` for Skred / Marit Lage-style scaling.
+- ⏳ **Tap-N-untapped-artifacts activation cost.** `tap_other_filter` taps one;
+  Whirler Rogue / affinity unblockable-enablers want "tap two." Generalize to a
+  count, and add an "X can't be blocked this turn" grant effect.
+
 - ✅ **Chosen-creature-type anthem static.** `StaticEffect::AnthemForChosenType
   { power, toughness, exclude_source }` reads the source's live
   `chosen_creature_type` (set at ETB via `Effect::NameCreatureType`) and emits a

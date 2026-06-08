@@ -30527,6 +30527,28 @@ pub fn kalonian_hydra() -> CardDefinition {
     }
 }
 
+/// Inspiring Overseer — {2}{W} 2/1 Angel Cleric with Flying. ETB: gain 1 life
+/// and draw a card.
+pub fn inspiring_overseer() -> CardDefinition {
+    CardDefinition {
+        name: "Inspiring Overseer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.
