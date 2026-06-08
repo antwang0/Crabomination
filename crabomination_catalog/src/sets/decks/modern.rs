@@ -29279,3 +29279,53 @@ pub fn iridescent_vinelasher() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rabbit Response — {2}{W}{W} Instant. Creatures you control get +2/+1 until
+/// end of turn. If you control a Rabbit, scry 2.
+pub fn rabbit_response() -> CardDefinition {
+    CardDefinition {
+        name: "Rabbit Response",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: each_your_creature(),
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Rabbit)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Brazen Collector — {1}{R} 2/1 Raccoon Rogue with First Strike. Whenever it
+/// attacks, add {R}. (The "this mana doesn't empty between steps/phases" rider
+/// is dropped — the pool already persists through the attack step in-engine.)
+pub fn brazen_collector() -> CardDefinition {
+    CardDefinition {
+        name: "Brazen Collector",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Raccoon, CreatureType::Rogue], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red]) },
+        }],
+        ..Default::default()
+    }
+}

@@ -37380,3 +37380,33 @@ fn iridescent_vinelasher_pings_on_landfall() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "landfall pinged the opponent for 1");
 }
+
+/// Rabbit Response pumps your team and scries when you control a Rabbit.
+#[test]
+fn rabbit_response_pumps_team() {
+    let mut g = two_player_game();
+    let rabbit = g.add_card_to_battlefield(0, catalog::hare_apparent()); // 2/2 Rabbit
+    let id = g.add_card_to_hand(0, catalog::rabbit_response());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rabbit Response");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(rabbit).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 from Rabbit Response");
+}
+
+/// Brazen Collector adds {R} when it attacks.
+#[test]
+fn brazen_collector_adds_red_on_attack() {
+    let mut g = two_player_game();
+    let bc = g.add_card_to_battlefield(0, catalog::brazen_collector());
+    g.battlefield_find_mut(bc).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: bc, target: AttackTarget::Player(1) }])
+        .expect("Brazen Collector attacks");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Red) >= 1, "added red on attack");
+}
