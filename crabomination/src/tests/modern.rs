@@ -37179,3 +37179,68 @@ fn daring_waverider_recasts_cheap_spell_from_graveyard() {
     // Exiled after resolving (not back in graveyard).
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt exiled, not in graveyard");
 }
+
+/// Diresight surveils, draws two, and costs 2 life.
+#[test]
+fn diresight_draws_two_and_loses_two_life() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
+    let hand0 = g.players[0].hand.len();
+    let life0 = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::diresight());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Diresight");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 2, "drew two");
+    assert_eq!(g.players[0].life, life0 - 2, "lost two life");
+}
+
+/// Starscape Cleric drains each opponent whenever you gain life.
+#[test]
+fn starscape_cleric_drains_on_lifegain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::starscape_cleric());
+    g.players[1].life = 20;
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::LifeGained { player: 0, amount: 3 }]);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent loses 1 per lifegain event");
+}
+
+/// Splash Lasher taps a creature and stuns it on ETB.
+#[test]
+fn splash_lasher_taps_and_stuns_on_etb() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let lash = g.add_card_to_battlefield(0, catalog::splash_lasher());
+    g.fire_self_etb_triggers(lash, 0);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.tapped, "bear tapped");
+    assert_eq!(c.counter_count(CounterType::Stun), 1, "bear has a stun counter");
+}
+
+/// Hare Apparent mints a Rabbit per other Hare Apparent you control.
+#[test]
+fn hare_apparent_mints_rabbit_per_copy() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::hare_apparent());
+    g.add_card_to_battlefield(0, catalog::hare_apparent());
+    let third = g.add_card_to_battlefield(0, catalog::hare_apparent());
+    g.fire_self_etb_triggers(third, 0);
+    drain_stack(&mut g);
+    let rabbits = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Rabbit").count();
+    assert_eq!(rabbits, 2, "two other Hare Apparents → two Rabbit tokens");
+}
+
+/// Valley Questcaller anthems your small typal creatures.
+#[test]
+fn valley_questcaller_anthems_typal_creatures() {
+    let mut g = two_player_game();
+    let mouse = g.add_card_to_battlefield(0, catalog::heartfire_hero()); // 1/1 Mouse
+    g.add_card_to_battlefield(0, catalog::valley_questcaller());
+    let cp = g.computed_permanent(mouse).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "Mouse anthemed +1/+1");
+}

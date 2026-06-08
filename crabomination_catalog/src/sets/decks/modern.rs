@@ -28956,3 +28956,145 @@ pub fn daring_waverider() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Diresight — {2}{B} Sorcery. Surveil 2, then draw two cards. You lose 2 life.
+pub fn diresight() -> CardDefinition {
+    CardDefinition {
+        name: "Diresight",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Starscape Cleric — {1}{B} 2/1 Bat Cleric with Flying, Offspring {2}{B}.
+/// It can't block; whenever you gain life, each opponent loses 1 life.
+pub fn starscape_cleric() -> CardDefinition {
+    CardDefinition {
+        name: "Starscape Cleric",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::CantBlock, Keyword::Offspring(cost(&[generic(2), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Splash Lasher — {3}{U} 3/3 Frog Wizard with Offspring {1}{U}. When it
+/// enters, tap up to one target creature and put a stun counter on it.
+pub fn splash_lasher() -> CardDefinition {
+    CardDefinition {
+        name: "Splash Lasher",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Offspring(cost(&[generic(1), u()]))],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Hare Apparent — {1}{W} 2/2 Rabbit Noble. When it enters, create a 1/1 white
+/// Rabbit token for each other creature you control named Hare Apparent.
+pub fn hare_apparent() -> CardDefinition {
+    CardDefinition {
+        name: "Hare Apparent",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::CountMatching {
+                sel: Box::new(Selector::EachPermanent(SelectionRequirement::Creature)),
+                filter: SelectionRequirement::HasName("Hare Apparent".into())
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            },
+            definition: rabbit_1_1_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// 1/1 white Rabbit creature token.
+fn rabbit_1_1_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Rabbit".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Rabbit], ..Default::default() },
+        ..Default::default()
+    }
+}
+
+/// Valley Questcaller — {1}{W} 2/3 Rabbit Warrior. Other Rabbits, Bats, Birds,
+/// and Mice you control get +1/+1; whenever one or more of those enter, scry 1.
+/// (The batched "one or more" trigger is modeled per entering creature.)
+pub fn valley_questcaller() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    let typal = || SelectionRequirement::HasCreatureType(CreatureType::Rabbit)
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Bat))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Bird))
+        .or(SelectionRequirement::HasCreatureType(CreatureType::Mouse));
+    CardDefinition {
+        name: "Valley Questcaller",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Rabbit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Rabbits, Bats, Birds, and Mice you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    typal()
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: typal().and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
