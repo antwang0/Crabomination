@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Chosen-creature-type anthem static.** `Effect::NameCreatureType` stores a
+  `chosen_creature_type` (Cavern of Souls), but there's no anthem static that
+  reads it — blocks Adaptive Automaton / Metallic Mimic / Patchwork Banner
+  ("creatures you control of the chosen type get +1/+1"). Add a
+  `StaticEffect::AnthemForChosenType { power, toughness }` applied through the
+  layer system.
+- ⏳ **Delirium conditional static** (four+ card types in graveyard → P/T
+  buff/keywords). Spineseeker Centipede shipped without its Delirium rider; a
+  reusable "while predicate, +X/+Y and gains K" conditional static would also
+  cover Mind Drill Assailant's Threshold (+3/+0 at 7+ gy).
+- ⏳ **Exile-from-graveyard activation cost.** Daring Fiendbonder / Daring
+  Waverider-style "{cost}, Exile this from your graveyard: …" abilities need a
+  graveyard-activated ability path (activate while in graveyard, paying an
+  exile-self cost).
 - ⏳ **Bloomburrow follow-ups (noticed this run):**
   - **Expend** (CR 700.14) ships (`mana_spent_on_spells_this_turn` +
     `EventKind::Expend` + `Predicate::ExpendReached`; Roughshod Duo). Remaining:
