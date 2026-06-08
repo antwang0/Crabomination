@@ -176,12 +176,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     `GameState.cant_block_pairs` (per-pair block restriction).
   - ✅ **Walker of the Wastes** — `PumpSelfByControlledPermanents` +
     `HasName("Wastes")`; a basic **Wastes** land (`{T}: Add {C}`) was added.
-- ⏳ **Client crate can't be built/linted in the web sandbox** (missing the
-  `wayland-client` system library; `wayland-sys` build script panics). Engine,
-  catalog, base, and server crates all build + clippy-clean + test-green.
-  Client edits are kept mechanical (mirror existing arms) and rustfmt-checked
-  only. Pending sandbox-side verification: `keyword_label` now phrases Devoid /
-  Landcycling / CantBeCounteredIfXAtLeast instead of raw `{:?}`.
+- ✅ **Client crate now builds/lints in the web sandbox.** The previous
+  `wayland-sys` panic was a missing system library; `apt-get install
+  libwayland-dev libasound2-dev libudev-dev` lets the client build + clippy
+  cleanly. Future runs should build the client too (a stale `CounterType::Ice`
+  match arm had slipped in unbuilt — now fixed).
 - ⏳ **Test harness: `check_state_based_actions()` doesn't dispatch
   *another-creature-died* watcher triggers.** A creature killed via raw
   `damage = N; check_state_based_actions()` fires its own death (SelfSource)
