@@ -1890,7 +1890,9 @@ impl GameState {
             .map(|c| c.id)
             .collect();
         for id in orphaned_auras {
-            self.remove_from_battlefield_to_graveyard(id);
+            // Fire any leaves-the-battlefield triggers on the Aura itself
+            // (CR 603.6d) — e.g. Rancor's "return it to its owner's hand".
+            events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
         // CR 704.5n — "If an Equipment or Fortification is attached to an

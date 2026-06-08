@@ -1071,6 +1071,10 @@ pub enum EventKind {
     /// CR 706.6 — the player rolled one or more dice ("Whenever you roll one
     /// or more dice"). Fires once per roll; matched to `GameEvent::DiceRolled`.
     RolledDice,
+    /// CR 712 — a permanent transformed. Fires once per transformed permanent;
+    /// the transforming permanent is the event subject (`EventScope::SelfSource`
+    /// for "when this transforms"). Matched to `GameEvent::Transformed`.
+    Transformed,
 }
 
 /// Whose events does this trigger listen for?
@@ -1719,6 +1723,11 @@ pub enum Effect {
     /// limits — a noncreature can't satisfy "if it was a creature", so it
     /// won't loop). No-op if the source isn't a creature card in a graveyard.
     ReturnSelfAsEnchantment,
+    /// CR 712 — Transform the targeted double-faced permanent(s): swap each to
+    /// its other face in place (same object, keeping counters / tapped state /
+    /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event
+    /// fires per permanent so "when this transforms" triggers can react.
+    Transform { what: Selector },
     /// "Exile target [permanent], then search its owner's graveyard, hand,
     /// and library for any number of cards with the same name as that
     /// [permanent] and exile them. Then that player shuffles." Crumble to

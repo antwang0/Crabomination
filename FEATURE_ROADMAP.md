@@ -215,6 +215,13 @@ not how Magic works" moments.
 - ⏳ **Classes / Rooms / Cases / Backgrounds** (enchantment subtypes with
   level/door mechanics).
 - ⏳ **Leveler cards** (level-up counters).
+- ✅ **Transforming DFCs** (CR 712) — `Effect::Transform` toggles a
+  permanent's active face in place (`CardInstance.{transformed,front_face}`,
+  same object: counters/tapped/attachments persist), fires
+  `EventKind::Transformed` for "when this transforms" triggers, and round-trips
+  through both the serde and `GameSnapshot` paths (front name + flag rebuild
+  the back face). Ships Concealing Curtains, Delver of Secrets, The Everflowing
+  Well. Remaining: Daybound/Nightbound auto-flip, DFC sagas.
 - ⏳ **Flip cards** (Kamigawa), **Meld** (Mightstone/Weakstone et al.),
   **Prototype**, **Omen**.
 - ⏳ **Face-down permanents** generalized (Morph exists as a keyword; needs

@@ -125,6 +125,8 @@ pub enum CreatureType {
     Naga,
     // Strixhaven artifact-creature subtype (Biblioplex Assistant).
     Gargoyle,
+    // Innistrad Eye Horror (Concealing Curtains // Revealing Eye).
+    Eye,
 }
 
 /// Land subtypes (basic land types + others).
@@ -1724,6 +1726,15 @@ pub struct CardInstance {
     /// point it reverts to a creature.
     pub bestowed: bool,
     pub face_down: bool,
+    /// CR 712 — true while this double-faced permanent is showing its back
+    /// face. `definition` is swapped to the active face; `front_face` stashes
+    /// the front so `Effect::Transform` can toggle back. Reconstructed on
+    /// snapshot load from the front name + this flag.
+    pub transformed: bool,
+    /// CR 712 — the front-face definition, kept while `transformed` so the
+    /// permanent can flip back. In-memory only (not serialized): the serde
+    /// wire stores the front name and rebuilds this on load.
+    pub front_face: Option<Arc<CardDefinition>>,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
     /// True if this card was cast via an evoke alternative cost — it will
@@ -1935,6 +1946,8 @@ impl CardInstance {
             bought_back: false,
             bestowed: false,
             face_down: false,
+            transformed: false,
+            front_face: None,
             is_token: false,
             used_loyalty_ability_this_turn: false,
             evoked: false,
@@ -2119,6 +2132,11 @@ struct CardInstanceWire {
     #[serde(default)]
     bestowed: bool,
     face_down: bool,
+    /// CR 712 — showing the back face. `name` always stores the FRONT face's
+    /// name so the registry resolves it; the back is recovered as
+    /// `front.back_face` on load. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    transformed: bool,
     is_token: bool,
     used_loyalty_ability_this_turn: bool,
     evoked: bool,
@@ -2222,7 +2240,14 @@ impl serde::Serialize for CardInstance {
     fn serialize<S: serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
         let wire = CardInstanceWire {
             id: self.id,
-            name: self.definition.name.to_string(),
+            // Always serialize the FRONT name so the registry can resolve it;
+            // a transformed permanent's active definition is the (unregistered)
+            // back face.
+            name: self
+                .front_face
+                .as_ref()
+                .map(|f| f.name.to_string())
+                .unwrap_or_else(|| self.definition.name.to_string()),
             owner: self.owner,
             controller: self.controller,
             tapped: self.tapped,
@@ -2237,6 +2262,7 @@ impl serde::Serialize for CardInstance {
             bought_back: self.bought_back,
             bestowed: self.bestowed,
             face_down: self.face_down,
+            transformed: self.transformed,
             is_token: self.is_token,
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
             evoked: self.evoked,
@@ -2296,6 +2322,15 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.bought_back = wire.bought_back;
         c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;
+        // CR 712 — restore a transformed permanent: stash the front, flip the
+        // active definition to the back face.
+        if wire.transformed {
+            if let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) {
+                c.front_face = Some(c.definition.clone());
+                c.definition = Arc::new(back);
+                c.transformed = true;
+            }
+        }
         c.is_token = wire.is_token;
         c.used_loyalty_ability_this_turn = wire.used_loyalty_ability_this_turn;
         c.evoked = wire.evoked;

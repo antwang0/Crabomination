@@ -52,6 +52,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
+        (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
         (EventKind::LostCoinFlip, GameEvent::CoinFlipLost { .. }) => true,
@@ -144,6 +145,11 @@ pub(crate) fn event_matches_spec(
             // the permanent that became monstrous.
             event,
             GameEvent::BecameMonstrous { card_id } if *card_id == source.id
+        ) || matches!(
+            // CR 712 — "When this transforms." Source must equal the
+            // permanent that transformed.
+            event,
+            GameEvent::Transformed { card_id } if *card_id == source.id
         ) || matches!(
             // "When this becomes the target of a spell or ability." The
             // implicit target==source.id check above already constrained it;
@@ -314,6 +320,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::Explored { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BecameMonstrous { card_id } => Some(EntityRef::Permanent(*card_id)),
+        GameEvent::Transformed { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
         // Enrage: the subject is the damaged permanent, so trigger bodies
         // referencing `Selector::TriggerSource` (and the implicit
@@ -400,6 +407,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::Explored { card_id, .. }
         | GameEvent::BecameMonstrous { card_id }
+        | GameEvent::Transformed { card_id }
         | GameEvent::TokenCreated { card_id }
         | GameEvent::CounterAdded { card_id, .. }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),

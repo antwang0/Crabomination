@@ -110,6 +110,11 @@ pub struct CardSnapshot {
     #[serde(default)]
     pub bestowed: bool,
     pub face_down: bool,
+    /// CR 712 — showing the back face. `name` stores the FRONT name; the back
+    /// is recovered as `front.back_face` on load. `#[serde(default)]` for
+    /// back-compat.
+    #[serde(default)]
+    pub transformed: bool,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
     pub evoked: bool,
@@ -259,7 +264,13 @@ impl GameSnapshot {
 fn card_snap(c: &CardInstance) -> CardSnapshot {
     CardSnapshot {
         id: c.id,
-        name: c.definition.name.to_string(),
+        // Always store the FRONT name (a transformed card's active definition
+        // is the unregistered back face).
+        name: c
+            .front_face
+            .as_ref()
+            .map(|f| f.name.to_string())
+            .unwrap_or_else(|| c.definition.name.to_string()),
         owner: c.owner,
         controller: c.controller,
         tapped: c.tapped,
@@ -273,6 +284,7 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
         bought_back: c.bought_back,
         bestowed: c.bestowed,
         face_down: c.face_down,
+        transformed: c.transformed,
         is_token: c.is_token,
         used_loyalty_ability_this_turn: c.used_loyalty_ability_this_turn,
         evoked: c.evoked,
@@ -445,6 +457,15 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.bought_back = cs.bought_back;
     c.bestowed = cs.bestowed;
     c.face_down = cs.face_down;
+    // CR 712 — rebuild a transformed permanent: stash the front, flip the
+    // active definition to the back face.
+    if cs.transformed {
+        if let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone()) {
+            c.front_face = Some(c.definition.clone());
+            c.definition = std::sync::Arc::new(back);
+            c.transformed = true;
+        }
+    }
     c.is_token = cs.is_token;
     c.used_loyalty_ability_this_turn = cs.used_loyalty_ability_this_turn;
     c.evoked = cs.evoked;
@@ -531,6 +552,30 @@ mod tests {
             .expect("Mindful Biomancer should round-trip");
         assert_eq!(bio_back.once_per_turn_used, vec![0],
             "Once-per-turn tracker must persist through snapshot/restore");
+    }
+
+    #[test]
+    fn snapshot_round_trips_transformed_dfc() {
+        // CR 712 — a transformed permanent must come back showing its back
+        // face (front name + `transformed` flag rebuild the active definition).
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let cc = g.add_card_to_battlefield(0, catalog::concealing_curtains());
+        g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: cc, ability_index: 0, target: None, x_value: None })
+            .expect("transform");
+        while !g.stack.is_empty() {
+            g.perform_action(GameAction::PassPriority).unwrap();
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        let restored = GameSnapshot::capture(&g).restore().expect("restore");
+        let back = restored.battlefield.iter().find(|c| c.id == cc).expect("present");
+        assert!(back.transformed);
+        assert_eq!(back.definition.name, "Revealing Eye");
+        assert!(back.front_face.as_ref().is_some_and(|f| f.name == "Concealing Curtains"));
     }
 
     #[test]
@@ -807,6 +852,7 @@ mod tests {
             bought_back: false,
             bestowed: false,
             face_down: false,
+            transformed: false,
             is_token: false,
             used_loyalty_ability_this_turn: false,
             evoked: false,

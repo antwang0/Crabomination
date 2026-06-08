@@ -1389,6 +1389,7 @@ pub enum GameEventWire {
     PermanentPhasedOut { card_id: CardId },
     Explored { card_id: CardId, controller: usize },
     BecameMonstrous { card_id: CardId },
+    Transformed { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
@@ -1540,6 +1541,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::BecameMonstrous { card_id } => {
                 GameEventWire::BecameMonstrous { card_id: *card_id }
+            }
+            GameEvent::Transformed { card_id } => {
+                GameEventWire::Transformed { card_id: *card_id }
             }
             GameEvent::TokenCreated { card_id } => {
                 GameEventWire::TokenCreated { card_id: *card_id }
@@ -1712,6 +1716,7 @@ impl GameEventWire {
             E::PermanentPhasedOut { card_id } => format!("{} phased out", name(*card_id)),
             E::Explored { card_id, .. } => format!("{} explored", name(*card_id)),
             E::BecameMonstrous { card_id } => format!("{} became monstrous", name(*card_id)),
+            E::Transformed { card_id } => format!("{} transformed", name(*card_id)),
             E::TokenCreated { card_id } => format!("token {} created", name(*card_id)),
             E::CardMilled { player, card_id } => {
                 format!("P{player} milled {}", name(*card_id))

@@ -356,6 +356,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         gaeas_cradle,
         golos_tireless_pilgrim,
         ramos_dragon_engine,
+        omnath_locus_of_creation,
         maelstrom_archangel,
         maelstrom_nexus,
         leyline_of_the_guildpact,
@@ -878,6 +879,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Black) {
         v.push(mourning_thrull);
+        v.push(concealing_curtains);
         v.push(goldmire_bridge);
         v.push(mortify);
         v.push(silent_clearing);
@@ -1097,6 +1099,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         unsummon,
         boomerang,
         cyclonic_rift,
+        sink_into_stupor,
+        delver_of_secrets,
+        the_everflowing_well,
         repeal,
         anticipate,
         divination,

@@ -27,10 +27,7 @@ work is listed below.
 |---|---|---|
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
-| The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
-| Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
-| Concealing Curtains | ⏳ | DFC into Revealing Eye creature. |
 
 ### Black
 
@@ -49,8 +46,8 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Hauntwoods Shrieker | ⏳ | Token + transform. |
-| Shifting Woodland | ⏳ | DFC land. |
+| Hauntwoods Shrieker | ⏳ | Manifest dread (face-down permanents). |
+| Shifting Woodland | ⏳ | Delirium-gated continuous "becomes a copy of a gy permanent" (layer-1 loop). |
 
 ### Artifacts & Planeswalkers (mono / colorless)
 
@@ -75,7 +72,6 @@ work is listed below.
 | Shiko and Narset, Unified | ⏳ | TBD. |
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
 | Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
-| Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |
 
 ### Lands
 
@@ -100,7 +96,8 @@ are listed in `DECK_FEATURES.md`.
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
 | Soulbond | ✅ | `Keyword::Soulbond` + `CardInstance.soulbond_partner` + `CardDefinition.soulbond_bonus` (`SoulbondBonus`: P/T, keywords, granted activated **and** triggered abilities). Pairs auto-resolve on ETB (`apply_soulbond_pairing`); the bonus rides both members as continuous effects and breaks on leave. Wolfir Silverheart, Wingcrafter, Nightshade Peddler, Trusted Forcemage, Hanweir Lancer, Silverblade Paladin, Nearheath Pilgrim, Deadeye Navigator (self-flicker), Tandem Lookout (combat-damage draw). |
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
-| Saga lore counters + DFC | ⏳ | The Everflowing Well; future sagas. |
+| Saga lore counters | ✅ | `saga_chapters` (History of Benalia, The Eldest Reborn). DFC sagas (transform-on-final-chapter) still ⏳. |
+| Transforming DFCs | ✅ | CR 712 — `Effect::Transform` + `CardInstance.{transformed,front_face}` + `EventKind::Transformed`. Swaps the active face in place (counters/tapped/attachments persist), round-trips through snapshots. Ships Concealing Curtains // Revealing Eye, Delver of Secrets // Insectile Aberration, The Everflowing Well // The Myriad Pools (descend-8 upkeep flip). Remaining ⏳: Daybound/Nightbound auto-flip, DFC sagas, manifest/disguise face-down. |
 | Hideaway lands | ⏳ | Shelldock Isle. |
 | Verge / surveil land family expansion | ✅ | All five enemy/allied `*verge` lands ship via `verge_land`. Horizon-canopy cycle complete (`horizon_land`; all six). All ten MKM surveil lands ship via `dual_land_with` + `etb_tap_then_surveil_one`. |
 | ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Creature-ETB / death **trigger** suppression ships via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` (Torpor Orb, Tocatli Honor Guard, Hushbringer ✅). Remaining: Gather Specimens (steal-instead). |

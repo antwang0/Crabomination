@@ -15559,9 +15559,8 @@ pub fn golgari_brownscale() -> CardDefinition {
 }
 
 /// Golgari Grave-Troll — {X}{B}{B} Creature — Skeleton Troll. 0/0, enters
-/// with X +1/+1 counters. Dredge 6. The "{T}, remove four +1/+1 counters:
-/// regenerate" ability is omitted (tracked in TODO.md); the X-body +
-/// Dredge 6 ship.
+/// with X +1/+1 counters. Dredge 6. `{T}`, remove four +1/+1 counters:
+/// regenerate this creature.
 pub fn golgari_grave_troll() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType};
     use crate::effect::Predicate;
@@ -15604,11 +15603,10 @@ pub fn golgari_grave_troll() -> CardDefinition {
 }
 
 /// Rancor — {G} Enchantment — Aura. "Enchant creature. Enchanted creature
-/// gets +2/+0 and has trample." The "when put into a graveyard from the
-/// battlefield, return Rancor to its owner's hand" recursion is omitted
-/// (no leaves-battlefield-to-hand trigger for noncreature permanents yet);
-/// the +2/+0 + trample buff ships via the Aura attach + equipped_bonus path.
+/// gets +2/+0 and has trample. When this Aura is put into a graveyard from
+/// the battlefield, return it to its owner's hand."
 pub fn rancor() -> CardDefinition {
+    use crate::effect::ZoneDest;
     CardDefinition {
         name: "Rancor",
         cost: cost(&[g()]),
@@ -15628,6 +15626,14 @@ pub fn rancor() -> CardDefinition {
             power: 2,
             toughness: 0,
             keywords: vec![Keyword::Trample], scale: None, triggered_abilities: vec![] }),
+        // Self-recursion: leaves battlefield → return from graveyard to hand.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -27001,6 +27007,200 @@ pub fn veteran_swordsmith() -> CardDefinition {
                 toughness: 0,
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Sink into Stupor // Soporific Springs — {1}{U}{U} Instant MDFC (MKM).
+/// Front: "Return target spell or nonland permanent an opponent controls to
+/// its owner's hand." (The spell-on-stack half collapses to the nonland-
+/// permanent bounce; the engine has no return-a-spell-to-hand primitive.)
+/// Back: Soporific Springs — a Land that enters tapped unless you pay 3 life,
+/// taps for {U}. Played via `GameAction::PlayLandBack`.
+pub fn sink_into_stupor() -> CardDefinition {
+    let back = CardDefinition {
+        name: "Soporific Springs",
+        card_types: vec![CardType::Land],
+        // As it enters, you may pay 3 life; otherwise it enters tapped.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::Tap { what: Selector::This },
+            ]),
+        }],
+        activated_abilities: vec![crate::catalog::sets::tap_add(Color::Blue)],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Sink into Stupor",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Nonland
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        back_face: Some(Box::new(back)),
+        ..Default::default()
+    }
+}
+
+/// Concealing Curtains // Revealing Eye — {B} Creature — Wall (transform DFC).
+/// Front: 0/4 Defender. `{2}{B}`: Transform this creature (sorcery-speed).
+/// Back: Revealing Eye, 3/4 Menace. When it transforms into Revealing Eye,
+/// target opponent reveals their hand; you choose a nonland card; that player
+/// discards it, then draws a card.
+pub fn concealing_curtains() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let revealing_eye = CardDefinition {
+        name: "Revealing Eye",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eye, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::DiscardChosen {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Nonland,
+                },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Concealing Curtains",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            sorcery_speed: true,
+            effect: Effect::Transform { what: Selector::This },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(revealing_eye)),
+        ..Default::default()
+    }
+}
+
+/// Delver of Secrets // Insectile Aberration — {U} Creature — Human Wizard.
+/// Front: 1/1. At the beginning of your upkeep, look at the top card of your
+/// library; you may reveal it. If an instant or sorcery card is revealed this
+/// way, transform Delver of Secrets. (Approximated: it transforms if the top
+/// card is an instant or sorcery, via an intervening-`if` on `Transform`.)
+/// Back: Insectile Aberration, 3/2 Flying.
+pub fn delver_of_secrets() -> CardDefinition {
+    use crate::effect::Predicate;
+    let aberration = CardDefinition {
+        name: "Insectile Aberration",
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Delver of Secrets",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::TopOfLibrary {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                    },
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+                then: Box::new(Effect::Transform { what: Selector::This }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        back_face: Some(Box::new(aberration)),
+        ..Default::default()
+    }
+}
+
+/// The Everflowing Well // The Myriad Pools — {2}{U} Legendary Artifact
+/// (transform DFC). Front ETB: mill two, then draw two. Descend 8 — at the
+/// beginning of your upkeep, if there are eight or more cards in your
+/// graveyard, transform it. Back: The Myriad Pools, a Legendary Artifact Land
+/// that taps for {U}. (The "copy a permanent spell" back trigger is dropped;
+/// Descend 8 counts all graveyard cards rather than permanent cards only.)
+pub fn the_everflowing_well() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::effect::Predicate;
+    let myriad_pools = CardDefinition {
+        name: "The Myriad Pools",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Land],
+        activated_abilities: vec![crate::catalog::sets::tap_add(Color::Blue)],
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "The Everflowing Well",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ]),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::GraveyardSizeOf(PlayerRef::You),
+                        Value::Const(8),
+                    ),
+                    then: Box::new(Effect::Transform { what: Selector::This }),
+                    else_: Box::new(Effect::Noop),
+                },
+            },
+        ],
+        back_face: Some(Box::new(myriad_pools)),
         ..Default::default()
     }
 }

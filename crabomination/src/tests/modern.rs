@@ -23163,6 +23163,102 @@ fn rancor_buffs_plus_two_zero_and_grants_trample() {
     assert!(buffed.keywords.contains(&crate::card::Keyword::Trample), "Rancor grants trample");
 }
 
+#[test]
+fn rancor_returns_to_hand_when_it_leaves_the_battlefield() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rancor = g.add_card_to_battlefield(0, catalog::rancor());
+    g.battlefield_find_mut(rancor).unwrap().attached_to = Some(bears);
+    // Host dies → Rancor is orphaned (SBA) → its LTB trigger bounces it home.
+    g.remove_to_graveyard_with_triggers(bears);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(rancor).is_none(), "Rancor left the battlefield");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == rancor),
+        "Rancor returned to its owner's hand"
+    );
+}
+
+// ── Transforming double-faced permanents (CR 712) ───────────────────────────
+
+#[test]
+fn concealing_curtains_transforms_and_strips_a_card() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let cc = g.add_card_to_battlefield(0, catalog::concealing_curtains());
+    g.add_card_to_hand(1, catalog::grizzly_bears()); // a nonland to strip
+    g.add_card_to_library(1, catalog::island()); // so the follow-up draw works
+    let opp_hand = g.players[1].hand.len();
+    g.players[0].mana_pool.add(Color::Black, 3); // {B} + {2} generic
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cc, ability_index: 0, target: None, x_value: None,
+    }).expect("{2}{B}: Transform");
+    drain_stack(&mut g);
+    let eye = g.battlefield_find(cc).expect("still on battlefield");
+    assert_eq!(eye.definition.name, "Revealing Eye", "transformed to back face");
+    assert!(eye.transformed);
+    assert!(eye.definition.keywords.contains(&crate::card::Keyword::Menace));
+    // Discarded the nonland (then drew): net hand unchanged, but the bear is gone.
+    assert!(!g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"));
+    assert_eq!(g.players[1].hand.len(), opp_hand, "discarded one, drew one");
+}
+
+#[test]
+fn delver_of_secrets_transforms_when_top_is_instant() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::Upkeep;
+    let d = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    g.add_card_to_library(0, catalog::shock()); // sole card → top is an instant
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let ab = g.battlefield_find(d).expect("still here");
+    assert_eq!(ab.definition.name, "Insectile Aberration");
+    assert_eq!((ab.power(), ab.toughness()), (3, 2));
+    assert!(ab.definition.keywords.contains(&crate::card::Keyword::Flying));
+}
+
+#[test]
+fn delver_of_secrets_stays_front_when_top_is_a_creature() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::Upkeep;
+    let d = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(d).unwrap().definition.name, "Delver of Secrets");
+}
+
+#[test]
+fn everflowing_well_mills_draws_then_descends_to_a_land() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // ETB: mill 2, draw 2.
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let well = g.add_card_to_hand(0, catalog::the_everflowing_well());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: well, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Everflowing Well");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "drew two");
+    assert_eq!(g.players[0].graveyard.len(), 2, "milled two");
+    // Descend 8: stuff the graveyard, then fire upkeep → transform to the land.
+    for _ in 0..8 { g.add_card_to_graveyard(0, catalog::island()); }
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let pools = g.battlefield_find(well).expect("still in play");
+    assert_eq!(pools.definition.name, "The Myriad Pools");
+    assert!(pools.definition.card_types.contains(&crate::card::CardType::Land));
+}
+
 // ── Cascade instants / Darkblast dredge / simple Auras ──────────────────────
 
 #[test]

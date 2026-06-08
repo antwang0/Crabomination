@@ -895,6 +895,8 @@ pub enum GameEvent {
     Explored { card_id: CardId, controller: usize },
     /// CR 701.31 — a permanent became monstrous.
     BecameMonstrous { card_id: CardId },
+    /// CR 712 — a permanent transformed to its other face.
+    Transformed { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
