@@ -29590,11 +29590,9 @@ pub fn carrot_cake() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
         triggered_abilities: vec![
             etb(rabbit_scry()),
-            // Printed "when you sacrifice it"; modeled as leaves-battlefield (a
-            // Food's only realistic exit is being sacrificed). A dedicated
-            // PermanentSacrificed-SelfSource dispatch is a TODO.md follow-up.
+            // "When you sacrifice it" — fires only on sacrifice, not any exit.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::SelfSource),
                 effect: rabbit_scry(),
             },
         ],

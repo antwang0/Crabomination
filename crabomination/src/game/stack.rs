@@ -2300,11 +2300,35 @@ impl GameState {
             self.players[controller_idx].creatures_died_this_turn =
                 self.players[controller_idx].creatures_died_this_turn.saturating_add(1);
         }
+        // Snapshot the card if it carries a SelfSource `PermanentSacrificed`
+        // trigger so the dispatcher can fire it from last-known info after the
+        // permanent has left (the sacrifice funnels push a `PermanentSacrificed`
+        // event but the source is already gone by dispatch time — Carrot Cake).
+        let has_sac_self_trigger = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .map(|c| {
+                let granted: &[crate::card::TriggeredAbility] = self
+                    .granted_triggers_eot
+                    .get(&c.id)
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]);
+                c.definition
+                    .triggered_abilities
+                    .iter()
+                    .chain(granted)
+                    .any(|t| {
+                        matches!(t.event.scope, EventScope::SelfSource)
+                            && matches!(t.event.kind, EventKind::PermanentSacrificed)
+                    })
+            })
+            .unwrap_or(false);
         // Last-known-info snapshot (CR 603.10): a "when this leaves the
         // battlefield" trigger resolves after the permanent is gone, so cache
         // its pre-removal state for selectors that read it (e.g. an Aura's
         // `AttachedTo(This)` → enchanted creature — Parallax Dementia).
-        if !leave_triggers.is_empty()
+        if (!leave_triggers.is_empty() || has_sac_self_trigger)
             && let Some(c) = self.battlefield.iter().find(|c| c.id == id)
         {
             self.died_card_snapshots.insert(id, c.clone());

@@ -37579,6 +37579,19 @@ fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
     assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
 }
 
+/// Carrot Cake's "when you sacrifice it" trigger is sacrifice-specific: a plain
+/// destroy (non-sacrifice exit) does not mint a Rabbit.
+#[test]
+fn carrot_cake_sac_trigger_doesnt_fire_on_destroy() {
+    let mut g = two_player_game();
+    let cake = g.add_card_to_battlefield(0, catalog::carrot_cake());
+    let evs = g.remove_to_graveyard_with_triggers(cake); // non-sacrifice exit
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let rabbits = g.battlefield.iter().filter(|c| c.definition.name == "Rabbit").count();
+    assert_eq!(rabbits, 0, "destroy is not a sacrifice — no Rabbit");
+}
+
 /// Take Out the Trash deals 3 and loots when you control a Raccoon.
 #[test]
 fn take_out_the_trash_pings_and_loots_with_raccoon() {

@@ -8,13 +8,6 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **`PermanentSacrificed` SelfSource triggers don't fire from the sac-cost
-  path.** A "when you sacrifice this" artifact (Carrot Cake) currently rides
-  `PermanentLeavesBattlefield` SelfSource as a stand-in (fires on any exit).
-  `remove_to_graveyard_with_triggers` only collects LeavesBattlefield /
-  CreatureDied SelfSource triggers; add `PermanentSacrificed` SelfSource
-  collection there (reading the leaving permanent's abilities pre-removal) so
-  the trigger is sacrifice-specific.
 - ⏳ **Bloomburrow follow-ups (noticed this run):**
   - **Expend** (CR 700.14) ships (`mana_spent_on_spells_this_turn` +
     `EventKind::Expend` + `Predicate::ExpendReached`; Roughshod Duo). Remaining:
