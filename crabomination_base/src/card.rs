@@ -256,6 +256,11 @@ pub enum CounterType {
     /// `Value::DistinctManaValuesInExileWithCounter` (Kianne's Fractal) and
     /// returned via `Effect::ReturnFromExileWithCounter` (Imbraham).
     Study,
+    /// Hone counter — Strixhaven cast-from-exile timer (Uvilda, Dean of
+    /// Perfection). An instant/sorcery exiled with hone counters ticks one off
+    /// each of the owner's upkeeps; when the last is removed it becomes
+    /// castable from exile for {4} less (`GameState::process_hone`).
+    Hone,
 }
 
 /// Every zone a card can occupy.
@@ -1750,6 +1755,11 @@ pub struct CardInstance {
     /// `kicked` flag so that a card with both Kicker and Flashback can
     /// be disambiguated cleanly.
     pub cast_via_flashback: bool,
+    /// True if this card was cast from exile on its current trip through the
+    /// stack (suspend/foretell/plot/impulse free or alt-cost casts). Powers
+    /// "whenever you cast a spell from exile" payoffs (Nassari, Dean of
+    /// Expression). Cleared when the card leaves the stack.
+    pub cast_from_exile: bool,
     /// "As [this] enters, choose a creature type." Cavern of Souls. The
     /// chosen type narrows which creature spells the controller can cast as
     /// uncounterable through this permanent. `None` until the ETB choice
@@ -1934,6 +1944,7 @@ impl CardInstance {
             blitzed: false,
             cast_from_hand: false,
             cast_via_flashback: false,
+            cast_from_exile: false,
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
             granted_keywords_eot: Vec::new(),
@@ -2124,6 +2135,8 @@ struct CardInstanceWire {
     /// as `false` (matching the old "not cast via flashback" path).
     #[serde(default)]
     cast_via_flashback: bool,
+    #[serde(default)]
+    cast_from_exile: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
     once_per_turn_used: Vec<usize>,
@@ -2233,6 +2246,7 @@ impl serde::Serialize for CardInstance {
             blitzed: self.blitzed,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
+            cast_from_exile: self.cast_from_exile,
             chosen_creature_type: self.chosen_creature_type,
             once_per_turn_used: self.once_per_turn_used.clone(),
             may_play_until: self.may_play_until,
@@ -2291,6 +2305,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.blitzed = wire.blitzed;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
+        c.cast_from_exile = wire.cast_from_exile;
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;
         c.may_play_until = wire.may_play_until;

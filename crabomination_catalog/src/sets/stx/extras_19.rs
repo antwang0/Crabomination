@@ -243,6 +243,74 @@ pub fn kianne_dean_of_substance() -> CardDefinition {
     }
 }
 
+/// Nassari, Dean of Expression — {3}{R}{R} 4/4 Efreet Shaman (back of Uvilda).
+/// At your upkeep, exile the top card of each opponent's library; you may cast
+/// those until end of turn. Whenever you cast a spell from exile, put a +1/+1
+/// counter on Nassari. (The "spend mana as any color" clause is dropped.)
+fn nassari_dean_of_expression() -> CardDefinition {
+    CardDefinition {
+        name: "Nassari, Dean of Expression",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Efreet, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::EachOpponent,
+                    count: Value::Const(1),
+                    duration: MayPlayDuration::EndOfThisTurn,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellFromExile),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Uvilda, Dean of Perfection // Nassari, Dean of Expression — {2}{U} 2/2 Djinn
+/// Wizard. {T}: you may exile an instant or sorcery from your hand with three
+/// hone counters; it ticks down one per your upkeep and is castable from exile
+/// for {4} less once the last comes off.
+pub fn uvilda_dean_of_perfection() -> CardDefinition {
+    CardDefinition {
+        name: "Uvilda, Dean of Perfection",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::HoneFromHand { count: Value::Const(3) },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(nassari_dean_of_expression())),
+        ..Default::default()
+    }
+}
+
 /// Radiant Scrollwielder — {2}{R}{W} 2/4 Dwarf Cleric. Instant and sorcery
 /// spells you control have lifelink. At the beginning of your upkeep, exile an
 /// instant or sorcery card from your graveyard and let yourself cast it this

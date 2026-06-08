@@ -599,6 +599,15 @@ impl GameState {
                     .map(|cid| self.permanents_gained_counter_this_turn.contains(&cid))
                     .unwrap_or(false)
             }
+            Predicate::CastSpellFromExile => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => card.cast_from_exile,
+                    _ => false,
+                })
+            }
             Predicate::CastSpellNotOwnedByYou => {
                 // Owner ≠ controller test against the just-cast spell.
                 // Resolution: walk the stack for the trigger source's

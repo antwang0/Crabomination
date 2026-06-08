@@ -9,11 +9,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 ## Follow-ups noticed (not yet done)
 
 - ⏳ **Remaining STX printed cards (each needs a new primitive):**
-  - **Hone counters + cast-from-exile-with-counter** — `CounterType::Hone` plus
-    "cast a card you own in exile with a hone counter for {4} less" + an upkeep
-    tick-down. Unblocks Uvilda//Nassari (the study half shipped this run:
-    `CounterType::Study` + `Effect::{StudyTopCard,ExileTopWithCounters}` +
-    `Value::DistinctManaValuesInExileWithCounter`, Kianne//Imbraham).
+  - ✅ **Hone counters + cast-from-exile** — `CounterType::Hone` +
+    `Effect::HoneFromHand` + `GameState::process_hone` (upkeep tick → {4}-less
+    cast-from-exile via a may-play grant). Nassari rides
+    `ExileTopAndGrantMayPlay { EachOpponent }` + `CardInstance.cast_from_exile`
+    + `Predicate::CastSpellFromExile`. Uvilda//Nassari shipped (Nassari's "any
+    color" mana clause dropped).
   - **Continuous "becomes a copy of" (layer 1)** — until-EOT/permanent copy of
     a chosen permanent (Echoing Equation, Helm of the Host loop, Mirrorform).
   - **Fixed alternative cost "cast for {N} instead"** + **put-lands-from-hand-

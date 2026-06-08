@@ -4283,5 +4283,6 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::valentin_dean_of_the_vein,
         super::radiant_scrollwielder,
         super::kianne_dean_of_substance,
+        super::uvilda_dean_of_perfection,
     ]
 }

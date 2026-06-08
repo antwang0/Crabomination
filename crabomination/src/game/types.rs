@@ -763,6 +763,10 @@ pub enum PendingEffectState {
     /// caster picks cards from `target_player`'s hand; the apply step exiles
     /// them permanently.
     ExileChosenFromHandPending { target_player: usize },
+    /// Suspended on a `HoneFromHand` decision (Uvilda, Dean of Perfection).
+    /// The owner picks an instant/sorcery from their hand; the apply step
+    /// exiles it with `count` hone counters.
+    HoneFromHandPending { target_player: usize, count: u32 },
     /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.

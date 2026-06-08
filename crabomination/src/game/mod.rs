@@ -1551,6 +1551,46 @@ impl GameState {
         events
     }
 
+    /// Uvilda, Dean of Perfection — at the active player's upkeep, remove one
+    /// hone counter from each instant/sorcery they own in exile with hone
+    /// counters. When the last comes off, grant them permission to cast it
+    /// from exile for {4} less (the printed "you may cast it" window).
+    pub(crate) fn process_hone(&mut self) -> Vec<crate::game::GameEvent> {
+        use crate::card::{CounterType, MayPlayDuration, MayPlayPermission};
+        let active = self.active_player_idx;
+        let turn = self.turn_number;
+        let mut events = Vec::new();
+        let honed: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| c.owner == active && c.counter_count(CounterType::Hone) > 0)
+            .map(|c| c.id)
+            .collect();
+        for id in honed {
+            let Some(card) = self.exile.iter_mut().find(|c| c.id == id) else { continue };
+            card.remove_counters(CounterType::Hone, 1);
+            events.push(crate::game::GameEvent::CounterRemoved {
+                card_id: id,
+                counter_type: CounterType::Hone,
+                count: 1,
+            });
+            if card.counter_count(CounterType::Hone) > 0 {
+                continue;
+            }
+            // Last hone counter removed — castable from exile for {4} less.
+            let mut cost = card.definition.cost.clone();
+            cost.reduce_generic(4);
+            card.may_play_until = Some(MayPlayPermission {
+                player: active,
+                granted_turn: turn,
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                exile_after: false,
+            });
+            card.granted_alt_cast_cost_eot = Some(cost);
+        }
+        events
+    }
+
     /// Remove one time counter from a suspended card in exile; when the last
     /// is removed, free-cast it from exile (CR 702.62e–f). Shared by the
     /// upkeep tick (`process_suspend`) and accelerants (Deep-Sea Kraken).
@@ -5402,6 +5442,23 @@ impl GameState {
                         self.players[target_player].hand.iter().position(|c| c.id == *cid)
                     {
                         let card = self.players[target_player].hand.remove(pos);
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: *cid });
+                    }
+                }
+                Ok(events)
+            }
+            PendingEffectState::HoneFromHandPending { target_player, count } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::new();
+                for cid in card_ids {
+                    if let Some(pos) =
+                        self.players[target_player].hand.iter().position(|c| c.id == *cid)
+                    {
+                        let mut card = self.players[target_player].hand.remove(pos);
+                        card.add_counters(crate::card::CounterType::Hone, count);
                         self.exile.push(card);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     }

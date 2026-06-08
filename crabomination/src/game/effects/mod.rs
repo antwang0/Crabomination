@@ -4775,6 +4775,32 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::HoneFromHand { count } => {
+                // Uvilda — the owner may exile an instant/sorcery from hand
+                // with `count` hone counters. Reuses the Discard decision shape.
+                use crate::decision::Decision;
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                let p = ctx.controller;
+                let candidates: Vec<(crate::card::CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                // "You may" — count 0..=1; the auto-decider may decline.
+                let decision = Decision::Discard { player: p, count: 1, hand: candidates };
+                let pending = PendingEffectState::HoneFromHandPending { target_player: p, count: n };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::Attach { what, to } => {
                 let anchor = self.resolve_selector(to, ctx)
                     .into_iter()
@@ -5934,21 +5960,27 @@ impl GameState {
                 // The top of the library is index 0 (see `Player::draw_top`
                 // and `Selector::TopOfLibrary`), so this reads `.first()`,
                 // not `.last()` (which is the bottom card).
-                let p = self.resolve_player(who, ctx).unwrap_or(ctx.controller);
+                let targets = self.resolve_players(who, ctx);
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 let granted_turn = self.turn_number;
-                for _ in 0..n {
-                    let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break; };
-                    let mut local_events = Vec::new();
-                    self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
-                    events.extend(local_events);
-                    if let Some(card) = self.find_card_anywhere_mut(top_id) {
-                        card.may_play_until = Some(crate::card::MayPlayPermission {
-                            player: ctx.controller,
-                            granted_turn,
-                            duration: *duration,
-                            exile_after: false,
-                        });
+                // Plural `who` (EachOpponent) peels from every resolved
+                // library — Nassari, Dean of Expression exiles the top card
+                // of each opponent's library, all castable by Nassari's
+                // controller until end of turn.
+                for p in targets {
+                    for _ in 0..n {
+                        let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break; };
+                        let mut local_events = Vec::new();
+                        self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
+                        events.extend(local_events);
+                        if let Some(card) = self.find_card_anywhere_mut(top_id) {
+                            card.may_play_until = Some(crate::card::MayPlayPermission {
+                                player: ctx.controller,
+                                granted_turn,
+                                duration: *duration,
+                                exile_after: false,
+                            });
+                        }
                     }
                 }
                 Ok(())

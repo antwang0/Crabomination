@@ -31,10 +31,12 @@ Sequence, Torrent Sculptor // Flamethrower Sonata, Blex // Search for Blex.
 (`StaticEffect::ExileDyingOpponentCreatures` death-replacement + reflexive).
 
 ⏳ work remaining printed STX cards, grouped by blocker:
-- **Hone counters** (cast-from-exile-with-counter + upkeep tick + {4}-less):
-  Uvilda//Nassari. (Study counters ✅ — `CounterType::Study`,
-  `Effect::{StudyTopCard,ExileTopWithCounters}`,
-  `Value::DistinctManaValuesInExileWithCounter`; Kianne//Imbraham shipped.)
+  (Hone counters ✅ — `CounterType::Hone` + `Effect::HoneFromHand` + the
+  `GameState::process_hone` upkeep tick → {4}-less cast-from-exile grant;
+  Nassari rides `ExileTopAndGrantMayPlay { EachOpponent }` +
+  `Predicate::CastSpellFromExile`. Uvilda//Nassari shipped; Nassari's
+  "spend mana as any color" clause is dropped. Study counters ✅ —
+  `CounterType::Study`, Kianne//Imbraham.)
 - **Continuous "becomes a copy" layer-1**: Echoing Equation (Augmenter's back).
 - **Cast-from-top impulse + can't-cast-permanents static**: Codie.
 - 🟡 **Awaken the Blood Avatar**: the optional "sacrifice any number, {2} less

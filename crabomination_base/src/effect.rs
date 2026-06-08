@@ -686,6 +686,10 @@ pub enum Predicate {
     /// opponent's zone. Evaluated against `ctx.trigger_source`'s
     /// `StackItem::Spell.card.owner`.
     CastSpellNotOwnedByYou,
+    /// True if the just-cast spell (via `ctx.trigger_source`) was cast from
+    /// exile — reads the `StackItem::Spell.card.cast_from_exile` flag.
+    /// Nassari, Dean of Expression's "whenever you cast a spell from exile".
+    CastSpellFromExile,
     /// True if `ctx.source` (the listening permanent's id) is currently
     /// in the engine's `permanents_gained_counter_this_turn` set — i.e.
     /// the listening permanent has had one or more counters put on it
@@ -2305,6 +2309,12 @@ pub enum Effect {
     /// Imbraham, Dean of Theory — exile the top `count` cards of the
     /// controller's library, each with one `counter` counter on it.
     ExileTopWithCounters { count: Value, counter: crate::card::CounterType },
+
+    /// Uvilda, Dean of Perfection — the controller may exile an instant or
+    /// sorcery card from their hand with `count` hone counters on it. The
+    /// per-upkeep tick-down + reduced cast-from-exile is handled engine-side
+    /// (`GameState::process_hone`).
+    HoneFromHand { count: Value },
 
     /// Controller chooses `count` cards from their hand and puts them on top of
     /// their library in a chosen order (first chosen = topmost).

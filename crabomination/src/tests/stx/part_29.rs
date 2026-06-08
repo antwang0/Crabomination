@@ -413,3 +413,67 @@ fn imbraham_exiles_top_x_with_study_counters() {
         assert_eq!(e.counter_count(CounterType::Study), 1);
     }
 }
+
+// ── Uvilda, Dean of Perfection // Nassari, Dean of Expression ───────────────────
+
+#[test]
+fn uvilda_hones_instant_then_makes_it_castable_for_four_less() {
+    let mut g = two_player_game();
+    let uvilda = g.add_card_to_battlefield(0, catalog::uvilda_dean_of_perfection());
+    g.clear_sickness(uvilda);
+    // {3}{U} instant (simplified body) — exiled with three hone counters.
+    let behold = g.add_card_to_hand(0, catalog::behold_the_multiverse());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Discard(vec![behold]),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: uvilda, ability_index: 0, target: None, x_value: None,
+    }).expect("Uvilda hone");
+    drain_stack(&mut g);
+    let e = g.exile.iter().find(|c| c.id == behold).expect("instant exiled");
+    assert_eq!(e.counter_count(CounterType::Hone), 3);
+
+    // Three of the owner's upkeeps tick the counters off.
+    g.active_player_idx = 0;
+    for _ in 0..3 {
+        g.process_hone();
+    }
+    let e = g.exile.iter().find(|c| c.id == behold).expect("still exiled");
+    assert_eq!(e.counter_count(CounterType::Hone), 0);
+    assert!(e.may_play_until.is_some(), "castable from exile after last hone tick");
+    // {3}{U} reduced by {4} → {U} (mv 1; the discount caps at the generic part).
+    assert_eq!(e.granted_alt_cast_cost_eot.as_ref().unwrap().cmc(), 1);
+}
+
+#[test]
+fn nassari_exiles_each_opponent_top_and_counts_exile_casts() {
+    let mut g = two_player_game();
+    let nassari =
+        g.add_card_to_battlefield(0, *catalog::uvilda_dean_of_perfection().back_face.unwrap());
+    g.clear_sickness(nassari);
+    let bolt = g.add_card_to_library(1, catalog::lightning_bolt());
+    // Active player 0's upkeep — exile the top of opponent 1's library.
+    g.step = TurnStep::Upkeep;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    let e = g.exile.iter().find(|c| c.id == bolt).expect("opp top exiled");
+    assert_eq!(e.may_play_until.unwrap().player, 0, "Nassari's controller may cast it");
+
+    // Casting it from exile pumps Nassari (+1/+1).
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt,
+        target: Some(crate::game::Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast bolt from exile");
+    drain_stack(&mut g);
+    let n = g.battlefield_find(nassari).expect("Nassari alive");
+    assert_eq!(n.counter_count(CounterType::PlusOnePlusOne), 1, "+1/+1 on exile cast");
+}

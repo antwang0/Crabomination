@@ -1383,6 +1383,7 @@ impl GameState {
             .saturating_sub(self.players[p].mana_pool.total());
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
+        card.cast_from_exile = false;
         card.adventuring = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -1543,6 +1544,7 @@ impl GameState {
             .saturating_sub(self.players[p].mana_pool.total());
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
+        card.cast_from_exile = false;
         card.split_cast = Some(if fused { 2 } else { 1 });
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -1869,6 +1871,7 @@ impl GameState {
 
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
+        card.cast_from_exile = false;
         // CR 702.32 — opt-in Kicker. Only stamp `kicked` if the card
         // actually has a kicker cost; the cost itself is folded into the
         // spell's mana cost below.
@@ -3413,6 +3416,8 @@ impl GameState {
         // cast, the grant (and its miracle alt-cost) is consumed.
         card.may_play_until = None;
         card.granted_alt_cast_cost_eot = None;
+        // Stamp the cast-zone flag for "cast a spell from exile" payoffs.
+        card.cast_from_exile = matches!(source_zone, Zone::Exile);
         // Route to exile on resolve when the granting effect demands it
         // (Nita's "if would go to graveyard, exile instead").
         if exile_after {
@@ -3875,6 +3880,7 @@ impl GameState {
         // accidentally collide with it during validation).
         let mut card = self.players[p].remove_from_hand(card_id).unwrap();
         card.cast_from_hand = true;
+        card.cast_from_exile = false;
         if alt.evoke_sacrifice {
             card.evoked = true;
         }

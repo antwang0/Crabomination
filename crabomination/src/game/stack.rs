@@ -183,6 +183,9 @@ impl GameState {
                 // upkeep; the spell is cast for free when the last comes off.
                 let mut susp = self.process_suspend();
                 events.append(&mut susp);
+                // Uvilda — hone counters tick down at the owner's upkeep.
+                let mut hone = self.process_hone();
+                events.append(&mut hone);
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
