@@ -1408,6 +1408,9 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of creatures the controller
     /// controls (counting the source itself). Burrowguard Mentor (base 0/0).
     CreaturesControlled { base: i32 },
+    /// Power = toughness = `base` + the number of lands the controller
+    /// controls. Lumra, Bellow of the Woods (base 0/0).
+    LandsControlled { base: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

@@ -7992,13 +7992,10 @@ pub fn uro() -> CardDefinition {
 // ── modern_decks-13: cube finishers ──────────────────────────────────────────
 
 /// Lumra, Bellow of the Woods — {4}{G}{G} Legendary Creature — Elemental.
-/// 6/6 Trample. When this enters, return all land cards from your graveyard
-/// to the battlefield tapped.
-///
-/// Mass land-recursion: `Move(EachMatching(Graveyard(You), Land) →
-/// Battlefield(You, tapped))`. The engine's `Move` already handles
-/// graveyard-zone sources, and `Selector::EachMatching` iterates every match
-/// — so a single Move call brings them all back at once.
+/// {4}{G}{G} Legendary Elemental Bear */* with Vigilance and Reach. Its power
+/// and toughness each equal the number of lands you control
+/// (`DynamicPt::LandsControlled`). When it enters, mill four, then return all
+/// land cards from your graveyard to the battlefield (tapped).
 pub fn lumra_bellow_of_the_woods() -> CardDefinition {
     use crate::card::Supertype as Sup;
     use crate::effect::ZoneRef;
@@ -8008,17 +8005,17 @@ pub fn lumra_bellow_of_the_woods() -> CardDefinition {
         supertypes: vec![Sup::Legendary],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bear],
             ..Default::default()
         },
-        power: 6,
-        toughness: 6,
-        // Real Oracle: Vigilance, Trample. (Reach was a stale leftover —
-        // Lumra is not the Reach printing.)
+        // Base 0/0; the CDA injection in `compute_battlefield` sets P/T to the
+        // controller's land count.
+        power: 0,
+        toughness: 0,
         keywords: vec![Keyword::Vigilance, Keyword::Reach],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Move {
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::Move {
                 what: Selector::EachMatching {
                     zone: ZoneRef::Graveyard(PlayerRef::You),
                     filter: SelectionRequirement::Land,
@@ -8028,7 +8025,7 @@ pub fn lumra_bellow_of_the_woods() -> CardDefinition {
                     tapped: true,
                 },
             },
-        }],
+        ]))],
         ..Default::default()
     }
 }
@@ -28560,6 +28557,69 @@ pub fn hivespine_wolverine() -> CardDefinition {
                 ),
             },
         ]))],
+        ..Default::default()
+    }
+}
+
+/// Cindering Cutthroat — {2}{B/R} 3/2 Lizard Assassin. Enters with a +1/+1
+/// counter if an opponent lost life this turn. {1}{B/R}: gains menace until
+/// end of turn.
+pub fn cindering_cutthroat() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::mana::{hybrid, Color};
+    CardDefinition {
+        name: "Cindering Cutthroat",
+        cost: cost(&[generic(2), hybrid(Color::Black, Color::Red)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), hybrid(Color::Black, Color::Red)]),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Three Tree Mascot — {2} 2/1 Artifact Creature — Shapeshifter with
+/// Changeling. {1}: Add one mana of any color. Activate only once each turn.
+pub fn three_tree_mascot() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Three Tree Mascot",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Changeling],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            once_per_turn: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

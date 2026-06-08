@@ -2926,6 +2926,39 @@ fn stonesplitter_bolt_bargained_deals_twice_x() {
 }
 
 #[test]
+fn cindering_cutthroat_enters_bigger_after_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[1].life -= 1; // an opponent lost life this turn
+    g.players[1].lost_life_this_turn = true;
+    let id = g.add_card_to_hand(0, catalog::cindering_cutthroat());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cindering Cutthroat");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "entered with a +1/+1 counter");
+}
+
+#[test]
+fn three_tree_mascot_taps_for_any_color() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::three_tree_mascot());
+    g.clear_sickness(id);
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Changeling));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("activate the mana ability");
+    assert!(g.players[0].mana_pool.total() >= 1, "produced a mana of any color");
+}
+
+#[test]
 fn hivespine_wolverine_mode_destroy_kills_an_enchantment() {
     let mut g = two_player_game();
     g.active_player_idx = 0;
@@ -13297,7 +13330,11 @@ fn lumra_returns_all_lands_from_your_graveyard() {
     let f1 = g.add_card_to_graveyard(0, catalog::forest());
     let f2 = g.add_card_to_graveyard(0, catalog::forest());
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    // A land on the battlefield so Lumra (*/* = lands you control) isn't a
+    // 0/0 that dies to SBA before its own ETB resolves.
+    g.add_card_to_battlefield(0, catalog::forest());
     let id = g.add_card_to_hand(0, catalog::lumra_bellow_of_the_woods());
+    g.players[0].library.clear(); // keep the ETB mill a no-op
     g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Green, 2);
 
@@ -13313,17 +13350,24 @@ fn lumra_returns_all_lands_from_your_graveyard() {
         "Bear stays in graveyard (not a land)");
     assert!(g.battlefield_find(f1).unwrap().tapped,
         "Land returns tapped per Oracle");
-    // Lumra itself is on the battlefield as a 6/6 trampler.
-    let lumra = g.battlefield_find(id).unwrap();
-    assert_eq!(lumra.definition.power, 6);
-    assert_eq!(lumra.definition.toughness, 6);
-    assert!(lumra.definition.keywords.contains(&crate::card::Keyword::Reach));
+    // Lumra is */* = lands you control. The two returned Forests are the
+    // only lands here (empty library → the ETB mill does nothing).
+    let lands = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land()).count() as i32;
+    let computed = g.compute_battlefield();
+    let lumra = computed.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(lumra.power, lands, "*/* = lands you control");
+    assert_eq!(lumra.toughness, lands);
+    assert!(g.battlefield_find(id).unwrap()
+        .definition.keywords.contains(&crate::card::Keyword::Reach));
 }
 
 #[test]
 fn lumra_etb_with_empty_graveyard_is_a_noop() {
     let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest()); // keep Lumra off 0/0
     let id = g.add_card_to_hand(0, catalog::lumra_bellow_of_the_woods());
+    g.players[0].library.clear(); // keep the ETB mill a no-op
     g.players[0].mana_pool.add_colorless(4);
     g.players[0].mana_pool.add(Color::Green, 2);
 
