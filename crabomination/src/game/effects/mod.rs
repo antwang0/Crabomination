@@ -4805,6 +4805,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::NthResolutionThisTurn { branches } => {
+                let p = ctx.controller;
+                let n = self.players[p].escalating_resolutions_this_turn as usize;
+                self.players[p].escalating_resolutions_this_turn =
+                    self.players[p].escalating_resolutions_this_turn.saturating_add(1);
+                if let Some(branch) = branches.get(n) {
+                    let branch = branch.clone();
+                    self.run_effect(&branch, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::CatchUpBasicLands => {
                 use crate::card::Supertype;
                 use rand::seq::SliceRandom;

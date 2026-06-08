@@ -1178,6 +1178,7 @@ impl GameState {
         // powers Witherbloom "if a creature died under your control this
         // turn" end-step payoffs (Essenceknit Scholar).
         self.players[p].creatures_died_this_turn = 0;
+        self.players[p].escalating_resolutions_this_turn = 0;
         // Reset the Revolt (CR 702.139) "permanent left the battlefield under
         // your control this turn" flag for the active player.
         self.players[p].permanent_left_battlefield_this_turn = false;

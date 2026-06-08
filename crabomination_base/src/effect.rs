@@ -2315,6 +2315,12 @@ pub enum Effect {
     /// controller's library, each with one `counter` counter on it.
     ExileTopWithCounters { count: Value, counter: crate::card::CounterType },
 
+    /// Omnath, Locus of Creation — run `branches[n]` where `n` is the number
+    /// of times an escalating ability the controller owns has already resolved
+    /// this turn (0-indexed), then bump that count. Past the last branch it
+    /// does nothing. Backed by `Player.escalating_resolutions_this_turn`.
+    NthResolutionThisTurn { branches: Vec<Effect> },
+
     /// Scholarship Sponsor — each player controlling fewer lands than the
     /// player with the most searches their library for up to (difference)
     /// basic land cards, puts them onto the battlefield tapped, then shuffles.

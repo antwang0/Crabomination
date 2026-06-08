@@ -17150,9 +17150,12 @@ pub fn parallax_tide() -> CardDefinition {
 
 // ── Push (claude/modern_decks session 5): new cube cards ────────────────
 
-/// Omnath, Locus of Creation — {R}{G}{W}{U} Legendary 4/4 Elemental.
-/// ETB draw 1 + gain 4 life.
+/// Omnath, Locus of Creation — {R}{G}{W}{U} Legendary 4/4 Elemental. ETB: draw
+/// a card. Landfall — the first land each turn gains you 4 life, the second
+/// adds {R}{G}{W}{U}, the third deals 4 to each opponent and each planeswalker
+/// you don't control.
 pub fn omnath_locus_of_creation() -> CardDefinition {
+    use crate::mana::Color;
     CardDefinition {
         name: "Omnath, Locus of Creation",
         cost: cost(&[r(), g(), w(), u()]),
@@ -17164,13 +17167,42 @@ pub fn omnath_locus_of_creation() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
-            ]),
-        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+                effect: Effect::NthResolutionThisTurn {
+                    branches: vec![
+                        Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+                        Effect::AddMana {
+                            who: PlayerRef::You,
+                            pool: ManaPayload::Colors(vec![
+                                Color::Red,
+                                Color::Green,
+                                Color::White,
+                                Color::Blue,
+                            ]),
+                        },
+                        Effect::Seq(vec![
+                            Effect::DealDamage {
+                                to: Selector::Player(PlayerRef::EachOpponent),
+                                amount: Value::Const(4),
+                            },
+                            Effect::DealDamage {
+                                to: Selector::EachPermanent(
+                                    SelectionRequirement::Planeswalker
+                                        .and(SelectionRequirement::ControlledByOpponent),
+                                ),
+                                amount: Value::Const(4),
+                            },
+                        ]),
+                    ],
+                },
+            },
+        ],
         ..Default::default()
     }
 }

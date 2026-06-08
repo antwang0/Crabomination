@@ -106,6 +106,12 @@ pub struct Player {
     /// for snapshot back-compat.
     #[serde(default)]
     pub creatures_died_this_turn: u32,
+    /// Number of times an "Nth time this turn" landfall ability this player
+    /// controls has resolved this turn (Omnath, Locus of Creation). Bumped by
+    /// `Effect::NthResolutionThisTurn`, reset at the player's `do_untap`.
+    /// Defaults to 0 for snapshot back-compat.
+    #[serde(default)]
+    pub escalating_resolutions_this_turn: u32,
     /// CR 702.139 — true if a permanent left the battlefield under this
     /// player's control so far this turn (Revolt). Set from the battlefield-
     /// removal funnels keyed off the leaving permanent's controller; reset at
@@ -320,6 +326,7 @@ impl Player {
             cards_drawn_this_turn: 0,
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
+            escalating_resolutions_this_turn: 0,
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             lost_life_this_turn: false,

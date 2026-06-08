@@ -118,6 +118,9 @@ impl Effect {
             Effect::HoneFromHand { .. } => false,
             Effect::CatchUpBasicLands => false,
             Effect::ExileFromHandTaxed { .. } => false,
+            Effect::NthResolutionThisTurn { branches } => {
+                branches.iter().any(|e| e.requires_target())
+            }
             Effect::SacrificeSource => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,

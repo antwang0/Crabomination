@@ -3554,6 +3554,36 @@ fn lotus_cobra_makes_treasure_on_landfall() {
 }
 
 #[test]
+fn omnath_landfall_escalates_across_three_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::omnath_locus_of_creation());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let (life0, opp0) = (g.players[0].life, g.players[1].life);
+
+    // 1st landfall → gain 4 life.
+    let l1 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(l1)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 4, "1st landfall gains 4 life");
+
+    // 2nd landfall → add {R}{G}{W}{U}.
+    g.players[0].lands_played_this_turn = 0;
+    let l2 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(l2)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 4, "2nd landfall adds four mana");
+
+    // 3rd landfall → deal 4 to each opponent.
+    g.players[0].lands_played_this_turn = 0;
+    let l3 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(l3)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp0 - 4, "3rd landfall deals 4 to the opponent");
+}
+
+#[test]
 fn gifted_aetherborn_has_deathtouch_lifelink() {
     use crate::card::Keyword;
     let d = catalog::gifted_aetherborn();
@@ -19562,7 +19592,7 @@ fn ramos_dragon_engine_is_4_4_flying_dragon_with_counter_trigger() {
 // ── Omnath, Locus of Creation ───────────────────────────────────────────────
 
 #[test]
-fn omnath_locus_of_creation_etb_draws_and_gains_life() {
+fn omnath_locus_of_creation_etb_draws_a_card() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let omnath = g.add_card_to_hand(0, catalog::omnath_locus_of_creation());
@@ -19577,8 +19607,10 @@ fn omnath_locus_of_creation_etb_draws_and_gains_life() {
         mode: None, x_value: None,
     }).expect("Omnath castable");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before + 4, "ETB should gain 4 life");
-    assert_eq!(g.players[0].hand.len(), hand_before, "ETB should draw 1 (net 0 after casting Omnath)");
+    // ETB draws 1 (net 0 after casting Omnath); the life-gain is the first
+    // landfall, not the ETB.
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB draws 1 (net 0)");
+    assert_eq!(g.players[0].life, life_before, "no life gain on ETB");
 }
 
 // ── Omnath, Locus of Rage ───────────────────────────────────────────────────
