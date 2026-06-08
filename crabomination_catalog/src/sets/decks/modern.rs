@@ -28526,3 +28526,40 @@ pub fn johanns_stopgap() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hivespine Wolverine — {3}{G}{G} 5/4 Elemental Wolverine. When it enters,
+/// choose one — put a +1/+1 counter on target creature you control; or it
+/// fights target creature token; or destroy target artifact or enchantment.
+pub fn hivespine_wolverine() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Hivespine Wolverine",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wolverine],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Fight {
+                attacker: Selector::This,
+                defender: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::IsToken)),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+        ]))],
+        ..Default::default()
+    }
+}

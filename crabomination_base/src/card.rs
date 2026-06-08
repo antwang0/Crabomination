@@ -92,7 +92,7 @@ pub enum CreatureType {
     // Eldraine Peasant subtype (Curious Pair, Giant Killer).
     Peasant,
     // Bloomburrow (2024) animal-folk subtypes.
-    Rabbit, Raccoon, Mouse,
+    Rabbit, Raccoon, Mouse, Wolverine,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
     // Artifact-creature token subtypes (Hangarback Walker's Thopters,

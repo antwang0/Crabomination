@@ -2926,6 +2926,40 @@ fn stonesplitter_bolt_bargained_deals_twice_x() {
 }
 
 #[test]
+fn hivespine_wolverine_mode_destroy_kills_an_enchantment() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let aura = g.add_card_to_battlefield(1, catalog::pacifism());
+    let hw = g.add_card_to_hand(0, catalog::hivespine_wolverine());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hw, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("cast Hivespine Wolverine, ETB mode 2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(aura).is_none(), "destroy mode killed the enchantment");
+}
+
+#[test]
+fn hivespine_wolverine_mode_counter_grows_a_creature() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hw = g.add_card_to_hand(0, catalog::hivespine_wolverine());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: hw, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("cast Hivespine Wolverine, ETB mode 0");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "+1/+1 counter mode");
+}
+
+#[test]
 fn ice_out_costs_one_less_when_bargained() {
     let mut g = two_player_game();
     // Seat 1 casts a spell to counter.
