@@ -197,6 +197,7 @@ pub fn body_of_research() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Body of Research",
@@ -349,6 +350,7 @@ pub fn multiple_choice() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Multiple Choice",
@@ -616,6 +618,7 @@ pub fn elemental_expressionism() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
         ]),

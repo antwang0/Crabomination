@@ -54,6 +54,7 @@ pub fn inkling_summoning() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Inkling Summoning",
@@ -141,6 +142,7 @@ pub fn spirit_summoning() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Spirit Summoning",

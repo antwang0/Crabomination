@@ -56,6 +56,7 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         activated_abilities: token.activated_abilities.clone(),
         triggered_abilities: token.triggered_abilities.clone(),
         static_abilities: token.static_abilities.clone(),
+        equipped_bonus: token.equipped_bonus.clone(),
         ..Default::default()
     }
 }
@@ -78,6 +79,7 @@ pub fn golem_3_3_token() -> TokenDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -118,6 +120,7 @@ pub fn food_token() -> TokenDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -156,6 +159,7 @@ pub fn treasure_token() -> TokenDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -233,6 +237,7 @@ pub fn blood_token() -> TokenDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -267,6 +272,7 @@ pub fn stx_pest_token() -> TokenDefinition {
             },
         }],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -296,6 +302,7 @@ pub fn eldrazi_scion_token() -> TokenDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -347,6 +354,7 @@ pub fn inkling_token() -> TokenDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -368,6 +376,7 @@ pub fn fractal_token() -> TokenDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -389,6 +398,7 @@ pub fn spirit_token() -> TokenDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -410,6 +420,7 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -496,5 +507,6 @@ pub fn clue_token() -> TokenDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }

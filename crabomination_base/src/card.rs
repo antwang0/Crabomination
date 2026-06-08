@@ -55,7 +55,7 @@ pub enum CreatureType {
     Elephant, Rhino, Hippo, Mammoth, Whale, Leviathan, Kraken, Elk,
     Lion, Kavu, Lhurgoyf, Atog, Noggle, Vedalken, Kor, Ally,
     Avatar, Phyrexian, Praetor, Incarnation, Mercenary, Archon, Aetherborn,
-    Construct, Golem, Myr, Robot, Hellion,
+    Construct, Golem, Myr, Robot, Hellion, Scarecrow,
     Ooze, Plant, Saproling,
     // Strixhaven-era subtypes.
     Inkling, Pest, Fractal,
@@ -979,6 +979,13 @@ pub struct TokenDefinition {
     /// by `token_to_card_definition`.
     #[serde(skip)]
     pub static_abilities: Vec<StaticAbility>,
+    /// Equip bonus for Equipment tokens (CR 301 — Mabel's Cragflame,
+    /// Kellan's Boots, etc.). When `Some`, the resulting token carries
+    /// this `equipped_bonus`; pair it with a `Keyword::Equip(cost)` in
+    /// `keywords` so the token can be equipped. `None` for non-Equipment
+    /// tokens. Defaults to `None` via `#[serde(default)]`.
+    #[serde(default)]
+    pub equipped_bonus: Option<EquipBonus>,
 }
 
 // ── Card definition ───────────────────────────────────────────────────────────

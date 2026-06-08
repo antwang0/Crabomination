@@ -3897,6 +3897,7 @@ pub fn raise_the_alarm() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         },
         triggered_abilities: vec![],
@@ -4805,6 +4806,7 @@ pub fn regisaur_alpha() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         })],
         ..Default::default()
@@ -5040,6 +5042,7 @@ pub fn raptor_hatchling() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
         }],
@@ -5178,6 +5181,7 @@ pub fn spectral_procession() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         },
         triggered_abilities: vec![],
@@ -5250,6 +5254,7 @@ pub fn beast_within() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
             Effect::Destroy {
@@ -6750,6 +6755,7 @@ pub fn doomed_dissenter() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         })],
         ..Default::default()
@@ -8837,6 +8843,7 @@ pub fn seasoned_pyromancer() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
         ]))],
@@ -10864,6 +10871,7 @@ pub fn murmuring_mystic() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         })],
         ..Default::default()
@@ -11870,6 +11878,7 @@ pub fn ophiomancer() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Ophiomancer",
@@ -12040,6 +12049,7 @@ pub fn white_suns_zenith() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "White Sun's Zenith",
@@ -14551,6 +14561,7 @@ pub fn lingering_souls() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         },
         ..Default::default()
@@ -16205,6 +16216,7 @@ pub fn decree_of_justice() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         },
         ..Default::default()
@@ -16383,6 +16395,7 @@ fn treasure_token() -> TokenDefinition {
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     }
 }
 
@@ -17493,6 +17506,7 @@ pub fn young_pyromancer() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         })],
         ..Default::default()
@@ -17545,6 +17559,7 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
         }],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Omnath, Locus of Rage",
@@ -18058,6 +18073,7 @@ pub fn kozileks_command() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
             Effect::PumpPT {
@@ -18127,6 +18143,7 @@ pub fn eldrazi_confluence() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
             Effect::Move {
@@ -18531,6 +18548,7 @@ pub fn kari_zev_skyship_raider() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
         }],
@@ -20152,6 +20170,7 @@ pub fn esikas_chariot() -> CardDefinition {
                         triggered_abilities: vec![],
                     
                         static_abilities: vec![],
+                        equipped_bonus: None,
                     },
                 },
             },
@@ -28787,6 +28806,153 @@ pub fn heartfire_hero() -> CardDefinition {
                 amount: Value::PowerOf(Box::new(Selector::This)),
             }),
         ],
+        ..Default::default()
+    }
+}
+
+/// Kindlespark Duo — {2}{R} 1/3 Lizard Otter. {T}: deal 1 damage to a target
+/// opponent. Whenever you cast a noncreature spell, untap it. (In 1v1 the
+/// "target opponent" ping maps to the lone opponent.)
+pub fn kindlespark_duo() -> CardDefinition {
+    CardDefinition {
+        name: "Kindlespark Duo",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Otter],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                },
+            ),
+            effect: Effect::Untap { what: Selector::This, up_to: None },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wildfire Wickerfolk — {R}{G} 3/2 Artifact Creature — Scarecrow with Haste.
+/// Delirium — it gets +1/+1 and has trample while four or more card types are
+/// among cards in your graveyard.
+pub fn wildfire_wickerfolk() -> CardDefinition {
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Wildfire Wickerfolk",
+        cost: cost(&[r(), g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scarecrow],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Delirium — +1/+1 and trample while there are four or more \
+                          card types among cards in your graveyard.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::DeliriumActive { who: PlayerRef::You },
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Trample],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Mabel, Heir to Cragflame — {1}{R}{W} 3/3 Legendary Mouse Soldier. Other
+/// Mice you control get +1/+1. When she enters, create Cragflame, a legendary
+/// colorless Equipment token granting +1/+1, vigilance, trample, and haste,
+/// with equip {2}.
+pub fn mabel_heir_to_cragflame() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    use crate::effect::{StaticAbility, StaticEffect};
+    let cragflame = TokenDefinition {
+        name: "Cragflame".into(),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Vigilance, Keyword::Trample, Keyword::Haste],
+            ..Default::default()
+        }),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Mabel, Heir to Cragflame",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Mouse, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Mice you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Mouse)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: cragflame,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Daring Waverider — {4}{U}{U} 4/4 Otter Wizard. When it enters, you may cast
+/// target instant or sorcery card with mana value 4 or less from your
+/// graveyard without paying its mana cost; exile it if it would be put into
+/// your graveyard.
+pub fn daring_waverider() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Daring Waverider",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::CastWithoutPayingImmediate {
+            what: target_filtered(
+                SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .and(SelectionRequirement::ManaValueAtMost(4)),
+            ),
+            source_zone: Zone::Graveyard,
+            exile_after: true,
+        })],
         ..Default::default()
     }
 }

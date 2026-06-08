@@ -1903,6 +1903,7 @@ pub fn afterlife(n: i32) -> TriggeredAbility {
             activated_abilities: vec![],
             triggered_abilities: vec![],
             static_abilities: vec![],
+            equipped_bonus: None,
         },
     })
 }
@@ -2187,6 +2188,7 @@ pub fn fabricate(n: i32) -> TriggeredAbility {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     etb(Effect::ChooseMode(vec![
         Effect::AddCounter {

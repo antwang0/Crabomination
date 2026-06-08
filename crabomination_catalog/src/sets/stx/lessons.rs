@@ -1000,6 +1000,7 @@ pub fn fractal_studies() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Fractal Studies",
@@ -1187,6 +1188,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Mascot Interpretation II",

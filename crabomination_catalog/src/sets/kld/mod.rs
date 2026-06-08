@@ -309,6 +309,7 @@ pub fn aether_swooper() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Aether Swooper",

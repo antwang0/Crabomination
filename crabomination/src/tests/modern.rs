@@ -37097,3 +37097,85 @@ fn heartfire_hero_valiant_grows_once_per_turn() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(hero).unwrap().power, 2, "Valiant only fires once per turn");
 }
+
+/// Wildfire Wickerfolk grows to 4/3 with trample once delirium is active.
+#[test]
+fn wildfire_wickerfolk_delirium_pumps_and_grants_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::wildfire_wickerfolk());
+    let c0 = g.computed_permanent(id).unwrap();
+    assert_eq!((c0.power, c0.toughness), (3, 2));
+    assert!(!c0.keywords.contains(&Keyword::Trample));
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::duress());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let c1 = g.computed_permanent(id).unwrap();
+    assert_eq!((c1.power, c1.toughness), (4, 3), "delirium → +1/+1");
+    assert!(c1.keywords.contains(&Keyword::Trample), "delirium grants trample");
+}
+
+/// Kindlespark Duo taps to ping the opponent, and casting a noncreature spell
+/// untaps it so it can ping again.
+#[test]
+fn kindlespark_duo_pings_and_untaps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let duo = g.add_card_to_battlefield(0, catalog::kindlespark_duo());
+    g.players[1].life = 20;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: duo, ability_index: 0, target: None, x_value: None,
+    }).expect("tap to ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "ping dealt 1");
+    assert!(g.battlefield_find(duo).unwrap().tapped, "tapped after activating");
+    // Cast a noncreature spell → untap trigger.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Bolt");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(duo).unwrap().tapped, "untapped by noncreature-cast trigger");
+}
+
+/// Mabel anthems other Mice and mints an equippable Cragflame on ETB.
+#[test]
+fn mabel_anthems_mice_and_mints_cragflame() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hero = g.add_card_to_battlefield(0, catalog::heartfire_hero()); // 1/1 Mouse
+    let mabel = g.add_card_to_battlefield(0, catalog::mabel_heir_to_cragflame());
+    g.fire_self_etb_triggers(mabel, 0);
+    drain_stack(&mut g);
+    // Other Mouse gets +1/+1.
+    assert_eq!(g.computed_permanent(hero).unwrap().power, 2, "Mabel anthems the Mouse");
+    // Cragflame Equipment token exists and can be equipped onto the hero.
+    let cragflame = g.battlefield.iter().find(|c| c.definition.name == "Cragflame")
+        .expect("Cragflame minted").id;
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Equip { equipment: cragflame, target: hero })
+        .expect("equip {2}");
+    let cp = g.computed_permanent(hero).unwrap();
+    // 1/1 base + anthem (+1/+1) + Cragflame (+1/+1) = 3/3 with haste.
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+    assert!(cp.keywords.contains(&Keyword::Haste) && cp.keywords.contains(&Keyword::Trample));
+}
+
+/// Daring Waverider's ETB free-casts an instant/sorcery (MV ≤ 4) from your
+/// graveyard.
+#[test]
+fn daring_waverider_recasts_cheap_spell_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[1].life = 20;
+    // Accept the optional "you may cast" prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let wave = g.add_card_to_battlefield(0, catalog::daring_waverider());
+    g.fire_self_etb_triggers(wave, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "free-cast Bolt dealt 3");
+    // Exiled after resolving (not back in graveyard).
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt exiled, not in graveyard");
+}

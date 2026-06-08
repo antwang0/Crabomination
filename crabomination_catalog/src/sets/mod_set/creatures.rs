@@ -514,8 +514,8 @@ pub fn sentinel_of_the_nameless_city() -> CardDefinition {
                     subtypes: Subtypes::default(),
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                static_abilities: vec![],
-
+                    static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
         }],
@@ -2211,6 +2211,7 @@ pub fn siege_gang_commander() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Siege-Gang Commander",
@@ -3123,6 +3124,7 @@ pub fn sporemound() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
         }],
@@ -3146,6 +3148,7 @@ pub fn avenger_of_zendikar() -> CardDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     let your_plants = Selector::EachPermanent(
         SelectionRequirement::HasCreatureType(CreatureType::Plant)
@@ -3441,6 +3444,7 @@ pub fn penumbra_spider() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         })],
         ..Default::default()
@@ -3738,6 +3742,7 @@ pub fn bitterbloom_bearer() -> CardDefinition {
                     triggered_abilities: vec![],
                 
                     static_abilities: vec![],
+                    equipped_bonus: None,
                 },
             },
         }],
@@ -3980,6 +3985,7 @@ pub fn grave_titan() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     let make_zombies = Effect::CreateToken {
         who: PlayerRef::You,
@@ -4248,6 +4254,7 @@ pub fn thragtusk() -> CardDefinition {
                         triggered_abilities: vec![],
                     
                         static_abilities: vec![],
+                        equipped_bonus: None,
                     },
                 },
             },
@@ -4314,6 +4321,7 @@ pub fn wurmcoil_engine() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     let wurm_lifelink = TokenDefinition {
         name: "Phyrexian Wurm".into(),
@@ -4331,6 +4339,7 @@ pub fn wurmcoil_engine() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Wurmcoil Engine",
@@ -4602,6 +4611,7 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Koma, Cosmos Serpent",
@@ -4878,6 +4888,7 @@ pub fn basking_broodscale() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Basking Broodscale",
@@ -5103,6 +5114,7 @@ pub fn descendant_of_storms() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Descendant of Storms",
@@ -5183,6 +5195,7 @@ pub fn elder_gargaroth() -> CardDefinition {
         triggered_abilities: vec![],
     
         static_abilities: vec![],
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Elder Gargaroth",
@@ -5370,6 +5383,7 @@ pub fn doomed_traveler() -> CardDefinition {
                 triggered_abilities: vec![],
             
                 static_abilities: vec![],
+                equipped_bonus: None,
             },
         })],
         ..Default::default()
