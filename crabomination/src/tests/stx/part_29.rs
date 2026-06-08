@@ -174,3 +174,57 @@ fn awaken_the_blood_avatar_forces_sacrifice_and_mints_avatar() {
     assert_eq!((avatar.power(), avatar.toughness()), (3, 6));
     assert!(avatar.has_keyword(&Keyword::Haste));
 }
+
+// ── Rowan, Scholar of Sparks // Will, Scholar of Frost ─────────────────────────
+
+#[test]
+fn rowan_static_makes_instants_and_sorceries_cost_one_less() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rowan_scholar_of_sparks());
+    // Mascot Exhibition ({7} sorcery) becomes {6} with Rowan's reduction.
+    let mascot = g.add_card_to_hand(0, catalog::mascot_exhibition());
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: mascot, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mascot Exhibition castable for {6} thanks to Rowan's IS reduction");
+}
+
+#[test]
+fn rowan_plus_one_pings_each_opponent_more_after_three_draws() {
+    let mut g = two_player_game();
+    let rowan = g.add_card_to_battlefield(0, catalog::rowan_scholar_of_sparks());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let life_before = g.players[1].life;
+    // Three cards drawn this turn → +1 deals 3.
+    g.players[0].cards_drawn_this_turn = 3;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: rowan, ability_index: 0, target: None, x_value: None,
+    }).expect("Rowan +1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3, "3 damage after three draws");
+}
+
+#[test]
+fn will_plus_one_sets_base_zero_two_and_minus_three_draws_two() {
+    let mut g = two_player_game();
+    let will = g.add_card_to_battlefield(0, *catalog::rowan_scholar_of_sparks().back_face.unwrap());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: will, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Will +1");
+    drain_stack(&mut g);
+    let v = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((v.power, v.toughness), (0, 2), "base P/T set to 0/2");
+
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let hand_before = g.players[0].hand.len();
+    // Reset the once-per-turn loyalty gate to exercise the -3 in the same test.
+    g.battlefield_find_mut(will).unwrap().used_loyalty_ability_this_turn = false;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: will, ability_index: 1, target: None, x_value: None,
+    }).expect("Will -3 draws two");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2);
+}

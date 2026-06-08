@@ -169,6 +169,8 @@ pub enum PlaneswalkerSubtype {
     Narset,
     // STX: Kasmina, Enigma Sage.
     Kasmina,
+    // STX Dean/Strixhaven planeswalker MDFCs.
+    Rowan, Will, Lukka,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.

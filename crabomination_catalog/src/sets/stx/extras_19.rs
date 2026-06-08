@@ -5,10 +5,11 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, Selector, SelectionRequirement, StaticAbility, StaticEffect, Subtypes,
-    Supertype, TokenDefinition, TriggeredAbility, Value, WardCost, Zone,
+    Keyword, LoyaltyAbility, PlaneswalkerSubtype, Predicate, Selector, SelectionRequirement,
+    StaticAbility, StaticEffect, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    WardCost, Zone,
 };
-use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft};
+use crate::effect::shortcut::{dies_gain_life, draw, etb, magecraft, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
@@ -155,6 +156,118 @@ pub fn torrent_sculptor() -> CardDefinition {
             },
         ]))],
         back_face: Some(Box::new(flamethrower_sonata())),
+        ..Default::default()
+    }
+}
+
+/// IS-cost-reduction static shared by the Rowan // Will scholars.
+fn is_costs_one_less() -> StaticAbility {
+    StaticAbility {
+        description: "Instant and sorcery spells you cast cost {1} less to cast.",
+        effect: StaticEffect::CostReduction {
+            filter: SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            amount: 1,
+        },
+    }
+}
+
+/// Will, Scholar of Frost — {4}{U} Will planeswalker (back of Rowan), 4 loyalty.
+/// IS spells you cast cost {1} less. +1: target creature has base 0/2 until your
+/// next turn. −3: draw two. −7: exile up to five target permanents. (The −7's
+/// "controller makes a 4/4" compensation collapses to a single targeted exile.)
+fn will_scholar_of_frost() -> CardDefinition {
+    CardDefinition {
+        name: "Will, Scholar of Frost",
+        cost: cost(&[generic(4), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Will],
+            ..Default::default()
+        },
+        static_abilities: vec![is_costs_one_less()],
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::SetBasePT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(0),
+                    toughness: Value::Const(2),
+                    duration: Duration::UntilNextTurn,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: draw(2),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Exile { what: target_filtered(SelectionRequirement::Permanent) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Rowan, Scholar of Sparks // Will, Scholar of Frost — {2}{R} Rowan
+/// planeswalker, 2 loyalty. IS spells you cast cost {1} less. +1: deal 1 to each
+/// opponent (3 instead if you've drawn three or more cards this turn). −4: an
+/// emblem with "Whenever you cast an instant or sorcery spell, you may pay {2};
+/// if you do, copy it and may choose new targets."
+pub fn rowan_scholar_of_sparks() -> CardDefinition {
+    CardDefinition {
+        name: "Rowan, Scholar of Sparks",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Rowan],
+            ..Default::default()
+        },
+        static_abilities: vec![is_costs_one_less()],
+        base_loyalty: 2,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(
+                        Value::CardsDrawnThisTurn(PlayerRef::You),
+                        Value::Const(3),
+                    ),
+                    then: Box::new(Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(3),
+                    }),
+                    else_: Box::new(Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                    }),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Rowan, Scholar of Sparks".into(),
+                    triggered: vec![magecraft(Effect::MayPay {
+                        description: "Pay {2} to copy that spell (you may choose new targets).".into(),
+                        mana_cost: cost(&[generic(2)]),
+                        body: Box::new(Effect::CopySpellMayChooseTargets {
+                            what: Selector::TriggerSource,
+                            count: Value::Const(1),
+                        }),
+                    })],
+                },
+                ..Default::default()
+            },
+        ],
+        back_face: Some(Box::new(will_scholar_of_frost())),
         ..Default::default()
     }
 }
