@@ -37955,6 +37955,80 @@ fn geist_of_saint_traft_makes_attacking_angel() {
     assert!(g.attacking.iter().any(|a| a.attacker == angel.id), "Angel is attacking");
 }
 
+/// Drogskol Captain buffs other Spirits +1/+1 and grants hexproof, not itself.
+#[test]
+fn drogskol_captain_buffs_other_spirits() {
+    use crate::card::{CreatureType, Keyword, CardType, CardDefinition, Subtypes};
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::drogskol_captain());
+    let spirit = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Test Spirit", card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1, toughness: 1, ..Default::default()
+    });
+    let cp = g.compute_battlefield();
+    let s = cp.iter().find(|c| c.id == spirit).unwrap();
+    assert_eq!((s.power, s.toughness), (2, 2), "other Spirit +1/+1");
+    assert!(s.keywords.contains(&Keyword::Hexproof), "other Spirit gains hexproof");
+    let c = cp.iter().find(|c| c.id == cap).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2), "captain doesn't buff itself");
+}
+
+/// Lord of the Unreal buffs Illusions (including itself? no — only Illusions).
+#[test]
+fn lord_of_the_unreal_buffs_illusions() {
+    use crate::card::{CreatureType, Keyword, CardType, CardDefinition, Subtypes};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lord_of_the_unreal());
+    let illusion = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Phantom", card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
+        power: 2, toughness: 2, ..Default::default()
+    });
+    let cp = g.compute_battlefield();
+    let i = cp.iter().find(|c| c.id == illusion).unwrap();
+    assert_eq!((i.power, i.toughness), (3, 3), "Illusion +1/+1");
+    assert!(i.keywords.contains(&Keyword::Hexproof));
+}
+
+/// Lord of Atlantis grants other Merfolk +1/+1 and islandwalk.
+#[test]
+fn lord_of_atlantis_buffs_merfolk_with_islandwalk() {
+    use crate::card::{CreatureType, Keyword, LandType, CardType, CardDefinition, Subtypes};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lord_of_atlantis());
+    let fish = g.add_card_to_battlefield(0, CardDefinition {
+        name: "Merperson", card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        power: 1, toughness: 1, ..Default::default()
+    });
+    let cp = g.compute_battlefield();
+    let f = cp.iter().find(|c| c.id == fish).unwrap();
+    assert_eq!((f.power, f.toughness), (2, 2), "other Merfolk +1/+1");
+    assert!(f.keywords.contains(&Keyword::Landwalk(LandType::Island)), "gains islandwalk");
+}
+
+/// Death Baron's disjunctive anthem buffs both Zombies and Skeletons + deathtouch.
+#[test]
+fn death_baron_buffs_zombies_and_skeletons() {
+    use crate::card::{CreatureType, Keyword, CardType, CardDefinition, Subtypes};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::death_baron());
+    let mk = |name: &'static str, ct: CreatureType| CardDefinition {
+        name, card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![ct], ..Default::default() },
+        power: 1, toughness: 1, ..Default::default()
+    };
+    let zombie = g.add_card_to_battlefield(0, mk("Z", CreatureType::Zombie));
+    let skeleton = g.add_card_to_battlefield(0, mk("S", CreatureType::Skeleton));
+    let cp = g.compute_battlefield();
+    for id in [zombie, skeleton] {
+        let c = cp.iter().find(|c| c.id == id).unwrap();
+        assert_eq!((c.power, c.toughness), (2, 2), "tribe member +1/+1");
+        assert!(c.keywords.contains(&Keyword::Deathtouch), "tribe member gains deathtouch");
+    }
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {

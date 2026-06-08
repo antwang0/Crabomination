@@ -30142,6 +30142,145 @@ pub fn geist_of_saint_traft() -> CardDefinition {
     }
 }
 
+/// Drogskol Captain — {1}{W}{U} 2/2 Spirit Soldier with Flying. Other Spirit
+/// creatures you control get +1/+1 and have hexproof.
+pub fn drogskol_captain() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Drogskol Captain",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Spirit creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Spirit creatures you control have hexproof.",
+                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::Hexproof },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lord of the Unreal — {U}{U} 2/2 Human Wizard. Illusion creatures you control
+/// get +1/+1 and have hexproof.
+pub fn lord_of_the_unreal() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let illusions = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Illusion)
+            .and(SelectionRequirement::ControlledByYou),
+    );
+    CardDefinition {
+        name: "Lord of the Unreal",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Illusion creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: illusions(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Illusion creatures you control have hexproof.",
+                effect: StaticEffect::GrantKeyword { applies_to: illusions(), keyword: Keyword::Hexproof },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lord of Atlantis — {U}{U} 2/2 Merfolk. Other Merfolk get +1/+1 and have
+/// islandwalk.
+pub fn lord_of_atlantis() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    // "Other Merfolk" — affects every player's Merfolk in the original, but the
+    // common modern reprint flavor and our anthem machinery scope it to the
+    // controller; matches the dominant casual use.
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Lord of Atlantis",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Merfolk get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Merfolk have islandwalk.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(),
+                    keyword: Keyword::Landwalk(LandType::Island),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Death Baron — {1}{B}{B} 2/2 Zombie Wizard. Zombies and Skeletons you control
+/// get +1/+1 and have deathtouch.
+pub fn death_baron() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let tribe = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+            .or(SelectionRequirement::HasCreatureType(CreatureType::Skeleton))
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Death Baron",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Zombies and Skeletons you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: tribe(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Zombies and Skeletons you control have deathtouch.",
+                effect: StaticEffect::GrantKeyword { applies_to: tribe(), keyword: Keyword::Deathtouch },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.
