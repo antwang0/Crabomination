@@ -29892,6 +29892,132 @@ pub fn metallic_mimic() -> CardDefinition {
     }
 }
 
+/// Bounding Krasis — {1}{G}{U} 3/3 Fish Lizard with Flash. ETB: tap target
+/// creature. (The "or untap" choice collapses to tap — the on-curve tempo line.)
+pub fn bounding_krasis() -> CardDefinition {
+    CardDefinition {
+        name: "Bounding Krasis",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fish, CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: target_filtered(SelectionRequirement::Creature),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Charming Prince — {1}{W} 2/2 Human Noble. ETB choose one — Scry 2; gain 3
+/// life; or blink another target creature you own (return at next end step).
+pub fn charming_prince() -> CardDefinition {
+    CardDefinition {
+        name: "Charming Prince",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ChooseN {
+            picks: vec![0],
+            modes: vec![
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+                Effect::ExileReturnNextEndStep {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                },
+            ],
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tatyova, Benthic Druid — {3}{G}{U} 3/3 Legendary Merfolk Druid. Landfall —
+/// whenever a land you control enters, gain 1 life and draw a card.
+pub fn tatyova_benthic_druid() -> CardDefinition {
+    CardDefinition {
+        name: "Tatyova, Benthic Druid",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragonlord Atarka — {5}{R}{G} 8/8 Legendary Elder Dragon with Flying and
+/// Trample. ETB: deal 5 damage divided among any number of target creatures
+/// and/or planeswalkers your opponents control.
+pub fn dragonlord_atarka() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonlord Atarka",
+        cost: cost(&[generic(5), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::DealDamageDivided {
+            total: Value::Const(5),
+            filter: SelectionRequirement::ControlledByOpponent
+                .and(SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker)),
+            max_targets: 5,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Risen Reef — {1}{G}{U} 1/1 Elemental. Whenever this or another Elemental you
+/// control enters, reveal the top card: a land enters, else it goes to hand.
+/// (The "may, tapped" choice collapses to an unconditional untapped put.)
+pub fn risen_reef() -> CardDefinition {
+    CardDefinition {
+        name: "Risen Reef",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Elemental),
+                }),
+            effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Bushwhack — {G} Sorcery. Choose one — search your library for a basic land
 /// card and put it into your hand; or target creature you control fights target
 /// creature you don't control.

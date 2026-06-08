@@ -37802,6 +37802,88 @@ fn metallic_mimic_chosen_type_enters_with_extra_counter() {
     );
 }
 
+/// Bounding Krasis taps a target creature on ETB.
+#[test]
+fn bounding_krasis_taps_a_creature() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::bounding_krasis());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Target(crate::game::Target::Permanent(foe)),
+    ]));
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(foe).unwrap().tapped, "target creature tapped");
+}
+
+/// Charming Prince mode 2 gains 3 life.
+#[test]
+fn charming_prince_gains_three_life() {
+    let mut g = two_player_game();
+    let life0 = g.players[0].life;
+    let id = g.add_card_to_battlefield(0, catalog::charming_prince());
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Modes(vec![1]),
+    ]));
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 3, "mode 2 gains 3 life");
+}
+
+/// Tatyova draws a card and gains a life on landfall.
+#[test]
+fn tatyova_landfall_draws_and_gains_life() {
+    use crate::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tatyova_benthic_druid());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    let life0 = g.players[0].life;
+    let hand0 = g.players[0].hand.len();
+    g.add_card_to_library(0, catalog::ponder()); // something to draw
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 1, "landfall gains 1 life");
+    // -1 for the land leaving hand, +1 drawn → net same count, but a card was drawn.
+    assert_eq!(g.players[0].hand.len(), hand0, "drew a card (land left, card drawn)");
+}
+
+/// Dragonlord Atarka divides 5 ETB damage onto opponents' creatures.
+#[test]
+fn dragonlord_atarka_etb_divides_five_damage() {
+    let mut g = two_player_game();
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_battlefield(0, catalog::dragonlord_atarka());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    // AutoDecider spreads damage; a single 2/2 takes at least lethal and dies.
+    assert!(g.battlefield_find(foe).is_none(), "opponent's 2/2 dies to divided damage");
+}
+
+/// Risen Reef triggers when an Elemental you control enters, putting a revealed
+/// land onto the battlefield.
+#[test]
+fn risen_reef_etb_puts_land_onto_battlefield() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::risen_reef());
+    // Top of library is a Forest; cast a second Risen Reef to trigger the first.
+    let fid = g.next_id();
+    g.players[0].add_to_library_top(fid, catalog::forest());
+    let bf0 = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let reef2 = g.add_card_to_hand(0, catalog::risen_reef());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: reef2, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Risen Reef");
+    drain_stack(&mut g);
+    let bf1 = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert!(bf1 > bf0, "the revealed Forest entered the battlefield");
+}
+
 /// Bushwhack mode 1 fights: your creature trades with theirs.
 #[test]
 fn bushwhack_fight_mode_trades_creatures() {
