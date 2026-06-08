@@ -2791,6 +2791,46 @@ fn spell_snare_counters_two_mana_value_spell() {
 }
 
 #[test]
+fn mental_misstep_counters_a_one_mana_spell() {
+    let mut g = two_player_game();
+    // Seat 1 casts Monastery Swiftspear ({R}, mana value 1).
+    let swift = g.add_card_to_hand(1, catalog::monastery_swiftspear());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: swift, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Swiftspear castable for {R}");
+    // Seat 0 responds with Mental Misstep, paying the {U/P} pip with 2 life.
+    let misstep = g.add_card_to_hand(0, catalog::mental_misstep());
+    let life = g.players[0].life;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: misstep, target: Some(Target::Permanent(swift)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mental Misstep castable for 2 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "paid the Phyrexian pip with 2 life");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == swift), "Swiftspear countered");
+}
+
+#[test]
+fn mutagenic_growth_payable_with_two_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mutagenic_growth());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for 2 life via the Phyrexian pip");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "paid 2 life");
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4), "+2/+2");
+}
+
+#[test]
 fn disentomb_returns_creature_from_graveyard() {
     let mut g = two_player_game();
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());

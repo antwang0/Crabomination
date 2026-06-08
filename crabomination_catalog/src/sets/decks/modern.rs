@@ -1124,6 +1124,22 @@ pub fn gut_shot() -> CardDefinition {
     }
 }
 
+/// Mental Misstep — {U/P} Instant. Counter target spell with mana value 1.
+pub fn mental_misstep() -> CardDefinition {
+    CardDefinition {
+        name: "Mental Misstep",
+        cost: ManaCost { symbols: vec![ManaSymbol::Phyrexian(Color::Blue)] },
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::ManaValueExactly(1)),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Wrangle — {2}{R} Sorcery. Gain control of target creature until end of turn,
 /// untap it, and it gains haste.
 pub fn wrangle() -> CardDefinition {
@@ -10421,12 +10437,11 @@ pub fn temur_battle_rage() -> CardDefinition {
 }
 
 /// Mutagenic Growth — {G/P} Instant. Target creature gets +2/+2 until end of
-/// turn. (Modeled at the {G} cost — Phyrexian "pay 2 life" alt is omitted;
-/// tracked in TODO.md.)
+/// turn. The Phyrexian pip can be paid with {G} or 2 life.
 pub fn mutagenic_growth() -> CardDefinition {
     CardDefinition {
         name: "Mutagenic Growth",
-        cost: cost(&[g()]),
+        cost: ManaCost { symbols: vec![ManaSymbol::Phyrexian(Color::Green)] },
         card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
