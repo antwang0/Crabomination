@@ -28479,3 +28479,50 @@ pub fn manifold_mouse() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ice Out — {1}{U}{U} Instant with Bargain. Costs {1} less if it's bargained.
+/// Counter target spell.
+pub fn ice_out() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Ice Out",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Bargain],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {1} less to cast if it's bargained.",
+            effect: StaticEffect::BargainCostReduction { amount: 1 },
+        }],
+        effect: Effect::CounterSpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+        },
+        ..Default::default()
+    }
+}
+
+/// Johann's Stopgap — {3}{U} Sorcery with Bargain. Costs {2} less if it's
+/// bargained. Return target nonland permanent to its owner's hand, then draw a
+/// card.
+pub fn johanns_stopgap() -> CardDefinition {
+    use crate::effect::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Johann's Stopgap",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Bargain],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast if it's bargained.",
+            effect: StaticEffect::BargainCostReduction { amount: 2 },
+        }],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}

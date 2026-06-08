@@ -1244,6 +1244,7 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         use crate::card::Keyword;
+        use crate::effect::StaticEffect;
         let p = self.priority.player_with_priority;
         let has_bargain = self.players[p]
             .hand
@@ -1277,8 +1278,23 @@ impl GameState {
             if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
                 c.bargained = true;
             }
+            // CR 702.176 — "this spell costs {N} less if it's bargained"
+            // (Ice Out, Johann's Stopgap), threaded through the cast path.
+            self.extra_cast_reduction = self.players[p]
+                .hand
+                .iter()
+                .find(|c| c.id == card_id)
+                .and_then(|c| {
+                    c.definition.static_abilities.iter().find_map(|sa| match sa.effect {
+                        StaticEffect::BargainCostReduction { amount } => Some(amount),
+                        _ => None,
+                    })
+                })
+                .unwrap_or(0);
         }
-        let mut cast = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        let cast = self.cast_spell(card_id, target, additional_targets, mode, x_value);
+        self.extra_cast_reduction = 0;
+        let mut cast = cast?;
         events.append(&mut cast);
         Ok(events)
     }

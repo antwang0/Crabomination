@@ -9,10 +9,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 ## Follow-ups noticed (not yet done)
 
 - ⏳ **Bargain / Eldraine follow-ups (this run):**
-  - "This spell costs {N} less if it's bargained" (Ice Out, Johann's Stopgap,
-    Hamlet Glutton) — needs a bargained-conditional cost reduction applied at
-    cast time (fold into `cast_spell_bargain` via the transient
-    `extra_cast_reduction` keyed on a per-card amount).
+  - ✅ "This spell costs {N} less if it's bargained" — `StaticEffect::
+    BargainCostReduction { amount }` folded into `cast_spell_bargain` via the
+    transient `extra_cast_reduction` (Ice Out, Johann's Stopgap). Hamlet
+    Glutton's {3}-less variant just needs the row.
   - Cacophony Scamp / Heartfire Hero "when this dies, deals damage equal to its
     power" needs LKI power on the dies trigger (CR 603.10 gap, see Goldvein
     Hydra note) before it's faithful.

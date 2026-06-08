@@ -2926,6 +2926,54 @@ fn stonesplitter_bolt_bargained_deals_twice_x() {
 }
 
 #[test]
+fn ice_out_costs_one_less_when_bargained() {
+    let mut g = two_player_game();
+    // Seat 1 casts a spell to counter.
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add_colorless(1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bears cast");
+    // Seat 0 bargains Ice Out: only {U}{U} in pool (one short of {1}{U}{U}).
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::ice_out());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ice Out castable for {U}{U} after the {1}-less bargain discount");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bears), "Ice Out countered Bears");
+}
+
+#[test]
+fn johanns_stopgap_bounces_and_draws() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let fodder = g.add_card_to_battlefield(0, catalog::the_everflowing_well());
+    let id = g.add_card_to_hand(0, catalog::johanns_stopgap());
+    // {2} less when bargained → only {U} needed (vs {3}{U}).
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1); // a little slack
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder),
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Johann's Stopgap castable cheaply when bargained");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bounced the bear to its owner's hand");
+    // Cast the Stopgap (−1), drew one (+1) → hand unchanged net.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
+}
+
+#[test]
 fn troublemaker_ouphe_bargained_exiles_opponent_artifact() {
     let mut g = two_player_game();
     g.active_player_idx = 0;

@@ -6529,7 +6529,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // SacrificeCostReduction (Awaken the Blood Avatar) — an optional
             // additional cost consulted by `cast_spell_sacrifice_reduce`; no
             // continuous-layer effect.
-            | StaticEffect::SacrificeCostReduction { .. } => vec![],
+            | StaticEffect::SacrificeCostReduction { .. }
+            // BargainCostReduction — read by `cast_spell_bargain` at cast time.
+            | StaticEffect::BargainCostReduction { .. } => vec![],
         })
         .collect()
 }

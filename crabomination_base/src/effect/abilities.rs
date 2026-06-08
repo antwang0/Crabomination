@@ -115,6 +115,10 @@ pub enum StaticEffect {
     /// `static_abilities`; cast via `GameAction::CastSpellSacrificeReduce`
     /// (Awaken the Blood Avatar). No continuous-layer effect.
     SacrificeCostReduction { per: u32 },
+    /// "This spell costs {amount} less to cast if it's bargained" (CR 702.176 —
+    /// Ice Out, Johann's Stopgap). Read by `cast_spell_bargain` when the
+    /// Bargain cost is actually paid. No continuous-layer effect.
+    BargainCostReduction { amount: u32 },
     /// Leyline-of-Sanctity-style "you have hexproof": opponents can't
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
