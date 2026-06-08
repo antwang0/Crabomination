@@ -1554,11 +1554,15 @@ impl GameState {
             victims
         };
         for id in legend_victims {
-            events.push(GameEvent::CreatureDied { card_id: id });
             // Cache snapshot before zone change so AnotherOfYours-scope
             // triggers off legend-rule deaths see the right player AND
-            // can introspect the dying card's printed types.
+            // can introspect the dying card's printed types. Only a *creature*
+            // dies (CR 700.4) — a legend-ruled planeswalker/artifact/enchant
+            // leaves the battlefield without a CreatureDied event.
             if let Some(c) = self.battlefield.iter().find(|c| c.id == id) {
+                if c.definition.is_creature() {
+                    events.push(GameEvent::CreatureDied { card_id: id });
+                }
                 self.died_card_snapshots.insert(id, c.clone());
             }
             self.remove_from_battlefield_to_graveyard(id);
