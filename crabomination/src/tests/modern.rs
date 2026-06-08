@@ -35717,3 +35717,189 @@ fn sandbar_crocodile_phases_out() {
     g.do_phasing();
     assert!(g.battlefield_find(id).is_none(), "Sandbar Crocodile phased out");
 }
+
+/// Changeling Titan champions a creature (Champion + 7/7 trample body).
+#[test]
+fn changeling_titan_champions_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let titan = g.add_card_to_hand(0, catalog::changeling_titan());
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+    g.perform_action(GameAction::CastSpell {
+        card_id: titan, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Changeling Titan castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "championed bear exiled");
+    let t = g.battlefield.iter().find(|c| c.definition.name == "Changeling Titan").unwrap();
+    assert!(t.has_keyword(&crate::card::Keyword::Trample), "Titan has trample");
+}
+
+/// Changeling Berserker enters with Haste (and champions a creature).
+#[test]
+fn changeling_berserker_has_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let zerk = g.add_card_to_hand(0, catalog::changeling_berserker());
+    for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
+    g.players[0].mana_pool.add_colorless(20);
+    g.perform_action(GameAction::CastSpell {
+        card_id: zerk, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Changeling Berserker castable");
+    drain_stack(&mut g);
+    let z = g.battlefield.iter().find(|c| c.definition.name == "Changeling Berserker").unwrap();
+    assert!(z.has_keyword(&crate::card::Keyword::Haste), "Berserker has haste");
+}
+
+/// Skyscribing makes each player draw X; its Forecast makes each draw one.
+#[test]
+fn skyscribing_each_player_draws_x_and_forecasts() {
+    let mut g = two_player_game();
+    for p in 0..2 { for _ in 0..5 { g.add_card_to_library(p, catalog::island()); } }
+    let id = g.add_card_to_hand(0, catalog::skyscribing());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let h0 = g.players[0].hand.len();
+    let h1 = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("Skyscribing castable for X=2");
+    drain_stack(&mut g);
+    // P0 cast Skyscribing (-1 hand) then drew 2 (+2) → net +1; P1 drew 2.
+    assert_eq!(g.players[0].hand.len(), h0 - 1 + 2);
+    assert_eq!(g.players[1].hand.len(), h1 + 2);
+}
+
+/// Skyscribing's Forecast (each player draws one) fires from hand in upkeep.
+#[test]
+fn skyscribing_forecast_each_player_draws_one() {
+    let mut g = two_player_game();
+    for p in 0..2 { for _ in 0..3 { g.add_card_to_library(p, catalog::island()); } }
+    let id = g.add_card_to_hand(0, catalog::skyscribing());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    let h1 = g.players[1].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Forecast activatable in upkeep");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), h1 + 1, "opponent drew one from Forecast");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "Skyscribing stays in hand");
+}
+
+/// Changeling (CR 702.73) is honored by the general type-filter eval: an
+/// Avian Changeling satisfies `HasCreatureType` for a type it doesn't print.
+#[test]
+fn changeling_satisfies_arbitrary_creature_type_filter() {
+    use crate::card::{CreatureType, SelectionRequirement};
+    let mut g = two_player_game();
+    let avian = g.add_card_to_battlefield(0, catalog::avian_changeling());
+    // It prints only Shapeshifter, but Changeling makes it every type.
+    assert!(g.evaluate_requirement(
+        &SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+        &Target::Permanent(avian), 0,
+    ), "Changeling counts as a Goblin");
+    assert!(g.evaluate_requirement(
+        &SelectionRequirement::HasCreatureType(CreatureType::Elf),
+        &Target::Permanent(avian), 0,
+    ), "Changeling counts as an Elf");
+}
+
+/// Game-Trail Changeling is a 4/4 trampling Changeling.
+#[test]
+fn game_trail_changeling_is_a_changeling_trampler() {
+    use crate::card::{CreatureType, SelectionRequirement};
+    let mut g = two_player_game();
+    let gt = g.add_card_to_battlefield(0, catalog::game_trail_changeling());
+    assert!(g.battlefield_find(gt).unwrap().has_keyword(&crate::card::Keyword::Trample));
+    assert!(g.evaluate_requirement(
+        &SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+        &Target::Permanent(gt), 0,
+    ), "Changeling counts as a Dragon");
+}
+
+/// Meekstone keeps power-3+ creatures from untapping; small ones untap.
+#[test]
+fn meekstone_locks_down_big_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::meekstone());
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(big).unwrap().tapped = true;
+    g.battlefield_find_mut(small).unwrap().tapped = true;
+    g.active_player_idx = 0;
+    g.do_untap();
+    assert!(g.battlefield_find(big).unwrap().tapped, "power-4 creature stays tapped");
+    assert!(!g.battlefield_find(small).unwrap().tapped, "power-2 creature untaps");
+}
+
+/// Aether Flash deals 2 damage to each creature as it enters (killing a 2/2).
+#[test]
+fn aether_flash_punishes_entering_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::aether_flash());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to Aether Flash's 2 damage");
+}
+
+/// Spitting Earth deals damage equal to Mountains you control.
+#[test]
+fn spitting_earth_scales_with_mountains() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::mountain()); }
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let se = g.add_card_to_hand(0, catalog::spitting_earth());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: se, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spitting Earth castable");
+    drain_stack(&mut g);
+    // 3 Mountains → 3 damage to a 4/4 → survives with 3 marked.
+    assert_eq!(g.battlefield_find(angel).unwrap().damage, 3, "dealt 3 (Mountains controlled)");
+}
+
+/// Carbonize deals 3 and exiles a creature that would die (no graveyard).
+#[test]
+fn carbonize_exiles_creature_it_kills() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let carb = g.add_card_to_hand(0, catalog::carbonize());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: carb, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Carbonize castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "killed creature is exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "not in graveyard");
+}
+
+/// Rolling Thunder deals X damage spread across targets (auto-split even).
+#[test]
+fn rolling_thunder_deals_x_damage() {
+    let mut g = two_player_game();
+    let p1 = g.players[1].life;
+    let rt = g.add_card_to_hand(0, catalog::rolling_thunder());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: Some(4),
+    }).expect("Rolling Thunder castable for X=4");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 4, "X=4 damage to a single target player");
+}

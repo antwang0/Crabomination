@@ -14869,6 +14869,133 @@ pub fn changeling_hero() -> CardDefinition {
     }
 }
 
+/// Avian Changeling — {2}{W} 2/2 Shapeshifter. Changeling, Flying.
+pub fn avian_changeling() -> CardDefinition {
+    CardDefinition {
+        name: "Avian Changeling",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Changeling, Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Game-Trail Changeling — {3}{G}{G} 4/4 Shapeshifter. Changeling, Trample.
+pub fn game_trail_changeling() -> CardDefinition {
+    CardDefinition {
+        name: "Game-Trail Changeling",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Changeling, Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Changeling Titan — {4}{G} 7/7 Shapeshifter. Changeling, Trample.
+/// Champion a creature (CR 702.77 — see `changeling_hero`).
+pub fn changeling_titan() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Changeling Titan",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Changeling, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Changeling Berserker — {3}{R} 5/3 Shapeshifter. Changeling, Haste.
+/// Champion a creature (CR 702.77 — see `changeling_hero`).
+pub fn changeling_berserker() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Changeling Berserker",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Changeling, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skyscribing — {X}{U}{U} Sorcery. "Each player draws X cards."
+/// Forecast — {2}{U}, Reveal from hand: each player draws a card. (CR 702.56)
+pub fn skyscribing() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Skyscribing",
+        cost: cost(&[x(), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::XFromCost,
+        },
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), u()]),
+            from_hand: true,
+            once_per_turn: true,
+            condition: Some(Predicate::All(vec![
+                Predicate::IsTurnOf(PlayerRef::You),
+                Predicate::CurrentStepIs(TurnStep::Upkeep),
+            ])),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Vodalian Illusionist — {2}{U} 2/2 Merfolk Wizard.
 /// `{U}{U}, {T}: Target creature phases out.` (CR 702.26)
 pub fn vodalian_illusionist() -> CardDefinition {
@@ -15065,6 +15192,113 @@ pub fn reality_ripple() -> CardDefinition {
                     .or(SelectionRequirement::Creature)
                     .or(SelectionRequirement::Land),
             ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Meekstone — {1} Artifact. "Creatures with power 3 or greater don't untap
+/// during their controller's untap step." (CR 502.3)
+pub fn meekstone() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Meekstone",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures with power 3 or greater don't untap during their controller's untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(3)),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Aether Flash — {2}{R} Enchantment. "Whenever a creature enters, Aether
+/// Flash deals 2 damage to it."
+pub fn aether_flash() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Aether Flash",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spitting Earth — {1}{R} Sorcery. "Deals damage to target creature equal to
+/// the number of Mountains you control."
+pub fn spitting_earth() -> CardDefinition {
+    use crate::card::LandType;
+    use crate::effect::shortcut::target_filtered;
+    let mountains = Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(LandType::Mountain)
+            .and(SelectionRequirement::ControlledByYou),
+    )));
+    CardDefinition {
+        name: "Spitting Earth",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: mountains,
+        },
+        ..Default::default()
+    }
+}
+
+/// Carbonize — {1}{R}{R} Instant. "Deals 3 damage to any target. If a
+/// creature dealt damage this way would die this turn, exile it instead."
+pub fn carbonize() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Carbonize",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn { what: Selector::Target(0) },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Rolling Thunder — {X}{R}{R} Sorcery. "Deals X damage divided as you choose
+/// among any number of targets." (`max_targets` capped at 6 — the divided
+/// decision can't enumerate truly unbounded targets.)
+pub fn rolling_thunder() -> CardDefinition {
+    CardDefinition {
+        name: "Rolling Thunder",
+        cost: cost(&[x(), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamageDivided {
+            total: Value::XFromCost,
+            filter: SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+            max_targets: 6,
         },
         ..Default::default()
     }
