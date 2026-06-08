@@ -37525,3 +37525,77 @@ fn valley_rotcaller_drains_per_tribal_creature() {
     assert_eq!(g.players[1].life, 18, "opponent lost 2");
     assert_eq!(g.players[0].life, 22, "you gained 2");
 }
+
+/// Nocturnal Hunger destroys a creature.
+#[test]
+fn nocturnal_hunger_destroys_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::nocturnal_hunger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Nocturnal Hunger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+}
+
+/// Conduct Electricity deals 6 to a creature.
+#[test]
+fn conduct_electricity_deals_six() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::conduct_electricity());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Conduct Electricity");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(angel).is_none(), "6 damage kills the 4/4");
+}
+
+/// Carrot Cake makes a Rabbit on ETB and again when sacrificed for life.
+#[test]
+fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
+    let mut g = two_player_game();
+    let cake = g.add_card_to_battlefield(0, catalog::carrot_cake());
+    g.fire_self_etb_triggers(cake, 0);
+    drain_stack(&mut g);
+    let after_etb = g.battlefield.iter().filter(|c| c.definition.name == "Rabbit").count();
+    assert_eq!(after_etb, 1, "ETB minted a Rabbit");
+    // Sacrifice for life → second Rabbit + 3 life.
+    g.players[0].mana_pool.add_colorless(2);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cake, ability_index: 0, target: None, x_value: None,
+    }).expect("sac Carrot Cake");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 3, "gained 3 life");
+    let after_sac = g.battlefield.iter().filter(|c| c.definition.name == "Rabbit").count();
+    assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
+}
+
+/// Take Out the Trash deals 3 and loots when you control a Raccoon.
+#[test]
+fn take_out_the_trash_pings_and_loots_with_raccoon() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.add_card_to_battlefield(0, catalog::brazen_collector()); // Raccoon
+    g.add_card_to_library(0, catalog::forest());
+    let extra = g.add_card_to_hand(0, catalog::forest()); // discard fodder
+    let _ = extra;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let id = g.add_card_to_hand(0, catalog::take_out_the_trash());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Take Out the Trash");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "3 damage kills the 2/2");
+}

@@ -29520,3 +29520,107 @@ pub fn valley_rotcaller() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Take Out the Trash — {1}{R} Instant. Deals 3 damage to target creature or
+/// planeswalker. If you control a Raccoon, you may discard a card; if you do,
+/// draw a card.
+pub fn take_out_the_trash() -> CardDefinition {
+    CardDefinition {
+        name: "Take Out the Trash",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Raccoon)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::MayDo {
+                    description: "Discard a card; if you do, draw a card.".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Nocturnal Hunger — {2}{B} Instant. Destroy target creature. (The optional
+/// "Gift a Food" rider is dropped — modal gift-promise isn't modeled.)
+pub fn nocturnal_hunger() -> CardDefinition {
+    CardDefinition {
+        name: "Nocturnal Hunger",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ..Default::default()
+    }
+}
+
+/// Carrot Cake — {1}{W} Food artifact. When it enters and when you sacrifice
+/// it, create a 1/1 white Rabbit token and scry 1. {2}, {T}, Sacrifice it:
+/// gain 3 life.
+pub fn carrot_cake() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    let rabbit_scry = || Effect::Seq(vec![
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: rabbit_1_1_token(),
+        },
+        Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+    ]);
+    CardDefinition {
+        name: "Carrot Cake",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        triggered_abilities: vec![
+            etb(rabbit_scry()),
+            // Printed "when you sacrifice it"; modeled as leaves-battlefield (a
+            // Food's only realistic exit is being sacrificed). A dedicated
+            // PermanentSacrificed-SelfSource dispatch is a TODO.md follow-up.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: rabbit_scry(),
+            },
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Conduct Electricity — {4}{R} Instant. Deals 6 damage to target creature.
+/// (The secondary "2 damage to up to one target creature token" is dropped —
+/// optional secondary targets aren't modeled here.)
+pub fn conduct_electricity() -> CardDefinition {
+    CardDefinition {
+        name: "Conduct Electricity",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(6),
+        },
+        ..Default::default()
+    }
+}
