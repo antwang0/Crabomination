@@ -29136,3 +29136,146 @@ pub fn roughshod_duo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Repel Calamity — {1}{W} Instant. Destroy target creature with power or
+/// toughness 4 or greater.
+pub fn repel_calamity() -> CardDefinition {
+    CardDefinition {
+        name: "Repel Calamity",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(
+                    SelectionRequirement::PowerAtLeast(4)
+                        .or(SelectionRequirement::ToughnessAtLeast(4)),
+                ),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Pileated Provisioner — {4}{W} 3/4 Bird Scout with Flying. When it enters,
+/// put a +1/+1 counter on target creature you control without flying.
+pub fn pileated_provisioner() -> CardDefinition {
+    CardDefinition {
+        name: "Pileated Provisioner",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird, CreatureType::Scout], ..Default::default() },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Three Tree Rootweaver — {1}{G} 1/3 Mole Druid. {T}: Add one mana of any color.
+pub fn three_tree_rootweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Three Tree Rootweaver",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mole, CreatureType::Druid], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Nettle Guard — {1}{W} 3/1 Mouse Soldier. Valiant — the first time each turn
+/// it becomes the target of a spell/ability you control, it gets +0/+2 until
+/// end of turn. {1}, Sacrifice it: destroy target artifact or enchantment.
+pub fn nettle_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Nettle Guard",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Mouse, CreatureType::Soldier], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YourControl).once_per_turn(),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(0),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Frilled Sparkshooter — {3}{R} 3/3 Lizard Archer with Menace and Reach. It
+/// enters with a +1/+1 counter if an opponent lost life this turn. (Modeled as
+/// an ETB conditional counter rather than an enters-with replacement.)
+pub fn frilled_sparkshooter() -> CardDefinition {
+    CardDefinition {
+        name: "Frilled Sparkshooter",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard, CreatureType::Archer], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Menace, Keyword::Reach],
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerLostLifeThisTurn { who: PlayerRef::EachOpponent },
+            then: Box::new(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            else_: Box::new(Effect::Noop),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Iridescent Vinelasher — {B} 1/2 Lizard Assassin with Offspring {2}.
+/// Landfall — whenever a land you control enters, it deals 1 damage to each
+/// opponent. (In 1v1 the printed "target opponent" maps to the lone opponent.)
+pub fn iridescent_vinelasher() -> CardDefinition {
+    CardDefinition {
+        name: "Iridescent Vinelasher",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard, CreatureType::Assassin], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Offspring(cost(&[generic(2)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

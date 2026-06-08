@@ -37301,3 +37301,82 @@ fn daybound_spell_cast_makes_it_day() {
     }).expect("cast Village Watch");
     assert_eq!(g.day_night, Some(DayNight::Day), "daybound cast set it to day");
 }
+
+/// Repel Calamity destroys a big creature but not a small one.
+#[test]
+fn repel_calamity_destroys_large_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::repel_calamity());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Repel Calamity");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "4/4 destroyed");
+}
+
+/// Pileated Provisioner puts a counter on a non-flying creature you control.
+#[test]
+fn pileated_provisioner_counters_nonflyer() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 no flying
+    let prov = g.add_card_to_battlefield(0, catalog::pileated_provisioner());
+    g.fire_self_etb_triggers(prov, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Three Tree Rootweaver taps for one mana of any color.
+#[test]
+fn three_tree_rootweaver_taps_for_any_color() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::three_tree_rootweaver());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "produced one mana");
+}
+
+/// Nettle Guard sacrifices to destroy an artifact.
+#[test]
+fn nettle_guard_sacrifices_to_destroy_artifact() {
+    let mut g = two_player_game();
+    let clue = g.add_card_to_battlefield(1, catalog::mind_stone()); // an artifact
+    let guard = g.add_card_to_battlefield(0, catalog::nettle_guard());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: guard, ability_index: 0,
+        target: Some(crate::game::Target::Permanent(clue)), x_value: None,
+    }).expect("sac to destroy");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(guard).is_none(), "Nettle Guard sacrificed");
+    assert!(g.battlefield_find(clue).is_none(), "artifact destroyed");
+}
+
+/// Frilled Sparkshooter enters bigger when an opponent lost life this turn.
+#[test]
+fn frilled_sparkshooter_grows_if_opponent_lost_life() {
+    let mut g = two_player_game();
+    g.players[1].lost_life_this_turn = true;
+    let id = g.add_card_to_battlefield(0, catalog::frilled_sparkshooter());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "entered with a +1/+1 counter");
+}
+
+/// Iridescent Vinelasher pings the opponent on landfall.
+#[test]
+fn iridescent_vinelasher_pings_on_landfall() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::iridescent_vinelasher());
+    g.players[1].life = 20;
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "landfall pinged the opponent for 1");
+}
