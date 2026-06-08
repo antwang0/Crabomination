@@ -256,6 +256,14 @@ impl GameState {
             if computed_kw(id).contains(&Keyword::Exert) {
                 card.skip_next_untap = true;
             }
+            // CR 702.147 — Decayed. "When it attacks, sacrifice it at end of
+            // combat." Reuse the attacking-token cleanup queue (CR 511.3).
+            if computed_kw(id).contains(&Keyword::Decayed) {
+                self.attacking_token_cleanup.push((
+                    id,
+                    crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
+                ));
+            }
             // CR 702.142 — record that this creature attacked (gates Boast).
             card.attacked_this_turn = true;
             self.attacking.push(atk);
@@ -456,7 +464,9 @@ impl GameState {
             // set so transient grants (e.g. SOS Duel Tactics's "this
             // creature can't block this turn", Postmortem Professor's
             // static restriction) take effect immediately.
-            if kws_of(blocker_id).contains(&Keyword::CantBlock) {
+            if kws_of(blocker_id).contains(&Keyword::CantBlock)
+                || kws_of(blocker_id).contains(&Keyword::Decayed)
+            {
                 return Err(GameError::CannotBlock(blocker_id));
             }
 

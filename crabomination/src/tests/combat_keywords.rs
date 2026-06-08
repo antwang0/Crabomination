@@ -70,6 +70,46 @@ fn cr_702_68_frenzy_silent_when_blocked() {
     assert_eq!((s.power(), s.toughness()), (2, 2), "frenzy does NOT fire when blocked");
 }
 
+// ── CR 702.147 Decayed ─────────────────────────────────────────────────────
+
+fn decayed_creature(name: &'static str) -> CardDefinition {
+    CardDefinition { keywords: vec![crate::card::Keyword::Decayed], ..body(name, 2, 2, vec![]) }
+}
+
+/// A decayed creature can't be declared as a blocker (CR 702.147a).
+#[test]
+fn cr_702_147_decayed_cant_block() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let zombie = g.add_card_to_battlefield(1, decayed_creature("Decayed Zombie"));
+    g.clear_sickness(atk);
+    g.clear_sickness(zombie);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    let err = g.perform_action(GameAction::DeclareBlockers(vec![(zombie, atk)]));
+    assert!(err.is_err(), "a decayed creature can't block");
+}
+
+/// A decayed creature that attacks is sacrificed at end of combat (CR 702.147b).
+#[test]
+fn cr_702_147_decayed_sacrificed_after_attacking() {
+    let mut g = two_player_game();
+    let zombie = g.add_card_to_battlefield(0, decayed_creature("Decayed Zombie"));
+    g.clear_sickness(zombie);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: zombie, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::PostCombatMain);
+    assert!(!g.battlefield.iter().any(|c| c.id == zombie), "decayed attacker sacrificed at end of combat");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == zombie), "it went to the graveyard");
+}
+
 // ── CR 702.158 Connive ─────────────────────────────────────────────────────
 
 // ── CR 702.39 Provoke ────────────────────────────────────────────────────────

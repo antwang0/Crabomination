@@ -364,6 +364,9 @@ pub enum Keyword {
     /// the normal damage).
     Toxic(u32),
     Defender,
+    /// CR 702.147 — Decayed. "This creature can't block. When it attacks,
+    /// sacrifice it at end of combat." Common on Zombie tokens (MID/VOW).
+    Decayed,
     Protection(Color),
     Hexproof,
     Shroud,

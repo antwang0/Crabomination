@@ -57,6 +57,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Shroud => "Shroud",
         Keyword::Flash => "Flash",
         Keyword::Defender => "Defender",
+        Keyword::Decayed => "Decayed",
         Keyword::Persist => "Persist",
         Keyword::Undying => "Undying",
         Keyword::Cascade => "Cascade",
