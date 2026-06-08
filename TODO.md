@@ -36,6 +36,22 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     lifts at the detainer's next turn; a granted-static "permanents your
     opponents control enter detained" variant (Lavinia of the Tenth) is ⏳.
 
+- ⏳ **Discovered (modern_decks landfall/exile batch):**
+  - ✅ **`Effect::NthResolutionThisTurn { branches }`** — runs `branches[n]`
+    where `n` = times an escalating ability the controller owns has resolved
+    this turn (`Player.escalating_resolutions_this_turn`, reset at untap).
+    Ships Omnath, Locus of Creation's 1st/2nd/3rd-landfall escalation.
+  - ✅ **`Effect::CatchUpBasicLands`** (Scholarship Sponsor), **`Effect::
+    ExileFromHandTaxed`** (Elite Spellbinder, owner-may-play + tax), **hone
+    counters** (`process_hone`, Uvilda // Nassari).
+  - **Codie, Vociferous Codex** still ⏳: needs `StaticEffect::
+    CantCastPermanentSpells` + a `DelayedTriggerKind::YourNextSpellCast` that
+    runs a discover-until-lesser-MV impulse (two new primitives).
+  - **Awaken the Blood Avatar** variable-sacrifice cost reduction still ⏳
+    (auto-path sacrifices 0; needs a cast-time "sacrifice N, {2} less each"
+    decision threaded into the cost computation).
+  - **Before adding a "new" card, grep the catalog for its name** — Omnath
+    already existed in `decks/modern.rs`; nearly duplicated it.
 - ⏳ **Discovered this run (STX sweep / extras_17):**
   - **"Sacrifice X or pay {N}" OR additional cost** — an `AdditionalCastCost`
     variant (or a `Vec<AdditionalCastCost>` "choose one" wrapper). Makes Bayou
