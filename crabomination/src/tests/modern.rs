@@ -37610,6 +37610,34 @@ fn carrot_cake_makes_rabbits_on_etb_and_sacrifice() {
     assert_eq!(after_sac, 2, "sacrifice trigger minted a second Rabbit");
 }
 
+/// Sinkhole Surveyor: attacking costs 1 life and endures 1.
+#[test]
+fn sinkhole_surveyor_attacks_loses_life_and_endures() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sinkhole_surveyor());
+    g.battlefield_find_mut(id).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let life0 = g.players[0].life;
+    g.declare_attackers(vec![Attack { attacker: id, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 - 1, "lost 1 life");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "endured 1");
+}
+
+/// Warden of the Grove: another nontoken creature entering endures X = Warden's
+/// +1/+1 counters.
+#[test]
+fn warden_of_the_grove_endures_entering_creatures() {
+    let mut g = two_player_game();
+    let warden = g.add_card_to_battlefield(0, catalog::warden_of_the_grove());
+    g.battlefield_find_mut(warden).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: bear }]);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 2, "bear endured 2 (Warden's counters)");
+}
+
 /// Bake into a Pie destroys a creature and leaves a Food behind.
 #[test]
 fn bake_into_a_pie_destroys_and_makes_food() {

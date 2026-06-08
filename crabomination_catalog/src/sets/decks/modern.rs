@@ -29687,6 +29687,73 @@ pub fn curious_forager() -> CardDefinition {
     }
 }
 
+/// Sinkhole Surveyor — {1}{B} 1/3 Bird Scout with flying. Whenever it attacks,
+/// you lose 1 life and it endures 1 (CR 701.63).
+pub fn sinkhole_surveyor() -> CardDefinition {
+    CardDefinition {
+        name: "Sinkhole Surveyor",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            Effect::Endure { target: Selector::This, n: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Warden of the Grove — {2}{G} 2/2 Hydra. At your end step, put a +1/+1
+/// counter on it; whenever another nontoken creature you control enters, it
+/// endures X, where X is the number of +1/+1 counters on Warden.
+pub fn warden_of_the_grove() -> CardDefinition {
+    CardDefinition {
+        name: "Warden of the Grove",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hydra],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(crate::game::types::TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::NotToken),
+                    }),
+                effect: Effect::Endure {
+                    target: Selector::TriggerSource,
+                    n: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Kin-Tree Nurturer — {2}{B} 2/1 Human Druid with lifelink. ETB: endures 1.
 pub fn kin_tree_nurturer() -> CardDefinition {
     CardDefinition {
