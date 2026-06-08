@@ -1790,6 +1790,25 @@ fn is_free_mana_ability(a: &ActivatedAbility) -> bool {
     if !a.tap_cost || a.sac_cost || a.life_cost > 0 || !a.mana_cost.symbols.is_empty() {
         return false;
     }
+    // Reject abilities carrying any *additional* resource cost beyond the tap:
+    // sacrificing / bouncing / tapping / exiling other permanents, discarding,
+    // exiling the source, paying energy, or a "from graveyard/hand"/gated
+    // activation. The bot shouldn't burn those just to float a mana mid-tap.
+    // (Quirion Ranger, Witch's Oven, Heritage Druid, energy taplands, etc.)
+    if a.sac_other_filter.is_some()
+        || a.bounce_other_filter.is_some()
+        || a.tap_other_filter.is_some()
+        || a.tap_n_filter.is_some()
+        || a.exile_other_filter.is_some()
+        || a.discard_cost.is_some()
+        || a.exile_self_cost
+        || a.energy_cost > 0
+        || a.condition.is_some()
+        || a.from_graveyard
+        || a.from_hand
+    {
+        return false;
+    }
     // Plain fixed-color / colorless rocks (Sol Ring, Mind Stone) plus
     // fixed-multicolor `OfColor` rocks — all decision-free, so the bot can
     // tap them and keep sequencing toward a cast. *Choice* sources
@@ -2766,9 +2785,25 @@ mod tests {
         assert!(!is_free_mana_ability(&pay_life), "life-paying mana source isn't free");
         let any_color = ActivatedAbility {
             effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(1)) },
-            ..plain
+            ..plain.clone()
         };
         assert!(!is_free_mana_ability(&any_color), "color-choice source isn't auto-tapped");
+        // Mana abilities with an additional resource cost are NOT free: the
+        // bot must not pointlessly pay them mid-tap.
+        use crate::card::SelectionRequirement;
+        let sac_other = ActivatedAbility {
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..plain.clone()
+        };
+        assert!(!is_free_mana_ability(&sac_other), "sacrifice-cost mana source isn't free");
+        let tap_n = ActivatedAbility {
+            tap_cost: true,
+            tap_n_filter: Some((SelectionRequirement::Creature, 3)),
+            ..plain.clone()
+        };
+        assert!(!is_free_mana_ability(&tap_n), "tap-N-cost mana source isn't free");
+        let energy = ActivatedAbility { energy_cost: 1, ..plain };
+        assert!(!is_free_mana_ability(&energy), "energy-cost mana source isn't free");
     }
 
     /// Reproducer for the "Vandalblast freeze" bug. The bot is in its main

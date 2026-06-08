@@ -962,6 +962,21 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if let Some(req) = ability.tap_other_filter.as_ref() {
         parts.push(format!("Tap a {}", requirement_noun(req)));
     }
+    // Tap-N-permanents activations (Heritage Druid's "Tap three untapped Elves
+    // you control") — `tap_n_filter`.
+    if let Some((req, n)) = ability.tap_n_filter.as_ref() {
+        parts.push(format!("Tap {n} {}s", requirement_noun(req)));
+    }
+    // Return-another-to-hand activations (Quirion Ranger, Wirewood Symbiote)
+    // — `bounce_other_filter`.
+    if let Some((req, n)) = ability.bounce_other_filter.as_ref() {
+        let noun = requirement_noun(req);
+        if *n == 1 {
+            parts.push(format!("Return a {noun}"));
+        } else {
+            parts.push(format!("Return {n} {noun}s"));
+        }
+    }
     // Discard-as-cost (Fauna Shaman, Survival of the Fittest) — `discard_cost`.
     if let Some((req, n)) = ability.discard_cost.as_ref() {
         let noun = requirement_noun(req);
@@ -1970,6 +1985,20 @@ mod tests {
             ..Default::default()
         };
         assert!(ability_cost_label(&sac_two).contains("Sacrifice 2 artifacts"));
+
+        // Heritage Druid: "Tap three untapped Elves you control".
+        let heritage = ActivatedAbility {
+            tap_n_filter: Some((R::HasCreatureType(crate::card::CreatureType::Elf), 3)),
+            ..Default::default()
+        };
+        assert!(ability_cost_label(&heritage).contains("Tap 3"), "tap-N rider shown");
+
+        // Quirion Ranger / Wirewood Symbiote: "Return a [permanent] you control".
+        let quirion = ActivatedAbility {
+            bounce_other_filter: Some((R::HasLandType(crate::card::LandType::Forest), 1)),
+            ..Default::default()
+        };
+        assert!(ability_cost_label(&quirion).contains("Return a"), "bounce rider shown");
     }
 
     /// `return_self_cost` activations (Grinning Ignus, Rootha) must show the
