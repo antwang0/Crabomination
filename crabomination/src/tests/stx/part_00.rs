@@ -2810,30 +2810,24 @@ fn quandrix_cultivator_etb_fetches_basic_forest_or_island() {
 // ── Tempted by the Oriq ────────────────────────────────────────────────────
 
 #[test]
-fn tempted_by_the_oriq_steals_and_grants_haste() {
+fn tempted_by_the_oriq_cannot_steal_high_mv_creature() {
+    // The MV-3-or-less gate: a 5-MV creature is not a legal target.
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Tap the bear up front so we can verify the untap clause.
-    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // MV 5
 
     let id = g.add_card_to_hand(0, catalog::tempted_by_the_oriq());
     for _c in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] { g.players[0].mana_pool.add(_c, 20); }
     g.players[0].mana_pool.add_colorless(20);
 
-    g.perform_action(GameAction::CastSpell {
+    let res = g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(bear)),
+        target: Some(Target::Permanent(big)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    })
-    .expect("Tempted by the Oriq castable for {2}{B}");
-    drain_stack(&mut g);
-
-    // Bear should now be controlled by caster (player 0), untapped, with haste.
-    let b = g.battlefield_find(bear).expect("Bear should still be on bf");
-    assert_eq!(b.controller, 0, "Bear should be under player 0's control");
-    assert!(!b.tapped, "Bear should be untapped");
-    assert!(b.has_keyword(&Keyword::Haste), "Bear should have haste");
+    });
+    assert!(res.is_err(), "5-MV creature is not a legal target");
+    let b = g.battlefield_find(big).expect("still on bf");
+    assert_eq!(b.controller, 1, "still controlled by its owner");
 }
 
 #[test]
@@ -3201,57 +3195,37 @@ fn crackle_with_power_divides_damage_among_two_targets() {
 }
 
 #[test]
-fn mentors_guidance_mode_zero_damages_target_creature() {
+fn mentors_guidance_draws_one_without_qualifier() {
     let mut g = two_player_game();
-    // P0 controls 3 creatures.
-    let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let _b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let _b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::mentors_guidance());
-    g.players[0].mana_pool.add(Color::Green, 1);
+    let hand_before = g.players[0].hand.len();
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: Some(0), x_value: None,
-    }).expect("Mentor's Guidance castable for {1}{G}{U}");
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mentor's Guidance castable");
     drain_stack(&mut g);
-
-    // Target took 3 damage (= 3 creatures). Bear has 2 toughness, so it
-    // dies.
-    assert!(!g.battlefield.iter().any(|c| c.id == target),
-        "target bear should die to 3 damage from Mentor's Guidance");
+    // No qualifying permanent → no copy. Net: -1 spell + 1 draw = unchanged.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "scry 1, draw 1");
 }
 
 #[test]
-fn mentors_guidance_mode_one_draws_for_counters_creatures() {
+fn mentors_guidance_copies_with_a_wizard() {
     let mut g = two_player_game();
-    // P0 controls two creatures with +1/+1 counters and one without.
-    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let _b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    for id in [b1, b2] {
-        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
-            c.add_counters(CounterType::PlusOnePlusOne, 1);
-        }
-    }
-    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    // A Wizard you control makes the cast-trigger copy the spell.
+    let _wiz = g.add_card_to_battlefield(0, catalog::burrog_befuddler());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::mentors_guidance());
     let hand_before = g.players[0].hand.len();
-    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
+    g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Mentor's Guidance castable");
     drain_stack(&mut g);
-
-    // 2 creatures with +1/+1 counters → draw 2 (net hand: -1 spell +2 draw).
-    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2,
-        "drew 2 cards (one per +1/+1-creature)");
+    // Copy + original each draw 1 → net -1 spell + 2 draws.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "copy doubles the draw");
 }
 
 #[test]

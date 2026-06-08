@@ -9458,52 +9458,33 @@ fn geometers_arthropod_x_cast_pulls_card_to_hand() {
 }
 
 #[test]
-fn bayou_groff_dies_may_pay_to_return_returns_to_hand_when_yes_and_paid() {
-    // Bayou Groff's death trigger: "may pay {1} to return". With scripted
-    // decider answering Bool(true) AND mana in pool, the body fires and the
-    // dead Groff returns to its owner's hand. Bayou Groff has its OWN
-    // SelfSource Dies trigger so this fires via the SBA dies-trigger
-    // collection path (not the unified AnotherOfYours dispatch).
+fn bayou_groff_requires_sacrificing_a_creature_to_cast() {
+    // "As an additional cost to cast this spell, sacrifice a creature." A
+    // fodder creature is auto-sacrificed; Groff resolves onto the battlefield.
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::bayou_groff());
-    // Pre-stash {1} of mana for the may-pay.
-    g.players[0].mana_pool.add_colorless(1);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
-    // Kill via Murder.
-    let murder = g.add_card_to_hand(0, catalog::murder());
-    g.players[0].mana_pool.add(Color::Black, 2);
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::bayou_groff());
+    g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: murder, target: Some(Target::Permanent(id)),
-        additional_targets: vec![],
-        mode: None, x_value: None,
-    })
-    .expect("Murder castable");
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with a creature to sacrifice");
     drain_stack(&mut g);
-    // Groff's may-pay-to-return body: should now be in hand.
-    assert!(g.players[0].hand.iter().any(|c| c.id == id),
-        "Bayou Groff should return to hand on yes+pay");
+    assert!(g.battlefield_find(fodder).is_none(), "fodder creature sacrificed");
+    assert!(g.battlefield_find(id).is_some(), "Bayou Groff entered the battlefield");
 }
 
 #[test]
-fn bayou_groff_dies_may_pay_default_no_stays_in_graveyard() {
-    // Default decider says no — Groff stays in graveyard.
+fn bayou_groff_uncastable_without_a_creature_to_sacrifice() {
+    // No other creature (and the pay-{3} alternative is dropped) → uncastable.
     let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::bayou_groff());
-    g.players[0].mana_pool.add_colorless(1);
-    let murder = g.add_card_to_hand(0, catalog::murder());
-    g.players[0].mana_pool.add(Color::Black, 2);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: murder, target: Some(Target::Permanent(id)),
-        additional_targets: vec![],
-        mode: None, x_value: None,
-    })
-    .expect("Murder castable");
-    drain_stack(&mut g);
-    // No return: Groff in graveyard.
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
-        "Bayou Groff should stay in graveyard when may-pay declined");
+    let id = g.add_card_to_hand(0, catalog::bayou_groff());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let res = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(res.is_err(), "no creature to sacrifice → cast rejected");
 }
 
 #[test]

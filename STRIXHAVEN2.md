@@ -21,10 +21,11 @@ A couple of 🟡 partials remain (riders dropped, core wired):
   (the IS-sharing-color / cast-free chain is dropped) and the "other PWs gain
   Kasmina's abilities" static is dropped.
 
-⏳ work remaining: ~40 printed STX cards (the Dean MDFCs, Codie/Extus/Blex/
-Jadzi legends, study/hone-counter cards, blink/recursion spells, the
-remaining X-spells — Exponential Growth now ✅ via `Effect::DoublePower`) — see
-the "Remaining real STX cards" entry in `TODO.md`.
-The modern_decks run added extras_14/15/16 (Campus lands, keyword creatures,
-the Lessons batch, Blot Out the Sky / Serpentine Curve / Golden Ratio,
-spell-copy/counter, and payoff creatures), mostly ✅.
+⏳ work remaining: ~19 printed STX cards (the Dean/legend MDFCs, study/hone-
+counter cards, and a handful of single-faced cards blocked on primitives —
+Draconic Intervention, Fervent Mastery, Radiant Scrollwielder, Codie, Elite
+Spellbinder, Ecological Appreciation). See the "Remaining real STX cards" entry
+in `TODO.md` for the per-card blockers.
+extras_17 added the single-faced Efreet Flamepainter, Thunderous Orator,
+Venerable Warsinger, and Ardent Dustspeaker; the correctness sweep made Mage
+Duel, Tempted by the Oriq, Mentor's Guidance, and Bayou Groff faithful.

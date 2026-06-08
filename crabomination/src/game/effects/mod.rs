@@ -6087,8 +6087,11 @@ impl GameState {
                 // off to the free-cast helper. The helper auto-targets /
                 // auto-modes the card; ScriptedDecider can override.
                 let entities = self.resolve_selector(what, ctx);
+                // A targeted graveyard/exile card resolves to `Permanent` (the
+                // only `Target` card variant); a `LastMoved`/zone selector may
+                // yield `Card`. Accept either.
                 let card_id = entities.into_iter().find_map(|e| match e {
-                    EntityRef::Card(id) => Some(id),
+                    EntityRef::Card(id) | EntityRef::Permanent(id) => Some(id),
                     _ => None,
                 });
                 let Some(card_id) = card_id else { return Ok(()); };

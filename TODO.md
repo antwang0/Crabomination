@@ -816,7 +816,7 @@ picking an item up.
 - 🟡 **CR 401 — Library** — cast-with-top-of-library-revealed recompute (401.5/401.6); multi-card same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
 - 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact.)
-- 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality).
+- 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
 - 🟡 **CR 508.1g — Attack tax** — `StaticEffect::AttackTaxToController { amount }`
   taxes attackers hitting the source's controller (Ghostly Prison, Propaganda).
   `declare_attackers` sums the tax across the batch and auto-pays from the
@@ -868,43 +868,41 @@ picking an item up.
   `scripts/fix_test_mana.py`). Re-run `python3 scripts/audit_stx_drift.py` to
   keep it at zero after adding cards.
   **Still wrong on the *effect body*** (cost/PT right, oracle text invented or
-  blocked on a primitive): Tempted by the Oriq (per-opponent permanent
-  steal, MV≤3), Mentor's Guidance (conditional copy-on-cast + scry/draw),
-  Illuminate History (discard-any-number→draw-that-many + gy≥7 Spirit), First
-  Day of Class ("creatures entering this turn" delayed trigger), Stonebinder's
-  Familiar (needs a generic `CardExiled` event), Hofri Ghostforge, Confront the
-  Past, Verdant/Fervent Mastery, Mage Duel, Strixhaven Stadium, Rise of Extus,
-  plus the type/keyword drift the cost sweep surfaced (e.g. Frost Trickster is a
-  Bird Wizard not Spirit Wizard; Daemogoth Titan is now {B/G}×4 — confirm
-  subtypes). This is the remaining multi-run work: per card replace the body
-  with the Scryfall text and rewrite its test(s). Watch for fixture coupling.
-  **Effects drift too, not only stats**: spot-checks show many school-file cards
-  carry entirely invented oracle text under a real name (Eager First-Year wired
-  as "magecraft pumps a target" vs. the real self-pump; Owlin Shieldmage as an
-  ETB combat-damage-preventer vs. the real Flying + Ward; Bayou Groff as a
-  "dies, may pay to return" body vs. the real {1}{G} 5/4 with a sac-or-pay-{3}
-  additional cost; Promising Duskmage as a drain vs. the real death-draw). Treat
-  this as a full set re-import — per card replace the body with the Scryfall text
-  and rewrite its test(s) + fixture uses. Budget several runs.
-- ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is now near-complete;
-  the modern_decks run also shipped Exponential Growth (`Effect::DoublePower`),
-  Sticky Fingers, Make Your Move, Semester's End (`Effect::ExileReturnNextEndStep`),
-  Culmination of Studies (`Value::CountMatching`), Geometric Nexus, Burn Down
-  the House, and the Mystical-Archive reprints Disperse / Weather the Storm /
-  Bond of Flourishing / Tamiyo's Safekeeping / Claim the Firstborn / Guttural
-  Response. Still unimplemented
-  printed STX cards, grouped by the primitive they're blocked on:
-  - **Study / hone counters** — needed for the Kianne/Imbraham and
-    Uvilda/Nassari Deans (exile-with-counter-then-cast mechanics).
-  - **Variable-X loyalty** (see below) — Kasmina, Enigma Sage's -X.
+  blocked on a primitive): Illuminate History (discard-any-number→draw-that-many
+  + gy≥7 Spirit), First Day of Class ("creatures entering this turn" delayed
+  trigger — needs a turn-scoped ETB delayed trigger), Stonebinder's Familiar
+  (needs a generic `CardExiled` event), Hofri Ghostforge (Spirit-copy
+  reanimation), Confront the Past, Verdant/Fervent Mastery, Strixhaven Stadium,
+  Rise of Extus, plus Daemogoth Titan's subtypes ({B/G}×4 — confirm). Per card:
+  replace the body with the Scryfall text and rewrite its test(s); watch for
+  fixture coupling. Swept faithful this run: **Mage Duel** (+1/+2 then fight),
+  **Tempted by the Oriq** (permanent MV≤3 steal), **Mentor's Guidance**
+  (conditional copy-on-cast + scry/draw), **Bayou Groff** (Plant Dog 5/4 +
+  sacrifice-a-creature additional cost; pay-{3} alternative dropped). Confirmed
+  already-faithful (stale notes): Frost Trickster (Bird Wizard, ETB tap+stun),
+  Eager First-Year (magecraft self-pump), Owlin Shieldmage (Flying + Ward 3
+  life), Promising Duskmage (death-draw if +1/+1 counter).
+  Bayou Groff's drop is the missing **"sacrifice X or pay {N}" OR additional
+  cost** — an `AdditionalCastCost` variant worth adding for a faithful version.
+- ⏳ **Remaining real STX (Strixhaven 2021) cards.** STX is near-complete (a
+  `set:stx` diff shows ~23 unimplemented, mostly MDFCs). This run added the
+  single-faced **Efreet Flamepainter** (`CastWithoutPayingImmediate` from gy on
+  combat damage), **Thunderous Orator** (conditional keyword-share via
+  `If` + `Predicate::SelectorExists`), **Venerable Warsinger** (combat-damage
+  reanimation, MV gate fixed at 3), and **Ardent Dustspeaker** (impulse-draw
+  two on attack; the gy-to-bottom enabler dropped). Still unimplemented,
+  grouped by the primitive they're blocked on:
+  - **Study / hone counters** — Kianne/Imbraham, Uvilda/Nassari Deans.
   - **Entered-this-turn filter** (`SelectionRequirement::EnteredThisTurn`) —
-    Shaile, Dean of Radiance's `{T}: +1/+1 on each creature that entered
-    this turn.`
-  - **MDFC legends** — Codie/Extus/Blex/Jadzi and the Dean cycle (two-faced).
+    Shaile, Dean of Radiance; also unblocks First Day of Class.
+  - **MDFC legends** — Codie/Extus/Blex/Jadzi + the Dean cycle (two-faced).
   - **Group land-search** — Scholarship Sponsor's catch-up basic-land tutor.
-  - **Variable-number-of-targets** — Semester's End is shipped single-target;
-    Ecological Appreciation needs "up to four with different names" + an
-    opponent-chooses-two split.
+  - **Variable-number-of-targets** — Ecological Appreciation ("up to four with
+    different names" + opponent-chooses-two split).
+  - **Single-faced, still blocked**: Draconic Intervention (exile-an-I/S
+    additional cost whose MV becomes X), Fervent Mastery / Radiant Scrollwielder
+    (random gy recur + spell-lifelink static), Codie (can't-cast-permanents
+    static + cascade-on-IS), Elite Spellbinder (exile-from-hand may-play + tax).
   Diff `set:stx` Scryfall names against the catalog string literals (note:
   helper-built names like the Snarl cycle are passed as `name` params, so
   grep the whole file, not just `name: "…"`).

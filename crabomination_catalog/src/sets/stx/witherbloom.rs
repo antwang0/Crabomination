@@ -122,60 +122,25 @@ pub fn pest_summoning() -> CardDefinition {
 /// may pay {1}. If you do, return it to its owner's hand."
 ///
 /// Now wired (push XVI) via the new `Effect::MayPay` primitive: dies
-/// trigger asks the controller "Pay {1} to return Bayou Groff to your
-/// hand?" — `AutoDecider` defaults to "no", `ScriptedDecider` can flip
-/// to "yes" for tests. On "yes" + sufficient mana in pool, the engine
-/// pays {1} and uses `Effect::Move(SelfSource → Hand(OwnerOf(Self)))`
-/// to return the now-graveyard-resident card. The body resolves
-/// against the just-died card by chasing its owner via
-/// `PlayerRef::OwnerOf`.
+/// Bayou Groff — {1}{G}, 5/4 Plant Dog. "As an additional cost to cast this
+/// spell, sacrifice a creature or pay {3}." The pay-{3} alternative is dropped
+/// (no OR-cost primitive yet), so the catalog models the sacrifice cost.
 pub fn bayou_groff() -> CardDefinition {
     CardDefinition {
         name: "Bayou Groff",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
+            creature_types: vec![CreatureType::Plant, CreatureType::Dog],
             ..Default::default()
         },
         power: 5,
         toughness: 4,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::MayPay {
-                description: "Pay {1} to return Bayou Groff to your hand?".into(),
-                mana_cost: ManaCost::new(vec![generic(1)]),
-                body: Box::new(Effect::Move {
-                    what: Selector::TriggerSource,
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
-                }),
-            },
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature,
+            count: 1,
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        enters_as_copy: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        affinity_graveyard_filter: None,
-        equipped_bonus: None,
-        soulbond_bonus: None,
-        additional_cast_cost: vec![],
-        bestow: None,
-        foretell_cost: None,
-        adventure: None,
-        plot_cost: None,
-        split: None,
-        saga_chapters: vec![],
+        ..Default::default()
     }
 }
 
