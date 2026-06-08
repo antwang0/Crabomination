@@ -8,18 +8,30 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Immediate (non-EOT) blink.** `Effect::ExileReturnNextEndStep` returns at
-  the next end step; there's no "exile then return *immediately*" primitive, so
-  Felidar Guardian / Restoration-style instant flicker can't be carded
-  faithfully (the combo timing differs). Add `Effect::FlickerImmediate { what }`.
+- ⏳ **Dedicated immediate-blink primitive.** Restoration-style instant flicker
+  is carded via `Exile { target } + Move { Target → Battlefield }` (Restoration
+  Angel, Felidar Guardian). A single `Effect::FlickerImmediate { what }` would be
+  cleaner (one trigger, no two-step target capture) but isn't required.
 - ⏳ **Cast-from-exile (any color) rider on linked exile.** `ExileUntilSourceLeaves`
   has no may-play grant, so Hostage Taker ("exile … you may cast it, any mana
   type") and similar can only ship the exile half. Pair the linked-exile with a
   grant-may-play-from-exile + any-color spend permission.
 - ⏳ **Snow permanent count** `Value` for Skred / Marit Lage-style scaling.
-- ⏳ **Tap-N-untapped-artifacts activation cost.** `tap_other_filter` taps one;
-  Whirler Rogue / affinity unblockable-enablers want "tap two." Generalize to a
-  count, and add an "X can't be blocked this turn" grant effect.
+- ✅ **Tap-N activation cost.** `ActivatedAbility.tap_n_filter` taps N matching
+  untapped permanents (source eligible) as a cost — Heritage Druid. (An "X can't
+  be blocked this turn" grant for Whirler Rogue-style payoffs is still ⏳.)
+- ⏳ **Cost-sacrifice P/T visible to the ability's resolution.** `sac_other_filter`
+  pays the sacrifice during activation, but `resolve_effect` resets the
+  `sacrificed_power/toughness` scratch, so `Value::SacrificedToughness` reads 0 in
+  the ability's stack resolution. Blocks Witch's Oven's "two Food if toughness ≥ 4"
+  (shipped as always-one-Food). Capture cost-sacrifice stats on the ability's
+  StackItem and restore them before resolving.
+- ⏳ **Put-permanent-from-hand-onto-battlefield effect** for Goblin Lackey /
+  Warren Instigator (combat-damage → drop a Goblin from hand), Sneak Attack,
+  Elvish Piper. No `Effect::PutFromHandOntoBattlefield` yet.
+- ⏳ **`Value` arithmetic (count × k).** Goblin Piledriver wants "+2/+0 for each
+  other attacking Goblin"; `Value::CountMatching` gives the count but there's no
+  multiply, so the doubled pump can't be expressed. Add `Value::Times(a, b)`.
 
 - ✅ **Chosen-creature-type anthem static.** `StaticEffect::AnthemForChosenType
   { power, toughness, exclude_source }` reads the source's live
@@ -1023,6 +1035,8 @@ picking an item up.
 - ✅ **CR 701.29 — Fateseal** — `Effect::Fateseal { who, amount }`: look at the top N of a targeted opponent's library, the controller may bottom any (Scry's library-side mirror). Decided inline (the `wants_ui` suspend prompt is a follow-up).
 - ✅ **CR 701.57 — Discover N** — `Effect::Discover { n }`: exile from top until a nonland MV≤N, cast it free or put in hand (controller's choice), bottom the rest. Ships Geological Appraiser, Trumpeting Carnosaur. (Cascade-adjacent; shares the bottom-the-rest tail.)
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
+- ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
+- ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
 - 🟡 **CR 614 — Replacement Effects** — general "instead" framework; true damage *redirection* (614.9) + damage *halving*; general skip-step/turn (614.10). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
 - 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Remaining: source-of-your-choice restriction (the shield soaks any source's next hit).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Phasing / extra-step insertion still ⏳.
