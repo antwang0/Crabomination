@@ -60,6 +60,30 @@ fn shaile_counters_only_creatures_that_entered_this_turn() {
     assert_eq!(g.battlefield.iter().find(|c| c.id == opp).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "opponent creature unaffected");
 }
 
+/// Embrose, Dean of Shadow (Shaile's MDFC back) — "Whenever a creature you
+/// control with a +1/+1 counter on it dies, draw a card."
+#[test]
+fn embrose_draws_when_countered_creature_you_control_dies() {
+    let embrose_def = *catalog::shaile_dean_of_radiance().back_face.unwrap();
+    let mut g = two_player_game();
+    let embrose = g.add_card_to_battlefield(0, embrose_def);
+    g.clear_sickness(embrose);
+    // A creature you control with a +1/+1 counter on it.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    let hand_before = g.players[0].hand.len();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+
+    // Lethal damage → SBA moves it to the graveyard and the death trigger
+    // (which reads the dying creature's LKI counters) draws a card.
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().damage = 10;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Embrose draws when a +1/+1-countered creature you control dies");
+}
+
 // ── Increasing Vengeance ────────────────────────────────────────────────────
 
 #[test]

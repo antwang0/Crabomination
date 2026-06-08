@@ -2227,7 +2227,7 @@ impl serde::Serialize for CardInstance {
             on_adventure: self.on_adventure,
             saddled: self.saddled,
             split_cast: self.split_cast,
-            exiled_by: self.exiled_by.clone(),
+            exiled_by: self.exiled_by,
             exiled_with: self.exiled_with,
             entered_turn: self.entered_turn,
         };
