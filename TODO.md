@@ -16,18 +16,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Generic `CardExiled` event** (`EventKind::CardExiled` + a `GameEvent`
     fired from every move-to-exile site) — Stonebinder's Familiar's "whenever
     one or more cards are exiled during your turn" once-per-turn trigger.
-  - **Turn-scoped ETB delayed trigger** (a `DelayedTriggerKind` watching
-    `EntersBattlefield` until cleanup) — First Day of Class's "whenever a
-    creature you control enters this turn, +1/+1 counter + haste".
-  - **`SelectionRequirement::EnteredThisTurn`** — a per-instance
-    `entered_this_turn` flag (set on ETB, cleared at cleanup), distinct from
-    `summoning_sick`; Shaile, Dean of Radiance.
+  - ✅ **Turn-scoped ETB delayed trigger** — `Effect::CreaturesYouControl
+    EnteringThisTurn` + `DelayedKind::CreatureYouControlEntersThisTurn`, fired
+    from the dispatcher and expiring at cleanup; First Day of Class.
+  - ✅ **`SelectionRequirement::EnteredThisTurn`** — `CardInstance.entered_turn`
+    stamped centrally at every ETB; Shaile // Embrose.
   - **X-scaled MV target filter** (`ManaValueAtMost(Value)`) — Confront the
     Past's "planeswalker with mana value X or less" reanimate mode.
+  - **"Cast for its alternative mana cost?" predicate** — model the Mastery
+    cycle's "you may pay {Y} rather than this spell's mana cost" as a real
+    second castable cost + a `cast_via_alt_cost` flag + a predicate, so the
+    alt-cost-gated rider fires only when the alt cost was paid. Today Verdant
+    Mastery collapses the branch (both clauses always fire) and Fervent Mastery
+    is unimplemented.
   - The STX "still wrong" list in *Suggested next-up tasks* was largely stale:
     Frost Trickster / Eager First-Year / Owlin Shieldmage / Promising Duskmage /
-    Rise of Extus / Verdant Mastery were already faithful. Re-verify before
-    picking a sweep target.
+    Rise of Extus / Verdant Mastery / Illuminate History were already faithful.
+    Re-verify before picking a sweep target.
 - ⏳ **Phasing (CR 702.26) follow-ups** (engine shipped this run): a permanent
   that **enters phased out** (Reality Ripple-adjacent / Teferi's Veil grant);
   phasing **grant** to other permanents (Teferi's Veil "attacking creatures
