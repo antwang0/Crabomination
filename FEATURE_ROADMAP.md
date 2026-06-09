@@ -172,7 +172,11 @@ not how Magic works" moments.
   `Or`-of-creature-type filters and applies `OtherThanSource` against the live
   source id — Blex, Vexing Pest's Pest/Bat/Insect/Snake/Spider lord).
   Devotion-gated creature states (Nyx gods) ship via
-  `StaticEffect::NotCreatureWhileDevotionBelow` (CR 700.5). Remaining:
+  `StaticEffect::NotCreatureWhileDevotionBelow` (CR 700.5). Keyword **loss**
+  ships via `StaticEffect::LoseKeyword` (layer-6 `RemoveKeyword`; Nowhere to
+  Run strips opponents' Hexproof/Shroud), and `check_target_legality` reads
+  layer-computed Hexproof/Shroud so granted *and* stripped evasion both
+  affect targeting (fixes Lightning Greaves' granted Shroud). Remaining:
   broader "you may play" permissions and devotion-gated *non-type* states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
 - ⏳ **Regeneration shields & "the next time" prevention** as proper shields

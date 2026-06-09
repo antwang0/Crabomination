@@ -39,8 +39,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 - ⏳ **Card riders dropped this run (each wants one small primitive):**
   Glissa Sunslayer (combat-damage `ChooseMode` with per-mode targets — only the
   draw mode ships); Bristly Bill ✅ (double-counters activated shipped via
-  `DoubleCountersOnEach`); Nowhere to Run ("opponents' creatures lose
-  hexproof/shroud" static); Get Lost / Sip of Hemlock use the destroyed
+  `DoubleCountersOnEach`); Nowhere to Run ✅ ("opponents' creatures lose
+  hexproof/shroud" via `StaticEffect::LoseKeyword`; `check_target_legality`
+  now reads layer-computed Hexproof/Shroud); Get Lost / Sip of Hemlock use the destroyed
   permanent's *owner* for the follow-up (differs from "controller" only under
   control-stealing).
 
