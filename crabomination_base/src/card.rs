@@ -682,13 +682,13 @@ pub enum CumulativeUpkeepCost {
 }
 
 impl CumulativeUpkeepCost {
-    /// Short human-readable cost phrase for tooltips/logs ("{2}", "—Pay 1
-    /// life", "—Sacrifice a creature").
+    /// Short human-readable cost phrase for tooltips/logs ("{2}", "Pay 1
+    /// life", "Sacrifice").
     pub fn summary(&self) -> String {
         match self {
             CumulativeUpkeepCost::Mana(c) => c.summary(),
-            CumulativeUpkeepCost::Life(n) => format!("—Pay {n} life"),
-            CumulativeUpkeepCost::Sacrifice(_) => "—Sacrifice".into(),
+            CumulativeUpkeepCost::Life(n) => format!("Pay {n} life"),
+            CumulativeUpkeepCost::Sacrifice(_) => "Sacrifice".into(),
         }
     }
 }
