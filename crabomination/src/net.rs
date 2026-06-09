@@ -862,6 +862,13 @@ pub struct PermanentView {
     /// `project_permanent`.
     #[serde(default)]
     pub detained: bool,
+    /// `Some(n)` when this is an Impending permanent (CR 702.183) that still
+    /// has `n` time counters — i.e. it isn't a creature yet and becomes one in
+    /// `n` of its controller's end steps. Lets the client badge the countdown
+    /// instead of just showing a generic non-creature. `None` once it's a
+    /// creature (or never had impending). Populated by `project_permanent`.
+    #[serde(default)]
+    pub impending_counters: Option<u32>,
     /// True when the permanent's computed power or toughness differs
     /// from its base (printed) values — a UI hint for rendering
     /// modified P/T in a distinct color. Always false for non-creatures.

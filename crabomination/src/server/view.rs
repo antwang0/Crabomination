@@ -521,6 +521,15 @@ fn project_permanent(
         monstrous: card.monstrous,
         suspected: card.suspected,
         detained: card.detained_by.is_some(),
+        impending_counters: {
+            let n = card.counter_count(crate::card::CounterType::Time);
+            let is_impending = card
+                .definition
+                .keywords
+                .iter()
+                .any(|k| matches!(k, crate::card::Keyword::Impending(_)));
+            (is_impending && n > 0).then_some(n)
+        },
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
@@ -1695,6 +1704,25 @@ mod tests {
         let entry = view.players[0].graveyard.iter().find(|c| c.id == crime).unwrap();
         assert!(entry.retrace, "Retrace flagged on graveyard view");
         assert!(entry.flashback_cost.is_none(), "no flashback cost for Raven's Crime");
+    }
+
+    #[test]
+    fn permanent_view_surfaces_impending_countdown() {
+        // An Overlord with time counters reports its impending countdown and
+        // is projected as a non-creature; once the counters are gone it's a
+        // creature with no countdown.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::overlord_of_the_boilerbilges());
+        state.battlefield_find_mut(id).unwrap()
+            .add_counters(crate::card::CounterType::Time, 4);
+        let perm = project(&state, 0).battlefield.into_iter().find(|p| p.id == id).unwrap();
+        assert_eq!(perm.impending_counters, Some(4));
+        assert!(!perm.card_types.contains(&crate::card::CardType::Creature), "non-creature while counting down");
+        state.battlefield_find_mut(id).unwrap()
+            .remove_counters(crate::card::CounterType::Time, 4);
+        let perm = project(&state, 0).battlefield.into_iter().find(|p| p.id == id).unwrap();
+        assert_eq!(perm.impending_counters, None);
+        assert!(perm.card_types.contains(&crate::card::CardType::Creature), "creature once counters are gone");
     }
 
     #[test]
