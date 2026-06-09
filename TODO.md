@@ -57,8 +57,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - ✅ **Umezawa's Jitte** — ships via `EquipBonus.triggers_on_equipment` (the
     granted combat-damage trigger resolves with the Equipment as source, so the
     charge counters land on Jitte) + three `remove_counter_cost` activated
-    abilities (+2/+2 / -1/-1 / gain 2). ⏳ remaining: the trigger only fires on
-    combat damage **to a player** — `DealsCombatDamageToCreature` isn't dispatched.
+    abilities (+2/+2 / -1/-1 / gain 2). Charges on combat damage to a player
+    **and to a creature** (CR 510.2 dispatch now ships) — fires when blocked.
   - ✅ **Leyline Binding** — Domain cost reduction ({1} less per basic land type)
     ships via `StaticEffect::SelfCostReducedByDomain` + `Value::DomainCount`;
     Tribal Flames reuses the Value for its X-damage. (Leyline Binding, Tribal Flames.)
@@ -1056,8 +1056,17 @@ picking an item up.
   triggered_abilities` fire as printed on the equipped creature; with
   `triggers_on_equipment` they resolve with the Equipment as source (Umezawa's
   Jitte's charge counters). Test `cr_702_6e_equip_trigger_resolves_on_the_equipment`.
-  Remaining ⏳: combat-damage-**to-a-creature** isn't dispatched (Jitte only
-  charges on damage to a player).
+  Combat-damage-**to-a-creature** (CR 510.2) now dispatches too, so an
+  equipment trigger fires when its creature is blocked (Jitte charges).
+- ✅ **CR 510.2 — combat damage to a creature dispatch** — `resolve_combat_
+  damage_with_filter` records creature-vs-creature damage and fires
+  `DealsCombatDamageToCreature` triggers after the step (shared
+  `fire_combat_damage_triggers`). Tests `cr_510_2_*`.
+- ✅ **CR 509.1d — block tax** — `StaticEffect::BlockTaxToController` enforced in
+  `declare_blockers` (Archangel of Tithes). Tests `cr_509_1d_*`.
+- ✅ **CR 702.46 — Cipher** — `Effect::Cipher` + `CardInstance.encoded_on`;
+  combat-damage-to-player dispatch offers a free copy (Shadow Slice). Test
+  `cr_702_46_cipher_encodes_then_recasts_on_combat_damage`.
 - ✅ **CR 702.41 — Affinity (for artifacts)** — rides the existing
   `CardDefinition.affinity_filter` generic cost reduction (`SelectionRequirement::
   Artifact`). Somber Hoverguard, Qumulox, Sojourner's Companion, Carapace Forger.

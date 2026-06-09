@@ -264,6 +264,7 @@ fn exile_entry(card: &CardInstance) -> ExileCardView {
         mana_value: card.definition.cost.cmc(),
         is_token: card.is_token,
         exiled_by: card.exiled_by.map(|l| l.source),
+        encoded_on: card.encoded_on,
     }
 }
 
@@ -2431,5 +2432,21 @@ mod tests {
         assert!(k2.has_alternative_cost);
         assert!(!k2.alt_cost_needs_pitch, "Surge needs no pitch");
         assert_eq!(k2.alt_cost_label, "{1}{R}", "surge cost label rendered");
+    }
+
+    #[test]
+    fn exile_view_surfaces_cipher_encoding() {
+        // CR 702.46 — an exiled card encoded on a creature surfaces its carrier.
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let mut card =
+            crate::card::CardInstance::new(crate::card::CardId(999), catalog::shadow_slice(), 0);
+        card.encoded_on = Some(bear);
+        g.exile.push(card);
+        let view = project(&g, 0);
+        assert!(
+            view.exile.iter().any(|e| e.encoded_on == Some(bear)),
+            "exile view surfaces the cipher carrier"
+        );
     }
 }

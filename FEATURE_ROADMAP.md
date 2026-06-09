@@ -410,7 +410,7 @@ feature; sweep card-batch by card-batch.
   `GameAction::CastSpellReplicate { times }`: pay the replicate cost any number
   of times, copy the spell that many times via `copy_stack_spell`; Pyromatics,
   Train of Thought, Shattering Spree), ⏳ Overload (note: already shipped as
-  an alt-cost `effect_override`; see Tier 1), ⏳ Cipher, ⏳ Surge, ✅ Spectacle
+  an alt-cost `effect_override`; see Tier 1), ✅ Cipher (CR 702.46 — `Effect::Cipher` + `CardInstance.encoded_on`; Shadow Slice), ⏳ Surge, ✅ Spectacle
   (`shortcut::spectacle` / `AlternativeCost.condition` —
   `Predicate::PlayerLostLifeThisTurn` + `Player.lost_life_this_turn`, CR
   702.111: cast for the spectacle cost if an opponent lost life this turn;

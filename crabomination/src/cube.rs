@@ -468,6 +468,7 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: white/multicolor staples ──
+        archangel_of_tithes,
         defenestrated_phantom,
         museum_nightwatch,
         crowd_control_warden,
@@ -1376,6 +1377,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        shadow_slice,
         shady_informant,
         alley_assailant,
         basilica_stalker,
