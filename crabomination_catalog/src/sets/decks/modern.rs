@@ -32703,3 +32703,65 @@ pub fn ankh_of_mishra() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Miracle (CR 702.94) ──────────────────────────────────────────────────────
+// `CardDefinition.miracle = Some(cost)` grants the miracle alt-cost when the
+// card is the first one its owner draws in a turn (see `maybe_grant_miracle`).
+
+/// Bonfire of the Damned — {X}{X}{R} Sorcery. Miracle {X}{R}. Deal X damage to
+/// target player or planeswalker and X damage to each creature that player /
+/// that planeswalker's controller controls (collapsed to "each opponent
+/// creature" in 1v1).
+pub fn bonfire_of_the_damned() -> CardDefinition {
+    CardDefinition {
+        name: "Bonfire of the Damned",
+        cost: cost(&[x(), x(), r()]),
+        card_types: vec![CardType::Sorcery],
+        miracle: Some(ManaCost { symbols: vec![ManaSymbol::X, ManaSymbol::Colored(Color::Red)] }),
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::XFromCost,
+            },
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::XFromCost,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Temporal Mastery — {5}{U}{U} Sorcery. Miracle {1}{U}. Take an extra turn
+/// after this one. (The self-exile rider is dropped — the spell goes to the
+/// graveyard as normal.)
+pub fn temporal_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Temporal Mastery",
+        cost: cost(&[generic(5), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        miracle: Some(cost(&[generic(1), u()])),
+        effect: Effect::TakeExtraTurn { who: PlayerRef::You, count: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Reforge the Soul — {4}{R}{R} Sorcery. Miracle {1}{R}. Each player discards
+/// their hand, then draws seven cards.
+pub fn reforge_the_soul() -> CardDefinition {
+    CardDefinition {
+        name: "Reforge the Soul",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        miracle: Some(cost(&[generic(1), r()])),
+        effect: Effect::Seq(vec![
+            Effect::Discard { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(100), random: false },
+            Effect::Draw { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(7) },
+        ]),
+        ..Default::default()
+    }
+}

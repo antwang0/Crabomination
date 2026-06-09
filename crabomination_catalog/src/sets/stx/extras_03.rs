@@ -132,6 +132,7 @@ pub fn lurking_deadeye() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -193,6 +194,7 @@ pub fn aether_helix() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -246,6 +248,7 @@ pub fn reflective_golem() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -308,6 +311,7 @@ pub fn tempest_caller() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -377,6 +381,7 @@ pub fn pillardrop_warden() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -448,6 +453,7 @@ pub fn devourer_of_memory() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -505,6 +511,7 @@ pub fn mavindas_verdict() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -564,6 +571,7 @@ pub fn witherbloom_skillchaser() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -627,6 +635,7 @@ pub fn quandrix_pop_quiz() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -677,6 +686,7 @@ pub fn inkwood_scrivener() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -731,6 +741,7 @@ pub fn furnace_hellkite() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -779,6 +790,7 @@ pub fn pinion_lecturer() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -833,6 +845,7 @@ pub fn sparkling_insight() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -889,6 +902,7 @@ pub fn pop_quiz_coach() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -939,6 +953,7 @@ pub fn soothing_hush() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1039,6 +1054,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1104,6 +1120,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1162,6 +1179,7 @@ pub fn inkfathom_divers() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1226,6 +1244,7 @@ pub fn quandrix_quickener() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1292,6 +1311,7 @@ pub fn search_for_glory() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1353,6 +1373,7 @@ pub fn fervent_strike() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1451,6 +1472,7 @@ pub fn waker_of_waves() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1511,6 +1533,7 @@ pub fn discover_the_formula() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1564,6 +1587,7 @@ pub fn mortician_beetle() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1620,6 +1644,7 @@ pub fn vespine_strix() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1687,6 +1712,7 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1742,6 +1768,7 @@ pub fn wandering_mind() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1809,6 +1836,7 @@ pub fn lecturing_loxodon() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1871,6 +1899,7 @@ pub fn sequence_engine() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1940,6 +1969,7 @@ pub fn curriculum_crab() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -1992,6 +2022,7 @@ pub fn pyrotechnics() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2046,6 +2077,7 @@ pub fn stormwild_capridor() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2109,6 +2141,7 @@ pub fn final_payment() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2201,6 +2234,7 @@ pub fn witchs_cauldron() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2262,6 +2296,7 @@ pub fn steady_stance() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2330,6 +2365,7 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2390,6 +2426,7 @@ pub fn revitalize() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2447,6 +2484,7 @@ pub fn grim_bounty() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2543,6 +2581,7 @@ pub fn growth_spiral() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2596,6 +2635,7 @@ pub fn idyllic_tutor() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2661,6 +2701,7 @@ pub fn gift_of_estates() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2715,6 +2756,7 @@ pub fn pillage() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2772,6 +2814,7 @@ pub fn slip_through_space() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2819,6 +2862,7 @@ pub fn doomskar() -> CardDefinition {
         bestow: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2907,6 +2951,7 @@ pub fn mind_drain() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -2965,6 +3010,7 @@ pub fn hindering_light() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3026,6 +3072,7 @@ pub fn soul_shatter() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3102,6 +3149,7 @@ pub fn lurking_predators() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3152,6 +3200,7 @@ pub fn prowling_caracal() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3207,6 +3256,7 @@ pub fn elvish_visionary() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3275,6 +3325,7 @@ pub fn sungrass_egg() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3347,6 +3398,7 @@ pub fn mascot_summoning() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3402,6 +3454,7 @@ pub fn scry_inversion() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3458,6 +3511,7 @@ pub fn cunning_rhetoric() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3519,6 +3573,7 @@ pub fn library_larcenist() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3576,6 +3631,7 @@ pub fn deans_list() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }
 
@@ -3629,5 +3685,6 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     }
 }

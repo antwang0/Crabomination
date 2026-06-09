@@ -448,12 +448,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   for the reconfigure cost; unattach restores creature-ness. Remaining: a
   client UI affordance to trigger the unattach (the `E`-key equip flow only
   attaches today).
-- **Warp / Miracle alt-cast keywords.** Two "cast-mode" keywords still dropped
-  on their cards: Warp (Mightform Harmonizer, Pinnacle Emissary — cast cheaply,
-  exile at end step, recast later — a Suspend/Plot-adjacent exile-and-recast),
-  and Miracle as a real card-castable cost (Metamorphosis Fanatic — only the
-  Lorehold "granted miracle" effect exists today, not a
-  `CardDefinition.miracle_cost` field). **Offspring {N}** (CR 702.166) now ships
+- **Warp alt-cast keyword.** Warp (Mightform Harmonizer, Pinnacle Emissary —
+  cast cheaply, exile at end step, recast later — a Suspend/Plot-adjacent
+  exile-and-recast) is still dropped on its cards. **Miracle (CR 702.94) ✅** —
+  `CardDefinition.miracle` + `maybe_grant_miracle` (first-draw alt-cost grant);
+  Metamorphosis Fanatic can now wire its real miracle cost.
+  **Offspring {N}** (CR 702.166) now ships
   via `Keyword::Offspring(cost)` reusing the Kicker pipeline (`has_kicker`
   returns the cost; `SpellWasKicked` gates an ETB 1/1 token-copy) — Thundertrap
   Trainer.

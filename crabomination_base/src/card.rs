@@ -1186,6 +1186,13 @@ pub struct CardDefinition {
     /// Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub split: Option<Box<SplitCard>>,
+    /// CR 702.94 — Miracle. `Some(cost)` lets the owner reveal this card as
+    /// the first card they draw in a turn and cast it for the miracle `cost`
+    /// (cheaper than its mana cost). Wired via a draw-time grant of the
+    /// miracle alt-cost (`granted_alt_cast_cost_eot` + `may_play_until`).
+    /// Defaults to `None` for snapshot back-compat.
+    #[serde(default)]
+    pub miracle: Option<crate::mana::ManaCost>,
 }
 
 /// CR 709 — the split layout. The left half lives on the parent

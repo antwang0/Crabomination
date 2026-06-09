@@ -3479,6 +3479,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     };
     let pest_id = g.add_card_to_battlefield(0, pest_def);
     g.clear_sickness(pest_id);

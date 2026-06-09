@@ -3633,9 +3633,33 @@ impl GameState {
         match self.players[p].draw_top() {
             Some(id) => {
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
+                self.maybe_grant_miracle(p, id);
                 true
             }
             None => false,
+        }
+    }
+
+    /// CR 702.94 — Miracle. If `card_id` was the first card `p` drew this
+    /// turn and it has a printed miracle cost, grant the miracle alt-cost
+    /// until end of turn (the owner may then cast it for that cost via
+    /// `GameAction::CastFromZoneWithoutPaying`). The reveal is treated as
+    /// automatic — the grant only adds a cheaper *option*, so revealing is
+    /// never a downside for the engine; a human simply declines to cast.
+    pub(crate) fn maybe_grant_miracle(&mut self, p: usize, card_id: CardId) {
+        if self.players[p].cards_drawn_this_turn != 1 {
+            return;
+        }
+        if let Some(card) = self.players[p].hand.iter_mut().find(|c| c.id == card_id)
+            && let Some(cost) = card.definition.miracle.clone()
+        {
+            card.may_play_until = Some(crate::card::MayPlayPermission {
+                player: p,
+                granted_turn: self.turn_number,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                exile_after: false,
+            });
+            card.granted_alt_cast_cost_eot = Some(cost);
         }
     }
 

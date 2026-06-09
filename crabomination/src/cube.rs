@@ -1092,6 +1092,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         opt,
         consider,
         thought_scour,
+        // ── Miracle (CR 702.94) ──
+        temporal_mastery,
         ancestral_recall,
         // frantic_search — ✅ "up to three" untap honored via
         // `Effect::Untap.up_to`. Disabled in cube pending color-balance
@@ -1990,6 +1992,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         scab_clan_mauler,
         gorehorn_minotaurs,
         bloodfray_giant,
+        // ── Miracle (CR 702.94) ──
+        bonfire_of_the_damned,
+        reforge_the_soul,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);

@@ -433,7 +433,11 @@ feature; sweep card-batch by card-batch.
   ✅ Buyback (`Keyword::Buyback(cost)` + `GameAction::CastSpellBuyback` —
   CR 702.27, optional additional cost; bought-back spell returns to its
   owner's hand instead of the graveyard on resolution; surfaced in
-  `PlayerView.buyback_hand`; Corpse Dance), ⏳ Miracle,
+  `PlayerView.buyback_hand`; Corpse Dance), ✅ Miracle
+  (CR 702.94 — `CardDefinition.miracle = Some(cost)`; the turn's first draw
+  stamps the miracle alt-cost + may-play window via `maybe_grant_miracle`,
+  cast for that cost through `CastFromZoneWithoutPaying`; Bonfire of the
+  Damned, Temporal Mastery, Reforge the Soul),
   ⏳ Bloodrush, ✅ Unleash (`Keyword::Unleash` + `shortcut::unleash()` — CR
   702.98: ETB "may enter with a +1/+1 counter" + computed `CantBlock` while it
   has one; Rakdos Cackler, Gore-House Chainwalker, Spawn of Rix Maadi),

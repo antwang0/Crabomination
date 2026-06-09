@@ -2447,6 +2447,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     };
 
     let mut g = two_player_game();
@@ -2541,6 +2542,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         plot_cost: None,
         split: None,
         saga_chapters: vec![],
+        miracle: None,
     };
 
     let mut g = two_player_game();

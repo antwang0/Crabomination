@@ -39478,3 +39478,46 @@ fn ankh_of_mishra_pings_land_controller_on_entry() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life - 2, "land's controller takes 2 when a land enters");
 }
+
+// ── Miracle (CR 702.94) ──────────────────────────────────────────────────────
+
+#[test]
+fn miracle_first_draw_grants_alt_cost_and_casts_cheaply() {
+    use crate::card::CounterType;
+    let _ = CounterType::Loyalty;
+    let mut g = two_player_game();
+    // Put Bonfire on top so the turn's first draw reveals it.
+    let bonfire = g.add_card_to_library(0, catalog::bonfire_of_the_damned());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut events = vec![];
+    assert!(g.draw_one(0, &mut events), "drew the top card");
+    // Miracle stamped the alt-cost on the drawn card.
+    let card = g.players[0].hand.iter().find(|c| c.id == bonfire).expect("in hand");
+    assert!(card.granted_alt_cast_cost_eot.is_some(), "miracle alt-cost granted on first draw");
+    assert!(card.may_play_until.is_some(), "miracle may-play window granted");
+    // Cast it for the miracle cost {X}{R} with X=2 (pay {2}{R}).
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bonfire, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("miracle cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 2, "X=2 damage to target player");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "X=2 killed the 2/2");
+}
+
+#[test]
+fn miracle_not_granted_on_later_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bonfire = g.add_card_to_library(0, catalog::bonfire_of_the_damned());
+    g.players[0].cards_drawn_this_turn = 0;
+    let mut events = vec![];
+    g.draw_one(0, &mut events); // first draw = island
+    g.draw_one(0, &mut events); // second draw = bonfire (not first)
+    let card = g.players[0].hand.iter().find(|c| c.id == bonfire).expect("in hand");
+    assert!(card.granted_alt_cast_cost_eot.is_none(), "no miracle on a non-first draw");
+}
