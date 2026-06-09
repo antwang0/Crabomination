@@ -221,8 +221,6 @@ fn colorless_pool() -> Vec<CardFactory> {
         scrapheap_scrounger,
         chromatic_sphere,
         endless_one,
-        // ── modern_decks: affinity artifact creature ──
-        frogmite,
 
         // ── modern_decks: draw-engine artifact ──
         the_endstone,

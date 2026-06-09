@@ -37437,23 +37437,6 @@ pub fn baral_chief_of_compliance() -> CardDefinition {
     }
 }
 
-/// Frogmite — {4} 2/2 artifact creature with Affinity for artifacts.
-pub fn frogmite() -> CardDefinition {
-    CardDefinition {
-        name: "Frogmite",
-        cost: cost(&[generic(4)]),
-        card_types: vec![CardType::Artifact, CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Frog],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        affinity_filter: Some(SelectionRequirement::Artifact),
-        ..Default::default()
-    }
-}
-
 /// Lightning Mauler — {1}{R} 2/1 Human Wizard. Soulbond; both paired creatures
 /// have haste.
 pub fn lightning_mauler() -> CardDefinition {

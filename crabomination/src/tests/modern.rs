@@ -42896,7 +42896,7 @@ fn reality_shift_exiles_and_manifests() {
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.add_card_to_library(1, catalog::lightning_bolt()); // becomes a face-down 2/2
     let id = g.add_card_to_hand(0, catalog::reality_shift());
-    for c in [Color::Blue] { g.players[0].mana_pool.add(c, 1); }
+    g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
@@ -43069,17 +43069,6 @@ fn baral_reduces_instant_sorcery_cost() {
     assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, None), 1, "instant costs 1 less");
     let bear = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
     assert_eq!(cost_reduction_for_spell(&g, 0, &bear, None), 0, "creatures unaffected");
-}
-
-/// Frogmite's Affinity for artifacts reduces its generic cost by {1} per artifact.
-#[test]
-fn frogmite_affinity_reduces_cost() {
-    use crate::game::actions::cost_reduction_for_spell;
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::chromatic_sphere());
-    g.add_card_to_battlefield(0, catalog::chromatic_sphere());
-    let frog = crate::card::CardInstance::new(g.next_id(), catalog::frogmite(), 0);
-    assert_eq!(cost_reduction_for_spell(&g, 0, &frog, None), 2, "two artifacts -> 2 off");
 }
 
 /// Lightning Mauler grants haste to its soulbond partner.
