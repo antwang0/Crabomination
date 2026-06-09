@@ -33836,3 +33836,228 @@ pub fn shattering_spree() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Ultramarines Honour Guard — {3}{W} 2/2 Astartes Warrior. Squad {2}. Other
+/// creatures you control get +1/+1.
+pub fn ultramarines_honour_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Ultramarines Honour Guard",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Squad(cost(&[generic(2)]))],
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "Other creatures you control get +1/+1.",
+            effect: crate::effect::StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![crate::effect::shortcut::squad_etb()],
+        ..Default::default()
+    }
+}
+
+/// Securitron Squadron — {1}{W} 2/2 Robot. Squad {3}. Vigilance. Whenever a
+/// creature token you control enters, put a +1/+1 counter on it.
+pub fn securitron_squadron() -> CardDefinition {
+    CardDefinition {
+        name: "Securitron Squadron",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance, Keyword::Squad(cost(&[generic(3)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::IsToken),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Powder Ganger — {2}{R} 2/2 Human Rogue. Squad {2}. When it enters, destroy
+/// up to one target artifact (modeled as a regular target).
+pub fn powder_ganger() -> CardDefinition {
+    CardDefinition {
+        name: "Powder Ganger",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Squad(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            etb(Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Space Marine Devastator — {3}{W} 3/3 Astartes Warrior. Squad {2}. When it
+/// enters, destroy up to one target artifact or enchantment.
+pub fn space_marine_devastator() -> CardDefinition {
+    CardDefinition {
+        name: "Space Marine Devastator",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Squad(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            etb(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Gary Clone — {1}{W} 1/3 Human Citizen. Squad {2}. Whenever it attacks, each
+/// creature you control named Gary Clone gets +1/+0 until end of turn.
+pub fn gary_clone() -> CardDefinition {
+    CardDefinition {
+        name: "Gary Clone",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Squad(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            crate::effect::shortcut::on_attack(Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasName("Gary Clone".into())
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Arco-Flagellant — {2}{B} 3/1 Human. Squad {2}. Can't block. Pay 3 life:
+/// gains indestructible until end of turn (Endurant).
+pub fn arco_flagellant() -> CardDefinition {
+    CardDefinition {
+        name: "Arco-Flagellant",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock, Keyword::Squad(cost(&[generic(2)]))],
+        triggered_abilities: vec![crate::effect::shortcut::squad_etb()],
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            life_cost: 3,
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Roadkill Rodney — {2} 2/1 Robot. Squad {3}. Deathtouch. Whenever it deals
+/// combat damage to a player, create a Mutagen token ({1}, {T}, Sacrifice: put
+/// a +1/+1 counter on target creature; sorcery speed).
+pub fn roadkill_rodney() -> CardDefinition {
+    let mutagen = TokenDefinition {
+        name: "Mutagen".to_string(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Artifact],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes::default(),
+        activated_abilities: vec![crate::card::ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        equipped_bonus: None,
+    };
+    CardDefinition {
+        name: "Roadkill Rodney",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Robot],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch, Keyword::Squad(cost(&[generic(3)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: mutagen,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -40300,3 +40300,134 @@ fn affordances_surface_squad_and_replicate() {
     assert!(a.squadable.contains(&squad), "Squad card is squadable");
     assert!(a.replicatable.contains(&repl), "Replicate card is replicatable");
 }
+
+/// Ultramarines Honour Guard buffs other creatures you control by +1/+1.
+#[test]
+fn ultramarines_honour_guard_anthems_other_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let guard = g.add_card_to_battlefield(0, catalog::ultramarines_honour_guard());
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 3, "other creature buffed");
+    assert_eq!(g.computed_permanent(guard).unwrap().power, 2, "not itself");
+}
+
+/// Securitron Squadron's Squad token copy enters and gains a +1/+1 counter from
+/// Securitron's "creature token you control enters" trigger.
+#[test]
+fn securitron_squadron_counters_its_squad_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::securitron_squadron());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellSquad {
+        card_id: id, times: 1, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Securitron Squadron with Squad once");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Securitron Squadron")
+        .expect("squad token");
+    assert_eq!(token.counter_count(CounterType::PlusOnePlusOne), 1,
+        "token gained a +1/+1 counter");
+}
+
+/// Powder Ganger's ETB destroys an artifact.
+#[test]
+fn powder_ganger_etb_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::powder_ganger());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Powder Ganger");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "ETB destroyed the artifact");
+}
+
+/// Space Marine Devastator's ETB destroys an enchantment.
+#[test]
+fn space_marine_devastator_etb_destroys_enchantment() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::gaeas_anthem());
+    let id = g.add_card_to_hand(0, catalog::space_marine_devastator());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Space Marine Devastator");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ench).is_none(), "ETB destroyed the enchantment");
+}
+
+/// Gary Clone's attack trigger pumps every Gary Clone you control +1/+0.
+#[test]
+fn gary_clone_attack_pumps_all_garys() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::gary_clone());
+    let b = g.add_card_to_battlefield(0, catalog::gary_clone());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ]).expect("attacks");
+    drain_stack(&mut g);
+    // Each attack trigger pumps both Garys +1/+0; two triggers → +2/+0 each.
+    assert_eq!(g.computed_permanent(a).unwrap().power, 1 + 2, "both attack triggers buff a");
+    assert_eq!(g.computed_permanent(b).unwrap().power, 1 + 2, "both attack triggers buff b");
+}
+
+/// Zephyrim is a 3/3 flier with vigilance castable for its normal cost.
+#[test]
+fn zephyrim_is_a_flying_vigilant_three_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::zephyrim());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Zephyrim");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("Zephyrim on battlefield");
+    assert!(c.has_keyword(&crate::card::Keyword::Flying), "flying");
+    assert!(c.has_keyword(&crate::card::Keyword::Vigilance), "vigilance");
+    assert_eq!((c.power(), c.toughness()), (3, 3));
+}
+
+/// Arco-Flagellant's "Pay 3 life" ability grants it indestructible.
+#[test]
+fn arco_flagellant_pays_life_for_indestructible() {
+    let mut g = two_player_game();
+    let arco = g.add_card_to_battlefield(0, catalog::arco_flagellant());
+    g.clear_sickness(arco);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: arco, ability_index: 0, target: None, x_value: None,
+    }).expect("pay 3 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 3, "paid 3 life");
+    assert!(g.battlefield_find(arco).unwrap().has_keyword(&crate::card::Keyword::Indestructible),
+        "gains indestructible until end of turn");
+}
+
+/// Roadkill Rodney has deathtouch and Squad; its Squad token copy enters too.
+#[test]
+fn roadkill_rodney_squad_mints_deathtouch_copies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::roadkill_rodney());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellSquad {
+        card_id: id, times: 1, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Roadkill Rodney with Squad once");
+    drain_stack(&mut g);
+    let rodneys: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Roadkill Rodney").collect();
+    assert_eq!(rodneys.len(), 2, "original + squad copy");
+    assert!(rodneys.iter().all(|c| c.has_keyword(&crate::card::Keyword::Deathtouch)),
+        "copies keep deathtouch");
+}
