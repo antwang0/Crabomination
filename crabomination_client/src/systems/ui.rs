@@ -25,6 +25,10 @@ pub struct PeekPopup;
 #[derive(Component)]
 pub struct GraveyardBrowser;
 
+/// Root marker for the exile-zone browser popup (toggled with V).
+#[derive(Component)]
+pub struct ExileBrowser;
+
 /// One card tile inside the graveyard browser. Stores the card's
 /// display name so the hover-name-tooltip system can render it.
 #[derive(Component)]
@@ -405,6 +409,7 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
             ("[  ]  \\", "Animation: slower · faster · reset"),
             ("`", "Debug console"),
             ("X", "Export game state"),
+            ("V", "Browse the exile zone"),
         ],
     ),
     (
@@ -979,6 +984,193 @@ pub fn graveyard_browser(
     }
 }
 
+/// Exile-zone browser: V toggles a popup listing every exiled card with
+/// badges for the engine state that matters (face down, may-play grants,
+/// Cipher encodes, linked "until X leaves" exiles). Mirrors the graveyard
+/// browser's layout; tiles reuse `GraveyardCardItem` so the shared
+/// hover-name tooltip works.
+pub fn exile_browser(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    asset_server: Res<AssetServer>,
+    ui_fonts: Res<UiFonts>,
+    existing: Query<Entity, With<ExileBrowser>>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
+) {
+    let close_requested = keyboard.just_pressed(KeyCode::Escape)
+        || overlay_interaction
+            .iter()
+            .any(|i| *i == Interaction::Pressed);
+    if !existing.is_empty() && (close_requested || keyboard.just_pressed(KeyCode::KeyV)) {
+        for entity in &existing {
+            commands.entity(entity).despawn();
+        }
+        return;
+    }
+    if !existing.is_empty() || !keyboard.just_pressed(KeyCode::KeyV) {
+        return;
+    }
+    let Some(cv) = view.0.as_ref() else { return };
+
+    // (display name, badge, face_down) per exiled card.
+    let entries: Vec<(String, Option<String>, bool)> = cv
+        .exile
+        .iter()
+        .map(|c| {
+            let mut badges: Vec<String> = Vec::new();
+            if c.face_down {
+                badges.push("Face down".to_string());
+            }
+            if let Some(p) = c.may_play_recipient {
+                badges.push(if p == cv.your_seat {
+                    "May play (you)".to_string()
+                } else {
+                    format!("May play (P{p})")
+                });
+            }
+            if c.encoded_on.is_some() {
+                badges.push("Cipher: encoded".to_string());
+            }
+            if c.exiled_by.is_some() {
+                badges.push("Returns when exiler leaves".to_string());
+            }
+            let badge = (!badges.is_empty()).then(|| badges.join(" · "));
+            (c.name.clone(), badge, c.face_down)
+        })
+        .collect();
+    let count = entries.len();
+    let panel_width = BROWSER_CARD_WIDTH * BROWSER_COLS as f32 + 80.0;
+
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG),
+            Button,
+            ExileBrowser,
+        ))
+        .id();
+
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(16.0)),
+                row_gap: Val::Px(12.0),
+                width: Val::Px(panel_width),
+                max_height: Val::Percent(85.0),
+                overflow: Overflow::scroll_y(),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+    commands.entity(root).add_child(panel);
+
+    commands.entity(panel).with_children(|panel| {
+        panel.spawn((
+            Text::new(format!("Exile ({count} cards)")),
+            ui_fonts.tf(18.0),
+            TextColor(theme::TEXT_PRIMARY),
+            Pickable::IGNORE,
+        ));
+        if entries.is_empty() {
+            panel.spawn((
+                Text::new("Empty"),
+                ui_fonts.tf(14.0),
+                TextColor(theme::TEXT_SECONDARY),
+                Pickable::IGNORE,
+            ));
+        } else {
+            panel
+                .spawn((
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        flex_wrap: FlexWrap::Wrap,
+                        column_gap: Val::Px(8.0),
+                        row_gap: Val::Px(8.0),
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ))
+                .with_children(|grid| {
+                    for (name, badge, face_down) in &entries {
+                        let tile_children = |tile: &mut ChildSpawnerCommands| {
+                            if !face_down {
+                                let texture: Handle<Image> =
+                                    asset_server.load(&scryfall::card_asset_path(name));
+                                tile.spawn((
+                                    ImageNode { image: texture, ..default() },
+                                    Node {
+                                        width: Val::Percent(100.0),
+                                        height: Val::Percent(100.0),
+                                        ..default()
+                                    },
+                                    Pickable::IGNORE,
+                                ));
+                            } else {
+                                // Masked card: a blank tile with the name.
+                                tile.spawn((
+                                    Text::new(name.clone()),
+                                    ui_fonts.tf(12.0),
+                                    TextColor(theme::TEXT_SECONDARY),
+                                    Pickable::IGNORE,
+                                ));
+                            }
+                            if let Some(label) = badge {
+                                tile.spawn((
+                                    Node {
+                                        position_type: PositionType::Absolute,
+                                        bottom: Val::Px(2.0),
+                                        left: Val::Px(2.0),
+                                        right: Val::Px(2.0),
+                                        justify_content: JustifyContent::Center,
+                                        ..default()
+                                    },
+                                    BackgroundColor(theme::OVERLAY_BG),
+                                    Pickable::IGNORE,
+                                ))
+                                .with_children(|b| {
+                                    b.spawn((
+                                        Text::new(label.clone()),
+                                        ui_fonts.tf(10.0),
+                                        TextColor(theme::TEXT_PRIMARY),
+                                        Pickable::IGNORE,
+                                    ));
+                                });
+                            }
+                        };
+                        grid.spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(BROWSER_CARD_WIDTH),
+                                height: Val::Px(BROWSER_CARD_HEIGHT),
+                                ..default()
+                            },
+                            GraveyardCardItem { name: name.clone() },
+                        ))
+                        .with_children(tile_children);
+                    }
+                });
+        }
+        panel.spawn((
+            Text::new("V / Esc / click outside to close"),
+            ui_fonts.tf(11.0),
+            TextColor(theme::TEXT_MUTED),
+            Pickable::IGNORE,
+        ));
+    });
+}
+
 pub fn pile_tooltip(
     mut commands: Commands,
     view: Res<CurrentView>,
@@ -1073,7 +1265,7 @@ pub fn graveyard_card_hover_name(
     ui_fonts: Res<UiFonts>,
     items: Query<(&Interaction, &GraveyardCardItem)>,
     existing: Query<Entity, With<GraveyardCardNameTooltip>>,
-    browser: Query<(), With<GraveyardBrowser>>,
+    browser: Query<(), Or<(With<GraveyardBrowser>, With<ExileBrowser>)>>,
     mut current_text: Query<&mut Text, With<GraveyardCardNameTooltip>>,
 ) {
     // No browser open → drop the tooltip.

@@ -801,6 +801,11 @@ pub struct ExileCardView {
     /// it to the carrier. `None` for plain exile.
     #[serde(default)]
     pub encoded_on: Option<CardId>,
+    /// CR 708 — exiled face down (hideaway's hidden card, foretold cards).
+    /// The projection masks `name`/`mana_value` for every viewer except the
+    /// card's controller.
+    #[serde(default)]
+    pub face_down: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -424,6 +424,17 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    // CR 702.183 — Impending countdown: not a creature until the last time
+    // counter comes off (one per controller's end step).
+    if let Some(n) = p.impending_counters
+        && n > 0
+    {
+        lines.push(format!(
+            "(impending: becomes a creature in {n} end step{})",
+            if n == 1 { "" } else { "s" }
+        ));
+    }
+
     if p.tapped {
         lines.push(String::from("(tapped)"));
     }
@@ -1137,6 +1148,14 @@ mod tests {
             assert!(keyword_reminder(&kw).is_some(),
                 "expected reminder text for {kw:?}");
         }
+    }
+
+    #[test]
+    fn impending_countdown_shows_in_tooltip() {
+        let mut p = make_permanent_view(0, 4);
+        p.impending_counters = Some(3);
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("impending: becomes a creature in 3 end steps"), "got: {body}");
     }
 
     #[test]

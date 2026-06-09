@@ -94,7 +94,7 @@ fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
                 decision: (viewer == Some(acting)).then(|| (&pd.decision).into()),
             }
         }),
-        exile: state.exile.iter().map(exile_entry).collect(),
+        exile: state.exile.iter().map(|c| exile_entry(c, viewer)).collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
@@ -255,16 +255,20 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
     Some(crate::net::CombatPreview { damage_to_players, lifegain_to_players, dying_creatures: dying })
 }
 
-fn exile_entry(card: &CardInstance) -> ExileCardView {
+fn exile_entry(card: &CardInstance, viewer: Option<usize>) -> ExileCardView {
+    // CR 708 — a face-down exiled card (hideaway, foretell) is hidden from
+    // everyone but its controller: mask the identity.
+    let hidden = card.face_down && viewer != Some(card.controller);
     ExileCardView {
         id: card.id,
-        name: card.definition.name.to_string(),
+        name: if hidden { "Face-down card".to_string() } else { card.definition.name.to_string() },
         owner: card.owner,
         may_play_recipient: card.may_play_until.as_ref().map(|p| p.player),
-        mana_value: card.definition.cost.cmc(),
+        mana_value: if hidden { 0 } else { card.definition.cost.cmc() },
         is_token: card.is_token,
         exiled_by: card.exiled_by.map(|l| l.source),
         encoded_on: card.encoded_on,
+        face_down: card.face_down,
     }
 }
 
@@ -1692,6 +1696,23 @@ mod tests {
         assert_eq!(view0.exile[0].owner, 0);
         assert_eq!(view1.exile.len(), 1);
         assert_eq!(view1.exile[0].name, view0.exile[0].name);
+    }
+
+    #[test]
+    fn face_down_exiled_card_is_masked_from_opponents() {
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let idx = state.battlefield.iter().position(|c| c.id == id).unwrap();
+        let mut card = state.battlefield.remove(idx);
+        card.face_down = true;
+        state.exile.push(card);
+
+        let owner_view = project(&state, 0);
+        assert_eq!(owner_view.exile[0].name, "Grizzly Bears", "controller sees the card");
+        assert!(owner_view.exile[0].face_down);
+        let opp_view = project(&state, 1);
+        assert_eq!(opp_view.exile[0].name, "Face-down card", "opponent sees a mask");
+        assert_eq!(opp_view.exile[0].mana_value, 0);
     }
 
     #[test]

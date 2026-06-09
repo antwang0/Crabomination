@@ -76,7 +76,7 @@ use systems::quality::{
     EscConsumed, SettingsOpen,
 };
 use systems::ui::{
-    graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, hover_card_preview,
+    exile_browser, graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, hover_card_preview,
     toggle_shortcut_help, update_castable_highlights, update_dying_highlights,
     update_activatable_highlights, peek_popup, pile_tooltip, reveal_popup, RevealPopupState,
 };
@@ -454,6 +454,7 @@ fn main() {
                 animate_hover_lift,
                 peek_popup,
                 graveyard_browser,
+                exile_browser,
                 pile_tooltip,
                 reveal_popup,
                 animate_flip,
