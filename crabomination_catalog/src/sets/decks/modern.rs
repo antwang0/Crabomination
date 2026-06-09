@@ -34151,3 +34151,119 @@ pub fn sicarian_infiltrator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: put-creature-from-hand cheats (Effect::PutFromHandOntoBattlefield) ──
+
+/// Sneak Attack — {2}{R} Enchantment. "{R}: You may put a creature card from
+/// your hand onto the battlefield. That creature gains haste. Sacrifice it at
+/// the beginning of the next end step."
+pub fn sneak_attack() -> CardDefinition {
+    CardDefinition {
+        name: "Sneak Attack",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                count: Value::Const(1),
+                tapped: false,
+                haste: true,
+                sacrifice_eot: true,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Through the Breach — {2}{R}{R} Instant. "You may put a creature card from
+/// your hand onto the battlefield. That creature gains haste. Sacrifice it at
+/// the beginning of the next end step." (Splice onto Arcane dropped.)
+pub fn through_the_breach() -> CardDefinition {
+    CardDefinition {
+        name: "Through the Breach",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+            count: Value::Const(1),
+            tapped: false,
+            haste: true,
+            sacrifice_eot: true,
+        },
+        ..Default::default()
+    }
+}
+
+/// Elvish Piper — {3}{G}{G} 1/1 Elf Shaman. "{G}, {T}: You may put a creature
+/// card from your hand onto the battlefield."
+pub fn elvish_piper() -> CardDefinition {
+    CardDefinition {
+        name: "Elvish Piper",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            tap_cost: true,
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Quicksilver Amulet — {4} Artifact. "{4}, {T}: You may put a creature card
+/// from your hand onto the battlefield."
+pub fn quicksilver_amulet() -> CardDefinition {
+    CardDefinition {
+        name: "Quicksilver Amulet",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            tap_cost: true,
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skred — {R} Snow Instant. "Skred deals damage to target creature equal to
+/// the number of snow permanents you control." (CR 205.4g)
+pub fn skred() -> CardDefinition {
+    CardDefinition {
+        name: "Skred",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        supertypes: vec![Supertype::Snow],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::SnowPermanentCountControlledBy(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}

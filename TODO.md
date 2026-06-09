@@ -66,7 +66,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   has no may-play grant, so Hostage Taker ("exile … you may cast it, any mana
   type") and similar can only ship the exile half. Pair the linked-exile with a
   grant-may-play-from-exile + any-color spend permission.
-- ⏳ **Snow permanent count** `Value` for Skred / Marit Lage-style scaling.
+- ✅ **Snow permanent count** `Value::SnowPermanentCountControlledBy` (CR
+  205.4g) — Skred ("damage = snow permanents you control"). Marit Lage / other
+  snow payoffs can reuse it.
 - ✅ **Tap-N activation cost.** `ActivatedAbility.tap_n_filter` taps N matching
   untapped permanents (source eligible) as a cost — Heritage Druid. (An "X can't
   be blocked this turn" grant for Whirler Rogue-style payoffs is still ⏳.)
@@ -76,9 +78,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   the ability's stack resolution. Blocks Witch's Oven's "two Food if toughness ≥ 4"
   (shipped as always-one-Food). Capture cost-sacrifice stats on the ability's
   StackItem and restore them before resolving.
-- ⏳ **Put-permanent-from-hand-onto-battlefield effect** for Goblin Lackey /
-  Warren Instigator (combat-damage → drop a Goblin from hand), Sneak Attack,
-  Elvish Piper. No `Effect::PutFromHandOntoBattlefield` yet.
+- ✅ **Put-permanent-from-hand-onto-battlefield effect** —
+  `Effect::PutFromHandOntoBattlefield { who, filter, count, tapped, haste,
+  sacrifice_eot }`: the controller picks up to `count` matching hand cards via
+  `ChooseCards` (always optional) and they enter under their control, with
+  optional haste + next-end-step sacrifice riders. Ships Sneak Attack, Through
+  the Breach, Elvish Piper, Quicksilver Amulet. Remaining ⏳: combat-damage
+  drop-a-Goblin (Goblin Lackey / Warren Instigator) wants the same effect off a
+  `DealsCombatDamageToPlayer` trigger with a creature-type filter.
 - ⏳ **`Value` arithmetic (count × k).** Goblin Piledriver wants "+2/+0 for each
   other attacking Goblin"; `Value::CountMatching` gives the count but there's no
   multiply, so the doubled pump can't be expressed. Add `Value::Times(a, b)`.

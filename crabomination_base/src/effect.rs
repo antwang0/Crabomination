@@ -489,6 +489,11 @@ pub enum Value {
     /// Powers Culling Ritual's "Add {B} or {G} for each permanent destroyed
     /// this way" — evaluate it in a later `Seq` step after the destruction.
     PermanentsDestroyedThisResolution,
+    /// Number of snow permanents (CR 205.4g — supertype Snow) controlled by
+    /// the resolved player. Powers Skred ("deals damage to target creature
+    /// equal to the number of snow permanents you control") and other
+    /// snow-matters scaling.
+    SnowPermanentCountControlledBy(PlayerRef),
 }
 
 impl Value {
@@ -2370,6 +2375,22 @@ pub enum Effect {
     /// mana value ≤ `max_mv`, put it onto the battlefield; otherwise put it
     /// into their hand. Matter Reshaper's death trigger.
     RevealTopPutPermanentMvElseHand { who: PlayerRef, max_mv: Value },
+
+    /// "You may put a [filter] card from your hand onto the battlefield." The
+    /// controller picks up to `count` matching cards from `who`'s hand (via
+    /// `ChooseCards`, min 0 — always optional) and they enter under the
+    /// controller's control, `tapped` if set. With `haste`, each entrant gains
+    /// haste until end of turn; with `sacrifice_eot`, each is sacrificed at the
+    /// beginning of the next end step (Sneak Attack, Through the Breach). Plain
+    /// form (no haste / no sac) ships Elvish Piper / Quicksilver Amulet.
+    PutFromHandOntoBattlefield {
+        who: PlayerRef,
+        filter: SelectionRequirement,
+        count: Value,
+        tapped: bool,
+        haste: bool,
+        sacrifice_eot: bool,
+    },
 
     /// Reveal the top `count` cards of the controller's library; an opponent
     /// chooses one of them, which goes to the controller's hand. Each

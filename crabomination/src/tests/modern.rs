@@ -40528,3 +40528,104 @@ fn sicarian_infiltrator_squad_draws_per_copy() {
     assert_eq!(g.battlefield.iter()
         .filter(|c| c.definition.name == "Sicarian Infiltrator").count(), 2);
 }
+
+// ── Put-creature-from-hand cheats + snow ──────────────────────────────────────
+
+/// Sneak Attack puts a creature from hand onto the battlefield, granting haste,
+/// and registers an end-step sacrifice that fires.
+#[test]
+fn sneak_attack_cheats_creature_in_with_haste_then_sacrifices() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let sneak = g.add_card_to_battlefield(0, catalog::sneak_attack());
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sneak, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Sneak Attack");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(dragon).expect("dragon on battlefield");
+    assert!(c.keywords.contains(&Keyword::Haste), "entrant gains haste");
+    // End-step sacrifice fires.
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_none(), "creature sacrificed at end step");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == dragon), "to graveyard");
+}
+
+/// Elvish Piper puts a creature from hand onto the battlefield for {G},{T} with
+/// no haste and no end-step sacrifice.
+#[test]
+fn elvish_piper_puts_creature_in_to_stay() {
+    let mut g = two_player_game();
+    let piper = g.add_card_to_battlefield(0, catalog::elvish_piper());
+    g.clear_sickness(piper);
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: piper, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Elvish Piper");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_some(), "creature stays on battlefield");
+    assert!(!g.delayed_triggers.iter().any(|t|
+        t.kind == crate::game::types::DelayedKind::NextEndStep),
+        "no end-step sacrifice registered");
+}
+
+/// Skred deals damage equal to the number of snow permanents you control.
+#[test]
+fn skred_scales_with_snow_permanents() {
+    let mut g = two_player_game();
+    // Three snow permanents (Ohran Frostfang carries the Snow supertype).
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::ohran_frostfang()); }
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let skred = g.add_card_to_hand(0, catalog::skred());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: skred, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Skred");
+    drain_stack(&mut g);
+    // 3 snow permanents → 3 damage → kills the 2/2 bear (toughness 2).
+    assert!(g.battlefield_find(target).is_none() || g.battlefield_find(target).unwrap().damage >= 3,
+        "Skred dealt 3 damage from 3 snow permanents");
+}
+
+/// Through the Breach cheats a creature in with haste as an instant.
+#[test]
+fn through_the_breach_cheats_creature_with_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let breach = g.add_card_to_hand(0, catalog::through_the_breach());
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: breach, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Through the Breach");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(dragon).expect("dragon in play");
+    assert!(c.keywords.contains(&Keyword::Haste), "entrant has haste");
+    assert!(g.delayed_triggers.iter().any(|t|
+        t.kind == crate::game::types::DelayedKind::NextEndStep),
+        "end-step sacrifice registered");
+}
+
+/// Quicksilver Amulet puts a creature from hand into play for {4},{T}.
+#[test]
+fn quicksilver_amulet_puts_creature_in() {
+    let mut g = two_player_game();
+    let amulet = g.add_card_to_battlefield(0, catalog::quicksilver_amulet());
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add_colorless(4);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![dragon])]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: amulet, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Quicksilver Amulet");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dragon).is_some(), "creature put onto battlefield");
+}

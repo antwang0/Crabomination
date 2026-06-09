@@ -4595,6 +4595,53 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PutFromHandOntoBattlefield { who, filter, count, tapped, haste, sacrifice_eot } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let max = self.evaluate_value(count, ctx).max(0) as u32;
+                if max == 0 { return Ok(()); }
+                let candidates: Vec<(CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if candidates.is_empty() { return Ok(()); }
+                let source = ctx.source.unwrap_or(CardId(0));
+                // Always optional ("you may"): min 0.
+                let answer = self.decider.decide(&Decision::ChooseCards {
+                    source,
+                    prompt: "Put which card(s) from your hand onto the battlefield?".to_string(),
+                    candidates,
+                    min: 0,
+                    max,
+                });
+                let chosen: Vec<CardId> = match answer { DecisionAnswer::Cards(v) => v, _ => vec![] };
+                let dest = ZoneDest::Battlefield { controller: PlayerRef::You, tapped: *tapped };
+                for cid in chosen {
+                    // Only move cards that are still in the hand and match.
+                    if !self.players[p].hand.iter().any(|c| c.id == cid) { continue; }
+                    self.move_card_to(cid, &dest, ctx, events);
+                    if *haste
+                        && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid)
+                        && !c.granted_keywords_eot.contains(&Keyword::Haste)
+                    {
+                        c.granted_keywords_eot.push(Keyword::Haste);
+                    }
+                    if *sacrifice_eot {
+                        self.delayed_triggers.push(crate::game::types::DelayedTrigger {
+                            controller: ctx.controller,
+                            source: cid,
+                            kind: crate::game::types::DelayedKind::NextEndStep,
+                            effect: Effect::SacrificeSource,
+                            target: None,
+                            fires_once: true,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Search { who, filter, to } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

@@ -231,6 +231,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── colorless utility ──
         pilgrims_eye,
         filigree_familiar,
+        // put-creature-from-hand cheat (modern_decks)
+        quicksilver_amulet,
         // Colorless utility artifacts (tap-down + pay-to-untap rituals).
         icy_manipulator,
         basalt_monolith,
@@ -1684,6 +1686,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         heartfire_immolator,
         warleaders_call,
         goblin_surprise,
+        // ── modern_decks: put-creature-from-hand cheats + snow ──
+        sneak_attack,
+        through_the_breach,
+        skred,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god
@@ -2109,6 +2115,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         anthem_of_champions,
         llanowar_loamspeaker,
         bristly_bill_spine_sower,
+        // ── modern_decks: put-creature-from-hand cheat ──
+        elvish_piper,
         // ── Cube expansion ──
         hornet_queen,
         // team-pump finishers (Overrun variants)
