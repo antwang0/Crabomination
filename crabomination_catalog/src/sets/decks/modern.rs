@@ -34129,3 +34129,25 @@ pub fn leap_of_flame() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sicarian Infiltrator — {2}{U} 1/2 Human Soldier. Flash. Squad {2}. When it
+/// enters, draw a card.
+pub fn sicarian_infiltrator() -> CardDefinition {
+    CardDefinition {
+        name: "Sicarian Infiltrator",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Squad(cost(&[generic(2)]))],
+        triggered_abilities: vec![
+            crate::effect::shortcut::squad_etb(),
+            etb(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        ],
+        ..Default::default()
+    }
+}

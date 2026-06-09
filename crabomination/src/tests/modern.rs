@@ -40507,3 +40507,24 @@ fn replicate_leap_of_flame_pumps_and_grants_keywords() {
     assert!(c.keywords.contains(&crate::card::Keyword::Flying), "flying");
     assert!(c.keywords.contains(&crate::card::Keyword::FirstStrike), "first strike");
 }
+
+/// Sicarian Infiltrator's Squad copies each draw a card on ETB (original +
+/// copy = two draws).
+#[test]
+fn sicarian_infiltrator_squad_draws_per_copy() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::sicarian_infiltrator());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpellSquad {
+        card_id: id, times: 1, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Sicarian Infiltrator with Squad once");
+    drain_stack(&mut g);
+    // -1 cast, +2 ETB draws (original + squad copy).
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "original + copy each draw");
+    assert_eq!(g.battlefield.iter()
+        .filter(|c| c.definition.name == "Sicarian Infiltrator").count(), 2);
+}
