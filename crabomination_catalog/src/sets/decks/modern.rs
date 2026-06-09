@@ -33448,3 +33448,245 @@ pub fn deep_cavern_bat() -> CardDefinition {
         ..Default::default()
     }
 }
+
+
+/// Llanowar Loamspeaker — {1}{G} 1/3 Elf Druid. `{T}: Add one mana of any
+/// color.` `{T}: Target land you control becomes a 3/3 Elemental with haste
+/// until end of turn (still a land). Sorcery speed.`
+pub fn llanowar_loamspeaker() -> CardDefinition {
+    CardDefinition {
+        name: "Llanowar Loamspeaker",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sorcery_speed: true,
+                effect: Effect::BecomeCreature {
+                    what: target_filtered(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Elemental],
+                    keywords: vec![Keyword::Haste],
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Bristly Bill, Spine Sower — {1}{G} 2/2 Legendary Plant Druid. Landfall: when
+/// a land you control enters, put a +1/+1 counter on target creature.
+/// `{3}{G}{G}: Double the number of +1/+1 counters on each creature you control.`
+pub fn bristly_bill_spine_sower() -> CardDefinition {
+    use crate::card::{CounterType, Supertype};
+    CardDefinition {
+        name: "Bristly Bill, Spine Sower",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g(), g()]),
+            effect: Effect::DoubleCountersOnEach {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Preacher of the Schism — {2}{B} 2/4 Vampire Cleric with deathtouch.
+/// Attacks the player with the most life (or tied) → create a 1/1 white
+/// Vampire with lifelink. Attacks while you have the most life (or tied) →
+/// draw a card and lose 1 life.
+pub fn preacher_of_the_schism() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Preacher of the Schism",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                    .with_filter(Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayer }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Vampire".into(),
+                        power: 1,
+                        toughness: 1,
+                        keywords: vec![Keyword::Lifelink],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::White],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Vampire],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
+                    .with_filter(Predicate::PlayerHasMostLife { who: PlayerRef::You }),
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Glissa Sunslayer — {1}{B}{G} 3/3 Legendary Phyrexian Zombie Elf with first
+/// strike and deathtouch. When it deals combat damage to a player, you draw a
+/// card and lose 1 life. (The printed "choose one" also offers destroy-an-
+/// enchantment / remove-three-counters; only the draw mode ships.)
+pub fn glissa_sunslayer() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Glissa Sunslayer",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Zombie, CreatureType::Elf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+
+
+/// Sip of Hemlock — {4}{B}{B} Sorcery. Destroy target creature. Its controller
+/// loses 2 life. (Uses the destroyed creature's owner for the life loss.)
+pub fn sip_of_hemlock() -> CardDefinition {
+    CardDefinition {
+        name: "Sip of Hemlock",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::LoseLife {
+                who: Selector::Player(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Goblin Surprise — {2}{R} Instant. Choose one — creatures you control get
+/// +2/+0 until end of turn; or create two 1/1 red Goblin creature tokens.
+pub fn goblin_surprise() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Surprise",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Goblin".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Goblin],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Nowhere to Run — {1}{B} Enchantment with flash. When it enters, target
+/// creature an opponent controls gets -3/-3 until end of turn. (The "creatures
+/// your opponents control lose hexproof and shroud" static is dropped.)
+pub fn nowhere_to_run() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Nowhere to Run",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}

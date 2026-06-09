@@ -1297,6 +1297,10 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         overlord_of_the_balemurk,
         get_lost,
         deep_cavern_bat,
+        nowhere_to_run,
+        preacher_of_the_schism,
+        glissa_sunslayer,
+        sip_of_hemlock,
         // ── Cube expansion ──
         noxious_gearhulk,
         sheoldred_whispering_one,
@@ -1679,6 +1683,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         overlord_of_the_boilerbilges,
         heartfire_immolator,
         warleaders_call,
+        goblin_surprise,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god
@@ -2102,6 +2107,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         overlord_of_the_hauntwoods,
         cenote_scout,
         anthem_of_champions,
+        llanowar_loamspeaker,
+        bristly_bill_spine_sower,
         // ── Cube expansion ──
         hornet_queen,
         // team-pump finishers (Overrun variants)

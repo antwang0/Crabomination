@@ -40012,3 +40012,126 @@ fn deep_cavern_bat_exiles_from_opponent_hand() {
     drain_stack(&mut g);
     assert!(g.players[1].hand.iter().any(|c| c.id == victim), "card returned on Bat leaving");
 }
+
+
+/// Llanowar Loamspeaker animates a target land into a 3/3 creature.
+#[test]
+fn llanowar_loamspeaker_animates_land() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let id = g.add_card_to_battlefield(0, catalog::llanowar_loamspeaker());
+    g.clear_sickness(id);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: Some(Target::Permanent(forest)), x_value: None,
+    }).expect("animate the Forest");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(forest).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature), "Forest is now a creature");
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}
+
+/// Bristly Bill puts a +1/+1 counter on a creature when a land enters.
+#[test]
+fn bristly_bill_landfall_adds_counter() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bill = g.add_card_to_battlefield(0, catalog::bristly_bill_spine_sower());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(land)).expect("play a land");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bill).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "landfall added a +1/+1 counter");
+}
+
+/// Glissa Sunslayer draws a card and loses 1 life on combat damage.
+#[test]
+fn glissa_combat_damage_draws_and_loses_life() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_battlefield(0, catalog::glissa_sunslayer());
+    let hand = g.players[0].hand.len();
+    let life = g.players[0].life;
+    let trig = catalog::glissa_sunslayer().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(id, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+}
+
+/// Preacher of the Schism, attacking a tied-for-most-life player while tied for
+/// most life itself, makes a Vampire and draws (losing 1 life).
+#[test]
+fn preacher_attacks_makes_vampire_and_draws() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_battlefield(0, catalog::preacher_of_the_schism());
+    g.clear_sickness(id);
+    let hand = g.players[0].hand.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id, target: AttackTarget::Player(1),
+    }])).expect("Preacher attacks P1");
+    drain_stack(&mut g);
+    let vamps = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Vampire").count();
+    assert_eq!(vamps, 1, "created a Vampire token (defender tied for most life)");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew (you tied for most life)");
+}
+
+
+/// Sip of Hemlock destroys a creature and drains its controller 2 life.
+#[test]
+fn sip_of_hemlock_destroys_and_drains() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::sip_of_hemlock());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    assert!(g.battlefield_find(bear).is_none(), "creature destroyed");
+    assert_eq!(g.players[1].life, 18, "controller lost 2 life");
+}
+
+/// Goblin Surprise (mode 1) creates two Goblin tokens.
+#[test]
+fn goblin_surprise_makes_two_goblins() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::goblin_surprise());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("cast Goblin Surprise (tokens mode)");
+    drain_stack(&mut g);
+    let gobs = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Goblin").count();
+    assert_eq!(gobs, 2, "made two Goblins");
+}
+
+/// Nowhere to Run shrinks an opponent's creature by -3/-3.
+#[test]
+fn nowhere_to_run_shrinks_opponent_creature() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::nowhere_to_run());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    crate::game::cast_at(&mut g, id, Target::Permanent(bear));
+    // 2/2 with -3/-3 dies as a 0-or-less-toughness creature.
+    assert!(g.battlefield_find(bear).is_none(), "bear shrank to lethal and died");
+}

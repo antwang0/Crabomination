@@ -8,6 +8,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Impending / Hideaway follow-ups (this run shipped the keywords).**
+  - Impending (CR 702.183, `Keyword::Impending(n)`): the client should badge the
+    `PermanentView.impending_counters` countdown (engine + view ship it; the
+    wayland sandbox blocks the client render edit).
+  - Hideaway (CR 702.76, `Effect::Hideaway`): the hidden-card pick auto-resolves
+    to the highest-MV card rather than prompting; and the Lorwyn land cycle's
+    harder gates are unwired — Mosswort Bridge (total power ≥ 8), Spinerock Knoll
+    (an opponent lost ≥ 7 life this turn), Windbrisk Heights (attacked with ≥ 3
+    creatures). Need the matching count/this-turn predicates.
+- ⏳ **Card riders dropped this run (each wants one small primitive):**
+  Glissa Sunslayer (combat-damage `ChooseMode` with per-mode targets — only the
+  draw mode ships); Bristly Bill ✅ (double-counters activated shipped via
+  `DoubleCountersOnEach`); Nowhere to Run ("opponents' creatures lose
+  hexproof/shroud" static); Get Lost / Sip of Hemlock use the destroyed
+  permanent's *owner* for the follow-up (differs from "controller" only under
+  control-stealing).
+
 - ⏳ **Cube bombs still needing primitives.** Noticed-but-deferred this run:
   Skyclave Apparition (exile-permanent + size-on-leave Illusion token),
   Duplicant (imprint + P/T-from-exiled), Grafdigger's Cage (a "can't enter from
