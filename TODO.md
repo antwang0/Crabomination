@@ -8,6 +8,23 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Combat-damage-**to-a-creature** trigger dispatch.** `EventKind::
+  DealsCombatDamageToCreature` exists but nothing fires it; only the
+  to-a-player path is dispatched. Wiring it would make Umezawa's Jitte charge
+  when its equipped creature is blocked, and unblock other "deals combat damage
+  to a creature" payoffs. Fire it from `resolve_combat_damage_with_filter`'s
+  attacker→blocker / blocker→attacker damage application, with the damaged
+  creature bound to a target slot.
+- ⏳ **Aether Gust + Subtlety-style "spell or permanent → top/bottom of
+  library".** Aether Gust hits a red/green *spell or permanent* and the owner
+  chooses top or bottom; the spell-counter half rides `CounteredSpellZone::
+  OwnerLibraryTopOrBottom`, but the permanent half needs a "move target
+  permanent to top/bottom of its owner's library (owner chooses)" effect.
+- ⏳ **Continuous "becomes a copy" (layer-1).** Still the highest-leverage
+  open primitive — `Layer::L1Copy` exists but there's no `Modification` arm or
+  copiable-values rewrite in `compute_battlefield`. Unblocks Mirrorform (aura),
+  Shifting Woodland, Vesuva / Thespian's Stage, Echoing Equation, Helm of the
+  Host's haste-token loop.
 - ✅ **Reinforce/face-down client affordances.** `GameAction::Reinforce` (CR
   702.77) and `CastFaceDown`/`TurnFaceUp` are engine-complete. `reinforceable_hand`
   now ships (`PlayerView.reinforceable_hand` + `compute_hand_affordances`,
