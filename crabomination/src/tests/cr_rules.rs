@@ -1,7 +1,10 @@
 //! Targeted Comprehensive-Rules conformance tests: Detain (CR 701.35),
 //! Fateseal (CR 701.29), the cross-type legend rule (CR 704.5j),
-//! +1/+1 vs -1/-1 counter annihilation (CR 122.3), and Valentin's
-//! death-replacement at the destroy funnel (CR 614).
+//! +1/+1 vs -1/-1 counter annihilation (CR 122.3), Valentin's
+//! death-replacement at the destroy funnel (CR 614), Exchange control
+//! (CR 701.12), Fight + deathtouch (CR 701.14 / 702.2), and the
+//! defending-player binding for "a creature you control attacks"
+//! triggers (CR 509.2 / 603.2).
 
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget};
@@ -145,4 +148,69 @@ fn cr_614_exile_replacement_applies_to_destroy_path() {
     g.priority.player_with_priority = 0;
     crate::game::cast_at(&mut g, murder, Target::Permanent(opp));
     assert!(g.exile.iter().any(|c| c.id == opp), "destroyed opp creature exiled instead");
+}
+
+// ── CR 701.12 — Exchange (control of two permanents) ───────────────────────────
+
+/// Switcheroo swaps control of two target creatures (Effect::ExchangeControl).
+#[test]
+fn cr_701_12_exchange_control_of_two_creatures() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::switcheroo());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Switcheroo");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1);
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0);
+}
+
+// ── CR 701.14 / 702.2 — Fight + deathtouch ─────────────────────────────────────
+
+/// A 1/1 deathtoucher that fights a 4/4 destroys it (any nonzero deathtouch
+/// damage is lethal, CR 702.2c) while surviving the 4 it takes... no — it dies
+/// too (4 ≥ 1 toughness). What we assert: the big creature dies to deathtouch.
+#[test]
+fn cr_702_2_fight_with_deathtouch_kills_larger_creature() {
+    let mut g = two_player_game();
+    let killer = g.add_card_to_battlefield(0, catalog::deadly_recluse()); // 1/2 deathtouch
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel());       // 4/4
+    let id = g.add_card_to_hand(0, catalog::prey_upon());
+    g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(killer)),
+        additional_targets: vec![Target::Permanent(big)], mode: None, x_value: None,
+    }).expect("cast Prey Upon");
+    drain_stack(&mut g);
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(big).is_none(), "4/4 dies to 1 deathtouch damage");
+}
+
+// ── CR 509.2 / 603.2 — "a creature you control attacks" binds defending player ──
+
+/// Leeching Sliver's "whenever a Sliver you control attacks, defending player
+/// loses 1 life" resolves against the *attacker's* defending player even though
+/// the ability source (Leeching Sliver) isn't the one attacking.
+#[test]
+fn cr_509_2_attack_trigger_binds_attackers_defending_player() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leeching_sliver());
+    let attacker = g.add_card_to_battlefield(0, catalog::muscle_sliver());
+    g.battlefield.iter_mut().find(|c| c.id == attacker).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let events = g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "defending player (seat 1) lost 1 life");
 }

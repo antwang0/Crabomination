@@ -1459,6 +1459,11 @@ pub enum Effect {
     /// Chelonian Tackle, STX Decisive Denial mode 1, and similar
     /// fight-style green/quandrix removal.
     Fight { attacker: Selector, defender: Selector },
+    /// CR 701.12 — Exchange control of the two permanents the selectors
+    /// resolve to (one each). A permanent control swap (Vedalken Plotter,
+    /// Aura Thief, Switcheroo). If either selector resolves to no permanent
+    /// the effect no-ops. Both permanents change controller simultaneously.
+    ExchangeControl { a: Selector, b: Selector },
     GainLife  { who: Selector, amount: Value },
     LoseLife  { who: Selector, amount: Value },
     /// CR 701.10d — "double a player's life total." Each player the selector

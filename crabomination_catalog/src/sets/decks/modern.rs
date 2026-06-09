@@ -35782,3 +35782,18 @@ pub fn cemetery_reaper() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Switcheroo — {4}{U} Sorcery. Exchange control of two target creatures.
+/// (CR 701.12 — `Effect::ExchangeControl`.)
+pub fn switcheroo() -> CardDefinition {
+    CardDefinition {
+        name: "Switcheroo",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ExchangeControl {
+            a: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+            b: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Creature },
+        },
+        ..Default::default()
+    }
+}

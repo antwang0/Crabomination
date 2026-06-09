@@ -3641,6 +3641,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeControl { a, b } => {
+                // CR 701.12 — swap the controllers of the two resolved
+                // permanents simultaneously. No-op unless both still exist.
+                let ca = self.resolve_selector(a, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                let cb = self.resolve_selector(b, ctx).into_iter().find_map(|e| e.as_permanent_id());
+                if let (Some(ca), Some(cb)) = (ca, cb)
+                    && ca != cb
+                {
+                    let ctrl_a = self.battlefield_find(ca).map(|c| c.controller);
+                    let ctrl_b = self.battlefield_find(cb).map(|c| c.controller);
+                    if let (Some(ctrl_a), Some(ctrl_b)) = (ctrl_a, ctrl_b)
+                        && ctrl_a != ctrl_b
+                    {
+                        if let Some(c) = self.battlefield_find_mut(ca) { c.controller = ctrl_b; }
+                        if let Some(c) = self.battlefield_find_mut(cb) { c.controller = ctrl_a; }
+                    }
+                }
+                Ok(())
+            }
+
             Effect::CreateToken { who, count, definition } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let mut n = self.evaluate_value(count, ctx).max(0) as u32;

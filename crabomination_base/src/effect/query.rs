@@ -167,6 +167,7 @@ impl Effect {
             Effect::Fight { attacker, defender } => {
                 sel_has_target(attacker) || sel_has_target(defender)
             }
+            Effect::ExchangeControl { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::GainLife { who, amount } | Effect::LoseLife { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
@@ -449,6 +450,7 @@ impl Effect {
             // we want to fight). The attacker is usually the friendly
             // already-on-bf source/target.
             Effect::Fight { defender, .. } => sel_filter(defender),
+            Effect::ExchangeControl { a, .. } => sel_filter(a),
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::LoseHalfLife { who, .. }
             | Effect::MillHalf { who, .. }
@@ -744,6 +746,7 @@ impl Effect {
                 "counter target spell".into()
             }
             Effect::Fight { .. } => "fight".into(),
+            Effect::ExchangeControl { .. } => "exchange control".into(),
             Effect::CreateToken { count, definition, .. } => {
                 let n = match count {
                     Value::Const(n) => *n,
@@ -919,6 +922,7 @@ impl Effect {
             | Effect::ResetCreature { .. }
             | Effect::BecomeBasicLand { .. }
             | Effect::Attach { .. }
+            | Effect::ExchangeControl { .. }
             | Effect::Fight { .. } => false,
             // Compound effects: defer to whichever child first surfaces a
             // primary-target filter — the auto-target heuristic's slot 0
@@ -1125,6 +1129,9 @@ impl Effect {
                 | Effect::PreventAllCombatDamageInvolving { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
+                }
+                Effect::ExchangeControl { a, b } => {
+                    sel_find(a, slot).or_else(|| sel_find(b, slot))
                 }
                 Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_find(who, slot),
                 Effect::LoseHalfLife { who, .. }

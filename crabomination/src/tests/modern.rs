@@ -40815,6 +40815,24 @@ fn manaweft_sliver_grants_mana_ability() {
     assert_eq!(g.players[0].mana_pool.total(), 1, "Manaweft Sliver produced one mana");
 }
 
+/// Switcheroo exchanges control of two target creatures (CR 701.12).
+#[test]
+fn switcheroo_exchanges_creature_control() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::switcheroo());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("cast Switcheroo");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().controller, 1, "your bear went to opp");
+    assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "their angel is now yours");
+}
+
 /// Sylvan Advocate only pumps itself once you control six or more lands.
 #[test]
 fn sylvan_advocate_pumps_with_six_lands() {

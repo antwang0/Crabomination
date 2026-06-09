@@ -1012,6 +1012,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         galerider_sliver,
         crystalline_sliver,
         winged_sliver,
+        switcheroo,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
