@@ -13,9 +13,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
     that pays {3} and casts the card as a face-down 2/2 creature spell, reusing
     the new `CardInstance.face_up_def` swap + `turn_face_up_action`. No catalog
     Morph cards yet, so deferred.
-  - **Disguise (CR 702.166c) / Cloak (CR 702.182)** — Disguise = morph with
-    ward {2}; Cloak = manifest that can always be turned up for mana cost. Both
-    ride the new face-down infra + a ward grant.
+  - Disguise (CR 702.166) ✅ (`Keyword::Disguise` + `facedown_disguise_definition`)
+    and Cloak (CR 702.182) ✅ (`Effect::Cloak` + serialized `CardInstance.cloaked`).
+    Follow-up ⏳: Hide in Plain Sight's full "look at top five, cloak two, rest to
+    bottom random" selection is simplified to cloaking the top two.
   - **Manifest-dread "turn up if a creature card"** already works via
     `TurnFaceUp`; a face-down noncreature can't be turned up (correct).
 - ⏳ **Cards deferred this run (each wants one small primitive):**

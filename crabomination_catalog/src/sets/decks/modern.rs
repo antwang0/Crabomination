@@ -13067,6 +13067,20 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Hide in Plain Sight — {3}{G} Sorcery. Cloak two cards (CR 702.182): put the
+/// top two cards of your library onto the battlefield face down as 2/2 creatures
+/// with ward {2}. (The "look at top five, pick two, rest to bottom" selection is
+/// simplified to cloaking the top two.)
+pub fn hide_in_plain_sight() -> CardDefinition {
+    CardDefinition {
+        name: "Hide in Plain Sight",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Cloak { who: PlayerRef::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
 /// Spikeshot Elder — {R} 1/1 Goblin Shaman. `{1}{R}{R}: deals damage equal to
 /// its power to any target.` (LRW)
 pub fn spikeshot_elder() -> CardDefinition {

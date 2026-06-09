@@ -120,6 +120,7 @@ impl Effect {
             Effect::PutFromHandOntoBattlefield { .. } => false,
             Effect::Manifest { .. } => false,
             Effect::ManifestDread { .. } => false,
+            Effect::Cloak { .. } => false,
             Effect::CatchUpBasicLands => false,
             Effect::ExileFromHandTaxed { .. } => false,
             Effect::Hideaway { .. } => false,

@@ -42128,6 +42128,38 @@ fn disguise_bubble_smuggler_turn_up_adds_four_counters() {
     assert_eq!((up.power(), up.toughness()), (6, 5), "2/1 + four +1/+1 counters");
 }
 
+/// Hide in Plain Sight cloaks the top two library cards: two face-down 2/2
+/// ward-{2} creatures enter, and a cloaked creature can be turned face up for
+/// its mana cost.
+#[test]
+fn cloak_hide_in_plain_sight_makes_two_warded_face_down_creatures() {
+    let mut g = two_player_game();
+    // Stack the library so the top two are a known creature (Grizzly Bears 2/2).
+    let top1 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let _top2 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::hide_in_plain_sight());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Hide in Plain Sight");
+    drain_stack(&mut g);
+    let cloaked: Vec<_> = g.battlefield.iter().filter(|c| c.face_down && c.controller == 0).collect();
+    assert_eq!(cloaked.len(), 2, "two cloaked permanents entered");
+    assert!(cloaked.iter().all(|c| c.ward_cost() == Some(2)), "cloak grants ward {{2}}");
+    assert!(cloaked.iter().all(|c| (c.power(), c.toughness()) == (2, 2)), "face-down 2/2");
+    // Turn one up for its mana cost ({1}{G} Grizzly Bears).
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::TurnFaceUp { card_id: top1 }).expect("turn cloaked creature up");
+    let up = g.battlefield_find(top1).expect("still here");
+    assert!(!up.face_down);
+    assert_eq!(up.definition.name, "Grizzly Bears");
+    assert_eq!(up.ward_cost(), None, "real face has no ward");
+}
+
 /// Restless Reef animates into a 4/3 and surveils 2 on attack.
 #[test]
 fn restless_reef_animates_and_surveils_on_attack() {

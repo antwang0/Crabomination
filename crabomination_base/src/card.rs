@@ -1881,6 +1881,11 @@ pub struct CardInstance {
     /// only: the serde wire stores the real name + a `face_down_permanent`
     /// flag and rebuilds this on load.
     pub face_up_def: Option<Arc<CardDefinition>>,
+    /// CR 702.182 — true while this permanent is face down because it was
+    /// Cloaked (so its 2/2 face-down body has ward {2}, like Disguise). The
+    /// real card carries no keyword to re-derive this, so it's tracked here and
+    /// serialized.
+    pub cloaked: bool,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
     /// True if this card was cast via an evoke alternative cost — it will
@@ -2102,6 +2107,7 @@ impl CardInstance {
             transformed: false,
             front_face: None,
             face_up_def: None,
+            cloaked: false,
             is_token: false,
             used_loyalty_ability_this_turn: false,
             evoked: false,
@@ -2210,19 +2216,28 @@ impl CardInstance {
         if self.face_up_def.is_some() {
             return;
         }
-        // CR 702.166c — a Disguise permanent is face down with ward {2}.
-        let disguised = self
-            .definition
-            .keywords
-            .iter()
-            .any(|k| matches!(k, Keyword::Disguise(_)));
+        // CR 702.166c / 702.182 — a Disguise or Cloak permanent is face down
+        // with ward {2}.
+        let warded = self.cloaked
+            || self
+                .definition
+                .keywords
+                .iter()
+                .any(|k| matches!(k, Keyword::Disguise(_)));
         self.face_up_def = Some(self.definition.clone());
-        self.definition = Arc::new(if disguised {
+        self.definition = Arc::new(if warded {
             facedown_disguise_definition()
         } else {
             facedown_creature_definition()
         });
         self.face_down = true;
+    }
+
+    /// CR 702.182 — Cloak this card: turn it face down with a ward-{2} body. It
+    /// can later be turned face up for its mana cost if it's a creature card.
+    pub fn cloak(&mut self) {
+        self.cloaked = true;
+        self.turn_face_down();
     }
 
     /// CR 708.5/708.10 — flip this permanent face up (or restore the real
@@ -2233,6 +2248,7 @@ impl CardInstance {
         let name = real.name;
         self.definition = real;
         self.face_down = false;
+        self.cloaked = false;
         Some(name)
     }
 
@@ -2326,6 +2342,10 @@ struct CardInstanceWire {
     /// `#[serde(default)]` for back-compat.
     #[serde(default)]
     face_down_permanent: bool,
+    /// CR 702.182 — face down because Cloaked (ward-{2} body). `#[serde(default)]`
+    /// for back-compat.
+    #[serde(default)]
+    cloaked: bool,
     /// CR 712 — showing the back face. `name` always stores the FRONT face's
     /// name so the registry resolves it; the back is recovered as
     /// `front.back_face` on load. `#[serde(default)]` for back-compat.
@@ -2460,6 +2480,7 @@ impl serde::Serialize for CardInstance {
             bestowed: self.bestowed,
             face_down: self.face_down,
             face_down_permanent: self.face_up_def.is_some(),
+            cloaked: self.cloaked,
             transformed: self.transformed,
             is_token: self.is_token,
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
@@ -2524,6 +2545,8 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         // CR 708 — restore a face-down permanent: stash the real definition
         // (resolved from `name`) and swap to the vanilla 2/2 face-down body.
         if wire.face_down_permanent {
+            // Set `cloaked` first so the warded face-down body is restored.
+            c.cloaked = wire.cloaked;
             c.turn_face_down();
         }
         // CR 712 — restore a transformed permanent: stash the front, flip the

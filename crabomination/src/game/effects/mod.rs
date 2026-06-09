@@ -4712,6 +4712,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Cloak { who, amount } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                for _ in 0..n {
+                    let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break };
+                    if let Some(c) = self.players[p].library.iter_mut().find(|c| c.id == top_id) {
+                        c.cloaked = true;
+                    }
+                    self.manifest_card(top_id, p, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::ManifestDread { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
