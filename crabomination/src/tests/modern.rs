@@ -43371,3 +43371,53 @@ fn wrap_in_vigor_shields_your_creatures() {
     assert_eq!(g.battlefield_find(mine).unwrap().regeneration_shields, 1,
         "each of your creatures got a regeneration shield");
 }
+
+// ── Threaten-style theft ──────────────────────────────────────────────────────
+
+#[test]
+fn act_of_treason_steals_until_end_of_turn() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(victim).unwrap().tapped = true;
+    let spell = g.add_card_to_hand(0, catalog::act_of_treason());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, spell, Target::Permanent(victim));
+    let v = g.battlefield_find(victim).unwrap();
+    assert_eq!(v.controller, 0, "control stolen");
+    assert!(!v.tapped, "untapped");
+    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::Haste), "gained haste");
+}
+
+#[test]
+fn traitorous_blood_grants_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::traitorous_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, spell, Target::Permanent(victim));
+    let kws = g.computed_permanent(victim).unwrap().keywords;
+    assert!(kws.contains(&Keyword::Trample) && kws.contains(&Keyword::Haste));
+}
+
+#[test]
+fn wrench_mind_discards_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    let spell = g.add_card_to_hand(0, catalog::wrench_mind());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, spell, Target::Player(1));
+    assert_eq!(g.players[1].hand.len(), 1, "discarded two of three");
+}

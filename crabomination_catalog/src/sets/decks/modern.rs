@@ -37932,3 +37932,75 @@ pub fn wrap_in_vigor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Threaten-style temporary theft ────────────────────────────────────────────
+
+/// Gain control of a target creature until end of turn, untap it, and grant
+/// haste (+ any extra keywords). The printed Threaten template.
+fn threaten_effect(extra: &[Keyword]) -> Effect {
+    let mut seq = vec![
+        Effect::GainControl {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: None,
+            duration: Duration::EndOfTurn,
+        },
+        Effect::Untap { what: Selector::Target(0), up_to: None },
+        Effect::GrantKeyword { what: Selector::Target(0), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+    ];
+    for kw in extra {
+        seq.push(Effect::GrantKeyword { what: Selector::Target(0), keyword: kw.clone(), duration: Duration::EndOfTurn });
+    }
+    Effect::Seq(seq)
+}
+
+/// Act of Treason — {2}{R} Sorcery. Gain control of target creature until end of
+/// turn, untap it, it gains haste.
+pub fn act_of_treason() -> CardDefinition {
+    CardDefinition {
+        name: "Act of Treason",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: threaten_effect(&[]),
+        ..Default::default()
+    }
+}
+
+/// Threaten — {2}{R} Sorcery. Untap target creature and gain control of it until
+/// end of turn; it gains haste.
+pub fn threaten() -> CardDefinition {
+    CardDefinition {
+        name: "Threaten",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: threaten_effect(&[]),
+        ..Default::default()
+    }
+}
+
+/// Traitorous Blood — {1}{R}{R} Sorcery. Gain control of target creature until
+/// end of turn, untap it; it gains trample and haste.
+pub fn traitorous_blood() -> CardDefinition {
+    CardDefinition {
+        name: "Traitorous Blood",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: threaten_effect(&[Keyword::Trample]),
+        ..Default::default()
+    }
+}
+
+/// Wrench Mind — {B}{B} Sorcery. Target player discards two cards. (The "unless
+/// they discard an artifact" downside is dropped — caster-side discard only.)
+pub fn wrench_mind() -> CardDefinition {
+    CardDefinition {
+        name: "Wrench Mind",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Discard {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(2),
+            random: false,
+        },
+        ..Default::default()
+    }
+}

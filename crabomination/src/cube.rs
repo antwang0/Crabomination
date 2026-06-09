@@ -1388,6 +1388,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         shadow_slice,
         midnight_recovery,
         tainted_strike,
+        wrench_mind,
         shady_informant,
         alley_assailant,
         basilica_stalker,
@@ -1801,6 +1802,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Bloodrush (Gatecrash)
         skinbrand_goblin,
         faithless_salvaging,
+        // Threaten-style theft
+        act_of_treason,
+        threaten,
+        traitorous_blood,
         viashino_shanktail,
         ghor_clan_rampager,
         zhur_taa_swine,
