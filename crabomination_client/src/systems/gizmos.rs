@@ -2,7 +2,7 @@
 //! arrows during the DeclareBlockers step, attacker swords during attacks, and
 //! source→target arrows for items on the stack.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
@@ -248,11 +248,20 @@ pub fn draw_blocking_gizmos(
 
 pub fn draw_attacker_overlays(
     view: Res<CurrentView>,
+    attack_plan: Res<AttackingState>,
     bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
     mut gizmos: Gizmos<AttackerGizmos>,
 ) {
     let Some(cv) = &view.0 else { return };
-    let attacking: Vec<CardId> = cv.battlefield.iter().filter(|p| p.attacking).map(|p| p.id).collect();
+    // Creatures the engine already reports as attacking…
+    let mut attacking: HashSet<CardId> =
+        cv.battlefield.iter().filter(|p| p.attacking).map(|p| p.id).collect();
+    // …plus the viewer's in-progress attack plan, so a creature shows its
+    // swords the moment it's selected during DeclareAttackers — not only after
+    // the attack is submitted (Attack All / Confirm).
+    if cv.step == TurnStep::DeclareAttackers && cv.active_player == cv.your_seat {
+        attacking.extend(attack_plan.plan.iter().map(|(atk, _)| *atk));
+    }
     if attacking.is_empty() { return; }
 
     let mut positions: HashMap<CardId, Vec3> = HashMap::new();
@@ -448,17 +457,9 @@ pub fn draw_attack_plan_gizmos(
         } else {
             yellow
         };
-        // Diamond on the attacker.
-        let n = from + Vec3::Z * 1.1;
-        let s = from - Vec3::Z * 1.1;
-        let e = from + Vec3::X * 1.1;
-        let w = from - Vec3::X * 1.1;
-        gizmos.line(n, e, color);
-        gizmos.line(e, s, color);
-        gizmos.line(s, w, color);
-        gizmos.line(w, n, color);
-
-        // Arrow to its current target.
+        // The attacker itself is marked by its crossed-swords overlay (see
+        // `draw_attacker_overlays`, which now includes planned attackers), so
+        // here we only draw the targeting arrow to its chosen defender.
         let to = match target {
             AttackTarget::Player(seat) => {
                 let mut p = player_hand_anchor(*seat, viewer, n_seats);

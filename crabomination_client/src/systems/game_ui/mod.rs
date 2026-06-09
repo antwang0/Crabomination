@@ -1098,6 +1098,9 @@ pub struct PhaseBanner {
 }
 
 const PHASE_BANNER_SECS: f32 = 1.5;
+/// Peak opacity of the dark chip behind a phase banner. Faded in step with the
+/// text by `animate_phase_banner`, so the chip never lingers after the text.
+const PHASE_BANNER_BG_ALPHA: f32 = 0.66;
 
 /// Flash a banner on milestone transitions: the start of a turn ("Your
 /// Turn" / "<name>'s Turn") and entry into combat ("Combat"). Deliberately
@@ -1160,6 +1163,15 @@ pub fn trigger_phase_banner(
         ))
         .with_children(|p| {
             p.spawn((
+                // Padded, semi-transparent chip behind the text so the big
+                // coloured banner reads against the busy 3-D board. Its alpha
+                // is faded in step with the text by `animate_phase_banner`.
+                Node {
+                    padding: UiRect::axes(Val::Px(24.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.04, 0.04, 0.07, PHASE_BANNER_BG_ALPHA)),
                 Text::new(text),
                 ui_fonts.tf(46.0),
                 TextColor(color),
@@ -1168,13 +1180,14 @@ pub fn trigger_phase_banner(
         });
 }
 
-/// Count the banner down and fade its text out over the last ~40% of its
-/// life; despawn when elapsed.
+/// Count the banner down and fade its text (and chip background) out over the
+/// last ~40% of its life; despawn when elapsed.
 pub fn animate_phase_banner(
     mut commands: Commands,
     time: Res<Time>,
     mut banners: Query<(Entity, &mut PhaseBanner, &Children)>,
     mut texts: Query<&mut TextColor>,
+    mut backgrounds: Query<&mut BackgroundColor>,
 ) {
     for (entity, mut banner, children) in &mut banners {
         banner.remaining -= time.delta_secs();
@@ -1189,6 +1202,13 @@ pub fn animate_phase_banner(
             if let Ok(mut tc) = texts.get_mut(child) {
                 let c = tc.0.to_srgba();
                 tc.0 = Color::srgba(c.red, c.green, c.blue, alpha);
+            }
+            // The chip background and text live on the same child entity;
+            // scale its alpha off the same curve (from the fixed peak so the
+            // per-frame rewrite stays idempotent).
+            if let Ok(mut bg) = backgrounds.get_mut(child) {
+                let c = bg.0.to_srgba();
+                bg.0 = Color::srgba(c.red, c.green, c.blue, PHASE_BANNER_BG_ALPHA * alpha);
             }
         }
     }
