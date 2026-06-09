@@ -42181,3 +42181,18 @@ fn morph_card_surfaced_as_morphable_affordance() {
     let aff2 = g2.compute_hand_affordances(0);
     assert!(!aff2.morphable.contains(&id2), "not morphable without {{3}}");
 }
+
+/// Simian Sling: as a 1/1 creature, becoming blocked pings the defender.
+#[test]
+fn simian_sling_pings_defender_when_blocked() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let sling = g.add_card_to_battlefield(0, catalog::simian_sling());
+    let def = catalog::simian_sling();
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Reconfigure(_))), "has Reconfigure");
+    let trig = def.triggered_abilities[0].effect.clone();
+    let opp = g.players[1].life;
+    let ctx = crate::game::effects::EffectContext::for_trigger(sling, 0, None, 0);
+    g.resolve_effect(&trig, &ctx).unwrap();
+    assert_eq!(g.players[1].life, opp - 1, "becomes-blocked pings each opponent for 1");
+}

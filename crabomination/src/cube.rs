@@ -1777,6 +1777,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sokenzan_crucible_of_defiance,
         restless_bivouac,
         restless_ridgeline,
+        simian_sling,
         overlord_of_the_boilerbilges,
         heartfire_immolator,
         warleaders_call,

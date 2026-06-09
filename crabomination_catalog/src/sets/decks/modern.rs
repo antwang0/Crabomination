@@ -36400,3 +36400,43 @@ pub fn gingerbrute() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Simian Sling — {R} Artifact Creature — Equipment Monkey 1/1. Equipped
+/// creature gets +1/+1. Whenever this creature or the equipped creature becomes
+/// blocked, it deals 1 damage to the defending player (approximated as each
+/// opponent). Reconfigure {2} (CR 702.151).
+pub fn simian_sling() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, EquipBonus};
+    let ping = || Effect::DealDamage {
+        to: Selector::Player(PlayerRef::EachOpponent),
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Simian Sling",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Monkey],
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Reconfigure(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![],
+            scale: None,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: ping(),
+            }],
+        }),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: ping(),
+        }],
+        ..Default::default()
+    }
+}
