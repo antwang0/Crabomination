@@ -16598,8 +16598,12 @@ fn teferi_hero_minus_three_tucks_a_permanent() {
 
 #[test]
 fn saheeli_rai_plus_one_pings_each_opponent() {
+    use crate::card::CounterType;
     let mut g = two_player_game();
     let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());
+    // An opponent planeswalker — Saheeli's +1 also pings each of these.
+    let opp_pw = g.add_card_to_battlefield(1, catalog::karn_liberated());
+    let pw_loyalty = g.battlefield_find(opp_pw).unwrap().counter_count(CounterType::Loyalty);
     g.add_card_to_library(0, catalog::island());
     let p1_life = g.players[1].life;
 
@@ -16610,6 +16614,11 @@ fn saheeli_rai_plus_one_pings_each_opponent() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[1].life, p1_life - 1, "Opp pinged for 1");
+    assert_eq!(
+        g.battlefield_find(opp_pw).unwrap().counter_count(CounterType::Loyalty),
+        pw_loyalty - 1,
+        "opponent's planeswalker also took 1 (a loyalty counter removed)",
+    );
 }
 
 #[test]
@@ -39623,4 +39632,35 @@ fn miracle_window_surfaces_in_hand_affordances() {
     g.draw_one(0, &mut events);
     let aff = g.compute_hand_affordances(0);
     assert!(aff.miracle.contains(&bonfire), "miracle window surfaced as an affordance");
+}
+
+// ── Bloodrush (CR 702.78) ────────────────────────────────────────────────────
+
+#[test]
+fn ghor_clan_rampager_bloodrush_pumps_an_attacker() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // An attacking creature to target.
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ghor = g.add_card_to_hand(0, catalog::ghor_clan_rampager());
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    // Bloodrush: {R}{G}, discard Ghor-Clan Rampager: +4/+4 and trample.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ghor, ability_index: 0,
+        target: Some(Target::Permanent(attacker)), x_value: None,
+    }).expect("bloodrush activatable from hand");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == ghor), "discarded as the bloodrush cost");
+    let cp = g.compute_battlefield();
+    let a = cp.iter().find(|c| c.id == attacker).unwrap();
+    assert_eq!((a.power, a.toughness), (6, 6), "+4/+4 from bloodrush");
+    assert!(a.keywords.contains(&Keyword::Trample), "gained trample");
 }

@@ -29,8 +29,12 @@ pub fn lyev_skyknight() -> CardDefinition {
     }
 }
 
-/// Ghor-Clan Rampager — {2}{R}{G} 4/4 Trample
+/// Ghor-Clan Rampager — {2}{R}{G} 4/4 Trample. Bloodrush (CR 702.78) —
+/// {R}{G}, Discard this card: Target attacking creature gets +4/+4 and gains
+/// trample until end of turn.
 pub fn ghor_clan_rampager() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Value};
+    use crate::effect::Duration;
     CardDefinition {
         name: "Ghor-Clan Rampager",
         cost: cost(&[generic(2), r(), g()]),
@@ -39,8 +43,25 @@ pub fn ghor_clan_rampager() -> CardDefinition {
         power: 4,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        effect: Effect::Noop,
-        triggered_abilities: vec![],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r(), g()]),
+            from_hand: true,
+            discard_self_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking)),
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: crate::card::Selector::Target(0),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

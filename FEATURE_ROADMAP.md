@@ -438,7 +438,10 @@ feature; sweep card-batch by card-batch.
   stamps the miracle alt-cost + may-play window via `maybe_grant_miracle`,
   cast for that cost through `CastFromZoneWithoutPaying`; Bonfire of the
   Damned, Temporal Mastery, Reforge the Soul),
-  ⏳ Bloodrush, ✅ Unleash (`Keyword::Unleash` + `shortcut::unleash()` — CR
+  ✅ Bloodrush (CR 702.78 — a from-hand activated ability with
+  `from_hand` + `discard_self_cost`; `{R}{G}, Discard this: target attacking
+  creature gets +4/+4 + trample` — Ghor-Clan Rampager),
+  ✅ Unleash (`Keyword::Unleash` + `shortcut::unleash()` — CR
   702.98: ETB "may enter with a +1/+1 counter" + computed `CantBlock` while it
   has one; Rakdos Cackler, Gore-House Chainwalker, Spawn of Rix Maadi),
   ✅ Scavenge (`shortcut::scavenge` — CR 702.97, gy-activated exile-self for

@@ -12236,6 +12236,15 @@ pub fn saheeli_rai() -> CardDefinition {
                         to: Selector::Player(PlayerRef::EachOpponent),
                         amount: Value::Const(1),
                     },
+                    // "…and each planeswalker they control" (CR 120.3c — the
+                    // damage removes a loyalty counter from each).
+                    Effect::DealDamage {
+                        to: Selector::EachPermanent(
+                            SelectionRequirement::Planeswalker
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                        amount: Value::Const(1),
+                    },
                 ]),
             },
             LoyaltyAbility {
