@@ -84,12 +84,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   sacrifice_eot }`: the controller picks up to `count` matching hand cards via
   `ChooseCards` (always optional) and they enter under their control, with
   optional haste + next-end-step sacrifice riders. Ships Sneak Attack, Through
-  the Breach, Elvish Piper, Quicksilver Amulet. Remaining ⏳: combat-damage
-  drop-a-Goblin (Goblin Lackey / Warren Instigator) wants the same effect off a
-  `DealsCombatDamageToPlayer` trigger with a creature-type filter.
-- ⏳ **`Value` arithmetic (count × k).** Goblin Piledriver wants "+2/+0 for each
-  other attacking Goblin"; `Value::CountMatching` gives the count but there's no
-  multiply, so the doubled pump can't be expressed. Add `Value::Times(a, b)`.
+  the Breach, Elvish Piper, Quicksilver Amulet, and the combat-damage
+  drop-a-Goblin trigger (Goblin Lackey / Warren Instigator) off a
+  `DealsCombatDamageToPlayer` trigger with a creature-type filter. ✅
+- ✅ **`Value` arithmetic (count × k).** `Value::Times(a, b)` ships; Goblin
+  Piledriver's "+2/+0 for each other attacking Goblin" rides it.
+- ⏳ **Multi-target ETB / triggered abilities.** `StackItem::Trigger` carries a
+  single `target`, so a triggered ability needing *two* targets (Vedalken
+  Plotter's "exchange control of target land you control and target land an
+  opponent controls") can't be auto-targeted for both slots. Spells already
+  thread `additional_targets`; triggers need the same. (Switcheroo, a sorcery,
+  exercises `Effect::ExchangeControl` cleanly meanwhile.)
 
 - ✅ **Chosen-creature-type anthem static.** `StaticEffect::AnthemForChosenType
   { power, toughness, exclude_source }` reads the source's live
@@ -1082,7 +1087,7 @@ picking an item up.
 - 🟡 **CR 401 — Library** — cast-with-top-of-library-revealed recompute (401.5/401.6); multi-card same-position picker (401.4). (401.7 `LibraryPosition::FromTop` ✅.)
 - 🟡 **CR 706 — Rolling a Die** — stored rolls (706.8); ignore-roll riders. Roll trigger (706.6) ✅ — `EventKind::RolledDice`/`GameEvent::DiceRolled { player, count }` fires once per roll instruction ("whenever you roll one or more dice"). Result-referencing effects ✅ via `Value::LastDieRoll` (706.4 — Ancient Copper Dragon, carded + tested). (modifier / reroll-at-most / doubles ✅.)
 - 🟡 **CR 707 — Copying Objects** — in-place copy (707.4); MDFC-face copy (707.8); static copy effects (707.2c); copied "as enters" choices (707.6); spell-copy exceptions (707.9). (Enter-as-copy "except it's also [type]" ✅ via `EntersAsCopy.extra_card_types` — Phyrexian Metamorph copies any artifact/creature and stays an artifact.)
-- 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
+- 🟡 **CR 506 — Combat Phase** — "block as though" restrictions (506.6); combat-step cast-timing gates (506.7). `PlayerRef::DefendingPlayer` now resolves off the *triggering attacker* for `YourControl`-scoped Attacks triggers (not just the ability source), so "whenever a creature you control attacks, defending player loses N" fires correctly (Leeching Sliver, CR 509.2). Combat-damage-to-player triggers now carry the damage dealt as `event_amount` (CR 119.3), so `Value::TriggerEventAmount` riders scale by the hit (Visions of Brutality). Such triggers now also **auto-target a graveyard card** when their effect prefers one (`prefers_graveyard_target`) instead of always binding slot 0 to the damaged player — Efreet Flamepainter recasts an instant, Venerable Warsinger reanimates a creature. (`CopySpell` / `CastWithoutPayingImmediate` are now surfaced by `primary_target_filter`, so on-cast self-copy and gy-recast triggers auto-target correctly; `CastWithoutPayingImmediate` accepts a `Permanent` entity-ref for the targeted gy card.)
 - 🟡 **CR 508.1g — Attack tax** — `StaticEffect::AttackTaxToController { amount }`
   taxes attackers hitting the source's controller (Ghostly Prison, Propaganda).
   `declare_attackers` sums the tax across the batch and auto-pays from the
@@ -1094,6 +1099,7 @@ picking an item up.
 - ✅ **CR 606 — Loyalty Abilities** — sorcery-speed, once-per-turn-per-walker gating ✅; loyalty-set effects ✅ (`Effect::SetLoyalty`); variable `-X` loyalty ✅ (606.5 — `LoyaltyAbility.x_cost`, `ActivateLoyaltyAbility { x_value }`, body reads `Value::XFromCost`; Kasmina). Remaining ⏳: "can be activated any time" riders; a UI `Decision::ChooseAmount` X prompt.
 - 🟡 **CR 701.45 — Learn** — reveal-Lesson / discard-to-draw decision ✅; the in-graveyard "if you would learn, you may instead return this" replacement ✅ via `StaticEffect::MayReturnFromGraveyardInsteadOfLearn` consulted at the top of `Effect::Learn` (Retriever Phoenix). Remaining ⏳: Lesson sideboard population in some deck-build paths.
 - ✅ **CR 701.10 — Double** — mana-doubling (701.10f) ✅ via `StaticEffect::ManaProductionDoubled` + `GameState.mana_production_doublers` (stamped around mana-ability resolution; `AddMana` multiplies pip output by `2^doublers`; rituals/spell-mana unaffected). Mana Reflection carded + tested. P/T-, counter-, life-doubling already ✅.
+- ✅ **CR 701.12 — Exchange (control)** — `Effect::ExchangeControl { a, b }` swaps the controllers of two resolved permanents simultaneously (Switcheroo). Exchange-life-totals + exchange-hand/graveyard already ✅. Remaining ⏳: an *until-end-of-turn* exchange variant and multi-target ETB delivery (Vedalken Plotter — see Follow-ups).
 - ✅ **CR 701.16 — Sacrifice** — `GameEvent::CreatureSacrificed`/`PermanentSacrificed` distinct from the lethal-damage/`Destroy` die path; `EventKind::CreatureSacrificed` triggers fire only on genuine sacrifice (Mortician Beetle). Remaining ⏳: batched multi-permanent sacrifice-cost picker.
 - ✅ **CR 701.60 — Suspect** — `Effect::Suspect { what }` + `CardInstance.suspected`; a suspected creature gains computed Menace + CantBlock (injected in `gather_continuous_effects`). `Predicate::SourceIsSuspected` gates Repeat Offender's toggle. Ships Barbed Servitor, Repeat Offender, Reasonable Doubt.
 - ✅ **CR 701.35 — Detain** — `Effect::Detain { what }` + `CardInstance.detained_by`; a detained permanent can't attack/block (combat gates) or have its abilities activated (`activate_ability` gate), lifting at the detainer's next turn (`do_untap`). Surfaced in `PermanentView.detained` + a client tooltip badge. Ships Lyev Skyknight. ⏳: granted "enters detained" statics.

@@ -681,6 +681,18 @@ pub enum CumulativeUpkeepCost {
     Sacrifice(Box<SelectionRequirement>),
 }
 
+impl CumulativeUpkeepCost {
+    /// Short human-readable cost phrase for tooltips/logs ("{2}", "—Pay 1
+    /// life", "—Sacrifice a creature").
+    pub fn summary(&self) -> String {
+        match self {
+            CumulativeUpkeepCost::Mana(c) => c.summary(),
+            CumulativeUpkeepCost::Life(n) => format!("—Pay {n} life"),
+            CumulativeUpkeepCost::Sacrifice(_) => "—Sacrifice".into(),
+        }
+    }
+}
+
 /// Composable filter for valid targets of a spell or ability.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SelectionRequirement {

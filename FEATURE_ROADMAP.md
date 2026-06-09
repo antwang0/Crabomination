@@ -57,7 +57,9 @@ and the rules-coverage audit in `TODO.md`.
   (`Value::LowestLifeTotal`; Repay in Kind), step-gated activated abilities
   (`Predicate::CurrentStepIs`; Mirror Universe/Magus of the Mirror upkeep gate),
   sacrifice-unless-pay-mana (`Effect::PayManaOrElse`; Archway Commons),
-  single-player graveyard exile (`Effect::ExilePlayerGraveyard`; Go Blank).
+  single-player graveyard exile (`Effect::ExilePlayerGraveyard`; Go Blank),
+  exchange-control of two permanents (`Effect::ExchangeControl`, CR 701.12;
+  Switcheroo).
 - **Formats/modes:** Standard, Commander, Brawl, Two-Headed Giant (+ teams);
   singleplayer vs. bot, networked TCP multiplayer, draft + cube, Learn/Lessons
   sideboard, full-state serde snapshots (save/restore + replay foundation).
@@ -537,8 +539,15 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 2. ⏳ **Stops / auto-yield configuration** — per-phase stops + "yield until
    something needs me" (priority plumbing already exists; today only Pass /
    End Turn / Next Turn).
-3. ⏳ **Combat math / damage preview** — projected life swing + which
-   creatures die on declared attacks/blocks.
+3. 🟡 **Combat math / damage preview** — `combat_preview` (`server::view`)
+   projects each player's life swing (damage + lifelink) and the dying
+   creatures off the declared attackers/blocks, honoring first/double strike,
+   deathtouch lethal-spread, trample overflow, indestructible, and
+   protection. Now **layer-aware**: P/T and keywords read the computed
+   battlefield, so anthems and granted/stripped evasion are reflected. The
+   client surfaces the life rows + a "Dying: N theirs / N yours" summary
+   (`update_combat_preview_panel`). Remaining: multi-blocker damage-order
+   nuance and planeswalker-target rows.
 4. ⏳ **Undo / mana-tap rollback** — undo un-committed taps before a spell
    locks in (`ManualTapRequired` already signals partial manual-tap model).
 5. 🟡 **Targeting arrows on the stack** — `KnownStackItem` now carries

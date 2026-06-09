@@ -1635,6 +1635,25 @@ pub fn update_combat_preview_panel(
         rows.push((format!("{who}:  {} → {}{}", p.life, new_life, note), color));
     }
 
+    // Numeric "who dies" summary to complement the red dying-creature borders:
+    // split the projected casualties by controller so the player sees the
+    // trade at a glance (yours in danger-red, opponents' in good-green).
+    let (mut yours, mut theirs) = (0u32, 0u32);
+    for id in &cp.dying_creatures {
+        match cv.battlefield.iter().find(|c| c.id == *id) {
+            Some(c) if c.controller == cv.your_seat => yours += 1,
+            Some(_) => theirs += 1,
+            None => {}
+        }
+    }
+    if yours > 0 || theirs > 0 {
+        let mut parts = Vec::new();
+        if theirs > 0 { parts.push(format!("{theirs} theirs")); }
+        if yours > 0 { parts.push(format!("{yours} yours")); }
+        let color = if yours > theirs { theme::TEXT_DANGER } else { theme::TEXT_GOOD };
+        rows.push((format!("Dying:  {}", parts.join(", ")), color));
+    }
+
     if rows.is_empty() {
         hide(&mut node);
         return;

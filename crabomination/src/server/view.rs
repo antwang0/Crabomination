@@ -142,25 +142,33 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
     let mut lifegain: std::collections::HashMap<usize, i32> = std::collections::HashMap::new();
     let mut dying: Vec<CardId> = Vec::new();
 
-    let lethal_from = |attacker: &crate::card::CardInstance, defender: &crate::card::CardInstance| -> bool {
-        let p = attacker.power();
+    // Use layer-computed P/T + keywords so the preview honors anthems,
+    // granted/stripped evasion (e.g. a granted Trample or Deathtouch), and
+    // keyword loss — not just the printed/counter values on the instance.
+    type CP = crate::game::layers::ComputedPermanent;
+    let computed = state.compute_battlefield();
+    let cp = |id: CardId| computed.iter().find(|c| c.id == id);
+    let kw = |c: &CP, k: &Keyword| c.keywords.contains(k);
+
+    let lethal_from = |attacker: &CP, defender: &CP| -> bool {
+        let p = attacker.power;
         p > 0
-            && !defender.has_keyword(&Keyword::Indestructible)
+            && !kw(defender, &Keyword::Indestructible)
             // CR 702.16e — combat damage from a color the defender has
             // protection from is prevented, so it never dies to that source.
             && !state.damage_prevented_by_protection(attacker.id, defender.id)
-            && (p >= defender.toughness() || attacker.has_keyword(&Keyword::Deathtouch))
+            && (p >= defender.toughness || kw(attacker, &Keyword::Deathtouch))
     };
 
     for atk in attackers {
-        let Some(a) = state.battlefield_find(atk.attacker) else { continue };
-        let blockers: Vec<&crate::card::CardInstance> = block_map
+        let Some(a) = cp(atk.attacker) else { continue };
+        let blockers: Vec<&CP> = block_map
             .iter()
             .filter(|(_, aid)| *aid == atk.attacker)
-            .filter_map(|(bid, _)| state.battlefield_find(*bid))
+            .filter_map(|(bid, _)| cp(*bid))
             .collect();
-        let a_power = a.power().max(0);
-        let lifelink = a.has_keyword(&Keyword::Lifelink);
+        let a_power = a.power.max(0);
+        let lifelink = kw(a, &Keyword::Lifelink);
         if blockers.is_empty() {
             // Unblocked: full damage to the defending player (planeswalker
             // targets don't hit a player's life).
@@ -173,9 +181,7 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
         } else {
             // Blocked: attacker assigns lethal to blockers in id order;
             // trample overflows to the defending player.
-            let has_fs = |c: &crate::card::CardInstance| {
-                c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
-            };
+            let has_fs = |c: &CP| kw(c, &Keyword::FirstStrike) || kw(c, &Keyword::DoubleStrike);
             let attacker_fs = has_fs(a);
             // Which blockers does the attacker kill? (lethal spread, deathtouch
             // first-blocker-eats-all). Computed first so first-strike removal
@@ -183,25 +189,25 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             let mut remaining = a_power;
             let mut killed: Vec<CardId> = Vec::new();
             for b in &blockers {
-                let needed = b.toughness().max(1);
-                if lethal_from(a, b) && (a.has_keyword(&Keyword::Deathtouch) || remaining >= needed) {
+                let needed = b.toughness.max(1);
+                if lethal_from(a, b) && (kw(a, &Keyword::Deathtouch) || remaining >= needed) {
                     killed.push(b.id);
-                    remaining -= if a.has_keyword(&Keyword::Deathtouch) { 1 } else { needed };
+                    remaining -= if kw(a, &Keyword::Deathtouch) { 1 } else { needed };
                 }
             }
             // CR 702.7 — a non-first-strike blocker the attacker kills in the
             // first-strike step deals no damage back. Such blockers don't
             // count toward the attacker's death.
             let deals_back =
-                |b: &crate::card::CardInstance| !(attacker_fs && !has_fs(b) && killed.contains(&b.id));
+                |b: &CP| !(attacker_fs && !has_fs(b) && killed.contains(&b.id));
             let total_blocker_power: i32 =
-                blockers.iter().filter(|b| deals_back(b)).map(|b| b.power().max(0)).sum();
+                blockers.iter().filter(|b| deals_back(b)).map(|b| b.power.max(0)).sum();
             let dt_blocker = blockers
                 .iter()
-                .any(|b| b.power() > 0 && b.has_keyword(&Keyword::Deathtouch) && deals_back(b));
+                .any(|b| b.power > 0 && kw(b, &Keyword::Deathtouch) && deals_back(b));
             if (total_blocker_power > 0 || dt_blocker)
-                && !a.has_keyword(&Keyword::Indestructible)
-                && (total_blocker_power >= a.toughness() || dt_blocker)
+                && !kw(a, &Keyword::Indestructible)
+                && (total_blocker_power >= a.toughness || dt_blocker)
             {
                 dying.push(a.id);
             }
@@ -210,10 +216,10 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             }
             // Trample overflow (CR 510.1c): leftover after lethal to all
             // blockers spills to the defending player.
-            if a.has_keyword(&Keyword::Trample) {
+            if kw(a, &Keyword::Trample) {
                 let assign_to_block: i32 = blockers
                     .iter()
-                    .map(|b| if a.has_keyword(&Keyword::Deathtouch) { 1 } else { b.toughness().max(0) })
+                    .map(|b| if kw(a, &Keyword::Deathtouch) { 1 } else { b.toughness.max(0) })
                     .sum();
                 let overflow = (a_power - assign_to_block).max(0);
                 if overflow > 0
@@ -229,8 +235,8 @@ fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
             // damage they deal to the attacker (a first-struck-dead blocker
             // deals none).
             for b in &blockers {
-                if b.has_keyword(&Keyword::Lifelink) && deals_back(b) {
-                    *lifegain.entry(b.controller).or_insert(0) += b.power().max(0);
+                if kw(b, &Keyword::Lifelink) && deals_back(b) {
+                    *lifegain.entry(b.controller).or_insert(0) += b.power.max(0);
                 }
             }
         }
