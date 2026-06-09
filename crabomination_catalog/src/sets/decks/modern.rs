@@ -33670,10 +33670,19 @@ pub fn goblin_surprise() -> CardDefinition {
 }
 
 /// Nowhere to Run — {1}{B} Enchantment with flash. When it enters, target
-/// creature an opponent controls gets -3/-3 until end of turn. (The "creatures
-/// your opponents control lose hexproof and shroud" static is dropped.)
+/// creature an opponent controls gets -3/-3 until end of turn. Creatures your
+/// opponents control lose hexproof and shroud.
 pub fn nowhere_to_run() -> CardDefinition {
     use crate::effect::shortcut::etb;
+    let lose = |keyword: Keyword| crate::card::StaticAbility {
+        description: "Creatures your opponents control lose hexproof and shroud.",
+        effect: crate::effect::StaticEffect::LoseKeyword {
+            applies_to: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+            ),
+            keyword,
+        },
+    };
     CardDefinition {
         name: "Nowhere to Run",
         cost: cost(&[generic(1), b()]),
@@ -33687,6 +33696,7 @@ pub fn nowhere_to_run() -> CardDefinition {
             toughness: Value::Const(-3),
             duration: Duration::EndOfTurn,
         })],
+        static_abilities: vec![lose(Keyword::Hexproof), lose(Keyword::Shroud)],
         ..Default::default()
     }
 }

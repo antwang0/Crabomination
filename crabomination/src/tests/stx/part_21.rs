@@ -2145,14 +2145,10 @@ fn cr_704_5n_equipment_unattaches_when_creature_dies() {
     if let Some(c) = g.battlefield_find_mut(greaves) {
         c.attached_to = Some(bear);
     }
-    // Now kill the bear with a Bolt.
-    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    g.priority.player_with_priority = 1;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("bolt");
+    // Now kill the bear with lethal damage (Lightning Greaves grants it
+    // Shroud, so it can't be *targeted* — mark damage + run SBA instead).
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    let _ = g.check_state_based_actions();
     drain_stack(&mut g);
     // Bear dead, but Equipment should still be in play with attached_to = None.
     assert!(g.battlefield_find(bear).is_none(), "bear dies");

@@ -74,6 +74,10 @@ pub enum StaticEffect {
     },
     /// Grant a keyword to everything the selector picks.
     GrantKeyword { applies_to: Selector, keyword: Keyword },
+    /// Strip a keyword from matching permanents (CR 613 layer 6) — "creatures
+    /// your opponents control lose hexproof and shroud" (Nowhere to Run). A
+    /// layer-6 `Modification::RemoveKeyword`, the mirror of `GrantKeyword`.
+    LoseKeyword { applies_to: Selector, keyword: Keyword },
     /// Replace ETB for matching permanents ("enters tapped").
     EntersTapped { applies_to: Selector },
     /// Controller may play one additional land per turn.

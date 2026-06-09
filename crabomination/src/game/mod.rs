@@ -6377,7 +6377,6 @@ impl GameState {
 
     /// Returns true if the permanent `id` has `kw` after all layer effects are applied.
     /// Falls back to `false` if the permanent is not on the battlefield.
-    #[cfg(test)]
     pub(crate) fn permanent_has_keyword(&self, id: CardId, kw: &Keyword) -> bool {
         self.computed_permanent(id)
             .is_some_and(|c| c.keywords.contains(kw))
@@ -6641,6 +6640,20 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
                         sublayer: None,
                         duration: EffectDuration::WhileSourceOnBattlefield,
                         modification: Modification::AddKeyword(keyword.clone()),
+                    }],
+                    None => vec![],
+                }
+            }
+            StaticEffect::LoseKeyword { applies_to, keyword } => {
+                match selector_to_affected(applies_to, card) {
+                    Some(affected) => vec![ContinuousEffect {
+                        timestamp,
+                        source,
+                        affected,
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::RemoveKeyword(keyword.clone()),
                     }],
                     None => vec![],
                 }

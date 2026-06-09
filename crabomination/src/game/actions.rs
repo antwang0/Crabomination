@@ -4434,10 +4434,14 @@ impl GameState {
         let Some(card) = self.battlefield_find(*cid) else {
             return Ok(());
         };
-        if card.has_keyword(&Keyword::Shroud) {
+        // Read layer-computed keywords (CR 613) so granted *and* stripped
+        // Hexproof/Shroud are honored — e.g. Nowhere to Run removing an
+        // opponent's hexproof makes the creature targetable.
+        let controller = card.controller;
+        if self.permanent_has_keyword(*cid, &Keyword::Shroud) {
             return Err(GameError::TargetHasShroud(*cid));
         }
-        if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
+        if self.permanent_has_keyword(*cid, &Keyword::Hexproof) && controller != caster {
             return Err(GameError::TargetHasHexproof(*cid));
         }
         // Ward is enforced via triggered abilities on the stack (CR 702.21a),

@@ -40136,6 +40136,25 @@ fn nowhere_to_run_shrinks_opponent_creature() {
     assert!(g.battlefield_find(bear).is_none(), "bear shrank to lethal and died");
 }
 
+/// Nowhere to Run strips hexproof from opponents' creatures (CR 613 layer 6).
+#[test]
+fn nowhere_to_run_strips_opponent_hexproof() {
+    let mut g = two_player_game();
+    let caryatid = g.add_card_to_battlefield(1, catalog::sylvan_caryatid()); // hexproof
+    assert!(g.computed_permanent(caryatid).unwrap()
+        .keywords.contains(&crate::card::Keyword::Hexproof), "hexproof before");
+    // Hexproof blocks an opponent's targeting before Nowhere to Run.
+    assert!(g.check_target_legality(&Target::Permanent(caryatid), 0).is_err(),
+        "hexproof blocks targeting before");
+    g.add_card_to_battlefield(0, catalog::nowhere_to_run());
+    assert!(!g.computed_permanent(caryatid).unwrap()
+        .keywords.contains(&crate::card::Keyword::Hexproof),
+        "opponent's creature loses hexproof while Nowhere to Run is out");
+    // …and is now a legal target for its controller's opponent.
+    assert!(g.check_target_legality(&Target::Permanent(caryatid), 0).is_ok(),
+        "targetable once hexproof is stripped");
+}
+
 // ── Squad (CR 702.157) ───────────────────────────────────────────────────────
 
 /// Vanguard Suppressor cast paying its Squad {2} twice mints two token copies
