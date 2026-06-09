@@ -44064,3 +44064,40 @@ fn thrun_regenerates() {
     assert!(g.battlefield_find(thrun).is_some(), "regenerated through the wrath");
     assert!(g.battlefield_find(thrun).unwrap().tapped, "regeneration taps");
 }
+
+/// Containment Construct rescues a discard into exile and lets you play it
+/// this turn.
+#[test]
+fn containment_construct_rescues_discards() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::containment_construct());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // exile it
+    let mut events = Vec::new();
+    g.discard_card(0, bolt, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let exiled = g.exile.iter().find(|c| c.id == bolt).expect("discard exiled");
+    assert!(exiled.may_play_until.is_some(), "playable this turn");
+}
+
+/// Heart of Kiran crews with 3 power and swings as a 4/4 flyer.
+#[test]
+fn heart_of_kiran_crews_and_attacks() {
+    use crate::card::CardType;
+    let mut g = two_player_game();
+    let heart = g.add_card_to_battlefield(0, catalog::heart_of_kiran());
+    let crew = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    g.clear_sickness(crew);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Crew { vehicle: heart, crew_creatures: vec![crew] })
+        .expect("crew 3 paid by a 6-power body");
+    let v = g.computed_permanent(heart).unwrap();
+    assert!(v.card_types.contains(&CardType::Creature), "animated by crewing");
+    assert_eq!((v.power, v.toughness), (4, 4));
+}

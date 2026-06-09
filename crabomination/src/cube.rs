@@ -244,6 +244,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         mirror_universe,
         disrupting_scepter,
         bomat_courier,
+        containment_construct,
+        heart_of_kiran,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,

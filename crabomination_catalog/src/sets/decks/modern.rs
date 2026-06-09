@@ -38788,3 +38788,53 @@ pub fn thrun_the_last_troll() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Containment Construct — {1} 1/2 Construct. Whenever you discard a card,
+/// exile it from your graveyard instead — you may play it this turn.
+pub fn containment_construct() -> CardDefinition {
+    use crate::card::MayPlayDuration;
+    CardDefinition {
+        name: "Containment Construct",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Exile the discarded card? You may play it this turn.".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move { what: Selector::TriggerSource, to: ZoneDest::Exile },
+                    Effect::GrantMayPlay {
+                        what: Selector::TriggerSource,
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Heart of Kiran — {2} Legendary Vehicle 4/4, flying, vigilance, crew 3.
+/// (The loyalty-counter alternative crew cost is dropped.)
+pub fn heart_of_kiran() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    CardDefinition {
+        name: "Heart of Kiran",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Crew(3), Keyword::Flying, Keyword::Vigilance],
+        ..Default::default()
+    }
+}
