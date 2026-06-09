@@ -1368,6 +1368,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        shady_informant,
         takenuma_abandoned_mire,
         restless_cottage,
         // black Sliver + zombie payoffs
@@ -2223,6 +2224,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         nervous_gardener,
         greenbelt_radical,
+        voracious_varmint,
         hide_in_plain_sight,
         boseiju_who_endures,
         // green Slivers + tribal lords

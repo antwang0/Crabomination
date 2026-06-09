@@ -13067,6 +13067,59 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Voracious Varmint — {1}{G} 2/2 Varmint with vigilance. `{1}, Sacrifice this:
+/// Destroy target artifact or enchantment.` (MKM)
+pub fn voracious_varmint() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Voracious Varmint",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Varmint],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Shady Informant — {3}{B}{R} 4/2 Ogre Rogue. Disguise {2}{B/R}{B/R}. When it
+/// dies, it deals 2 damage to any target. (MKM)
+pub fn shady_informant() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
+    let br = || hybrid(Color::Black, Color::Red);
+    CardDefinition {
+        name: "Shady Informant",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ogre, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Disguise(cost(&[generic(2), br(), br()]))],
+        triggered_abilities: vec![on_dies(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
 /// Greenbelt Radical — {3}{G} 4/4 Centaur. Disguise {5}{G}{G}. When turned face
 /// up, put a +1/+1 counter on each creature you control and they gain trample
 /// until end of turn. (MKM)

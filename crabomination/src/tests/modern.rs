@@ -42128,6 +42128,35 @@ fn disguise_bubble_smuggler_turn_up_adds_four_counters() {
     assert_eq!((up.power(), up.toughness()), (6, 5), "2/1 + four +1/+1 counters");
 }
 
+/// Shady Informant deals 2 damage to any target when it dies.
+#[test]
+fn shady_informant_dies_deals_two_damage() {
+    let mut g = two_player_game();
+    let informant = g.add_card_to_battlefield(0, catalog::shady_informant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let life_before = g.players[1].life;
+    // Kill via lethal damage + SBA.
+    g.battlefield_find_mut(informant).unwrap().damage = 2;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 2, "dies-trigger deals 2 to the chosen player");
+}
+
+/// Voracious Varmint sacrifices itself to destroy an artifact or enchantment.
+#[test]
+fn voracious_varmint_sacs_to_destroy_artifact() {
+    let mut g = two_player_game();
+    let varmint = g.add_card_to_battlefield(0, catalog::voracious_varmint());
+    let art = g.add_card_to_battlefield(1, catalog::null_rod());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: varmint, ability_index: 0, target: Some(Target::Permanent(art)), x_value: None,
+    }).expect("activate sac ability");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+    assert!(g.battlefield_find(varmint).is_none(), "varmint sacrificed as cost");
+}
+
 /// Greenbelt Radical's turn-up pumps the whole team with +1/+1 counters.
 #[test]
 fn disguise_greenbelt_radical_turn_up_pumps_team() {

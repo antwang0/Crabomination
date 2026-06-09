@@ -83,6 +83,8 @@ pub enum CreatureType {
     Ouphe,
     // MKM / LCI expansion (Spyglass Siren, Inside Source, Slimy Dualleech).
     Siren, Citizen, Leech,
+    // Bloomburrow / MKM (Voracious Varmint).
+    Varmint,
     // Enchantment creature subtype (Enduring Innocence).
     Glimmer,
     // Ninjutsu creature subtype (Fallen Shinobi, etc.).
