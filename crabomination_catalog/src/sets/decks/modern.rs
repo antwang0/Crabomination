@@ -35797,3 +35797,155 @@ pub fn switcheroo() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: more Slivers + tribal payoffs (batch 3) ─────────────────────
+
+/// Spinneret Sliver — {1}{G} 2/2. All Sliver creatures have reach.
+pub fn spinneret_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have reach.",
+            effect: StaticEffect::GrantKeyword { applies_to: all_slivers(), keyword: Keyword::Reach },
+        }],
+        ..sliver("Spinneret Sliver", cost(&[generic(1), g()]), 2, 2)
+    }
+}
+
+/// Horned Sliver — {2}{G} 2/2. All Sliver creatures have trample.
+pub fn horned_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have trample.",
+            effect: StaticEffect::GrantKeyword { applies_to: all_slivers(), keyword: Keyword::Trample },
+        }],
+        ..sliver("Horned Sliver", cost(&[generic(2), g()]), 2, 2)
+    }
+}
+
+/// Talon Sliver — {1}{W} 1/1. All Sliver creatures have first strike.
+pub fn talon_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have first strike.",
+            effect: StaticEffect::GrantKeyword { applies_to: all_slivers(), keyword: Keyword::FirstStrike },
+        }],
+        ..sliver("Talon Sliver", cost(&[generic(1), w()]), 1, 1)
+    }
+}
+
+/// Two-Headed Sliver — {1}{R} 1/1. All Sliver creatures have menace.
+pub fn two_headed_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have menace.",
+            effect: StaticEffect::GrantKeyword { applies_to: all_slivers(), keyword: Keyword::Menace },
+        }],
+        ..sliver("Two-Headed Sliver", cost(&[generic(1), r()]), 1, 1)
+    }
+}
+
+/// Watcher Sliver — {3}{W} 2/2. All Sliver creatures get +0/+2.
+pub fn watcher_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers get +0/+2.",
+            effect: StaticEffect::PumpPT { applies_to: all_slivers(), power: 0, toughness: 2 },
+        }],
+        ..sliver("Watcher Sliver", cost(&[generic(3), w()]), 2, 2)
+    }
+}
+
+/// Vengeful Dead — {3}{B} 3/2 Zombie. Whenever this creature or another Zombie
+/// dies, each opponent loses 1 life.
+pub fn vengeful_dead() -> CardDefinition {
+    CardDefinition {
+        name: "Vengeful Dead",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+                },
+            ),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Withered Wretch — {B}{B} 2/2 Zombie Cleric. {1}: Exile target card from a
+/// graveyard.
+pub fn withered_wretch() -> CardDefinition {
+    CardDefinition {
+        name: "Withered Wretch",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::ExileTaggedWithSource {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::InGraveyard },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Immaculate Magistrate — {3}{G} 2/2 Elf Shaman. {T}: Put a +1/+1 counter on
+/// target creature for each Elf you control.
+pub fn immaculate_magistrate() -> CardDefinition {
+    CardDefinition {
+        name: "Immaculate Magistrate",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddCounter {
+                what: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::ControlledByYou),
+                ))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Coastal Piracy — {2}{U}{U} Enchantment. Whenever a creature you control deals
+/// combat damage to an opponent, you may draw a card. (The optional "may" is
+/// always taken — pure upside, so bots benefit.)
+pub fn coastal_piracy() -> CardDefinition {
+    CardDefinition {
+        name: "Coastal Piracy",
+        cost: cost(&[generic(2), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::YourControl),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}

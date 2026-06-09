@@ -40896,6 +40896,83 @@ fn cemetery_reaper_buffs_other_zombies() {
     assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Zombie gets +1/+1");
 }
 
+/// Horned Sliver grants trample to every Sliver (yours and theirs).
+#[test]
+fn horned_sliver_grants_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hs = g.add_card_to_battlefield(0, catalog::horned_sliver());
+    let opp = g.add_card_to_battlefield(1, catalog::talon_sliver());
+    assert!(g.computed_permanent(hs).unwrap().keywords.contains(&Keyword::Trample));
+    assert!(g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::Trample),
+        "all-Sliver grant reaches opponent's Sliver too");
+}
+
+/// Watcher Sliver's +0/+2 anthem toughens every Sliver.
+#[test]
+fn watcher_sliver_toughens_all_slivers() {
+    let mut g = two_player_game();
+    let ws = g.add_card_to_battlefield(0, catalog::watcher_sliver());
+    assert_eq!(g.computed_permanent(ws).unwrap().toughness, 4, "2/2 base + 0/+2");
+}
+
+/// Vengeful Dead drains each opponent when any Zombie (incl. itself) dies.
+#[test]
+fn vengeful_dead_drains_when_a_zombie_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::vengeful_dead());
+    let other = g.add_card_to_battlefield(0, catalog::shepherd_of_rot()); // a Zombie
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(other)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the other Zombie");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "opponent lost 1 when the Zombie died");
+}
+
+/// Immaculate Magistrate adds +1/+1 counters equal to the Elves you control.
+#[test]
+fn immaculate_magistrate_counters_scale_with_elves() {
+    let mut g = two_player_game();
+    let mag = g.add_card_to_battlefield(0, catalog::immaculate_magistrate()); // Elf #1
+    g.add_card_to_battlefield(0, catalog::sylvan_advocate());                 // Elf #2
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(mag);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mag, ability_index: 0,
+        target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("activate Immaculate Magistrate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(target).unwrap().power, 4, "2/2 + two +1/+1 counters");
+}
+
+/// Coastal Piracy lets you draw when your creature connects.
+#[test]
+fn coastal_piracy_draws_on_combat_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::coastal_piracy());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card off combat damage");
+}
+
 /// Leeching Sliver drains the defending player when a Sliver attacks.
 #[test]
 fn leeching_sliver_drains_on_sliver_attack() {

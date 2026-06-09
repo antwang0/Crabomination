@@ -468,6 +468,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         steelform_sliver,
         sentinel_sliver,
         bonescythe_sliver,
+        talon_sliver,
+        watcher_sliver,
         // Spirit + Knight tribal
         empyrean_eagle,
         kinsbaile_cavalier,
@@ -1013,6 +1015,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         crystalline_sliver,
         winged_sliver,
         switcheroo,
+        coastal_piracy,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1347,6 +1350,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         shepherd_of_rot,
         deaths_head_buzzard,
         cemetery_reaper,
+        vengeful_dead,
+        withered_wretch,
         overlord_of_the_balemurk,
         get_lost,
         deep_cavern_bat,
@@ -1756,6 +1761,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         striking_sliver,
         blur_sliver,
         belligerent_sliver,
+        two_headed_sliver,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god
@@ -2184,6 +2190,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         manaweft_sliver,
         sylvan_advocate,
         wilt_leaf_liege,
+        spinneret_sliver,
+        horned_sliver,
+        immaculate_magistrate,
         overlord_of_the_hauntwoods,
         cenote_scout,
         anthem_of_champions,
