@@ -24,7 +24,7 @@ pub fn geological_appraiser() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        triggered_abilities: vec![etb(Effect::Discover { n: Value::Const(3) })],
+        triggered_abilities: vec![etb(Effect::Discover { n: Value::Const(3), filter: None })],
         ..Default::default()
     }
 }
@@ -44,7 +44,7 @@ pub fn trumpeting_carnosaur() -> CardDefinition {
         power: 7,
         toughness: 6,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::Discover { n: Value::Const(5) })],
+        triggered_abilities: vec![etb(Effect::Discover { n: Value::Const(5), filter: None })],
         ..Default::default()
     }
 }

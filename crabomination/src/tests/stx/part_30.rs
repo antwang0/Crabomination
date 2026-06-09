@@ -160,3 +160,81 @@ fn transforming_flourish_destroys_opponent_creature() {
 
     assert!(g.battlefield_find(opp_bear).is_none(), "opponent's creature destroyed");
 }
+
+/// Codie's static forbids casting permanent spells.
+#[test]
+fn codie_blocks_permanent_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::codie_vociferous_codex());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "permanent spells are locked while Codie is out");
+}
+
+/// Codie's activation adds WUBRG and sets up the next-spell impulse: casting
+/// a spell exiles from the top until a cheaper instant/sorcery turns up.
+#[test]
+fn codie_activation_ramps_and_impulses_on_next_spell() {
+    let mut g = two_player_game();
+    let codie = g.add_card_to_battlefield(0, catalog::codie_vociferous_codex());
+    g.clear_sickness(codie);
+    // Library (top → down): a bear (skipped — not an IS), a Bolt (MV 1 < 3 →
+    // hit), then two Islands for Divination's draws.
+    let skipped = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: codie, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Codie");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 5, "added WUBRG");
+    // Cast Divination (MV 3) off the burst.
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.perform_action(GameAction::CastSpell {
+        card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Divination");
+    drain_stack(&mut g);
+    // The impulse fired: bear skipped to exile→bottom, Bolt (declined cast) to hand.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "cheaper instant found and (declined) put in hand");
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(skipped),
+        "non-IS card bottomed");
+}
+
+/// Ecological Appreciation finds up to four distinct-name creatures with
+/// MV <= X across library + graveyard; the opponent denies the two biggest,
+/// the rest enter the battlefield.
+#[test]
+fn ecological_appreciation_splits_with_opponent() {
+    let mut g = two_player_game();
+    // Candidates: dreadmaw MV 6 (excluded: > X), serra angel MV 5 + bears MV 2
+    // in library, wall of omens MV 2 in graveyard.
+    g.add_card_to_library(0, catalog::colossal_dreadmaw());
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let wall = g.add_card_to_graveyard(0, catalog::wall_of_omens());
+    let spell = g.add_card_to_hand(0, catalog::ecological_appreciation());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(7); // X=5 + {2}
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: Some(5),
+    }).expect("cast Ecological Appreciation");
+    drain_stack(&mut g);
+    // Angel (MV 5) + one MV-2 body denied (the two biggest); the other two
+    // MV-2 creatures hit the battlefield... with three candidates <= X
+    // (angel, bears, wall), the two biggest are denied: angel + one 2-drop.
+    assert!(g.battlefield_find(angel).is_none(), "biggest candidate denied");
+    let entered = [bears, wall].iter().filter(|&&c| g.battlefield_find(c).is_some()).count();
+    assert_eq!(entered, 1, "one of the remaining candidates entered");
+    assert!(!g.battlefield.iter().any(|c| c.id == angel), "angel shuffled away");
+}

@@ -2249,6 +2249,12 @@ impl GameState {
             return Err(GameError::CantCastNoncreature);
         }
 
+        // Codie lock — this player can't cast permanent spells.
+        if card.definition.is_permanent() && self.player_cant_cast_permanent_spells(p) {
+            self.players[p].hand.push(card);
+            return Err(GameError::CantCastPermanentSpells);
+        }
+
         // Validate convoke creatures up-front (before any state mutation).
         if !convoke_creatures.is_empty()
             && !card.definition.keywords.contains(&crate::card::Keyword::Convoke)
@@ -4568,6 +4574,18 @@ impl GameState {
         Ok(())
     }
 
+    /// True while `player` controls a `ControllerCantCastPermanentSpells`
+    /// source (Codie, Vociferous Codex).
+    pub(crate) fn player_cant_cast_permanent_spells(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition.static_abilities.iter().any(|sa| {
+                    matches!(sa.effect, StaticEffect::ControllerCantCastPermanentSpells)
+                })
+        })
+    }
+
     /// True if `player` controls any permanent granting "you have hexproof"
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
@@ -4616,6 +4634,31 @@ impl GameState {
         converged_value: u32,
     ) {
         use crate::effect::{EventKind, EventScope};
+        // CR 603.7e — one-shot "when you cast your next spell this turn"
+        // delayed triggers (Codie). Fire each matching watcher once, with
+        // the cast spell bound as the trigger source, and consume it.
+        let (next_cast, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.delayed_triggers)
+            .into_iter()
+            .partition(|dt| {
+                dt.controller == controller
+                    && matches!(dt.kind, crate::game::types::DelayedKind::YourNextSpellCastThisTurn)
+            });
+        self.delayed_triggers = rest;
+        for dt in next_cast {
+            self.stack.push(StackItem::Trigger {
+                source: dt.source,
+                controller: dt.controller,
+                effect: Box::new(dt.effect),
+                target: None,
+                mode: None,
+                x_value: 0,
+                converged_value: 0,
+                trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
+                mana_spent: 0,
+                event_amount: 0,
+                intervening_if: None,
+            });
+        }
         // CR 113.10b — permanents under a "loses all abilities" continuous
         // effect (Mercurial Transformation / Turn to Frog) don't fire
         // printed Magecraft / spell-cast triggers. Pre-compute the stripped

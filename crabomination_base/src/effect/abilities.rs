@@ -179,6 +179,10 @@ pub enum StaticEffect {
     /// (CR 614.5). Combat damage aimed at the controller's *other creatures*
     /// isn't redirected (blocker damage keeps its normal path).
     RedirectDamageToSelf,
+    /// Codie's lock: the source's controller can't cast permanent spells
+    /// (creature/artifact/enchantment/planeswalker). Checked at the main
+    /// cast gate in `cast_spell`.
+    ControllerCantCastPermanentSpells,
     /// CR 615.12 — while active, damage can't be prevented (global). A
     /// permanent-static sibling of `Effect::DamageCantBePreventedThisTurn`;
     /// `apply_prevention_shields` bypasses all shields while any source on the

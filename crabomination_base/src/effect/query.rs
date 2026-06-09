@@ -155,6 +155,8 @@ impl Effect {
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
+            Effect::OnYourNextSpellCastThisTurn { body } => body.requires_target(),
+            Effect::SearchSplitWithOpponent { .. } => false,
             Effect::MayPay { body, .. } => body.requires_target(),
             Effect::Process { then, .. } => then.requires_target(),
             Effect::CollectEvidence { amount, then } => {
@@ -227,7 +229,7 @@ impl Effect {
             Effect::DigToHandLoseLife { count, life_per_card } => {
                 value_has_target(count) || value_has_target(life_per_card)
             }
-            Effect::Discover { n } => value_has_target(n),
+            Effect::Discover { n, .. } => value_has_target(n),
             Effect::Monstrosity { n } => value_has_target(n),
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),

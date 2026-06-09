@@ -4281,6 +4281,8 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         // ── extras_19 — final real-STX sweep ──
         super::emergent_sequence,
         super::augmenter_pugilist,
+        super::codie_vociferous_codex,
+        super::ecological_appreciation,
         super::torrent_sculptor,
         super::blex_vexing_pest,
         super::extus_oriq_overlord,

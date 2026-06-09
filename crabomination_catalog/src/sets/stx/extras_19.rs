@@ -861,3 +861,66 @@ pub fn blex_vexing_pest() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Codie, Vociferous Codex — {3} Legendary Artifact Creature — Book Construct
+/// 1/4. You can't cast permanent spells. {4}, {T}: Add {W}{U}{B}{R}{G}; when
+/// you next cast a spell this turn, exile from the top until an instant or
+/// sorcery with lesser mana value, castable free (filtered Discover).
+pub fn codie_vociferous_codex() -> CardDefinition {
+    use crate::effect::{ActivatedAbility, ManaPayload, StaticEffect};
+    use crate::mana::Color;
+    let lesser_is = SelectionRequirement::HasCardType(CardType::Instant)
+        .or(SelectionRequirement::HasCardType(CardType::Sorcery));
+    CardDefinition {
+        name: "Codie, Vociferous Codex",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        static_abilities: vec![crate::card::StaticAbility {
+            description: "You can't cast permanent spells.",
+            effect: StaticEffect::ControllerCantCastPermanentSpells,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::Seq(vec![
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![
+                        Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                    ]),
+                },
+                Effect::OnYourNextSpellCastThisTurn {
+                    body: Box::new(Effect::Discover {
+                        n: Value::Diff(
+                            Box::new(Value::ManaValueOf(Box::new(Selector::TriggerSource))),
+                            Box::new(Value::Const(1)),
+                        ),
+                        filter: Some(lesser_is),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ecological Appreciation — {X}{2}{G} Sorcery. Search library + graveyard
+/// for up to four creature cards with different names, MV ≤ X; an opponent
+/// shuffles two away, the rest enter the battlefield.
+pub fn ecological_appreciation() -> CardDefinition {
+    CardDefinition {
+        name: "Ecological Appreciation",
+        cost: cost(&[x(), generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::SearchSplitWithOpponent { count: 4 },
+        ..Default::default()
+    }
+}

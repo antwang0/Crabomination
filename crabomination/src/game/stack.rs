@@ -1408,6 +1408,7 @@ impl GameState {
                 dt.kind,
                 crate::game::types::DelayedKind::WhenCardDies(_)
                     | crate::game::types::DelayedKind::CreatureYouControlEntersThisTurn
+                    | crate::game::types::DelayedKind::YourNextSpellCastThisTurn
             )
         });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention

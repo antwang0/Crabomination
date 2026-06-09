@@ -2231,7 +2231,7 @@ mod tests {
         use crate::effect::{Effect, PlayerRef, Value};
         assert_eq!(ability_effect_label(&Effect::Fateseal {
             who: PlayerRef::EachOpponent, amount: Value::Const(2) }), "Fateseal");
-        assert_eq!(ability_effect_label(&Effect::Discover { n: Value::Const(3) }), "Discover");
+        assert_eq!(ability_effect_label(&Effect::Discover { n: Value::Const(3), filter: None }), "Discover");
     }
 
     /// A variable `-X` loyalty ability surfaces with `x_cost: true` so the

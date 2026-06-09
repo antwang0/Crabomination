@@ -7158,7 +7158,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // the `Effect::Sacrifice` resolver; no continuous-layer effect.
             | StaticEffect::OpponentsCantMakeYouSacrifice
             | StaticEffect::ControllerDrawsDoubled
-            | StaticEffect::RedirectDamageToSelf => vec![],
+            | StaticEffect::RedirectDamageToSelf
+            | StaticEffect::ControllerCantCastPermanentSpells => vec![],
         })
         .collect()
 }

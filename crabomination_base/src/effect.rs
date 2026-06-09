@@ -1690,7 +1690,14 @@ pub enum Effect {
     /// either cast it without paying its mana cost or put it into hand; the
     /// rest go to the bottom in a random order. Geological Appraiser,
     /// Trumpeting Carnosaur.
-    Discover { n: Value },
+    Discover {
+        n: Value,
+        /// When `Some`, the stop condition is "a card matching this filter
+        /// with MV ≤ n" instead of the printed "nonland card with MV ≤ n"
+        /// (Codie's "an instant or sorcery card with lesser mana value").
+        #[serde(default)]
+        filter: Option<crate::card::SelectionRequirement>,
+    },
     /// CR 702.39 — *provoke*: untap the creature `what` resolves to and force
     /// it to block this combat's source attacker if able. Sets the target's
     /// `must_block` to the effect source. Used by `shortcut::provoke`.
@@ -2612,6 +2619,21 @@ pub enum Effect {
     CreaturesYouControlEnteringThisTurn {
         body: Box<Effect>,
     },
+
+    /// "When you cast your next spell this turn, [body]." Registers a
+    /// one-shot turn-scoped delayed trigger (CR 603.7e); the cast spell is
+    /// exposed to `body` as `Selector::TriggerSource`. Expires at cleanup.
+    /// Codie, Vociferous Codex.
+    OnYourNextSpellCastThisTurn {
+        body: Box<Effect>,
+    },
+
+    /// Ecological Appreciation: search your library and graveyard for up to
+    /// `count` creature cards with different names and mana value ≤ X
+    /// (`Value::XFromCost`); an opponent chooses two to shuffle into your
+    /// library, the rest enter the battlefield. Auto-pickers: caster takes
+    /// the highest-MV candidates, the opponent denies the two biggest.
+    SearchSplitWithOpponent { count: u32 },
 
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller

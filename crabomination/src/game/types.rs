@@ -478,6 +478,10 @@ pub enum DelayedKind {
     /// that enters for the rest of the turn; the entering creature is the
     /// trigger source. Expires at cleanup. Powers First Day of Class.
     CreatureYouControlEntersThisTurn,
+    /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
+    /// on the controller's next spell cast, with the cast spell bound as the
+    /// trigger source; expires at cleanup if no spell was cast. Codie.
+    YourNextSpellCastThisTurn,
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────
@@ -1164,6 +1168,8 @@ pub enum GameError {
     SorcerySpeedOnly,
     #[error("You can't cast noncreature spells this turn")]
     CantCastNoncreature,
+    #[error("You can't cast permanent spells")]
+    CantCastPermanentSpells,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),
     #[error("Card {0:?} not found in graveyard")]

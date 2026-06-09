@@ -5699,6 +5699,69 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SearchSplitWithOpponent { count } => {
+                use crate::card::CardType;
+                use crate::effect::ZoneDest;
+                let p = ctx.controller;
+                let cap = ctx.x_value;
+                // Candidates: creature cards in the controller's library +
+                // graveyard, MV ≤ X, distinct names; take the biggest `count`.
+                let mut candidates: Vec<(CardId, &'static str, u32)> = self.players[p]
+                    .library
+                    .iter()
+                    .chain(self.players[p].graveyard.iter())
+                    .filter(|c| {
+                        c.definition.card_types.contains(&CardType::Creature)
+                            && c.definition.cost.cmc() <= cap
+                    })
+                    .map(|c| (c.id, c.definition.name, c.definition.cost.cmc()))
+                    .collect();
+                candidates.sort_by(|a, b| b.2.cmp(&a.2));
+                let mut picked: Vec<(CardId, u32)> = Vec::new();
+                let mut names: Vec<&str> = Vec::new();
+                for (cid, name, mv) in candidates {
+                    if picked.len() as u32 >= *count {
+                        break;
+                    }
+                    if !names.contains(&name) {
+                        names.push(name);
+                        picked.push((cid, mv));
+                    }
+                }
+                // The opponent denies the two biggest (picked is MV-sorted).
+                let denied: Vec<CardId> = picked.iter().take(2).map(|(c, _)| *c).collect();
+                for (cid, _) in picked.iter().skip(2) {
+                    self.move_card_to(
+                        *cid,
+                        &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                        ctx,
+                        events,
+                    );
+                }
+                for cid in denied {
+                    self.move_card_to(
+                        cid,
+                        &ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::Shuffled },
+                        ctx,
+                        events,
+                    );
+                }
+                Ok(())
+            }
+
+            Effect::OnYourNextSpellCastThisTurn { body } => {
+                let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                self.delayed_triggers.push(DelayedTrigger {
+                    controller: ctx.controller,
+                    source,
+                    kind: crate::game::types::DelayedKind::YourNextSpellCastThisTurn,
+                    effect: (**body).clone(),
+                    target: None,
+                    fires_once: true,
+                });
+                Ok(())
+            }
+
             Effect::PayOrLoseGame { mana_cost, life_cost } => {
                 let p = ctx.controller;
                 // Try to pay mana via auto-tap, then deduct life. If any of
@@ -6597,11 +6660,13 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Discover { n } => {
+            Effect::Discover { n, filter } => {
                 // CR 701.57: exile cards from the top of the controller's
                 // library until a nonland card with MV ≤ n is exiled; the
                 // controller casts it for free or puts it into hand. The rest
-                // go to the bottom of the library in a random order.
+                // go to the bottom of the library in a random order. With a
+                // `filter`, the stop condition is "matches filter with MV ≤ n"
+                // (Codie's instant-or-sorcery impulse).
                 use crate::card::{CardType, Zone};
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let p = ctx.controller;
@@ -6611,11 +6676,14 @@ impl GameState {
                 while !self.players[p].library.is_empty() {
                     let top = &self.players[p].library[0];
                     let cid = top.id;
-                    let is_land = top.definition.card_types.contains(&CardType::Land);
+                    let matches = match filter {
+                        Some(f) => crate::game::layers::requirement_matches_card(f, top, p),
+                        None => !top.definition.card_types.contains(&CardType::Land),
+                    };
                     let mv = top.definition.cost.cmc();
                     self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
                     exiled.push(cid);
-                    if !is_land && mv <= cap {
+                    if matches && mv <= cap {
                         hit = Some(cid);
                         break;
                     }
