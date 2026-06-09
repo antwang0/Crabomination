@@ -39450,3 +39450,31 @@ fn myr_battlesphere_attack_pings_for_each_untapped_myr() {
     }
     assert!(g.players[1].life <= opp_life - 4, "pinged for each of the four untapped Myr");
 }
+
+#[test]
+fn spine_of_ish_sah_destroys_on_etb_and_returns_on_death() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spine = g.add_card_to_hand(0, catalog::spine_of_ish_sah());
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spine, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spine castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "ETB destroyed the opponent's permanent");
+    // Now kill Spine; it returns to its owner's hand.
+    g.remove_to_graveyard_with_triggers(spine);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == spine), "Spine returns to owner's hand on death");
+}
+
+#[test]
+fn ankh_of_mishra_pings_land_controller_on_entry() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ankh_of_mishra());
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    let life = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(forest)).expect("play land");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "land's controller takes 2 when a land enters");
+}

@@ -32655,3 +32655,51 @@ pub fn myr_battlesphere() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cube expansion: triggered artifacts ──────────────────────────────────────
+
+/// Spine of Ish Sah — {7} Artifact. ETB: destroy target permanent. When it
+/// dies (is put into a graveyard from the battlefield), return it to its
+/// owner's hand.
+pub fn spine_of_ish_sah() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Spine of Ish Sah",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            etb(Effect::Destroy { what: target_filtered(SelectionRequirement::Permanent) }),
+            // CR: "put into a graveyard from the battlefield" → return to hand.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ankh of Mishra — {2} Artifact. Whenever a land enters the battlefield, Ankh
+/// of Mishra deals 2 damage to that land's controller.
+pub fn ankh_of_mishra() -> CardDefinition {
+    CardDefinition {
+        name: "Ankh of Mishra",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
