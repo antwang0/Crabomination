@@ -132,6 +132,11 @@ pub struct Player {
     /// for snapshot back-compat.
     #[serde(default)]
     pub lost_life_this_turn: bool,
+    /// Total life lost this turn (CR 119.3). Bumped alongside
+    /// `lost_life_this_turn`, reset with it. Powers `Value::LifeLostThisTurn`
+    /// (Spinerock Knoll's "an opponent lost 7 or more life" gate).
+    #[serde(default)]
+    pub life_lost_this_turn: u32,
     /// Card ids of creatures that have dealt damage to this player so far
     /// this turn (combat or non-combat). Reset for all players at the
     /// active player's `do_untap`. Powers "destroy target creature that
@@ -145,6 +150,10 @@ pub struct Player {
     /// boundary in `do_untap`. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub attacked_this_turn: bool,
+    /// Number of creatures this player declared as attackers this turn.
+    /// Powers `Value::CreaturesAttackedWithThisTurn` (Windbrisk Heights).
+    #[serde(default)]
+    pub creatures_attacked_this_turn: u32,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -330,8 +339,10 @@ impl Player {
             permanent_left_battlefield_this_turn: false,
             was_dealt_damage_this_turn: false,
             lost_life_this_turn: false,
+            life_lost_this_turn: 0,
             creatures_that_damaged_me_this_turn: Vec::new(),
             attacked_this_turn: false,
+            creatures_attacked_this_turn: 0,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             pending_is_discounts: Vec::new(),

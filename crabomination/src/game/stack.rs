@@ -1200,6 +1200,7 @@ impl GameState {
         self.players[p].extra_land_plays = 0;
         // Raid (CR 702.108): the active player hasn't attacked yet this turn.
         self.players[p].attacked_this_turn = false;
+        self.players[p].creatures_attacked_this_turn = 0;
         self.players[p].spells_cast_this_turn = 0;
         // Reset the Bloodthirst "damaged this turn" flag for *every* player
         // at the turn boundary (not just the active player) so a creature
@@ -1207,6 +1208,7 @@ impl GameState {
         for pl in &mut self.players {
             pl.was_dealt_damage_this_turn = false;
             pl.lost_life_this_turn = false;
+            pl.life_lost_this_turn = 0;
             pl.creatures_that_damaged_me_this_turn.clear();
             // Veil of Summer's "this turn" riders clear at the turn boundary
             // for every seat (CR 514.2 cleanup-scope grants).

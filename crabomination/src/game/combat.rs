@@ -274,6 +274,7 @@ impl GameState {
             self.attacking.push(atk);
             // Raid (CR 702.108 ability word): the controller attacked this turn.
             self.players[p].attacked_this_turn = true;
+            self.players[p].creatures_attacked_this_turn += 1;
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted
             // Attacks triggers (Root Manipulation's "gain 1 life when

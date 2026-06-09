@@ -1252,6 +1252,8 @@ impl GameState {
         } else {
             // delta < 0 — this player lost life (CR 119.3). Powers Spectacle.
             self.players[seat].lost_life_this_turn = true;
+            self.players[seat].life_lost_this_turn =
+                self.players[seat].life_lost_this_turn.saturating_add((-delta) as u32);
         }
         new_total
     }
@@ -6640,7 +6642,7 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
         }),
         "Vile Aggregate" => Some(DynamicPt::ColorlessCreaturesControlled { base_t: 5 }),
         "Burrowguard Mentor" => Some(DynamicPt::CreaturesControlled { base: 0 }),
-        "Lumra, Bellow of the Woods" => Some(DynamicPt::LandsControlled { base: 0 }),
+        "Lumra, Bellow of the Woods" | "Rubblehulk" => Some(DynamicPt::LandsControlled { base: 0 }),
         "Broodstar" => Some(DynamicPt::ArtifactsControlled { base: 0 }),
         "Crackling Drake" => Some(DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t: 4 }),
         _ => None,

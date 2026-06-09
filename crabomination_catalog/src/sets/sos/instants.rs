@@ -324,17 +324,10 @@ pub fn mana_sculpt() -> CardDefinition {
     }
 }
 
-/// Run Behind — {3}{U} Instant.
-/// "This spell costs {1} less to cast if it targets an attacking
-/// creature. / Target creature's owner puts it on their choice of the
-/// top or bottom of their library."
-///
-/// Approximation: the conditional cost reduction is omitted. The
-/// top-or-bottom owner-choice is collapsed to **bottom of library** —
-/// the engine has no top-or-bottom prompt for the targeted creature's
-/// *owner* to pick, and bottom-of-library is the more typical "kill"
-/// outcome. (A Vraska's Contempt-style permanent removal at instant
-/// speed for {3}{U}, which matches the spell's role in cube.)
+/// Run Behind — {3}{U} Instant. Target creature's owner puts it on their
+/// choice of the top or bottom of their library (`LibraryPosition::
+/// OwnerChoice`). The "{1} less if it targets an attacking creature" rider
+/// rides `AlternativeCost.target_filter`.
 pub fn run_behind() -> CardDefinition {
     use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
     use crate::mana::u;
@@ -354,15 +347,6 @@ pub fn run_behind() -> CardDefinition {
             },
         },
         triggered_abilities: vec![],
-        // Push (modern_decks): "{1} less if it targets an attacking
-        // creature" rider wired via `AlternativeCost { mana_cost: {2}{U},
-        // target_filter: Some(Creature + IsAttacking) }`. The
-        // top-or-bottom owner-choice rider is wired via the new
-        // `LibraryPosition::OwnerChoice` primitive — `place_card_in_dest`
-        // asks the card's owner via `Decision::OptionalTrigger` (yes =
-        // top, no = bottom). AutoDecider's `Bool(false)` default lands
-        // the card on the bottom (the previous behavior); ScriptedDecider
-        // can flip to top for tests.
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(2), u()]),
             life_cost: 0,

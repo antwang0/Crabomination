@@ -11460,6 +11460,37 @@ pub fn blue_elemental_blast() -> CardDefinition {
     }
 }
 
+/// Aether Gust — {1}{U} Instant. Choose target spell or permanent that's red
+/// or green; its owner puts it on the top or bottom of their library.
+/// Spell half rides `CounteredSpellZone::OwnerLibraryTopOrBottom`; permanent
+/// half rides `LibraryPosition::OwnerChoice`.
+pub fn aether_gust() -> CardDefinition {
+    use crate::effect::{CounteredSpellZone, LibraryPosition};
+    let red_or_green = SelectionRequirement::HasColor(Color::Red)
+        .or(SelectionRequirement::HasColor(Color::Green));
+    CardDefinition {
+        name: "Aether Gust",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpellToZone {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(red_or_green.clone()),
+                ),
+                zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Permanent.and(red_or_green)),
+                to: ZoneDest::Library {
+                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    pos: LibraryPosition::OwnerChoice,
+                },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Three Visits — {1}{G} Sorcery. "Search your library for a Forest
 /// card, put it onto the battlefield, then shuffle." Identical text to
 /// Nature's Lore (which is already in the catalog) — they're both
@@ -37588,6 +37619,43 @@ pub fn last_thoughts() -> CardDefinition {
     }
 }
 
+/// Hidden Strings — {U} Sorcery. You may tap or untap target permanent, then
+/// you may tap or untap another target permanent. Cipher (CR 702.46).
+/// Encoded as a 4-way `ChooseMode` (tap/untap × slot 0/slot 1), each half
+/// individually declinable via `MayDo`.
+pub fn hidden_strings() -> CardDefinition {
+    let half = |slot: u8, untap: bool| {
+        let what = Selector::TargetFiltered { slot, filter: SelectionRequirement::Permanent };
+        let body = if untap {
+            Effect::Untap { what, up_to: None }
+        } else {
+            Effect::Tap { what }
+        };
+        Effect::MayDo {
+            description: if untap { "Untap the target permanent".into() } else { "Tap the target permanent".into() },
+            body: Box::new(body),
+        }
+    };
+    let combo = |first_untap: bool, second_untap: bool| {
+        Effect::Seq(vec![half(0, first_untap), half(1, second_untap)])
+    };
+    CardDefinition {
+        name: "Hidden Strings",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ChooseMode(vec![
+                combo(false, false),
+                combo(false, true),
+                combo(true, false),
+                combo(true, true),
+            ]),
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Paranoid Delusions — {U}{B} Sorcery. Target player mills three cards. Cipher.
 pub fn paranoid_delusions() -> CardDefinition {
     CardDefinition {
@@ -37805,6 +37873,39 @@ pub fn viashino_shanktail() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
         activated_abilities: vec![bloodrush(cost(&[generic(2), r()]), 3, 1, Some(Keyword::FirstStrike))],
+        ..Default::default()
+    }
+}
+
+/// Rubblehulk — {4}{R}{G} */* Elemental; P/T = lands you control (CDA via
+/// `dynamic_pt_for_name`). Bloodrush — {1}{R}{G}: target attacking creature
+/// gets +X/+X where X is the number of lands you control.
+pub fn rubblehulk() -> CardDefinition {
+    let lands_you_control = Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+    )));
+    CardDefinition {
+        name: "Rubblehulk",
+        cost: cost(&[generic(4), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r(), g()]),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking)),
+                power: lands_you_control.clone(),
+                toughness: lands_you_control,
+                duration: Duration::EndOfTurn,
+            },
+            from_hand: true,
+            discard_self_cost: true,
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

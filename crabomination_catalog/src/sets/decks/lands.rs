@@ -11,11 +11,11 @@ use super::super::{
     fastland_etb_conditional_tap, painland, shockland_pay_two_or_tap, tap_add, tap_add_colorless,
 };
 use crate::card::{
-    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType, Selector,
-    Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
+    SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef, Predicate};
-use crate::mana::{Color, ManaCost, cost, generic, u};
+use crate::mana::{Color, ManaCost, cost, g, generic, r, u, w};
 
 // ── Fastlands ────────────────────────────────────────────────────────────────
 //
@@ -590,6 +590,86 @@ pub fn shelldock_isle() -> CardDefinition {
         ],
         ..Default::default()
     }
+}
+
+/// Shared body for the Lorwyn hideaway lands: enters tapped, Hideaway 4,
+/// `{T}: Add {color}` + `{color}, {T}: play the hidden card free if `gate`.
+fn lorwyn_hideaway_land(
+    name: &'static str,
+    color: Color,
+    pip: crate::mana::ManaSymbol,
+    gate: Predicate,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add(color),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[pip]),
+                condition: Some(gate),
+                effect: Effect::CastWithoutPayingImmediate {
+                    what: Selector::CardExiledWithSource,
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![
+            etb_tap(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Hideaway { count: Value::Const(4) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Mosswort Bridge — hideaway land; plays the hidden card if creatures you
+/// control have total power 8 or greater.
+pub fn mosswort_bridge() -> CardDefinition {
+    lorwyn_hideaway_land(
+        "Mosswort Bridge",
+        Color::Green,
+        g(),
+        Predicate::ValueAtLeast(
+            Value::PowerOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ))),
+            Value::Const(8),
+        ),
+    )
+}
+
+/// Spinerock Knoll — hideaway land; plays the hidden card if an opponent lost
+/// 7 or more life this turn.
+pub fn spinerock_knoll() -> CardDefinition {
+    lorwyn_hideaway_land(
+        "Spinerock Knoll",
+        Color::Red,
+        r(),
+        Predicate::ValueAtLeast(
+            Value::LifeLostThisTurn(PlayerRef::EachOpponent),
+            Value::Const(7),
+        ),
+    )
+}
+
+/// Windbrisk Heights — hideaway land; plays the hidden card if you attacked
+/// with three or more creatures this turn.
+pub fn windbrisk_heights() -> CardDefinition {
+    lorwyn_hideaway_land(
+        "Windbrisk Heights",
+        Color::White,
+        w(),
+        Predicate::ValueAtLeast(
+            Value::CreaturesAttackedWithThisTurn(PlayerRef::You),
+            Value::Const(3),
+        ),
+    )
 }
 
 // ── Manlands (CR 702 — lands that animate into creatures) ───────────────────

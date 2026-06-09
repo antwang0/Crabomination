@@ -40026,6 +40026,89 @@ fn hideaway_shelldock_isle_exiles_then_plays_hidden_card() {
     assert!(!g.exile.iter().any(|c| c.id == bear), "bear left exile");
 }
 
+/// Shared setup: play a hideaway land for seat 0 with a known Grizzly Bears
+/// on top of an otherwise-empty library, returning (hidden card id, land id).
+fn hideaway_setup(g: &mut GameState, land_def: crate::card::CardDefinition) -> (CardId, CardId) {
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].library.clear();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::lightning_bolt()); }
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, land_def);
+    g.perform_action(GameAction::PlayLand(land)).expect("play hideaway land");
+    drain_stack(g);
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.priority.player_with_priority = 0;
+    (bear, land)
+}
+
+fn activate_hideaway_play(g: &mut GameState, land: CardId, mana: Color) -> Result<(), crate::game::GameError> {
+    g.players[0].mana_pool.add(mana, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let r = g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, x_value: None,
+    }).map(|_| ());
+    drain_stack(g);
+    r
+}
+
+/// Mosswort Bridge plays its hidden card only at total controlled power ≥ 8.
+#[test]
+fn mosswort_bridge_gate_requires_total_power_eight() {
+    let mut g = two_player_game();
+    let (bear, land) = hideaway_setup(&mut g, catalog::mosswort_bridge());
+    assert!(activate_hideaway_play(&mut g, land, Color::Green).is_err(), "no power on board → gated");
+    for _ in 0..2 { g.add_card_to_battlefield(0, catalog::colossal_dreadmaw()); } // 6+6 power
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    assert!(activate_hideaway_play(&mut g, land, Color::Green).is_ok(), "12 power ≥ 8 → plays");
+    assert!(g.battlefield_find(bear).is_some(), "hidden bear played");
+}
+
+/// Spinerock Knoll's gate reads "an opponent lost 7 or more life this turn".
+#[test]
+fn spinerock_knoll_gate_requires_seven_life_lost() {
+    let mut g = two_player_game();
+    let (bear, land) = hideaway_setup(&mut g, catalog::spinerock_knoll());
+    g.adjust_life(1, -6);
+    assert!(activate_hideaway_play(&mut g, land, Color::Red).is_err(), "6 life lost → gated");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.adjust_life(1, -1);
+    assert!(activate_hideaway_play(&mut g, land, Color::Red).is_ok(), "7 life lost → plays");
+    assert!(g.battlefield_find(bear).is_some(), "hidden bear played");
+}
+
+/// Windbrisk Heights' gate counts declared attackers this turn.
+#[test]
+fn windbrisk_heights_gate_requires_three_attackers() {
+    let mut g = two_player_game();
+    let (bear, land) = hideaway_setup(&mut g, catalog::windbrisk_heights());
+    g.players[0].creatures_attacked_this_turn = 2;
+    assert!(activate_hideaway_play(&mut g, land, Color::White).is_err(), "two attackers → gated");
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.players[0].creatures_attacked_this_turn = 3;
+    assert!(activate_hideaway_play(&mut g, land, Color::White).is_ok(), "three attackers → plays");
+    assert!(g.battlefield_find(bear).is_some(), "hidden bear played");
+}
+
+/// Declaring attackers bumps the per-player tally that Windbrisk reads.
+#[test]
+fn declare_attackers_counts_creatures_attacked_this_turn() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a);
+    g.clear_sickness(b);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a, target: AttackTarget::Player(1) },
+        Attack { attacker: b, target: AttackTarget::Player(1) },
+    ])).expect("declare two attackers");
+    assert_eq!(g.players[0].creatures_attacked_this_turn, 2);
+}
+
 // ── Misc modern staples ──────────────────────────────────────────────────────
 
 /// Get Lost destroys a creature and gives its controller two Map tokens.
@@ -43207,6 +43290,73 @@ fn whispering_madness_wheels_each_player() {
     assert_eq!(g.players[1].hand.len(), 4, "seat 1 drew up to the max (4)");
 }
 
+/// Aether Gust mode 1 puts a red/green permanent on top or bottom of its
+/// owner's library (owner chooses; scripted to top here).
+#[test]
+fn aether_gust_tucks_green_permanent_owner_chooses_top() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::aether_gust());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    precombat(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // top
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    }).expect("cast Aether Gust");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear left the battlefield");
+    assert_eq!(g.players[1].library.first().map(|c| c.id), Some(bear), "on top of owner's library");
+}
+
+/// Aether Gust mode 1 rejects a non-red/green permanent target.
+#[test]
+fn aether_gust_rejects_off_color_permanent() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_omens());
+    let spell = g.add_card_to_hand(0, catalog::aether_gust());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    precombat(&mut g);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(wall)),
+        additional_targets: vec![],
+        mode: Some(1),
+        x_value: None,
+    }).is_err(), "white permanent is not a legal Aether Gust target");
+}
+
+/// Hidden Strings mode 2 untaps the first target and taps the second.
+#[test]
+fn hidden_strings_untaps_first_and_taps_second_target() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(mine).unwrap().tapped = true;
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::hidden_strings());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    precombat(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true), // do the untap
+        DecisionAnswer::Bool(true), // do the tap
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)],
+        mode: Some(2),
+        x_value: None,
+    }).expect("cast Hidden Strings");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(mine).unwrap().tapped, "first target untapped");
+    assert!(g.battlefield_find(theirs).unwrap().tapped, "second target tapped");
+}
+
 // ── Bloodrush ─────────────────────────────────────────────────────────────────
 
 #[test]
@@ -43271,6 +43421,37 @@ fn bloodrush_rejects_non_attacking_target() {
         card_id: horn, ability_index: 0,
         target: Some(Target::Permanent(idle)), x_value: None,
     }).is_err(), "no attacking creature → illegal target");
+}
+
+/// Rubblehulk's P/T is a lands-you-control CDA; its Bloodrush pumps by the
+/// live land count.
+#[test]
+fn rubblehulk_cda_and_bloodrush_scale_with_lands() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let hulk = g.add_card_to_battlefield(0, catalog::rubblehulk());
+    let c = g.computed_permanent(hulk).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "CDA: P/T = lands controlled");
+
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let hulk2 = g.add_card_to_hand(0, catalog::rubblehulk());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hulk2, ability_index: 0,
+        target: Some(Target::Permanent(attacker)), x_value: None,
+    }).expect("bloodrush");
+    drain_stack(&mut g);
+    let a = g.computed_permanent(attacker).unwrap();
+    assert_eq!((a.power, a.toughness), (5, 5), "2/2 +3/+3 for three lands");
 }
 
 // ── Pump / evasion one-shots ──────────────────────────────────────────────────

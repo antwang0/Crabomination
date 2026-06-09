@@ -299,6 +299,16 @@ pub enum Value {
     /// "{T}: Add X mana of any one color, where X is the amount of life
     /// you gained this turn."
     LifeGainedThisTurn(PlayerRef),
+    /// Life lost so far this turn (CR 119.3) — the **maximum** over the
+    /// players `who` resolves to, so `EachOpponent` reads "the most life any
+    /// opponent has lost this turn" (Spinerock Knoll's hideaway gate).
+    /// Backed by `Player.life_lost_this_turn`.
+    LifeLostThisTurn(PlayerRef),
+    /// Creatures `who` declared as attackers this turn (max over resolved
+    /// players). Creatures *put onto the battlefield attacking* don't count,
+    /// matching the Windbrisk Heights ruling on "attacked with N creatures".
+    /// Backed by `Player.creatures_attacked_this_turn`.
+    CreaturesAttackedWithThisTurn(PlayerRef),
     GraveyardSizeOf(PlayerRef),
     /// Maximum graveyard size across **every alive player** in the game.
     /// Reads `players[*].graveyard.len()` and returns the max. Backs

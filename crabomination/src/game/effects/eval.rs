@@ -124,6 +124,20 @@ impl GameState {
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
             Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),
+            // Max over the resolved set, so `EachOpponent` reads "the most
+            // life any opponent lost this turn" (Spinerock Knoll).
+            Value::LifeLostThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].life_lost_this_turn as i32)
+                .max()
+                .unwrap_or(0),
+            Value::CreaturesAttackedWithThisTurn(p) => self
+                .resolve_players(p, ctx)
+                .iter()
+                .map(|&p| self.players[p].creatures_attacked_this_turn as i32)
+                .max()
+                .unwrap_or(0),
             Value::DistinctPowerYouControl => {
                 let mut powers: Vec<i32> = self
                     .battlefield
