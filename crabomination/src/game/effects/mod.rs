@@ -1796,13 +1796,13 @@ impl GameState {
                             let cid = card.id;
                             self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
                             self.last_moved_cards.push(cid);
-                            if *link_to_source || *face_down {
-                                if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
-                                    if *link_to_source {
-                                        c.exiled_with = ctx.source;
-                                    }
-                                    c.face_down = *face_down;
+                            if (*link_to_source || *face_down)
+                                && let Some(c) = self.exile.iter_mut().find(|c| c.id == cid)
+                            {
+                                if *link_to_source {
+                                    c.exiled_with = ctx.source;
                                 }
+                                c.face_down = *face_down;
                             }
                         }
                     }

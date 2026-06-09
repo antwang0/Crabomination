@@ -1107,7 +1107,7 @@ pub fn exile_browser(
                         let tile_children = |tile: &mut ChildSpawnerCommands| {
                             if !face_down {
                                 let texture: Handle<Image> =
-                                    asset_server.load(&scryfall::card_asset_path(name));
+                                    asset_server.load(scryfall::card_asset_path(name));
                                 tile.spawn((
                                     ImageNode { image: texture, ..default() },
                                     Node {

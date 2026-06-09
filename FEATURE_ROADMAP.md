@@ -113,8 +113,12 @@ not how Magic works" moments.
    `prevent_combat_damage_this_turn` flag for combat fogs. **Per-source
    combat shields** now ship via `Effect::PreventAllCombatDamageInvolving`
    + `GameState.combat_damage_prevented_creatures` (Maze of Ith — prevent
-   all combat damage to and by a creature this turn, CR 614.9). Remaining:
-   true damage *redirection* and damage *halving*.
+   all combat damage to and by a creature this turn, CR 614.9). **Damage
+   redirection** (CR 614.9) ships via `StaticEffect::RedirectDamageToSelf`
+   at both damage funnels — Palisade Giant. **Draw replacement** (CR 121.2a)
+   ships via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought
+   Reflection; stacks per 614.5). Remaining: damage *halving*, skip-step/turn
+   replacements.
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes` is
    wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). "Pick from
    revealed cards" is also wired: `Effect::LookPickToHand` (Impulse /
@@ -691,8 +695,9 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 ## Suggested sequencing
 
 1. **Replacement-effect framework** (Tier-1 #1) — the highest-leverage
-   primitive still open. (Combat damage-order and multi-pick "choose N"
-   decisions, formerly bundled here, are now wired.)
+   primitive still open. (Combat damage-order, multi-pick "choose N",
+   damage redirection, and draw doubling are now wired; layer-1 continuous
+   copies ship via `Effect::BecomeCopyOfFor`.)
 2. **Card-zoom preview + stops/auto-yield + combat-math preview**
    (Tier-7 #1–3) — the trio that most closes the "feels like Arena" gap.
 3. **Best-of-3 + sideboard + deck legality** (Tier 10) — makes draft/cube

@@ -112,11 +112,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   permanent's *owner* for the follow-up (differs from "controller" only under
   control-stealing).
 
-- ⏳ **Cube bombs still needing primitives.** Noticed-but-deferred this run:
-  Skyclave Apparition (exile-permanent + size-on-leave Illusion token),
-  Duplicant (imprint + P/T-from-exiled), Grafdigger's Cage (a "can't enter from
-  gy/library + can't cast from gy/library" static), Hostage Taker, Gonti
-  (cast an opponent's exiled card). Each wants one targeted engine primitive.
+- ⏳ **Cube bombs still needing primitives.** Skyclave Apparition ✅
+  (`ExileReturnZone::IllusionToken`). Remaining: Duplicant (imprint +
+  P/T-from-exiled), Grafdigger's Cage (a "can't enter from gy/library +
+  can't cast from gy/library" static), Hostage Taker (paid cast from linked
+  exile + any-color spend), Gonti (cast an opponent's exiled card).
 - ⏳ **`EachOpponentPlaneswalker` was unneeded** — Saheeli's "each planeswalker
   they control" rides `EachPermanent(Planeswalker & ControlledByOpponent)` with
   damage-to-PW (CR 120.3c). Karn Liberated's -14 and Ugin's -X exile-by-MV
@@ -1054,6 +1054,12 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.103 — Jump-start** — rides the flashback cast path (own cost +
+  `AdditionalCastCost::Discard{1}`, exile-after); Chemister's Insight,
+  Radical Idea; surfaced as `flashback_cost` in the graveyard view.
+- ✅ **CR 707.2 — continuous copies** — `Effect::BecomeCopyOfFor` (EOT /
+  Permanent durations, leave-revert, 707.2e non-legendary); Echoing
+  Equation, Mirrorform, Vesuva, Thespian's Stage, Shifting Woodland.
 - ✅ **CR 702.43 — Domain** — `Value::DomainCount(PlayerRef)` (distinct basic
   land types among a player's lands, 0–5) + `StaticEffect::SelfCostReducedByDomain`
   generic cost reduction. Tribal Flames (X damage = domain), Leyline Binding
@@ -1154,7 +1160,7 @@ picking an item up.
 - 🟡 **CR 613 — Interaction of Continuous Effects** — no dependency analyzer (613.8); CDA-first pre-pass (613.3); Aura re-stamp on enchant (613.7e).
 - 🟡 **CR 208 — Power/Toughness** — base-P/T-only checks (208.4b); noncreature-P/T API observability (208.3 / Vehicles).
 - 🟡 **CR 119 — Life** — 119.7 set-to-lowest ✅ (`Value::LowestLifeTotal` + Repay in Kind); exchange-life-totals ✅ (Soul Conduit, Mirror Universe, Magus of the Mirror); life-gain→loss replacement ✅ (`StaticEffect::LifeGainBecomesLoss`, Tainted Remedy); life-gain **bonus** replacement ✅ (119.10 — `StaticEffect::LifeGainBonus { target, amount }` folded into `adjust_life` via `life_gain_bonus_now`; Honor Troll's "gain that much plus 1"). Remaining: redistribute-life-totals; per-source life-gain replacement breadth.
-- 🟡 **CR 121 — Drawing a Card** — choose-to-draw (121.3); draw-count replacement (121.2a); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
+- 🟡 **CR 121 — Drawing a Card** — draw-count replacement (121.2a) ✅ via `StaticEffect::ControllerDrawsDoubled` in `draw_one` (Thought Reflection; stacks per 614.5, reentrancy-guarded). Remaining: choose-to-draw (121.3); mid-cast face-down draw (121.8); reveal-on-draw (121.9).
 - 🟡 **CR 502 — Untap Step** — Phasing (502.1 / 702.26) ✅: `do_phasing`
   runs as a turn-based action at the top of the untap step, moving the active
   player's phasing permanents (and their attachments) to `GameState.phased_out`
@@ -1197,7 +1203,7 @@ picking an item up.
 - ✅ **CR 701.59 — Collect Evidence N** — `Effect::CollectEvidence { amount, then }`: optionally exile graveyard cards totaling MV≥N, then run the reflexive payoff. A `wants_ui` controller picks via `ChooseCards` (sum-validated); bots/tests keep the auto cheapest-pick. Ships Sample Collector, Izoni.
 - ✅ **CR 602.5b — Additional activation costs (cont.)** — two new cost forms on `ActivatedAbility`: `bounce_other_filter` ("Return a [filter] you control to its owner's hand:" — Quirion Ranger, Wirewood Symbiote) and `tap_n_filter` ("Tap N untapped [filter] you control:", source eligible — Heritage Druid). Both gate pre-payment + auto-pick lowest-power, surface in `ability_cost_label`, and are excluded from the bot's `is_free_mana_ability`.
 - ✅ **CR 701.16 / 614 — "Opponents can't make you sacrifice"** — `StaticEffect::OpponentsCantMakeYouSacrifice`, consulted in the `Effect::Sacrifice` resolver (skips a player whose opponent's effect would force a sacrifice; own-sacrifice unaffected). Ships Sigarda, Host of Herons + the sacrifice half of Tamiyo, Collector of Tales.
-- 🟡 **CR 614 — Replacement Effects** — general "instead" framework; true damage *redirection* (614.9) + damage *halving*; general skip-step/turn (614.10). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
+- 🟡 **CR 614 — Replacement Effects** — general "instead" framework; damage *halving*; general skip-step/turn (614.10). Damage *redirection* (614.9) ✅ via `StaticEffect::RedirectDamageToSelf` at both damage funnels (Palisade Giant; one redirect per event per 614.5). (ETB-counters, token/counter/damage *doubling*, regen, EtbTriggerTax, Maze-of-Ith per-source prevention ✅. Creature-ETB / death **trigger suppression** ✅ via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` — Torpor Orb / Tocatli Honor Guard / Hushbringer; `etb_trigger_multiplier` returns 0 for creature entrants and the dies-trigger gather paths skip while a suppressor is in play.)
 - 🟡 **CR 615.1 — Prevention effects** — per-source / per-N shields (Wojek Apothecary, Stave Off); non-combat prevention breadth — Mending Hands ✅ (next-4 shield on any target); prevent-and-gain ✅ via `Effect::PreventNextDamageAndGainLife` + `PreventionShield.gain_life` (Reverse Damage). Remaining: source-of-your-choice restriction (the shield soaks any source's next hit).
 - 🟡 **CR 500 — Turn structure** — `Predicate::CurrentStepIs(TurnStep)` gates "activate only during [your] upkeep/end step" abilities (Mirror Universe, Magus of the Mirror). Phasing / extra-step insertion still ⏳.
 - 🟡 **CR 305 — Lands** — see git for the per-clause detail.
