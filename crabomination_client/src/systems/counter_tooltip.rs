@@ -847,6 +847,7 @@ mod tests {
             saga_final_chapter: None,
             has_other_face: false,
             transformed: false,
+            squad_count: None,
         }
     }
 

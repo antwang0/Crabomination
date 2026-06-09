@@ -879,6 +879,11 @@ pub struct PermanentView {
     /// creature (or never had impending). Populated by `project_permanent`.
     #[serde(default)]
     pub impending_counters: Option<u32>,
+    /// `Some(n)` when this permanent was cast paying its Squad cost `n` times
+    /// (CR 702.157) — the original that minted `n` token copies on ETB. Lets
+    /// the client badge "Squad ×n". `None`/0 for plain casts and the copies.
+    #[serde(default)]
+    pub squad_count: Option<u32>,
     /// True when the permanent's computed power or toughness differs
     /// from its base (printed) values — a UI hint for rendering
     /// modified P/T in a distinct color. Always false for non-creatures.

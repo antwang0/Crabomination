@@ -532,6 +532,7 @@ fn project_permanent(
                 .any(|k| matches!(k, crate::card::Keyword::Impending(_)));
             (is_impending && n > 0).then_some(n)
         },
+        squad_count: (card.squad_count > 0).then_some(card.squad_count),
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
@@ -1706,6 +1707,20 @@ mod tests {
         let entry = view.players[0].graveyard.iter().find(|c| c.id == crime).unwrap();
         assert!(entry.retrace, "Retrace flagged on graveyard view");
         assert!(entry.flashback_cost.is_none(), "no flashback cost for Raven's Crime");
+    }
+
+    #[test]
+    fn permanent_view_surfaces_squad_count() {
+        // A creature cast paying Squad twice reports squad_count = 2; its token
+        // copies (and plain casts) report None.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::vanguard_suppressor());
+        state.battlefield_find_mut(id).unwrap().squad_count = 2;
+        let perm = project(&state, 0).battlefield.into_iter().find(|p| p.id == id).unwrap();
+        assert_eq!(perm.squad_count, Some(2));
+        let plain = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let pv = project(&state, 0).battlefield.into_iter().find(|p| p.id == plain).unwrap();
+        assert_eq!(pv.squad_count, None);
     }
 
     #[test]
