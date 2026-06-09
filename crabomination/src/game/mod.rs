@@ -420,6 +420,12 @@ pub struct GameState {
     /// graveyard. Cleared once consumed. Beacon cycle.
     #[serde(skip)]
     pub(crate) shuffle_resolving_spell_into_library: bool,
+    /// CR 702.46 — Cipher. Set by `Effect::Cipher` to the creature the
+    /// resolving spell should be exiled "encoded on"; the post-resolution
+    /// routing consumes it to send the card to exile (with `encoded_on` stamped)
+    /// instead of the graveyard. Cleared once consumed.
+    #[serde(skip)]
+    pub(crate) cipher_encode_pending: Option<CardId>,
     /// Transient: the `CardId`s of cards discarded within the current
     /// effect resolution. Populated alongside the count fields above. Used
     /// by Mind Roots's "Put up to one land card discarded this way onto
@@ -775,6 +781,7 @@ impl Clone for GameState {
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             nonland_cards_discarded_per_player_this_resolution: self.nonland_cards_discarded_per_player_this_resolution.clone(),
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
+            cipher_encode_pending: self.cipher_encode_pending,
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             players_sacrificed_this_resolution: self.players_sacrificed_this_resolution.clone(),
@@ -879,6 +886,7 @@ impl GameState {
             cards_discarded_per_player_this_resolution: HashMap::new(),
             nonland_cards_discarded_per_player_this_resolution: HashMap::new(),
             shuffle_resolving_spell_into_library: false,
+            cipher_encode_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
             players_sacrificed_this_resolution: std::collections::HashSet::new(),
@@ -6208,6 +6216,15 @@ impl GameState {
         if card.definition.exile_on_resolve {
             self.players[caster].cards_exiled_this_turn =
                 self.players[caster].cards_exiled_this_turn.saturating_add(1);
+            self.exile.push(card);
+            return Ok(events);
+        }
+        // CR 702.46 — Cipher. `Effect::Cipher` set `cipher_encode_pending` to
+        // the creature this spell should be encoded on. Route the card to exile
+        // with `encoded_on` stamped instead of the graveyard.
+        if let Some(creature) = self.cipher_encode_pending.take() {
+            let mut card = card;
+            card.encoded_on = Some(creature);
             self.exile.push(card);
             return Ok(events);
         }

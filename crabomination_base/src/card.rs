@@ -2013,6 +2013,11 @@ pub struct CardInstance {
     /// creature"). Unlike `exiled_by`, the card never returns — this is a
     /// pure association used by counting effects. `None` for ordinary exile.
     pub exiled_with: Option<CardId>,
+    /// CR 702.46 — Cipher. While this card is exiled "encoded on" a creature,
+    /// `encoded_on` holds that creature's id. Whenever the encoded creature
+    /// deals combat damage to a player, the controller may cast a free copy of
+    /// this card. `None` for ordinary exile.
+    pub encoded_on: Option<CardId>,
     /// Until-end-of-turn flashback granted to this card while it sits in a
     /// graveyard — "target instant/sorcery card in your graveyard gains
     /// flashback until end of turn; the flashback cost equals its mana
@@ -2146,6 +2151,7 @@ impl CardInstance {
             must_block: None,
             exiled_by: None,
             exiled_with: None,
+            encoded_on: None,
             granted_flashback_eot: None,
             granted_alt_cast_cost_eot: None,
             named_card: None,

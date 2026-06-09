@@ -37555,3 +37555,21 @@ pub fn archangel_of_tithes() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Shadow Slice — {2}{B} Sorcery. Target player loses 4 life. Cipher (CR
+/// 702.46 — exile encoded on a creature; recast free when it connects).
+pub fn shadow_slice() -> CardDefinition {
+    CardDefinition {
+        name: "Shadow Slice",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(4),
+            },
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}

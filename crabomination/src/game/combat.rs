@@ -1880,6 +1880,20 @@ impl GameState {
             }
         }
 
+        // CR 702.46 — Cipher. A card exiled encoded on this creature offers its
+        // controller a free copy whenever the creature deals combat damage to a
+        // player. Reuses the Paradigm free-copy effect (mint a token copy of the
+        // exiled card and free-cast it; the encoded original stays in exile).
+        if kind == EventKind::DealsCombatDamageToPlayer
+            && let Some(atk_ctrl) = attacker_controller
+        {
+            for enc in &self.exile {
+                if enc.encoded_on == Some(source) {
+                    triggers.push((enc.id, Effect::CastFreeParadigmCopy, atk_ctrl));
+                }
+            }
+        }
+
         for (trig_source, effect, controller) in triggers {
             // Most combat-damage triggers implicitly target the damaged player
             // (drain riders, "that player discards / loses life"). But some

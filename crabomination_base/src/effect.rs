@@ -2282,6 +2282,14 @@ pub enum Effect {
     /// continues each main phase.
     CastFreeParadigmCopy,
 
+    /// Cipher (CR 702.46). Trailing effect of a Cipher spell: the controller
+    /// may exile this spell card "encoded" on a creature they control (stamping
+    /// `CardInstance.encoded_on`). The combat-damage-to-player dispatch then
+    /// offers a free copy whenever that creature connects. Sets a pending flag
+    /// consumed by `continue_spell_resolution` so the card routes to exile
+    /// instead of the graveyard.
+    Cipher,
+
     /// Cascade (CR 702.85). Triggered "when you cast this spell": exile
     /// cards from the top of the controller's library until a nonland
     /// card with mana value strictly less than `max_mv` is exiled. The

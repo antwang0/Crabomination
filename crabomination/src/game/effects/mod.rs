@@ -6859,7 +6859,7 @@ impl GameState {
                 use crate::decision::{Decision, DecisionAnswer};
                 let answer = self.decider.decide(&Decision::OptionalTrigger {
                     source,
-                    description: format!("Paradigm: cast a copy of {}?", def.name),
+                    description: format!("Cast a copy of {}?", def.name),
                 });
                 if !matches!(answer, DecisionAnswer::Bool(true)) {
                     return Ok(());
@@ -6888,6 +6888,34 @@ impl GameState {
                     false,
                 )?;
                 events.extend(cast_events);
+                Ok(())
+            }
+
+            Effect::Cipher => {
+                // CR 702.46 — the controller may exile this spell card encoded
+                // on a creature they control. Auto-pick the highest-power
+                // untapped creature (the likeliest attacker); a wants_ui seat is
+                // offered a yes/no. On yes, flag the post-resolution routing.
+                use crate::decision::{Decision, DecisionAnswer};
+                let ctrl = ctx.controller;
+                let mut creatures: Vec<(CardId, i32)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == ctrl && c.definition.is_creature())
+                    .map(|c| (c.id, c.power()))
+                    .collect();
+                if creatures.is_empty() {
+                    return Ok(());
+                }
+                creatures.sort_by_key(|(_, p)| -*p);
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::OptionalTrigger {
+                    source,
+                    description: "Cipher: encode this spell on a creature you control?".into(),
+                });
+                if matches!(answer, DecisionAnswer::Bool(true)) {
+                    self.cipher_encode_pending = Some(creatures[0].0);
+                }
                 Ok(())
             }
 

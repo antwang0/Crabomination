@@ -346,3 +346,37 @@ fn cr_509_1d_block_tax_inactive_when_not_attacking() {
     g.active_player_idx = 0;
     g.declare_blockers(vec![(blocker, attacker)]).expect("no tax when Archangel isn't attacking");
 }
+
+// ── CR 702.46 — Cipher ────────────────────────────────────────────────────────
+
+/// A Cipher spell exiles encoded on a creature; when that creature deals combat
+/// damage to a player, its controller casts a free copy.
+#[test]
+fn cr_702_46_cipher_encodes_then_recasts_on_combat_damage() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    // Say "yes" to the encode prompt and the later free-copy prompt.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let slice = g.add_card_to_hand(0, catalog::shadow_slice());
+    g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, slice, Target::Player(1));
+    assert_eq!(g.players[1].life, 16, "Shadow Slice: 20 → 16");
+    assert!(g.exile.iter().any(|c| c.id == slice && c.encoded_on == Some(bear)),
+        "Shadow Slice exiled encoded on the bear");
+    // Connect with the bear: 2 combat damage + a free Shadow Slice copy (−4).
+    g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 10, "16 − 2 combat − 4 cipher copy");
+}
