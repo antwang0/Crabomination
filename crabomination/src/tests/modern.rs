@@ -39664,3 +39664,51 @@ fn ghor_clan_rampager_bloodrush_pumps_an_attacker() {
     assert_eq!((a.power, a.toughness), (6, 6), "+4/+4 from bloodrush");
     assert!(a.keywords.contains(&Keyword::Trample), "gained trample");
 }
+
+#[test]
+fn hornet_queen_etb_makes_four_deathtouch_insects() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::hornet_queen());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let insects: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Insect" && c.controller == 0).collect();
+    assert_eq!(insects.len(), 4, "four Insect tokens");
+    assert!(insects[0].definition.keywords.contains(&Keyword::Deathtouch), "with deathtouch");
+}
+
+#[test]
+fn bogardan_hellkite_etb_deals_four_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::bogardan_hellkite());
+    let opp_life = g.players[1].life;
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 4, "dealt 4 damage on ETB");
+}
+
+#[test]
+fn sheoldred_whispering_one_reanimates_on_your_upkeep() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sheoldred_whispering_one());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.fire_step_triggers(TurnStep::Upkeep); // player 0's upkeep
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == dead),
+        "Sheoldred returned a creature from your graveyard at your upkeep");
+}
+
+#[test]
+fn sheoldred_whispering_one_forces_opponent_sacrifice_on_their_upkeep() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sheoldred_whispering_one());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 1; // it's the opponent's upkeep
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim),
+        "the opponent sacrificed a creature at their upkeep");
+}

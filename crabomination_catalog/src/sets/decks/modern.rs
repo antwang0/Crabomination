@@ -32946,3 +32946,99 @@ pub fn reveillark() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cube expansion: green/red/black bombs ────────────────────────────────────
+
+/// Hornet Queen — {4}{G}{G}{G} 2/2 Insect. Flying, deathtouch. When it enters,
+/// create four 1/1 green Insect tokens with flying and deathtouch.
+pub fn hornet_queen() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    let hornet = TokenDefinition {
+        name: "Insect".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Hornet Queen",
+        cost: cost(&[generic(4), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You, count: Value::Const(4), definition: hornet,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Bogardan Hellkite — {6}{R}{R} 5/5 Dragon. Flash, flying. When it enters, it
+/// deals 4 damage divided as you choose among any number of target creatures
+/// and/or players.
+pub fn bogardan_hellkite() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Bogardan Hellkite",
+        cost: cost(&[generic(6), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::DealDamageDivided {
+            total: Value::Const(4),
+            filter: SelectionRequirement::Creature.or(SelectionRequirement::Player),
+            max_targets: 4,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Sheoldred, Whispering One — {5}{B}{B} 6/6 Praetor with swampwalk. At your
+/// upkeep, return a creature card from your graveyard to the battlefield. At
+/// each opponent's upkeep, that player sacrifices a creature.
+pub fn sheoldred_whispering_one() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Sheoldred, Whispering One",
+        cost: cost(&[generic(5), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Praetor], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Landwalk(LandType::Swamp)],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: SelectionRequirement::Creature,
+                        }),
+                        count: Box::new(Value::Const(1)),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::OpponentControl),
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::ActivePlayer),
+                    filter: SelectionRequirement::Creature,
+                    count: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}

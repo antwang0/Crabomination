@@ -1288,6 +1288,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Cube expansion ──
         noxious_gearhulk,
+        sheoldred_whispering_one,
         // allied-color batch (modern_decks)
         festering_mummy,
         reassembling_skeleton,
@@ -2006,6 +2007,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         reforge_the_soul,
         // ── Cube expansion ──
         stormbreath_dragon,
+        bogardan_hellkite,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -2082,6 +2084,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Cube expansion ──
+        hornet_queen,
         // team-pump finishers (Overrun variants)
         overwhelming_stampede,
         triumph_of_the_hordes,
