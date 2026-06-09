@@ -178,3 +178,55 @@ pub fn the_eldest_reborn() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Welcome to Sweettooth — {1}{G} Saga. I — create a 1/1 white Human token.
+/// II — create a Food token. III — put X +1/+1 counters on target creature you
+/// control, where X is the number of Foods you control.
+pub fn welcome_to_sweettooth() -> CardDefinition {
+    use crate::mana::g;
+    let human = TokenDefinition {
+        name: "Human".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Welcome to Sweettooth",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: saga_subtypes(),
+        saga_chapters: vec![
+            (1, mint_token(human, 1)),
+            (
+                2,
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::food_token(),
+                },
+            ),
+            (
+                3,
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::CountMatching {
+                        sel: Box::new(Selector::EachPermanent(SelectionRequirement::ControlledByYou)),
+                        filter: SelectionRequirement::HasArtifactSubtype(
+                            crate::card::ArtifactSubtype::Food,
+                        ),
+                    },
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

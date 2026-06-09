@@ -41897,3 +41897,75 @@ fn phelia_attack_blinks_and_grows() {
     let p = g.battlefield_find(phelia).expect("phelia still here");
     assert_eq!(p.counter_count(crate::card::CounterType::PlusOnePlusOne), 1, "Phelia grew");
 }
+
+/// Kessig Wolf Run pumps a target creature +X/+0 and grants trample.
+#[test]
+fn kessig_wolf_run_pumps_and_grants_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::kessig_wolf_run());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2); // X=2
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: Some(2),
+    }).expect("activate {2}{R}, {T}");
+    drain_stack(&mut g);
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!(b.power, 4, "+2/+0 (base 2 + X=2)");
+    assert!(b.keywords.contains(&Keyword::Trample));
+}
+
+/// Welcome to Sweettooth: I mints a Human, II a Food; III adds X +1/+1 counters
+/// (X = Foods you control) to a target creature you control.
+#[test]
+fn welcome_to_sweettooth_saga_chapters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::welcome_to_sweettooth());
+    g.saga_advance(id); // chapter I (ETB normally fires I; here advance drives it)
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Human" && c.controller == 0));
+    g.saga_advance(id); // chapter II — a Food
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food" && c.controller == 0));
+    g.saga_advance(id); // chapter III — X = 1 Food → +1/+1 on the Human
+    drain_stack(&mut g);
+    let human = g.battlefield.iter().find(|c| c.definition.name == "Human").unwrap();
+    assert_eq!(human.counter_count(CounterType::PlusOnePlusOne), 1, "X=1 Food → one counter");
+}
+
+/// Hamlet Glutton: bargaining it knocks {2} off the cost; ETB gains 3 life.
+#[test]
+fn hamlet_glutton_bargain_reduces_cost_and_gains_life() {
+    let mut g = two_player_game();
+    let fodder = g.add_token_to_battlefield(0, &crabomination_base::tokens::food_token());
+    let id = g.add_card_to_hand(0, catalog::hamlet_glutton());
+    // {5}{G}{G} minus {2} bargained = {3}{G}{G}.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpellBargain {
+        card_id: id, sacrifice: Some(fodder), target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bargained for {3}{G}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "resolved");
+    assert_eq!(g.players[0].life, life + 3, "ETB gained 3");
+}
+
+/// Gingerbrute can be sacrificed for 3 life.
+#[test]
+fn gingerbrute_sacrifices_for_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::gingerbrute());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("sac for 3 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3);
+    assert!(g.battlefield_find(id).is_none(), "sacrificed");
+}

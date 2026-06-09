@@ -36346,3 +36346,57 @@ pub fn ribbons_of_night() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hamlet Glutton — {5}{G}{G} 6/6 Giant with Trample and Bargain. Costs {2}
+/// less if bargained. When it enters, you gain 3 life.
+pub fn hamlet_glutton() -> CardDefinition {
+    CardDefinition {
+        name: "Hamlet Glutton",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample, Keyword::Bargain],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2} less to cast if it's bargained.",
+            effect: StaticEffect::BargainCostReduction { amount: 2 },
+        }],
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gingerbrute — {1} Artifact Creature — Food Golem 1/1 with Haste.
+/// `{2}, {T}, Sacrifice this creature: You gain 3 life.` (The "{1}: can't be
+/// blocked except by haste creatures" evasion ability is dropped.)
+pub fn gingerbrute() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype};
+    CardDefinition {
+        name: "Gingerbrute",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            artifact_subtypes: vec![ArtifactSubtype::Food],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

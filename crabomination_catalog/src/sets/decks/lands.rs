@@ -783,6 +783,38 @@ pub fn blinkmoth_nexus() -> CardDefinition {
     )
 }
 
+/// Kessig Wolf Run — `{T}: Add {C}`. `{X}{R}, {T}`: target creature gets
+/// +X/+0 and gains trample until end of turn.
+pub fn kessig_wolf_run() -> CardDefinition {
+    use crate::card::Keyword;
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    let pump = ActivatedAbility {
+        tap_cost: true,
+        mana_cost: cost(&[crate::mana::x(), crate::mana::r()]),
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(crate::card::SelectionRequirement::Creature),
+                power: Value::XFromCost,
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Kessig Wolf Run",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add_colorless(), pump],
+        ..Default::default()
+    }
+}
+
 /// Hengegate Pathway // Mistgate Pathway — W/U MDFC.
 pub fn hengegate_pathway() -> CardDefinition {
     pathway(

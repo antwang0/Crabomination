@@ -289,6 +289,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── claude/modern_decks: colorless artifacts ──
         mana_crypt,
         null_rod,
+        gingerbrute,
         aetherflux_reservoir,
         mox_diamond,
         chrome_mox,
@@ -1762,6 +1763,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: red utility land ──
+        kessig_wolf_run,
         overlord_of_the_boilerbilges,
         heartfire_immolator,
         warleaders_call,
@@ -2501,6 +2504,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks push: new green cards ──
         vengevine,
         hauntwoods_shrieker,
+        hamlet_glutton,
+        welcome_to_sweettooth,
         finale_of_devastation,
         archdruids_charm,
         kodamas_reach,
