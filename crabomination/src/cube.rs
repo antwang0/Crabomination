@@ -964,6 +964,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_floodpits,
+        make_disappear,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1294,6 +1295,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_balemurk,
+        get_lost,
         // ── Cube expansion ──
         noxious_gearhulk,
         sheoldred_whispering_one,
@@ -1674,6 +1676,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_boilerbilges,
+        heartfire_immolator,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god

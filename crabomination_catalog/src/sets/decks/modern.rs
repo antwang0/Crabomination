@@ -33274,3 +33274,75 @@ pub fn overlord_of_the_hauntwoods() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Misc modern staples ──────────────────────────────────────────────────────
+
+/// Get Lost — {1}{B} Instant. Destroy target creature or planeswalker. Its
+/// owner creates two Map tokens. (Uses owner; differs from "controller" only
+/// under control-stealing.)
+pub fn get_lost() -> CardDefinition {
+    use crate::game::effects::map_token;
+    CardDefinition {
+        name: "Get Lost",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                },
+            },
+            Effect::CreateToken {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(2),
+                definition: map_token(),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Make Disappear — {1}{U} Instant. Counter target spell unless its controller
+/// pays {3}. Casualty 1 (sacrifice a power-1+ creature to copy this).
+pub fn make_disappear() -> CardDefinition {
+    CardDefinition {
+        name: "Make Disappear",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Casualty(1)],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(3)]),
+            exile: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Heartfire Immolator — {R} 2/1 with Prowess. "{R}, {T}, Sacrifice this: It
+/// deals 3 damage to any target."
+pub fn heartfire_immolator() -> CardDefinition {
+    use crate::effect::shortcut::deal;
+    CardDefinition {
+        name: "Heartfire Immolator",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Prowess],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            mana_cost: cost(&[r()]),
+            effect: deal(3, target_filtered(SelectionRequirement::Any)),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

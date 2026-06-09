@@ -39887,3 +39887,65 @@ fn hideaway_shelldock_isle_exiles_then_plays_hidden_card() {
     assert!(g.battlefield_find(bear).is_some(), "the hidden bear was played onto the battlefield");
     assert!(!g.exile.iter().any(|c| c.id == bear), "bear left exile");
 }
+
+// ── Misc modern staples ──────────────────────────────────────────────────────
+
+/// Get Lost destroys a creature and gives its controller two Map tokens.
+#[test]
+fn get_lost_destroys_and_makes_two_maps() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gl = g.add_card_to_hand(0, catalog::get_lost());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    crate::game::cast_at(&mut g, gl, Target::Permanent(bear));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+    let maps = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.name == "Map").count();
+    assert_eq!(maps, 2, "controller got two Map tokens");
+}
+
+/// Make Disappear counters a spell whose controller can't pay the {3} tax.
+#[test]
+fn make_disappear_counters_unpaid_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    let md = g.add_card_to_hand(0, catalog::make_disappear());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: md, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Make Disappear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "Bolt countered (P1 can't pay the tax)");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
+
+/// Heartfire Immolator sacrifices itself to deal 3 damage to any target.
+#[test]
+fn heartfire_immolator_sac_deals_three() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let id = g.add_card_to_battlefield(0, catalog::heartfire_immolator());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("activate Heartfire Immolator");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "dealt 3 to opponent");
+    assert!(g.battlefield_find(id).is_none(), "sacrificed itself");
+}
