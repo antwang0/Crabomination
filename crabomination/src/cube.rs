@@ -467,6 +467,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: white/multicolor staples ──
         defenestrated_phantom,
+        museum_nightwatch,
         eiganjo_seat_of_the_empire,
         restless_fortress,
         phelia_exuberant_shepherd,
@@ -1369,6 +1370,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         shady_informant,
+        basilica_stalker,
+        rakish_scoundrel,
         takenuma_abandoned_mire,
         restless_cottage,
         // black Sliver + zombie payoffs
@@ -1776,6 +1779,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: red utility land ──
+        bolrac_clan_basher,
+        pyrotechnic_performer,
+        riftburst_hellion,
         kessig_wolf_run,
         sokenzan_crucible_of_defiance,
         restless_bivouac,

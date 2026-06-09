@@ -42128,6 +42128,120 @@ fn disguise_bubble_smuggler_turn_up_adds_four_counters() {
     assert_eq!((up.power(), up.toughness()), (6, 5), "2/1 + four +1/+1 counters");
 }
 
+/// Riftburst Hellion disguises and turns up into a 6/7 reacher.
+#[test]
+fn disguise_riftburst_hellion_turns_up_6_7_reach() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::riftburst_hellion());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    // Disguise {4}{R/G}{R/G}: pay the hybrid pips with red.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    let up = g.battlefield_find(id).expect("here");
+    assert_eq!((up.power(), up.toughness()), (6, 7));
+    assert!(up.definition.keywords.contains(&Keyword::Reach));
+}
+
+/// Rakish Scoundrel's turn-up grants a creature indestructible until EOT.
+#[test]
+fn disguise_rakish_scoundrel_turn_up_grants_indestructible() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::rakish_scoundrel());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(buddy))]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&Keyword::Indestructible),
+        "target gains indestructible until EOT");
+}
+
+/// Bolrac-Clan Basher: a disguised cast turns up into a double-striking trampler.
+#[test]
+fn disguise_bolrac_clan_basher_turns_up_with_keywords() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::bolrac_clan_basher());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {3}{R}{R}");
+    let up = g.battlefield_find(id).expect("here");
+    assert_eq!((up.power(), up.toughness()), (3, 2));
+    assert!(up.definition.keywords.contains(&Keyword::DoubleStrike));
+    assert!(up.definition.keywords.contains(&Keyword::Trample));
+}
+
+/// Basilica Stalker gains life and surveils when it connects.
+#[test]
+fn basilica_stalker_combat_damage_gains_life_and_surveils() {
+    let mut g = two_player_game();
+    let stalker = g.add_card_to_battlefield(0, catalog::basilica_stalker());
+    g.clear_sickness(stalker);
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: stalker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1, "gained 1 life on combat damage");
+}
+
+/// Museum Nightwatch leaves a 2/2 Detective behind when it dies.
+#[test]
+fn museum_nightwatch_dies_into_detective() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::museum_nightwatch());
+    g.battlefield_find_mut(id).unwrap().damage = 2;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    let det = g.battlefield.iter().find(|c| c.definition.name == "Detective").expect("Detective token");
+    assert_eq!((det.power(), det.toughness()), (2, 2));
+}
+
+/// Pyrotechnic Performer burns each opponent for its power when turned face up.
+#[test]
+fn disguise_pyrotechnic_performer_turn_up_burns_opponents() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pyrotechnic_performer());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    let life_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 3, "deals 3 (its power) to the opponent");
+}
+
 /// Shady Informant deals 2 damage to any target when it dies.
 #[test]
 fn shady_informant_dies_deals_two_damage() {

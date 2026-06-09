@@ -165,13 +165,14 @@ pub fn lookup_by_name(name: &str) -> Option<CardDefinition> {
 }
 
 fn lookup_token_by_name(name: &str) -> Option<CardDefinition> {
-    use crate::game::effects::{blood_token, clue_token, food_token, token_to_card_definition, treasure_token};
+    use crate::game::effects::{blood_token, clue_token, detective_token, food_token, token_to_card_definition, treasure_token};
     // Predefined utility tokens (CR 111.10): Clue, Treasure, Food, Blood.
     if let Some(token) = match name {
         "Clue" => Some(clue_token()),
         "Treasure" => Some(treasure_token()),
         "Food" => Some(food_token()),
         "Blood" => Some(blood_token()),
+        "Detective" => Some(detective_token()),
         _ => None,
     } {
         return Some(token_to_card_definition(&token));

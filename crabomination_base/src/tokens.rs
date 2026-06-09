@@ -358,6 +358,28 @@ pub fn inkling_token() -> TokenDefinition {
     }
 }
 
+/// 2/2 white-and-blue Detective creature token (MKM — Museum Nightwatch,
+/// Inside Source, Felonious Rage, …).
+pub fn detective_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Detective".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Detective],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        equipped_bonus: None,
+    }
+}
+
 /// 0/0 green-and-blue Fractal creature token. Used by Quandrix scaling
 /// payoffs; lives or dies based on the +1/+1 counters its creator stamps on.
 pub fn fractal_token() -> TokenDefinition {

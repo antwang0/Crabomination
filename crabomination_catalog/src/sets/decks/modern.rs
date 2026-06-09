@@ -13067,6 +13067,156 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Bolrac-Clan Basher — {4}{R}{R} 3/2 Cyclops with double strike and trample.
+/// Disguise {3}{R}{R}. (MKM)
+pub fn bolrac_clan_basher() -> CardDefinition {
+    CardDefinition {
+        name: "Bolrac-Clan Basher",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cyclops, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![
+            Keyword::DoubleStrike,
+            Keyword::Trample,
+            Keyword::Disguise(cost(&[generic(3), r(), r()])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Riftburst Hellion — {5}{R}{G} 6/7 Hellion with reach. Disguise {4}{R/G}{R/G}.
+/// (MKM)
+pub fn riftburst_hellion() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
+    let rg = || hybrid(Color::Red, Color::Green);
+    CardDefinition {
+        name: "Riftburst Hellion",
+        cost: cost(&[generic(5), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hellion],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 7,
+        keywords: vec![Keyword::Reach, Keyword::Disguise(cost(&[generic(4), rg(), rg()]))],
+        ..Default::default()
+    }
+}
+
+/// Basilica Stalker — {5}{B} 3/4 Vampire Detective with flying. Combat damage to
+/// a player: gain 1 life and surveil 1. Disguise {4}{B}. (MKM)
+pub fn basilica_stalker() -> CardDefinition {
+    CardDefinition {
+        name: "Basilica Stalker",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Disguise(cost(&[generic(4), b()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Museum Nightwatch — {3}{W} 3/2 Centaur Soldier. When it dies, create a 2/2
+/// Detective token. Disguise {1}{W}. (MKM)
+pub fn museum_nightwatch() -> CardDefinition {
+    CardDefinition {
+        name: "Museum Nightwatch",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Disguise(cost(&[generic(1), w()]))],
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::game::effects::detective_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Rakish Scoundrel — {2}{B}{G} 3/3 Elf Rogue with deathtouch. When it enters or
+/// is turned face up, target creature gains indestructible until end of turn.
+/// Disguise {4}{B/G}{B/G}. (MKM)
+pub fn rakish_scoundrel() -> CardDefinition {
+    use crate::effect::Duration;
+    use crate::mana::{hybrid, Color};
+    let bg = || hybrid(Color::Black, Color::Green);
+    let grant = || Effect::GrantKeyword {
+        what: target_filtered(SelectionRequirement::Creature),
+        keyword: Keyword::Indestructible,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Rakish Scoundrel",
+        cost: cost(&[generic(2), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch, Keyword::Disguise(cost(&[generic(4), bg(), bg()]))],
+        triggered_abilities: vec![
+            etb(grant()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: grant(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Pyrotechnic Performer — {1}{R} 3/2 Lizard Assassin. When it's turned face up,
+/// it deals damage equal to its power to each opponent. Disguise {R}. (MKM — the
+/// "another creature you control" clause is simplified to this creature.)
+pub fn pyrotechnic_performer() -> CardDefinition {
+    CardDefinition {
+        name: "Pyrotechnic Performer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Disguise(cost(&[r()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Voracious Varmint — {1}{G} 2/2 Varmint with vigilance. `{1}, Sacrifice this:
 /// Destroy target artifact or enchantment.` (MKM)
 pub fn voracious_varmint() -> CardDefinition {
