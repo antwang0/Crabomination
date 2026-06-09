@@ -42128,6 +42128,30 @@ fn disguise_bubble_smuggler_turn_up_adds_four_counters() {
     assert_eq!((up.power(), up.toughness()), (6, 5), "2/1 + four +1/+1 counters");
 }
 
+/// The bot unmasks an affordable face-down Disguise creature in its main phase.
+#[test]
+fn bot_turns_up_affordable_face_down_creature() {
+    use crate::server::bot::{Bot, RandomBot};
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::bubble_smuggler());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    // Give the bot the disguise turn-up cost {5}{U} and nothing else to do.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let mut bot = RandomBot::new();
+    let action = bot.next_action(&g, 0);
+    assert!(matches!(action, Some(GameAction::TurnFaceUp { card_id }) if card_id == id),
+        "bot should turn up the face-down creature; got {action:?}");
+}
+
 /// Riftburst Hellion disguises and turns up into a 6/7 reacher.
 #[test]
 fn disguise_riftburst_hellion_turns_up_6_7_reach() {

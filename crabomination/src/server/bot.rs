@@ -1194,6 +1194,28 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         }
     }
 
+    // Morph / Disguise (CR 702.36 / 702.166): cast a hand card face down for
+    // {3} as a 2/2 (with ward {2} for Disguise). Offered only when no normal
+    // spell candidate exists yet, so the bot still prefers casting cards face
+    // up; `would_accept` enforces sorcery timing and the {3} payment.
+    if castable.is_empty() {
+        for c in state.players[seat].hand.iter().filter(|c| {
+            c.definition.keywords.iter().any(|k| {
+                matches!(
+                    k,
+                    crate::card::Keyword::Morph(_)
+                        | crate::card::Keyword::Megamorph(_)
+                        | crate::card::Keyword::Disguise(_)
+                )
+            })
+        }) {
+            let action = GameAction::CastFaceDown { card_id: c.id };
+            if state.would_accept(action.clone()) {
+                castable.push(action);
+            }
+        }
+    }
+
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
     // played-this-turn, etc.). Use the game-level helper so an
@@ -1279,7 +1301,27 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Unmask a face-down threat (Morph / Megamorph / Disguise / a cloaked or
+    // manifested creature card) when the turn-up cost is affordable. Dry-run-
+    // gated, so the cost / timing / "manifested noncreature can't turn up"
+    // rules all bottom out in `would_accept`.
+    if let Some(action) = pick_turn_face_up(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Offer a `TurnFaceUp` for the first affordable face-down permanent the bot
+/// controls. The cost is the real card's Morph/Megamorph/Disguise cost, or its
+/// mana cost for a manifested/cloaked creature card; `would_accept` enforces it.
+fn pick_turn_face_up(state: &GameState, seat: usize) -> Option<GameAction> {
+    state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.face_down && c.face_up_def.is_some())
+        .map(|c| GameAction::TurnFaceUp { card_id: c.id })
+        .find(|a| state.would_accept(a.clone()))
 }
 
 /// Find an affordable graveyard-activated ability whose cost exiles the source
