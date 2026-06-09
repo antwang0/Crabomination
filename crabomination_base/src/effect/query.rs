@@ -154,6 +154,7 @@ impl Effect {
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::Escalate { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
+            Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::MayPay { body, .. } => body.requires_target(),
             Effect::Process { then, .. } => then.requires_target(),
             Effect::CollectEvidence { amount, then } => {

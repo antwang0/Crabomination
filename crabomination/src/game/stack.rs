@@ -137,6 +137,11 @@ impl GameState {
         }
 
         self.step = next;
+        // Per-step draw tallies reset at every step boundary (Orcish
+        // Bowmasters' "first card drawn in the draw step" exemption).
+        for pl in &mut self.players {
+            pl.cards_drawn_this_step = 0;
+        }
         events.push(GameEvent::StepChanged(next));
 
         match next {

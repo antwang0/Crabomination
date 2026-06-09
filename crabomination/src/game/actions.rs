@@ -6225,6 +6225,12 @@ impl GameState {
             card.once_per_turn_used.push(ability_index);
         }
 
+        // P/T of a creature sacrificed as part of this activation's cost,
+        // re-stamped at resolution via `Effect::WithSacrificedPt` so
+        // `Value::SacrificedPower/Toughness` survive intervening
+        // resolutions (Witch's Oven's "toughness 4 or greater" branch).
+        let mut cost_sac_pt: Option<(i32, i32)> = None;
+
         // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
         // source. The effect runs/queues after, and any selectors that
         // reference the source by id will miss it on the battlefield —
@@ -6262,6 +6268,7 @@ impl GameState {
                     self.sacrificed_power = Some(p_val);
                     self.sacrificed_toughness = Some(t_val);
                     self.sacrificed_mana_value = Some(mv);
+                    cost_sac_pt = Some((p_val, t_val));
                     // Cache the dying card's snapshot so AnotherOfYours
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
@@ -6321,6 +6328,7 @@ impl GameState {
                     self.sacrificed_power = Some(p_val);
                     self.sacrificed_toughness = Some(t_val);
                     self.sacrificed_mana_value = Some(mv);
+                    cost_sac_pt = Some((p_val, t_val));
                     self.died_card_snapshots.insert(other_cid, snap);
                 }
                 events.push(GameEvent::CreatureSacrificed { card_id: other_cid, who: sac_who });
@@ -6484,10 +6492,20 @@ impl GameState {
         } else {
             // Non-mana activated ability goes on the stack.
             let ability_target = target.clone();
+            // Carry a cost-sacrificed creature's P/T into resolution
+            // (intervening resolutions reset the scratch).
+            let queued_effect = match cost_sac_pt {
+                Some((power, toughness)) => Effect::WithSacrificedPt {
+                    power,
+                    toughness,
+                    body: Box::new(ability.effect),
+                },
+                None => ability.effect,
+            };
             self.stack.push(StackItem::Trigger {
                 source: card_id,
                 controller: p,
-                effect: Box::new(ability.effect),
+                effect: Box::new(queued_effect),
                 target,
                 mode: None,
                 x_value: activated_x,

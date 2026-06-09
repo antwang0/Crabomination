@@ -31905,9 +31905,8 @@ pub fn cauldron_familiar() -> CardDefinition {
     }
 }
 
-/// Witch's Oven — {1} Artifact. {T}, Sacrifice a creature: create a Food token.
-/// (The "two Food if the sacrificed creature's toughness was 4+" rider is
-/// dropped — cost-sacrifice P/T isn't visible to the ability's resolution.)
+/// Witch's Oven — {1} Artifact. {T}, Sacrifice a creature: create a Food
+/// token, or two if the sacrificed creature's toughness was 4 or greater.
 pub fn witchs_oven() -> CardDefinition {
     CardDefinition {
         name: "Witch's Oven",
@@ -31916,10 +31915,18 @@ pub fn witchs_oven() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: crabomination_base::tokens::food_token(),
+            effect: Effect::If {
+                cond: Predicate::ValueAtLeast(Value::SacrificedToughness, Value::Const(4)),
+                then: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: crabomination_base::tokens::food_token(),
+                }),
+                else_: Box::new(Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: crabomination_base::tokens::food_token(),
+                }),
             },
             ..Default::default()
         }],
@@ -38102,6 +38109,54 @@ pub fn wrench_mind() -> CardDefinition {
             amount: Value::Const(2),
             random: false,
         },
+        ..Default::default()
+    }
+}
+
+/// Orcish Bowmasters — {1}{B} 1/1 Orc Archer, Flash. Whenever an opponent
+/// draws a card except the first one they draw in each of their draw steps,
+/// deal 1 damage to any target, then amass Orcs 1.
+pub fn orcish_bowmasters() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Orcish Bowmasters",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Orc, CreatureType::Archer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl)
+                // Exempt the drawing player's first draw of their own draw
+                // step (the turn-based draw).
+                .with_filter(Predicate::Not(Box::new(Predicate::All(vec![
+                    Predicate::CurrentStepIs(TurnStep::Draw),
+                    Predicate::IsTurnOf(PlayerRef::Triggerer),
+                    Predicate::ValueAtMost(
+                        Value::CardsDrawnThisStep(PlayerRef::Triggerer),
+                        Value::Const(1),
+                    ),
+                ])))),
+            effect: Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(1),
+                },
+                Effect::Amass {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    extra_type: Some(CreatureType::Orc),
+                },
+            ]),
+        }],
         ..Default::default()
     }
 }

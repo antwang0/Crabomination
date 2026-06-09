@@ -429,6 +429,11 @@ pub enum Value {
     /// and similar payoffs. Backed by `Player.cards_drawn_this_turn`,
     /// reset on the player's untap.
     CardsDrawnThisTurn(PlayerRef),
+    /// Cards `who` has drawn during the current step. Backed by
+    /// `Player.cards_drawn_this_step`, reset on every step change.
+    /// Powers Orcish Bowmasters' "except the first one they draw in
+    /// each of their draw steps" exemption.
+    CardsDrawnThisStep(PlayerRef),
     /// Number of lands the player has played this turn (CR 305 / landfall).
     /// Backed by `Player.lands_played_this_turn`; a `> 0` value powers
     /// "if a land entered under your control this turn" landfall riders
@@ -2506,6 +2511,14 @@ pub enum Effect {
     /// references. Used by Thud (sacrifice creature, deal damage equal to
     /// its power) and similar spells.
     SacrificeAndRemember { who: PlayerRef, filter: SelectionRequirement },
+
+    /// Internal plumbing: re-stamp the P/T of a creature sacrificed as an
+    /// *activation cost* before running `body`, so
+    /// `Value::SacrificedPower/Toughness` read it at resolution even after
+    /// intervening resolutions reset the scratch (Witch's Oven). Wrapped
+    /// around the queued ability effect by `activate_ability`; not meant
+    /// for card definitions.
+    WithSacrificedPt { power: i32, toughness: i32, body: Box<Effect> },
 
     /// "Target opponent reveals their hand. You choose a card from it
     /// matching `filter`. They discard it." Inquisition of Kozilek,

@@ -90,6 +90,11 @@ pub struct Player {
     /// backwards-compatibility.
     #[serde(default)]
     pub cards_drawn_this_turn: u32,
+    /// Cards drawn during the current step — reset for every player on each
+    /// step change. Powers "except the first card they draw in their draw
+    /// step" trigger gates (Orcish Bowmasters, CR 603.3).
+    #[serde(default)]
+    pub cards_drawn_this_step: u32,
     /// Number of times a card has left this player's graveyard on the
     /// current turn. Reset to 0 in `do_untap`. Powers Strixhaven Lorehold
     /// "if a card left your graveyard this turn" payoffs (Living History,
@@ -333,6 +338,7 @@ impl Player {
             spells_cast_this_turn: 0,
             life_gained_this_turn: 0,
             cards_drawn_this_turn: 0,
+            cards_drawn_this_step: 0,
             cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
             escalating_resolutions_this_turn: 0,
@@ -394,6 +400,7 @@ impl Player {
         let id = card.id;
         self.hand.push(card);
         self.cards_drawn_this_turn = self.cards_drawn_this_turn.saturating_add(1);
+        self.cards_drawn_this_step = self.cards_drawn_this_step.saturating_add(1);
         Some(id)
     }
 

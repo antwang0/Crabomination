@@ -1389,6 +1389,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        orcish_bowmasters,
         shadow_slice,
         midnight_recovery,
         tainted_strike,

@@ -5496,6 +5496,12 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WithSacrificedPt { power, toughness, body } => {
+                self.sacrificed_power = Some(*power);
+                self.sacrificed_toughness = Some(*toughness);
+                self.run_effect(body, ctx, events)
+            }
+
             Effect::SacrificeAndRemember { who, filter } => {
                 // Resolve `who` to a single player; pick one of their
                 // controlled permanents matching `filter`; sacrifice it and

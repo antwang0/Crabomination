@@ -38786,6 +38786,21 @@ fn witchs_oven_bakes_a_food() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "Food token created");
 }
 
+/// Witch's Oven bakes two Food off a toughness-4+ creature; the sacrificed
+/// P/T survives to the ability's resolution (Effect::WithSacrificedPt).
+#[test]
+fn witchs_oven_bakes_two_food_for_big_toughness() {
+    let mut g = two_player_game();
+    let oven = g.add_card_to_battlefield(0, catalog::witchs_oven());
+    g.add_card_to_battlefield(0, catalog::colossal_dreadmaw()); // 6/6
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: oven, ability_index: 0, target: None, x_value: None,
+    }).expect("bake");
+    drain_stack(&mut g);
+    let foods = g.battlefield.iter().filter(|c| c.definition.name == "Food").count();
+    assert_eq!(foods, 2, "toughness 6 ≥ 4 → two Food");
+}
+
 /// Goblin Ringleader rakes Goblins off the top of the library into hand.
 #[test]
 fn goblin_ringleader_reveals_goblins_to_hand() {
@@ -40107,6 +40122,31 @@ fn declare_attackers_counts_creatures_attacked_this_turn() {
         Attack { attacker: b, target: AttackTarget::Player(1) },
     ])).expect("declare two attackers");
     assert_eq!(g.players[0].creatures_attacked_this_turn, 2);
+}
+
+/// Orcish Bowmasters fires on an opponent's off-step draw (ping + amass
+/// Orcs 1) but exempts their draw-step turn-based draw.
+#[test]
+fn orcish_bowmasters_punishes_extra_draws_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::orcish_bowmasters());
+    for _ in 0..3 { g.add_card_to_library(1, catalog::island()); }
+    // Opponent's own draw step, first draw — exempt.
+    g.active_player_idx = 1;
+    g.step = TurnStep::Draw;
+    let mut events = Vec::new();
+    g.draw_one(1, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Army"), "turn-based draw exempt");
+    // Second draw in the same draw step — triggers.
+    let mut events = Vec::new();
+    g.draw_one(1, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let army = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Army")
+        .expect("amassed an Orc Army");
+    assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 1, "amass 1");
 }
 
 // ── Misc modern staples ──────────────────────────────────────────────────────
