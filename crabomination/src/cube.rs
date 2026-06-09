@@ -467,6 +467,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: white/multicolor staples ──
         eiganjo_seat_of_the_empire,
+        restless_fortress,
         phelia_exuberant_shepherd,
         phlage_titan_of_fires_fury,
         // Impending Overlord (Duskmourn)
@@ -1366,6 +1367,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         takenuma_abandoned_mire,
+        restless_cottage,
         // black Sliver + zombie payoffs
         leeching_sliver,
         shepherd_of_rot,
@@ -1774,6 +1776,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         kessig_wolf_run,
         sokenzan_crucible_of_defiance,
         restless_bivouac,
+        restless_ridgeline,
         overlord_of_the_boilerbilges,
         heartfire_immolator,
         warleaders_call,

@@ -42123,3 +42123,42 @@ fn trygon_predator_destroys_artifact_on_combat_damage() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(art).is_none(), "Trygon destroyed the opponent's artifact");
 }
+
+/// Restless Fortress animates 1/4 and drains 1 on attack.
+#[test]
+fn restless_fortress_drains_on_attack() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_fortress());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 2, target: None, x_value: None }).expect("animate");
+    drain_stack(&mut g);
+    let opp = g.players[1].life;
+    let me = g.players[0].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 1, "opp lost 1");
+    assert_eq!(g.players[0].life, me + 1, "you gained 1");
+}
+
+/// Restless Cottage animates 4/4 and creates a Food on attack.
+#[test]
+fn restless_cottage_makes_food_on_attack() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_cottage());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility { card_id: land, ability_index: 2, target: None, x_value: None }).expect("animate");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food" && c.controller == 0));
+}

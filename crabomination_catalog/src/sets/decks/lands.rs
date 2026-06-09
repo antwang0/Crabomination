@@ -866,6 +866,57 @@ pub fn restless_vinestalk() -> CardDefinition {
     )
 }
 
+/// Restless Fortress — W/B. `{2}{W}{B}`: becomes a 1/4 Nightmare. Whenever it
+/// attacks, an opponent loses 1 life and you gain 1 life.
+pub fn restless_fortress() -> CardDefinition {
+    use crate::card::CreatureType;
+    restless_land(
+        "Restless Fortress", Color::White, Color::Black,
+        cost(&[generic(2), crate::mana::w(), crate::mana::b()]), 1, 4,
+        vec![CreatureType::Nightmare], vec![],
+        Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        },
+    )
+}
+
+/// Restless Ridgeline — R/G. `{2}{R}{G}`: becomes a 3/4 Dinosaur. Whenever it
+/// attacks, target creature you control gets +1/+1 until end of turn.
+pub fn restless_ridgeline() -> CardDefinition {
+    use crate::card::{CreatureType, SelectionRequirement as R};
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::Duration;
+    restless_land(
+        "Restless Ridgeline", Color::Red, Color::Green,
+        cost(&[generic(2), crate::mana::r(), crate::mana::g()]), 3, 4,
+        vec![CreatureType::Dinosaur], vec![],
+        Effect::PumpPT {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+    )
+}
+
+/// Restless Cottage — B/G. `{2}{B}{G}`: becomes a 4/4 Horror. Whenever it
+/// attacks, create a Food token. (The graveyard-exile rider is dropped.)
+pub fn restless_cottage() -> CardDefinition {
+    use crate::card::CreatureType;
+    restless_land(
+        "Restless Cottage", Color::Black, Color::Green,
+        cost(&[generic(2), crate::mana::b(), crate::mana::g()]), 4, 4,
+        vec![CreatureType::Horror], vec![],
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crabomination_base::tokens::food_token(),
+        },
+    )
+}
+
 /// Restless Spire — U/R creature-land. Enters tapped, `{T}: Add {U} or {R}`.
 /// `{U}{R}`: becomes a 2/1 Elemental with first strike until end of turn (still
 /// a land). Whenever it attacks, scry 1.
