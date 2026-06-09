@@ -379,6 +379,12 @@ fn colorless_pool() -> Vec<CardFactory> {
         sword_of_body_and_mind,
         sword_of_feast_and_famine,
         sword_of_war_and_peace,
+        sword_of_fire_and_ice,
+        sword_of_light_and_shadow,
+        sword_of_truth_and_justice,
+        // ── Cube expansion: colorless bombs ──
+        karn_liberated,
+        myr_battlesphere,
         // ── Push XXIV (session 8) — colorless cube additions ──
         phyrexian_revoker,
         solemn_simulacrum,
@@ -2397,6 +2403,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(cragcrown_pathway);
         // ── modern_decks: cube maybeboard additions ──
         v.push(bloodbraid_challenger);
+        v.push(wrenn_and_six);
         v.push(legion_extruder);
         v.push(dragonback_assault);
         v.push(twisted_landscape);

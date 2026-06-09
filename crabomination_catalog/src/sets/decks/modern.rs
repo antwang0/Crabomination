@@ -32435,3 +32435,223 @@ pub fn wirewood_herald() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cube expansion: Mirran/Phyrexian Swords (cont.) + planeswalkers ──────────
+// (`sword()` helper above ships the {3} Equipment, Equip {2}, +2/+2 +
+//  protection-from-two-colors shell with a `DealsCombatDamageToPlayer` rider.)
+
+/// Sword of Fire and Ice — protection from red and from blue. On combat damage
+/// to a player: deal 2 damage + draw a card. (The "any target" of the 2 damage
+/// is bound to the damaged player — the trigger's Target(0).)
+pub fn sword_of_fire_and_ice() -> CardDefinition {
+    sword("Sword of Fire and Ice", [Color::Red, Color::Blue], Effect::Seq(vec![
+        Effect::DealDamage { to: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(2) },
+        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+    ]))
+}
+
+/// Sword of Light and Shadow — protection from white and from black. On combat
+/// damage to a player: gain 3 life and return a creature card from your
+/// graveyard to your hand.
+pub fn sword_of_light_and_shadow() -> CardDefinition {
+    sword("Sword of Light and Shadow", [Color::White, Color::Black], Effect::Seq(vec![
+        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        Effect::Move {
+            what: Selector::Take {
+                inner: Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                count: Box::new(Value::Const(1)),
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+    ]))
+}
+
+/// Sword of Truth and Justice — protection from white and from blue. On combat
+/// damage to a player: put a +1/+1 counter on the equipped creature, then
+/// proliferate.
+pub fn sword_of_truth_and_justice() -> CardDefinition {
+    sword("Sword of Truth and Justice", [Color::White, Color::Blue], Effect::Seq(vec![
+        Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+        Effect::Proliferate,
+    ]))
+}
+
+/// Wrenn and Six — {R}{G} Legendary Planeswalker. 3 loyalty.
+/// **+1**: Return up to one target land card from your graveyard to your hand.
+/// **-1**: Wrenn and Six deals 1 damage to any target.
+/// **-7**: Emblem — approximated as "at the beginning of your upkeep, return an
+/// instant or sorcery card from your graveyard to your hand" (the printed
+/// retrace-grant emblem collapses to recurring gy-recursion).
+pub fn wrenn_and_six() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Wrenn and Six",
+        cost: cost(&[r(), g()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Wrenn],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Move {
+                    what: Selector::Take {
+                        inner: Box::new(Selector::CardsInZone {
+                            who: PlayerRef::You,
+                            zone: crate::card::Zone::Graveyard,
+                            filter: SelectionRequirement::Land,
+                        }),
+                        count: Box::new(Value::Const(1)),
+                    },
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Wrenn and Six".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::Move {
+                            what: Selector::Take {
+                                inner: Box::new(Selector::CardsInZone {
+                                    who: PlayerRef::You,
+                                    zone: crate::card::Zone::Graveyard,
+                                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                                }),
+                                count: Box::new(Value::Const(1)),
+                            },
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        },
+                    }],
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Karn Liberated — {7} Legendary Planeswalker. 6 loyalty.
+/// **+4**: Target player exiles a card from their hand.
+/// **-3**: Exile target permanent.
+/// **-14**: Approximated as `WinGame` (the "restart the game, returning
+/// Karn-exiled cards under your control" ultimate collapses to a win).
+pub fn karn_liberated() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Karn Liberated",
+        cost: cost(&[generic(7)]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Karn],
+            ..Default::default()
+        },
+        base_loyalty: 6,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 4,
+                effect: Effect::ExileChosenFromHand {
+                    from: Selector::Player(PlayerRef::Target(0)),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Any,
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Exile { what: target_filtered(SelectionRequirement::Permanent) },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -14,
+                effect: Effect::WinGame { who: PlayerRef::You },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Myr Battlesphere — {7} Artifact Creature — Myr Construct, 4/7. ETB: create
+/// four 1/1 Myr. On attack: tap your untapped Myr, deal that many damage to the
+/// defending player, and Battlesphere gets +1/+0 until end of turn per Myr.
+pub fn myr_battlesphere() -> CardDefinition {
+    let myr = TokenDefinition {
+        name: "Myr".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Myr], ..Default::default() },
+        ..Default::default()
+    };
+    let untapped_myr = || Value::CountMatching {
+        sel: Box::new(Selector::EachPermanent(
+            SelectionRequirement::ControlledByYou
+                .and(SelectionRequirement::HasCreatureType(CreatureType::Myr))
+                .and(SelectionRequirement::Untapped),
+        )),
+        filter: SelectionRequirement::Any,
+    };
+    CardDefinition {
+        name: "Myr Battlesphere",
+        cost: cost(&[generic(7)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Myr, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 7,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::Const(4), definition: myr },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage { to: Selector::Player(PlayerRef::DefendingPlayer), amount: untapped_myr() },
+                    Effect::PumpPT {
+                        what: Selector::This,
+                        power: untapped_myr(),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::Tap {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::ControlledByYou
+                                .and(SelectionRequirement::HasCreatureType(CreatureType::Myr))
+                                .and(SelectionRequirement::Untapped),
+                        ),
+                    },
+                ]),
+            },
+        ],
+        ..Default::default()
+    }
+}

@@ -39299,3 +39299,154 @@ fn wirewood_herald_tutors_elf_on_death() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == elf), "tutored an Elf to hand");
 }
+
+// ── Cube expansion: Swords + planeswalkers + Myr Battlesphere ─────────────────
+
+#[test]
+fn sword_of_fire_and_ice_pings_and_draws() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_fire_and_ice());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let opp_life = g.players[1].life;
+    let my_hand = g.players[0].hand.len();
+    let combat = g.compute_battlefield().iter().find(|c| c.id == attacker).unwrap().power;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[0].hand.len() > my_hand { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[1].life, opp_life - combat - 2, "combat damage + 2 from Sword");
+    assert!(g.players[0].hand.len() > my_hand, "drew a card");
+}
+
+#[test]
+fn sword_of_light_and_shadow_gains_life_and_returns_creature() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_light_and_shadow());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let my_life = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.players[0].hand.iter().any(|c| c.id == dead) { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].life, my_life + 3, "gained 3 life");
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "returned a creature from graveyard");
+}
+
+#[test]
+fn sword_of_truth_and_justice_counters_and_proliferates() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor());
+    let sword = g.add_card_to_battlefield(0, catalog::sword_of_truth_and_justice());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(attacker);
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.battlefield_find(attacker).map_or(0, |c| c.counter_count(CounterType::PlusOnePlusOne)) >= 2 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    // +1/+1 counter placed, then proliferate adds a second.
+    assert_eq!(
+        g.battlefield_find(attacker).unwrap().counter_count(CounterType::PlusOnePlusOne), 2,
+        "counter placed then proliferated",
+    );
+}
+
+#[test]
+fn wrenn_and_six_plus_one_returns_land_from_graveyard() {
+    let mut g = two_player_game();
+    let wrenn = g.add_card_to_battlefield(0, catalog::wrenn_and_six());
+    let land = g.add_card_to_graveyard(0, catalog::mountain());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: wrenn, ability_index: 0, target: None, x_value: None,
+    }).expect("Wrenn +1");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == land), "returned a land to hand");
+}
+
+#[test]
+fn wrenn_and_six_minus_one_pings_any_target() {
+    let mut g = two_player_game();
+    let wrenn = g.add_card_to_battlefield(0, catalog::wrenn_and_six());
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: wrenn, ability_index: 1,
+        target: Some(Target::Player(1)), x_value: None,
+    }).expect("Wrenn -1");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 1, "pinged opponent for 1");
+}
+
+#[test]
+fn karn_liberated_minus_three_exiles_target_permanent() {
+    let mut g = two_player_game();
+    let karn = g.add_card_to_battlefield(0, catalog::karn_liberated());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: karn, ability_index: 1,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Karn -3");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "permanent exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear), "in exile");
+}
+
+#[test]
+fn myr_battlesphere_makes_four_myr_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::myr_battlesphere());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let myr = g.battlefield.iter().filter(|c| c.definition.name == "Myr" && c.controller == 0).count();
+    assert_eq!(myr, 4, "ETB mints four Myr");
+}
+
+#[test]
+fn myr_battlesphere_attack_pings_for_each_untapped_myr() {
+    let mut g = two_player_game();
+    let sphere = g.add_card_to_battlefield(0, catalog::myr_battlesphere());
+    // ETB mints four untapped Myr to fuel the attack trigger.
+    g.fire_self_etb_triggers(sphere, 0);
+    drain_stack(&mut g);
+    g.clear_sickness(sphere);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sphere, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    for _ in 0..6 {
+        if g.players[1].life <= opp_life - 4 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.players[1].life <= opp_life - 4, "pinged for each of the four untapped Myr");
+}

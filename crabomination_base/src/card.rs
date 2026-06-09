@@ -175,6 +175,8 @@ pub enum PlaneswalkerSubtype {
     Kasmina,
     // STX Dean/Strixhaven planeswalker MDFCs.
     Rowan, Will, Lukka,
+    // Cube expansion: Wrenn (Wrenn and Six).
+    Wrenn,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
