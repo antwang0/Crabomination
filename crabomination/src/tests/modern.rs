@@ -42174,6 +42174,56 @@ fn bot_turns_up_affordable_face_down_creature() {
         "bot should turn up the face-down creature; got {action:?}");
 }
 
+/// Alley Assailant enters tapped and drains 3 when it's turned face up.
+#[test]
+fn disguise_alley_assailant_enters_tapped_and_drains_on_turn_up() {
+    let mut g = two_player_game();
+    // Cast it face up first to check the enters-tapped trigger.
+    let copy = g.add_card_to_hand(0, catalog::alley_assailant());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: copy, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast face up");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(copy).expect("here").tapped, "enters tapped");
+    // Now the disguise path: face down, then turn up to drain.
+    let id = g.add_card_to_hand(0, catalog::alley_assailant());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    let opp_before = g.players[1].life;
+    let me_before = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 3, "opponent loses 3");
+    assert_eq!(g.players[0].life, me_before + 3, "you gain 3");
+}
+
+/// Offender at Large pumps a creature +2/+0 when turned face up.
+#[test]
+fn disguise_offender_at_large_turn_up_pumps_target() {
+    let mut g = two_player_game();
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::offender_at_large());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(buddy))]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    drain_stack(&mut g);
+    assert_eq!((g.computed_permanent(buddy).unwrap().power, g.computed_permanent(buddy).unwrap().toughness),
+        (4, 2), "Grizzly Bears 2/2 +2/+0");
+}
+
 /// Faerie Snoop's turn-up digs two cards, taking one to hand.
 #[test]
 fn disguise_faerie_snoop_turn_up_digs_two() {

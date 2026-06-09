@@ -1372,6 +1372,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         shady_informant,
+        alley_assailant,
         basilica_stalker,
         rakish_scoundrel,
         takenuma_abandoned_mire,
@@ -1782,6 +1783,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: red utility land ──
         bolrac_clan_basher,
+        offender_at_large,
         pyrotechnic_performer,
         riftburst_hellion,
         kessig_wolf_run,

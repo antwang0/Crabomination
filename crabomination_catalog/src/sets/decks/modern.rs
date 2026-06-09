@@ -13067,6 +13067,69 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Alley Assailant — {2}{B} 3/3 Vampire Rogue that enters tapped. Disguise
+/// {4}{B}{B}. When turned face up, target opponent loses 3 life and you gain 3.
+/// (MKM)
+pub fn alley_assailant() -> CardDefinition {
+    CardDefinition {
+        name: "Alley Assailant",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Disguise(cost(&[generic(4), b(), b()]))],
+        triggered_abilities: vec![
+            etb(Effect::Tap { what: Selector::This }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(3),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Offender at Large — {4}{R} 5/4 Giant Rogue. When it enters or is turned face
+/// up, target creature gets +2/+0 until end of turn. Disguise {4}{R}. (MKM — the
+/// "up to one target" collapses to a required target.)
+pub fn offender_at_large() -> CardDefinition {
+    use crate::effect::Duration;
+    let pump = || Effect::PumpPT {
+        what: target_filtered(SelectionRequirement::Creature),
+        power: Value::Const(2),
+        toughness: Value::Const(0),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Offender at Large",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Disguise(cost(&[generic(4), r()]))],
+        triggered_abilities: vec![
+            etb(pump()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: pump(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Faerie Snoop — {1}{U}{B} 1/4 Faerie Detective with flying. Disguise
 /// {1}{U/B}{U/B}. When turned face up, look at the top two cards of your
 /// library; put one into your hand and the other into your graveyard. (MKM)
