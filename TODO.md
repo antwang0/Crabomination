@@ -13,7 +13,7 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   now ships (`PlayerView.reinforceable_hand` + `compute_hand_affordances`,
   dry-run-gated on a payable cost + creature target). `turn_up_able` ships.
 - ⏳ **MKM Disguise riders dropped this run (each wants one small primitive).**
-  - Granite Witness — "tap **or untap**" collapses to tap.
+  - ✅ Granite Witness — "tap **or untap**" now ships via `ChooseMode([Tap, Untap])`.
   - Offender at Large — "**up to one** target" collapses to a required target.
   - Experiment Twelve / Pyrotechnic Performer — "or another creature you control
     is turned face up" collapses to a SelfSource-only trigger (no per-creature

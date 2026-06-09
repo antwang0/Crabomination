@@ -42298,13 +42298,17 @@ fn reinforceable_affordance_requires_mana_and_target() {
         "payable Reinforce with a creature target is surfaced");
 }
 
-/// Granite Witness taps a creature when turned face up.
+/// Granite Witness taps a creature when turned face up (tap mode of CR's
+/// "tap or untap").
 #[test]
 fn disguise_granite_witness_turn_up_taps_creature() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::granite_witness());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Mode(0),
+        DecisionAnswer::Target(Target::Permanent(victim)),
+    ]));
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
@@ -42314,6 +42318,28 @@ fn disguise_granite_witness_turn_up_taps_creature() {
     g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).expect("here").tapped, "target creature tapped");
+}
+
+/// Granite Witness can instead choose to untap a creature when turned face up.
+#[test]
+fn disguise_granite_witness_turn_up_can_untap() {
+    let mut g = two_player_game();
+    let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(ally).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::granite_witness());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Mode(1),
+        DecisionAnswer::Target(Target::Permanent(ally)),
+    ]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(ally).expect("here").tapped, "untap mode untapped the creature");
 }
 
 /// Experiment Twelve doubles in size when turned face up.

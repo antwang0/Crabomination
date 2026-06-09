@@ -13122,8 +13122,8 @@ pub fn bannerhide_krushok() -> CardDefinition {
 }
 
 /// Granite Witness — {2}{W}{U} 3/2 Gargoyle Detective artifact creature with
-/// flying and vigilance. Disguise {W/U}{W/U}. When turned face up, tap target
-/// creature. (MKM — the "tap or untap" choice collapses to tap.)
+/// flying and vigilance. Disguise {W/U}{W/U}. When turned face up, tap or untap
+/// target creature. (MKM)
 pub fn granite_witness() -> CardDefinition {
     use crate::mana::{hybrid, Color};
     let wu = || hybrid(Color::White, Color::Blue);
@@ -13144,7 +13144,10 @@ pub fn granite_witness() -> CardDefinition {
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
-            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+            effect: Effect::ChooseMode(vec![
+                Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+                Effect::Untap { what: target_filtered(SelectionRequirement::Creature), up_to: None },
+            ]),
         }],
         ..Default::default()
     }
