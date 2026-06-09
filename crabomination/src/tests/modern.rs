@@ -41078,3 +41078,56 @@ fn keen_sense_is_green_curiosity() {
     assert_eq!(aura.cost, crate::mana::cost(&[crate::mana::g()]));
     assert!(aura.equipped_bonus.unwrap().triggered_abilities.len() == 1);
 }
+
+// ── More tribal payoffs ───────────────────────────────────────────────────────
+
+/// Obelisk of Urd buffs the chosen creature type +2/+2.
+#[test]
+fn obelisk_of_urd_buffs_chosen_type() {
+    let mut g = two_player_game();
+    let goblin = g.add_card_to_battlefield(0, catalog::skirk_prospector());
+    let obelisk = g.add_card_to_battlefield(0, catalog::obelisk_of_urd());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::CreatureType(crate::card::CreatureType::Goblin),
+    ]));
+    g.fire_self_etb_triggers(obelisk, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(goblin).unwrap().power, 3, "Goblin 1/1 → 3/3");
+}
+
+/// Wizened Cenn buffs other Kithkin.
+#[test]
+fn wizened_cenn_buffs_kithkin() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wizened_cenn());
+    let kith = g.add_card_to_battlefield(0, catalog::wizened_cenn());
+    assert_eq!(g.computed_permanent(kith).unwrap().power, 3, "other Kithkin pumped");
+}
+
+/// Stonybrook Banneret reduces Merfolk and Wizard spell costs by {1}.
+#[test]
+fn stonybrook_banneret_reduces_merfolk_cost() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stonybrook_banneret());
+    let merfolk = g.add_card_to_hand(0, catalog::merrow_reejerey()); // {2}{U} → {1}{U}
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: merfolk, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Merfolk costs {1} less");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(merfolk).is_some());
+}
+
+/// Skymarcher Aspirant gains menace once you have the city's blessing.
+#[test]
+fn skymarcher_aspirant_menace_with_blessing() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let asp = g.add_card_to_battlefield(0, catalog::skymarcher_aspirant());
+    assert!(!g.computed_permanent(asp).unwrap().keywords.contains(&Keyword::Menace),
+        "no menace without the blessing");
+    g.players[0].city_blessing = true;
+    assert!(g.computed_permanent(asp).unwrap().keywords.contains(&Keyword::Menace),
+        "menace with the city's blessing");
+}

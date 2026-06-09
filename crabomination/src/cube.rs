@@ -235,6 +235,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         quicksilver_amulet,
         // Affinity artifact creature (modern_decks)
         sojourners_companion,
+        // chosen-type anthem (modern_decks)
+        obelisk_of_urd,
         // Colorless utility artifacts (tap-down + pay-to-untap rituals).
         icy_manipulator,
         basalt_monolith,
@@ -463,6 +465,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         kinsbaile_cavalier,
         // Auras (enchantress support)
         ethereal_armor,
+        // Kithkin + Vampire tribal
+        wizened_cenn,
+        skymarcher_aspirant,
         // ── Cube expansion ──
         reveillark,
         spirit_of_the_labyrinth,
@@ -988,6 +993,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Auras (curiosity / unblockable)
         curiosity,
         aqueous_form,
+        // Merfolk/Wizard cost reducer
+        stonybrook_banneret,
         // ── modern_decks: Merfolk + blue Slivers tribal ──
         master_of_the_pearl_trident,
         merfolk_mistbinder,

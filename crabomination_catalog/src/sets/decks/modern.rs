@@ -35150,3 +35150,107 @@ pub fn aqueous_form() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: more tribal payoffs ─────────────────────────────────────────
+
+/// Obelisk of Urd — {4}{4} Artifact (Convoke). As it enters, choose a creature
+/// type. Creatures you control of the chosen type get +2/+2. (Printed symmetry
+/// — "creatures of the chosen type" — is scoped to your own board here.)
+pub fn obelisk_of_urd() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Obelisk of Urd",
+        cost: cost(&[generic(8)]),
+        card_types: vec![CardType::Artifact],
+        keywords: vec![Keyword::Convoke],
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control of the chosen type get +2/+2.",
+            effect: StaticEffect::AnthemForChosenType { power: 2, toughness: 2, exclude_source: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wizened Cenn — {1}{W} 2/2 Kithkin Soldier. Other Kithkin creatures you
+/// control get +1/+1.
+pub fn wizened_cenn() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Wizened Cenn",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Kithkin creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Kithkin)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource)),
+                power: 1, toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stonybrook Banneret — {1}{U} 1/3 Merfolk Wizard. Merfolk and Wizard spells
+/// you cast cost {1} less to cast.
+pub fn stonybrook_banneret() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Stonybrook Banneret",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Merfolk and Wizard spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Wizard)),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skymarcher Aspirant — {W} 1/1 Vampire Soldier. Has menace as long as you
+/// have the city's blessing.
+pub fn skymarcher_aspirant() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{Predicate, StaticEffect};
+    CardDefinition {
+        name: "Skymarcher Aspirant",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "As long as you have the city's blessing, this has menace.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::HasCityBlessing { who: PlayerRef::You },
+                power: 0, toughness: 0, keywords: vec![Keyword::Menace],
+            },
+        }],
+        ..Default::default()
+    }
+}
