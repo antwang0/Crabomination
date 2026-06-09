@@ -525,6 +525,53 @@ impl GameState {
             }
         }
 
+        // CR 509.1d — block tax (Archangel of Tithes). Sum every active
+        // `BlockTaxToController` amount (an `only_while_attacking` source counts
+        // only while it's attacking this combat) and auto-pay {tax} per declared
+        // blocker out of that blocker's controller's mana pool. Reject the whole
+        // declaration if a blocking player can't cover it. (A wants_ui pay prompt
+        // is a TODO, shared with the attack-tax path.)
+        let block_tax_per: u32 = {
+            let mut sum = 0u32;
+            for c in &self.battlefield {
+                for sa in &c.definition.static_abilities {
+                    if let crate::effect::StaticEffect::BlockTaxToController {
+                        amount,
+                        only_while_attacking,
+                    } = &sa.effect
+                    {
+                        if *only_while_attacking
+                            && !self.attacking.iter().any(|a| a.attacker == c.id)
+                        {
+                            continue;
+                        }
+                        let mut ctx =
+                            crate::game::effects::EffectContext::for_spell(c.controller, None, 0, 0);
+                        ctx.source = Some(c.id);
+                        sum += self.evaluate_value(amount, &ctx).max(0) as u32;
+                    }
+                }
+            }
+            sum
+        };
+        if block_tax_per > 0 {
+            let mut tax_by_controller: std::collections::HashMap<usize, u32> =
+                std::collections::HashMap::new();
+            for &(blocker_id, _) in &assignments {
+                if let Some(b) = self.battlefield_find(blocker_id) {
+                    *tax_by_controller.entry(b.controller).or_insert(0) += block_tax_per;
+                }
+            }
+            for (&player, &owed) in &tax_by_controller {
+                if self.players[player].mana_pool.total() < owed {
+                    return Err(GameError::CannotBlock(assignments[0].0));
+                }
+            }
+            for (player, owed) in tax_by_controller {
+                self.players[player].mana_pool.spend_generic(owed);
+            }
+        }
+
         // Menace: attackers with Menace must be blocked by 2+ creatures or not at all.
         for atk in &self.attacking {
             let has_menace = kws_of(atk.attacker).contains(&Keyword::Menace);

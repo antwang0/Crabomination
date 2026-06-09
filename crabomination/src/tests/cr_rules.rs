@@ -299,3 +299,50 @@ fn cr_510_2_to_creature_dispatch_skips_unblocked_attacker() {
     assert_eq!(g.battlefield_find(jitte).unwrap().counter_count(CounterType::Charge), 2,
         "exactly one charge trigger (the to-player one) — two counters, not four");
 }
+
+// ── CR 509.1d — block tax (Archangel of Tithes) ───────────────────────────────
+
+/// While Archangel of Tithes attacks, the defender must pay {1} for each
+/// blocker; the declaration is rejected when the blocking player can't cover
+/// the tax, and accepted once they can.
+#[test]
+fn cr_509_1d_block_tax_requires_payment() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    // Archangel attacks (turning on the block tax) alongside a ground bear.
+    let angel = g.add_card_to_battlefield(0, catalog::archangel_of_tithes());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(angel);
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking = vec![
+        Attack { attacker: angel, target: AttackTarget::Player(1) },
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    // Seat 1 has no mana → can't pay the {1} block tax.
+    assert!(g.declare_blockers(vec![(blocker, attacker)]).is_err(),
+        "block rejected without paying the tax");
+    // Give seat 1 one mana and retry.
+    g.players[1].mana_pool.add_colorless(1);
+    g.declare_blockers(vec![(blocker, attacker)]).expect("block legal once the tax is paid");
+    assert_eq!(g.players[1].mana_pool.total(), 0, "the block tax was spent");
+}
+
+/// The block tax is gated on the source attacking: an Archangel sitting back on
+/// defense imposes no block tax.
+#[test]
+fn cr_509_1d_block_tax_inactive_when_not_attacking() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    // Seat 1's Archangel is not attacking; seat 0 attacks with a bear.
+    g.add_card_to_battlefield(1, catalog::archangel_of_tithes());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareBlockers;
+    g.active_player_idx = 0;
+    g.declare_blockers(vec![(blocker, attacker)]).expect("no tax when Archangel isn't attacking");
+}

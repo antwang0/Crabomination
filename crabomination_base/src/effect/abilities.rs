@@ -185,6 +185,20 @@ pub enum StaticEffect {
     /// of Safety = number of enchantments you control. Copies stack. A wants_ui
     /// interactive pay prompt is a TODO.
     AttackTaxToController { amount: Value, protect_planeswalkers: bool },
+    /// CR 509.1d — block tax. "Creatures can't block unless their controllers
+    /// pay `amount` for each of those creatures." Checked in `declare_blockers`,
+    /// which sums the tax across every active source and auto-pays it from each
+    /// blocking player's mana pool (rejecting the declaration if it can't be
+    /// covered). `only_while_attacking` gates the static on the source itself
+    /// being an attacking creature this combat (Archangel of Tithes — the
+    /// block-tax half is live only while it attacks); `false` makes it an
+    /// always-on enchantment-style tax. A wants_ui interactive pay prompt is a
+    /// TODO (shared with the attack-tax path).
+    BlockTaxToController {
+        amount: Value,
+        #[serde(default)]
+        only_while_attacking: bool,
+    },
     /// CR 121.2b — Targeted players can't draw more than `max` cards each
     /// turn. While active, an `Effect::Draw` that would push a player past
     /// `max` (counting `Player.cards_drawn_this_turn`) is truncated. Models

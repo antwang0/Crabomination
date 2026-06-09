@@ -6928,6 +6928,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::LifeGainBecomesLoss { .. }
             // AttackTaxToController — consulted in declare_attackers; no layer.
             | StaticEffect::AttackTaxToController { .. }
+            // BlockTaxToController — consulted in declare_blockers; no layer.
+            | StaticEffect::BlockTaxToController { .. }
             // CapDrawsPerTurn — consulted at draw time via draw_cap_for; no
             // layer effect.
             | StaticEffect::CapDrawsPerTurn { .. }
