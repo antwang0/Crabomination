@@ -380,15 +380,17 @@ pub fn rhystic_study() -> CardDefinition {
     }
 }
 
-/// Mystic Remora — {U} Enchantment. "Whenever an opponent casts a noncreature
-/// spell, you may draw a card unless that player pays {4}." The caster is asked
-/// to pay {4} (`UnlessPlayerPays`); if they decline/can't, you draw. (The
-/// cumulative-upkeep maintenance cost is still omitted.)
+/// Mystic Remora — {U} Enchantment. Cumulative upkeep {1} (CR 702.24).
+/// "Whenever an opponent casts a noncreature spell, you may draw a card unless
+/// that player pays {4}." The caster is asked to pay {4} (`UnlessPlayerPays`);
+/// if they decline/can't, you draw.
 pub fn mystic_remora() -> CardDefinition {
+    use crate::card::Keyword;
     CardDefinition {
         name: "Mystic Remora",
         cost: cost(&[u()]),
         card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::CumulativeUpkeep(cost(&[generic(1)]))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
                 .with_filter(crate::effect::Predicate::EntityMatches {

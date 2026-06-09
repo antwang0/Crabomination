@@ -41131,6 +41131,25 @@ fn skymarcher_aspirant_menace_with_blessing() {
         "menace with the city's blessing");
 }
 
+/// CR 702.24 — cumulative upkeep paid from the pool keeps Mystic Remora and
+/// adds an age counter; unpaid, it's sacrificed.
+#[test]
+fn cr_702_24_cumulative_upkeep_pays_or_sacrifices() {
+    use crate::card::CounterType;
+    // Paid: load {1}, Remora survives with one age counter.
+    let mut g = two_player_game();
+    let remora = g.add_card_to_battlefield(0, catalog::mystic_remora());
+    g.active_player_idx = 0;
+    g.players[0].mana_pool.add_colorless(1);
+    g.process_cumulative_upkeep();
+    assert!(g.battlefield_find(remora).is_some(), "paid upkeep keeps Remora");
+    assert_eq!(g.battlefield_find(remora).unwrap().counter_count(CounterType::Age), 1);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the generic upkeep was paid");
+    // Unpaid: a second upkeep with an empty pool sacrifices it.
+    g.process_cumulative_upkeep();
+    assert!(g.battlefield_find(remora).is_none(), "unpaid cumulative upkeep sacrifices Remora");
+}
+
 /// Necrotic Ooze gains the activated abilities of creature cards in
 /// graveyards — here, Llanowar Elves' `{T}: Add {G}` mana ability.
 #[test]

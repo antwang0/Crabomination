@@ -1712,6 +1712,56 @@ impl GameState {
         events
     }
 
+    /// CR 702.24 — Cumulative upkeep. As a turn-based action at the active
+    /// player's upkeep, each permanent they control with
+    /// `Keyword::CumulativeUpkeep(cost)` gets one age counter; its controller
+    /// then pays `cost` once per age counter on it from their floating pool,
+    /// or sacrifices it. (Following `PayManaOrElse`, payment is auto from the
+    /// pool when affordable — an interactive pay prompt is a follow-up.)
+    pub(crate) fn process_cumulative_upkeep(&mut self) -> Vec<crate::game::GameEvent> {
+        use crate::card::{CounterType, Keyword};
+        let active = self.active_player_idx;
+        let mut events = Vec::new();
+        let affected: Vec<(CardId, crate::mana::ManaCost)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == active)
+            .filter_map(|c| {
+                c.definition.keywords.iter().find_map(|k| match k {
+                    Keyword::CumulativeUpkeep(cost) => Some((c.id, cost.clone())),
+                    _ => None,
+                })
+            })
+            .collect();
+        for (id, cost) in affected {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.add_counters(CounterType::Age, 1);
+            }
+            events.push(crate::game::GameEvent::CounterAdded {
+                card_id: id,
+                counter_type: CounterType::Age,
+                count: 1,
+            });
+            let n = self.battlefield_find(id).map(|c| c.counter_count(CounterType::Age)).unwrap_or(1);
+            // Total = cost × age counters (repeat the pip list N times).
+            let mut symbols = Vec::new();
+            for _ in 0..n {
+                symbols.extend(cost.symbols.iter().cloned());
+            }
+            let total = crate::mana::ManaCost::new(symbols);
+            let paid = self.players[active].mana_pool.pay(&total).is_ok();
+            if !paid {
+                events.push(crate::game::GameEvent::PermanentSacrificed { card_id: id, who: active });
+                if self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false) {
+                    events.push(crate::game::GameEvent::CreatureSacrificed { card_id: id, who: active });
+                }
+                let mut die = self.remove_to_graveyard_with_triggers(id);
+                events.append(&mut die);
+            }
+        }
+        events
+    }
+
     /// CR 702.62d/e — remove one time counter from each suspended card the
     /// active player owns in exile; when the last counter comes off, cast
     /// the card without paying its mana cost (a creature so cast clears its

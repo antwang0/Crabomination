@@ -186,6 +186,9 @@ impl GameState {
                 // Uvilda — hone counters tick down at the owner's upkeep.
                 let mut hone = self.process_hone();
                 events.append(&mut hone);
+                // CR 702.24 — cumulative upkeep: age counter + pay-or-sacrifice.
+                let mut cu = self.process_cumulative_upkeep();
+                events.append(&mut cu);
                 self.fire_step_triggers(TurnStep::Upkeep);
                 self.give_priority_to_active();
             }
