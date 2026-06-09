@@ -233,6 +233,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         filigree_familiar,
         // put-creature-from-hand cheat (modern_decks)
         quicksilver_amulet,
+        // Affinity artifact creature (modern_decks)
+        sojourners_companion,
         // Colorless utility artifacts (tap-down + pay-to-untap rituals).
         icy_manipulator,
         basalt_monolith,
@@ -967,6 +969,10 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_floodpits,
         make_disappear,
+        // ── modern_decks: Affinity (CR 702.41) ──
+        somber_hoverguard,
+        broodstar,
+        qumulox,
         // ── modern_decks: Merfolk + blue Slivers tribal ──
         master_of_the_pearl_trident,
         merfolk_mistbinder,
@@ -2137,6 +2143,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Elf tribal
         elvish_champion,
         dwynen_gilt_leaf_daen,
+        // Affinity artifact creature (modern_decks)
+        carapace_forger,
         // ── Cube expansion ──
         hornet_queen,
         // team-pump finishers (Overrun variants)

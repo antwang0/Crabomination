@@ -40835,3 +40835,70 @@ fn lord_of_the_undead_returns_zombie() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == zombie), "Zombie returned to hand");
 }
+
+// ── Affinity for artifacts (CR 702.41) ────────────────────────────────────────
+
+/// Somber Hoverguard's Affinity reduces its generic cost by your artifact count.
+#[test]
+fn somber_hoverguard_affinity_reduces_cost() {
+    let mut g = two_player_game();
+    // Four artifacts on the battlefield → {5}{U} becomes {1}{U}.
+    for _ in 0..4 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    let id = g.add_card_to_hand(0, catalog::somber_hoverguard());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Affinity makes it castable for {1}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "Somber Hoverguard resolved");
+}
+
+/// Broodstar's power/toughness equal the number of artifacts you control (CDA).
+#[test]
+fn broodstar_pt_scales_with_artifacts() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    let star = g.add_card_to_battlefield(0, catalog::broodstar());
+    // 3 Ornithopters + Broodstar itself = 4 artifacts.
+    let c = g.computed_permanent(star).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4), "*/* = artifacts you control");
+}
+
+/// Carapace Forger gets +1/+1 while you control three or more artifacts.
+#[test]
+fn carapace_forger_grows_with_artifacts() {
+    let mut g = two_player_game();
+    let cf = g.add_card_to_battlefield(0, catalog::carapace_forger());
+    assert_eq!(g.computed_permanent(cf).unwrap().power, 2, "just the Forger = 1 artifact");
+    for _ in 0..2 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    assert_eq!(g.computed_permanent(cf).unwrap().power, 3, "three artifacts → +1/+1");
+}
+
+/// Qumulox's Affinity drops its {7}{U} to {U} with seven artifacts.
+#[test]
+fn qumulox_affinity_castable_cheap() {
+    let mut g = two_player_game();
+    for _ in 0..7 { g.add_card_to_battlefield(0, catalog::ornithopter()); }
+    let id = g.add_card_to_hand(0, catalog::qumulox());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Affinity-7 makes Qumulox cost {U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some());
+}
+
+/// Sojourner's Companion can be landcycled to fetch a land.
+#[test]
+fn sojourners_companion_landcycles() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::sojourners_companion());
+    g.add_card_to_library(0, catalog::plains());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Landcycle { card_id: id })
+        .expect("landcycle for {2}");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cycled into graveyard");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Plains"), "fetched a Plains");
+}

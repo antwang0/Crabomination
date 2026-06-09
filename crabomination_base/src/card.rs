@@ -1443,6 +1443,9 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of lands the controller
     /// controls. Lumra, Bellow of the Woods (base 0/0).
     LandsControlled { base: i32 },
+    /// Power = toughness = `base` + the number of artifacts the controller
+    /// controls (counting the source). Broodstar (base 0/0, CR 604.3 CDA).
+    ArtifactsControlled { base: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

@@ -980,6 +980,13 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.41 — Affinity (for artifacts)** — rides the existing
+  `CardDefinition.affinity_filter` generic cost reduction (`SelectionRequirement::
+  Artifact`). Somber Hoverguard, Qumulox, Sojourner's Companion, Carapace Forger.
+- ✅ **CR 205.4g — Snow permanents** — `Value::SnowPermanentCountControlledBy`
+  (reads `CardDefinition.is_snow()`); Skred.
+- ✅ **CR 604.3 — Characteristic-defining P/T (artifact count)** —
+  `DynamicPt::ArtifactsControlled` (`dynamic_pt_for_name`); Broodstar's */*.
 - ✅ **CR 702.176 — Bargain** (`Keyword::Bargain` + `GameAction::
   CastSpellBargain`: optional "sacrifice an artifact, enchantment, or token"
   additional cost; `CardInstance.bargained` + `Predicate::SpellWasBargained`

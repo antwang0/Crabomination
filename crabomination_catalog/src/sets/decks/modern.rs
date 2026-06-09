@@ -34751,3 +34751,100 @@ pub fn lord_of_the_undead() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: Affinity for artifacts (CR 702.41) ──────────────────────────
+
+/// Somber Hoverguard — {5}{U} 3/3 Artifact Creature — Drone. Flying. Affinity
+/// for artifacts.
+pub fn somber_hoverguard() -> CardDefinition {
+    CardDefinition {
+        name: "Somber Hoverguard",
+        cost: cost(&[generic(5), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Drone], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        ..Default::default()
+    }
+}
+
+/// Broodstar — {6}{U}{U} */* Artifact Creature — Beast. Flying. Affinity for
+/// artifacts. Power/toughness each equal to the number of artifacts you control.
+pub fn broodstar() -> CardDefinition {
+    // P/T is a characteristic-defining ability resolved by `dynamic_pt_for_name`
+    // ("Broodstar" → ArtifactsControlled). Printed power/toughness are 0/0.
+    CardDefinition {
+        name: "Broodstar",
+        cost: cost(&[generic(6), u(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        ..Default::default()
+    }
+}
+
+/// Sojourner's Companion — {6} 3/3 Artifact Creature — Phyrexian Horror.
+/// Affinity for artifacts. Landcycling {2}.
+pub fn sojourners_companion() -> CardDefinition {
+    CardDefinition {
+        name: "Sojourner's Companion",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        keywords: vec![Keyword::Landcycling(cost(&[generic(2)]), LandType::Plains)],
+        ..Default::default()
+    }
+}
+
+/// Carapace Forger — {2}{G} 2/2 Artifact Creature — Insect. Affinity for
+/// artifacts. As long as you control three or more artifacts, this gets +1/+1.
+pub fn carapace_forger() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{Predicate, StaticEffect};
+    CardDefinition {
+        name: "Carapace Forger",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        static_abilities: vec![StaticAbility {
+            description: "As long as you control three or more artifacts, this gets +1/+1.",
+            effect: StaticEffect::PumpSelfIf {
+                condition: Predicate::ValueAtLeast(
+                    Value::CountOf(Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou)))),
+                    Value::Const(3),
+                ),
+                power: 1, toughness: 1, keywords: vec![],
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Qumulox — {7}{U} 4/4 Artifact Creature — Beast. Flying. Affinity for
+/// artifacts.
+pub fn qumulox() -> CardDefinition {
+    CardDefinition {
+        name: "Qumulox",
+        cost: cost(&[generic(7), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        affinity_filter: Some(SelectionRequirement::Artifact),
+        ..Default::default()
+    }
+}
