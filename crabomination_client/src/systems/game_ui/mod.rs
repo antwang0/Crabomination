@@ -1776,6 +1776,31 @@ pub fn sync_game_visuals(
     for anim in &inflight.gy {
         *gy_in_flight.entry(anim.owner).or_default() += 1;
     }
+    // A card that has just left the battlefield/hand for a graveyard still has
+    // its on-board entity *this* frame — the `SendToGraveyardAnimation` insert
+    // and `BattlefieldCard`/`HandCard` removal are deferred commands, so the
+    // entity is still a `BattlefieldCard`/`HandCard` and `inflight.gy` can't
+    // see the new animation yet. Without counting it, the pile pops the card in
+    // at full count while the soon-to-fly board copy is still drawn — the "two
+    // copies" flicker. So treat any live battlefield/hand entity whose id is
+    // already in a graveyard view as in-flight too. (Next frame it carries
+    // `SendToGraveyardAnimation` and is counted via `inflight.gy` instead, so
+    // there's no double-count.)
+    let gy_id_sets: Vec<HashSet<CardId>> = cv
+        .players
+        .iter()
+        .map(|p| p.graveyard.iter().map(|c| c.id).collect())
+        .collect();
+    for (_, gid, owner, _, _, _) in &bf_cards {
+        if gy_id_sets.get(owner.0).is_some_and(|s| s.contains(&gid.0)) {
+            *gy_in_flight.entry(owner.0).or_default() += 1;
+        }
+    }
+    for (_, gid, _, _, _, _) in &hand_cards {
+        if gy_id_sets.get(viewer).is_some_and(|s| s.contains(&gid.0)) {
+            *gy_in_flight.entry(viewer).or_default() += 1;
+        }
+    }
 
     for (gy, mut transform, mut vis, mut lift, _mat) in &mut graveyard_q {
         let gy_count = gy_size(gy.owner);

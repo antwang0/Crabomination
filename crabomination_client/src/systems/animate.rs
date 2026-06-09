@@ -65,11 +65,6 @@ pub fn animate_hover_lift(
 /// so a step transition fully resolves in ~150 ms with a smooth ease.
 const COMBAT_LURCH_SPEED: f32 = 5.0;
 
-/// Fraction of the way to the icon attackers hold at while combat is
-/// declared but damage hasn't resolved. Blockers use half this so the
-/// two creatures don't visually occupy the same point.
-const COMBAT_HOLD_PROGRESS: f32 = 0.32;
-
 /// Fraction of the way to the icon attackers reach on a damage step —
 /// the lunge into contact. Blockers stop short of this so the attacker
 /// is what visibly hits the icon.
@@ -152,25 +147,20 @@ pub fn update_combat_lurch_targets(
             }
         };
 
+        // Creatures stay at rest through BeginCombat / DeclareAttackers /
+        // DeclareBlockers — the lunge is reserved for the damage step, so the
+        // motion reads as the actual strike rather than a premature creep
+        // forward while attacks/blocks are still being declared. Only the
+        // creatures striking *this* damage step lunge (a first-striker doesn't
+        // move during regular combat damage, nor a vanilla creature during
+        // first-strike damage); everything else holds home and the smooth lerp
+        // retracts anyone who struck on an earlier step.
         let base_progress = match cv.step {
-            // BeginCombat → DeclareAttackers: the attacker has just been
-            // declared but the defender hasn't responded. A small hold
-            // forward signals "this creature is locked in to attack."
-            TurnStep::DeclareAttackers => COMBAT_HOLD_PROGRESS,
-            TurnStep::DeclareBlockers => COMBAT_HOLD_PROGRESS,
-            // Damage steps: lunge for the creatures actually striking,
-            // hold for those that already struck (or haven't yet).
-            step @ (TurnStep::FirstStrikeDamage | TurnStep::CombatDamage) => {
-                if strikes_this_step(step) {
-                    COMBAT_STRIKE_PROGRESS
-                } else {
-                    COMBAT_HOLD_PROGRESS
-                }
+            step @ (TurnStep::FirstStrikeDamage | TurnStep::CombatDamage)
+                if strikes_this_step(step) =>
+            {
+                COMBAT_STRIKE_PROGRESS
             }
-            // EndCombat retracts most of the way but still slightly
-            // forward; the next step transition (PostCombatMain) zeros
-            // it out and the smooth lerp does the rest.
-            TurnStep::EndCombat => COMBAT_HOLD_PROGRESS * 0.5,
             _ => 0.0,
         };
         let target_progress = if is_blocker { base_progress * 0.55 } else { base_progress };

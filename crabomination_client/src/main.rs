@@ -466,9 +466,6 @@ fn main() {
                 animate_tap,
                 animate_reveal_peek,
                 trigger_reveal_animation,
-                draw_blocking_gizmos,
-                draw_attacker_overlays,
-                draw_stack_arrows,
                 adjust_animation_speed,
             )
                 .run_if(in_state(AppState::InGame)),
@@ -477,7 +474,6 @@ fn main() {
         .add_systems(
             Update,
             (
-                draw_attack_plan_gizmos,
                 update_castable_highlights,
                 update_dying_highlights,
                 update_activatable_highlights,
@@ -568,13 +564,24 @@ fn main() {
                 .chain()
                 .run_if(in_state(AppState::InGame)),
         )
+        // Battlefield-anchored gizmo overlays must run AFTER animate_combat_lurch,
+        // which adds the lunge offset to each attacker/blocker's transform. If
+        // they run before it (the default unordered placement), they read the
+        // pre-lunge resting position and the overlay (e.g. the attacker swords
+        // during DeclareBlockers) detaches from the card that has lunged forward.
         .add_systems(
             Update,
-            draw_pt_modified_overlays.run_if(in_state(AppState::InGame)),
-        )
-        .add_systems(
-            Update,
-            (draw_legal_target_rings, draw_target_arrow).run_if(in_state(AppState::InGame)),
+            (
+                draw_blocking_gizmos,
+                draw_attacker_overlays,
+                draw_stack_arrows,
+                draw_attack_plan_gizmos,
+                draw_pt_modified_overlays,
+                draw_legal_target_rings,
+                draw_target_arrow,
+            )
+                .after(animate_combat_lurch)
+                .run_if(in_state(AppState::InGame)),
         )
         .add_systems(
             Update,
