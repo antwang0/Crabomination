@@ -3783,6 +3783,17 @@ impl GameState {
                 }
                 found.ok_or(GameError::CardNotInHand(card_id))?
             }
+            Zone::Library => {
+                // Cast off the top of a library (Jadzi's magecraft impulse).
+                let mut found: Option<crate::card::CardInstance> = None;
+                for player in self.players.iter_mut() {
+                    if let Some(pos) = player.library.iter().position(|c| c.id == card_id) {
+                        found = Some(player.library.remove(pos));
+                        break;
+                    }
+                }
+                found.ok_or(GameError::CardNotInHand(card_id))?
+            }
             _ => return Err(GameError::CardNotInHand(card_id)),
         };
 
@@ -6264,7 +6275,13 @@ impl GameState {
         }
 
         let mut events = auto_mana_events;
-        events.push(GameEvent::AbilityActivated { source: card_id });
+        // Mana abilities don't emit the activation event — every printed
+        // "whenever an opponent activates an ability" trigger carves them
+        // out (Flamescroll Celebrant, CR 605.1), and the log skips the
+        // tap-for-mana spam.
+        if !is_mana_ability(&ability.effect) {
+            events.push(GameEvent::AbilityActivated { source: card_id });
+        }
 
         // Mark the ability as used for the once-per-turn budget. (After
         // tap/mana cost validation succeeds, before sacrifice or stack

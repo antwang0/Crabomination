@@ -238,3 +238,125 @@ fn ecological_appreciation_splits_with_opponent() {
     assert_eq!(entered, 1, "one of the remaining candidates entered");
     assert!(!g.battlefield.iter().any(|c| c.id == angel), "angel shuffled away");
 }
+
+/// Jadzi's magecraft: a revealed land enters the battlefield; a nonland may
+/// be cast by paying {1} instead of its cost.
+#[test]
+fn jadzi_magecraft_plays_land_or_casts_top_for_one() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::jadzi_oracle_of_arcavios());
+    // Library (top → down): a Forest, then a Dreadmaw.
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let bolt_deep = g.add_card_to_library(0, catalog::colossal_dreadmaw());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let s1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1); // for the {1} impulse later
+    crate::game::cast_at(&mut g, s1, Target::Player(1));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest).is_some(), "revealed land entered the battlefield");
+    // Next instant: top is the dreadmaw (nonland) — pay {1} to cast it.
+    let s2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Two prompts: MayPay's {1}, then the free-cast confirm.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    crate::game::cast_at(&mut g, s2, Target::Player(1));
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bolt_deep).is_some(), "nonland top cast for one generic");
+}
+
+/// Journey to the Oracle dumps any number of hand lands onto the battlefield
+/// and, at eight-plus lands, may discard to bounce itself back to hand.
+#[test]
+fn journey_to_the_oracle_puts_hand_lands_onto_battlefield() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let journey = g.add_card_to_hand(0, *catalog::jadzi_oracle_of_arcavios().back_face.unwrap());
+    for _ in 0..5 { g.add_card_to_battlefield(0, catalog::forest()); }
+    let h1 = g.add_card_to_hand(0, catalog::forest());
+    let h2 = g.add_card_to_hand(0, catalog::forest());
+    let h3 = g.add_card_to_hand(0, catalog::forest());
+    let fodder = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![h1, h2, h3]), // put all three lands
+        DecisionAnswer::Bool(true),              // discard to return
+        DecisionAnswer::Discard(vec![fodder]),
+    ]));
+    crate::game::cast(&mut g, journey);
+    drain_stack(&mut g);
+    for l in [h1, h2, h3] {
+        assert!(g.battlefield_find(l).is_some(), "hand land entered");
+    }
+    // 5 + 3 = 8 lands → discard fodder, Journey back to hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == journey), "Journey returned to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "discarded a card");
+}
+
+
+/// Flamescroll Celebrant pings an opponent who activates a non-mana ability;
+/// mana abilities are exempt.
+#[test]
+fn flamescroll_celebrant_pings_opponent_activations() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::flamescroll_celebrant());
+    // Opponent taps a Forest (mana ability): no ping.
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 20, "mana ability exempt");
+    // Opponent activates a non-mana ability (their own Flamescroll's pump).
+    let opp_fc = g.add_card_to_battlefield(1, catalog::flamescroll_celebrant());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: opp_fc, ability_index: 0, target: None, x_value: None,
+    }).expect("pump");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "non-mana activation pinged");
+}
+
+/// Revel in Silence locks opponents out of casting and loyalty activations
+/// for the turn, and exiles itself.
+#[test]
+fn revel_in_silence_locks_opponents_and_exiles_itself() {
+    let mut g = two_player_game();
+    let revel = g.add_card_to_hand(0, *catalog::flamescroll_celebrant().back_face.unwrap());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast(&mut g, revel);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == revel), "Revel exiled itself");
+    // Opponent can't cast.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    assert!(matches!(
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(0)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }),
+        Err(crate::game::GameError::SilencedThisTurn)
+    ), "opponent is silenced");
+    // The caster themselves can still cast.
+    let own_bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, own_bolt, Target::Player(1));
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "caster unaffected");
+}

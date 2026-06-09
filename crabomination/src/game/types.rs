@@ -741,6 +741,45 @@ pub(crate) enum ResumeContext {
     },
 }
 
+impl GameAction {
+    /// True for actions a Revel-in-Silence lock forbids: casting any spell
+    /// (every `Cast*` variant) or activating a loyalty ability.
+    pub(crate) fn is_cast_or_loyalty(&self) -> bool {
+        use GameAction as A;
+        matches!(
+            self,
+            A::CastSpell { .. }
+                | A::CastSpellKicked { .. }
+                | A::CastBestow { .. }
+                | A::CastSpellBuyback { .. }
+                | A::CastFaceDown { .. }
+                | A::CastForetold { .. }
+                | A::CastAdventure { .. }
+                | A::CastAdventureCreature { .. }
+                | A::CastSplitRight { .. }
+                | A::CastSplitFused { .. }
+                | A::CastAftermath { .. }
+                | A::CastSpellCasualty { .. }
+                | A::CastSpellBargain { .. }
+                | A::CastSpellSacrificeReduce { .. }
+                | A::CastSpellSquad { .. }
+                | A::CastSpellReplicate { .. }
+                | A::CastPlotted { .. }
+                | A::CastSpellBack { .. }
+                | A::CastSpellConvoke { .. }
+                | A::CastSpellDelve { .. }
+                | A::CastSpellAlternative { .. }
+                | A::CastFlashback { .. }
+                | A::CastRetrace { .. }
+                | A::CastEscape { .. }
+                | A::CastFlashbackTap { .. }
+                | A::CastFromZoneWithoutPaying { .. }
+                | A::CastFromCommandZone { .. }
+                | A::ActivateLoyaltyAbility { .. }
+        )
+    }
+}
+
 /// Which of an attacker's two combat-damage choices a `ResumeContext::
 /// CombatDamage` is waiting on: the order its multiple blockers are dealt
 /// damage in (CR 510.1c), or how its power is divided among them (510.1d).
@@ -1170,6 +1209,8 @@ pub enum GameError {
     CantCastNoncreature,
     #[error("You can't cast permanent spells")]
     CantCastPermanentSpells,
+    #[error("You can't cast spells or activate loyalty abilities this turn")]
+    SilencedThisTurn,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),
     #[error("Card {0:?} not found in graveyard")]

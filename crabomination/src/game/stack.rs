@@ -1221,6 +1221,7 @@ impl GameState {
             pl.spells_uncounterable_this_turn = false;
             pl.cast_blue_or_black_this_turn = false;
             pl.cant_cast_noncreature_this_turn = false;
+            pl.silenced_this_turn = false;
         }
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters

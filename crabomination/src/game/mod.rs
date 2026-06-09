@@ -420,6 +420,12 @@ pub struct GameState {
     /// graveyard. Cleared once consumed. Beacon cycle.
     #[serde(skip)]
     pub(crate) shuffle_resolving_spell_into_library: bool,
+    /// `Effect::ReturnResolvingSpellToHand` — same shape, hand-bound.
+    #[serde(skip)]
+    pub(crate) return_resolving_spell_to_hand: bool,
+    /// `Effect::ExileResolvingSpell` — same shape, exile-bound.
+    #[serde(skip)]
+    pub(crate) exile_resolving_spell: bool,
     /// CR 702.46 — Cipher. Set by `Effect::Cipher` to the creature the
     /// resolving spell should be exiled "encoded on"; the post-resolution
     /// routing consumes it to send the card to exile (with `encoded_on` stamped)
@@ -820,6 +826,8 @@ impl Clone for GameState {
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             nonland_cards_discarded_per_player_this_resolution: self.nonland_cards_discarded_per_player_this_resolution.clone(),
             shuffle_resolving_spell_into_library: self.shuffle_resolving_spell_into_library,
+            return_resolving_spell_to_hand: self.return_resolving_spell_to_hand,
+            exile_resolving_spell: self.exile_resolving_spell,
             cipher_encode_pending: self.cipher_encode_pending,
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
@@ -928,6 +936,8 @@ impl GameState {
             cards_discarded_per_player_this_resolution: HashMap::new(),
             nonland_cards_discarded_per_player_this_resolution: HashMap::new(),
             shuffle_resolving_spell_into_library: false,
+            return_resolving_spell_to_hand: false,
+            exile_resolving_spell: false,
             cipher_encode_pending: None,
             discarded_card_ids_this_resolution: Vec::new(),
             permanents_destroyed_this_resolution: 0,
@@ -3463,6 +3473,14 @@ impl GameState {
         }
         if self.pending_decision.is_some() {
             return Err(GameError::DecisionPending);
+        }
+        // Revel in Silence-style lock: a silenced player can't cast spells
+        // or activate loyalty abilities this turn. Gated here so every
+        // Cast* action variant is covered at once.
+        if action.is_cast_or_loyalty()
+            && self.players[self.priority.player_with_priority].silenced_this_turn
+        {
+            return Err(GameError::SilencedThisTurn);
         }
         let events = match action {
             GameAction::PlayLand(id) => self.play_land(id),
@@ -6347,6 +6365,19 @@ impl GameState {
             let owner = card.owner;
             self.players[owner].library.push(card);
             self.players[owner].library.shuffle(&mut rand::rng());
+            return Ok(events);
+        }
+        // Revel in Silence's "exile this" rider.
+        if self.exile_resolving_spell {
+            self.exile_resolving_spell = false;
+            self.exile.push(card);
+            return Ok(events);
+        }
+        // Journey to the Oracle's "return this to its owner's hand" rider.
+        if self.return_resolving_spell_to_hand {
+            self.return_resolving_spell_to_hand = false;
+            let owner = card.owner;
+            self.players[owner].hand.push(card);
             return Ok(events);
         }
         // Buyback (CR 702.27e): a spell cast paying its buyback cost returns

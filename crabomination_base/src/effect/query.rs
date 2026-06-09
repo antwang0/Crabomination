@@ -157,6 +157,9 @@ impl Effect {
             Effect::WithSacrificedPt { body, .. } => body.requires_target(),
             Effect::OnYourNextSpellCastThisTurn { body } => body.requires_target(),
             Effect::SearchSplitWithOpponent { .. } => false,
+            Effect::ReturnResolvingSpellToHand => false,
+            Effect::ExileResolvingSpell => false,
+            Effect::SilencePlayersThisTurn { who } => player_has_target(who),
             Effect::MayPay { body, .. } => body.requires_target(),
             Effect::Process { then, .. } => then.requires_target(),
             Effect::CollectEvidence { amount, then } => {

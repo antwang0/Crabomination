@@ -924,3 +924,138 @@ pub fn ecological_appreciation() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Journey to the Oracle — {2}{G}{G} Sorcery, back face of Jadzi. Put any
+/// number of land cards from your hand onto the battlefield; then if you
+/// control eight or more lands, you may discard a card to return this to hand.
+fn journey_to_the_oracle() -> CardDefinition {
+    CardDefinition {
+        name: "Journey to the Oracle",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                count: Value::Const(i32::MAX),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(8),
+                },
+                then: Box::new(Effect::MayDo {
+                    description: "Discard a card to return Journey to the Oracle to your hand?"
+                        .into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                        Effect::ReturnResolvingSpellToHand,
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Jadzi, Oracle of Arcavios — {6}{U}{U} 5/5 Legendary Human Wizard.
+/// Discard a card: return Jadzi to hand. Magecraft — reveal the top card:
+/// a land enters the battlefield, a nonland may be cast for {1} instead.
+/// // Journey to the Oracle.
+pub fn jadzi_oracle_of_arcavios() -> CardDefinition {
+    use crate::card::Zone;
+    let top = || Selector::TopOfLibrary { who: PlayerRef::You, count: Value::Const(1) };
+    CardDefinition {
+        name: "Jadzi, Oracle of Arcavios",
+        cost: cost(&[generic(6), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            discard_cost: Some((SelectionRequirement::Any, 1)),
+            effect: Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::You) },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![magecraft(Effect::If {
+            cond: Predicate::EntityMatches { what: top(), filter: SelectionRequirement::Land },
+            then: Box::new(Effect::Move {
+                what: top(),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: Box::new(Effect::MayPay {
+                description: "Pay {1} to cast the top card of your library?".into(),
+                mana_cost: cost(&[generic(1)]),
+                body: Box::new(Effect::CastWithoutPayingImmediate {
+                    what: top(),
+                    source_zone: Zone::Library,
+                    exile_after: false,
+                }),
+            }),
+        })],
+        back_face: Some(Box::new(journey_to_the_oracle())),
+        ..Default::default()
+    }
+}
+
+/// Revel in Silence — {W}{W} Instant, back face of Flamescroll Celebrant.
+/// Opponents can't cast spells or activate loyalty abilities this turn;
+/// exiles itself.
+fn revel_in_silence() -> CardDefinition {
+    CardDefinition {
+        name: "Revel in Silence",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SilencePlayersThisTurn { who: PlayerRef::EachOpponent },
+            Effect::ExileResolvingSpell,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Flamescroll Celebrant — {1}{R} 2/1 Human Shaman. Whenever an opponent
+/// activates a non-mana ability, deal 1 damage to that player. {1}{R}:
+/// +2/+0 until end of turn. // Revel in Silence.
+pub fn flamescroll_celebrant() -> CardDefinition {
+    CardDefinition {
+        name: "Flamescroll Celebrant",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::AbilityActivated, EventScope::OpponentControl),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        back_face: Some(Box::new(revel_in_silence())),
+        ..Default::default()
+    }
+}

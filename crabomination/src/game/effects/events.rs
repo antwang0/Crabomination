@@ -370,6 +370,10 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // a player cycles a card" payoffs that introspect the cycled
         // card's printed attributes.
         GameEvent::CardCycled { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        // The subject is the ability's source permanent; `PlayerRef::
+        // Triggerer` then resolves to its controller (the activating
+        // player — Flamescroll Celebrant's "that player").
+        GameEvent::AbilityActivated { source } => Some(EntityRef::Permanent(*source)),
         _ => None,
     }
 }
@@ -439,6 +443,9 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         // YourControl scope checks for "a creature you control is dealt
         // damage" payoffs).
         GameEvent::DamageDealt { to_card: Some(card_id), .. } => Some(*card_id),
+        // The activated ability's source — its controller is the actor
+        // for YourControl / OpponentControl scope checks (Flamescroll).
+        GameEvent::AbilityActivated { source } => Some(*source),
         _ => None,
     }
 }

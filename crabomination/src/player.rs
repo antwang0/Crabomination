@@ -159,6 +159,10 @@ pub struct Player {
     /// Powers `Value::CreaturesAttackedWithThisTurn` (Windbrisk Heights).
     #[serde(default)]
     pub creatures_attacked_this_turn: u32,
+    /// Revel in Silence: this player can't cast spells or activate loyalty
+    /// abilities for the rest of the turn. Reset at the turn boundary.
+    #[serde(default)]
+    pub silenced_this_turn: bool,
     /// Number of cards this player has caused to be put into exile on
     /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs
@@ -349,6 +353,7 @@ impl Player {
             creatures_that_damaged_me_this_turn: Vec::new(),
             attacked_this_turn: false,
             creatures_attacked_this_turn: 0,
+            silenced_this_turn: false,
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             pending_is_discounts: Vec::new(),

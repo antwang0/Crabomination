@@ -1774,6 +1774,17 @@ pub enum Effect {
     /// Beacon of Destruction). Runs at resolution before the spell would go
     /// to the graveyard, so the card never lands in the graveyard.
     ShuffleSelfIntoLibrary,
+    /// "Return [this spell] to its owner's hand" as part of its own
+    /// resolution (Journey to the Oracle's discard rider). Flags the
+    /// post-resolution routing the same way `ShuffleSelfIntoLibrary` does.
+    ReturnResolvingSpellToHand,
+    /// Revel in Silence: each resolved player can't cast spells or activate
+    /// loyalty abilities for the rest of the turn
+    /// (`Player.silenced_this_turn`).
+    SilencePlayersThisTurn { who: PlayerRef },
+    /// "Exile [this spell]" as part of its own resolution (Revel in
+    /// Silence). Same flag pattern as `ShuffleSelfIntoLibrary`.
+    ExileResolvingSpell,
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },

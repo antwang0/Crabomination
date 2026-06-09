@@ -5017,6 +5017,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ReturnResolvingSpellToHand => {
+                self.return_resolving_spell_to_hand = true;
+                Ok(())
+            }
+
+            Effect::ExileResolvingSpell => {
+                self.exile_resolving_spell = true;
+                Ok(())
+            }
+
+            Effect::SilencePlayersThisTurn { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    self.players[p].silenced_this_turn = true;
+                }
+                Ok(())
+            }
+
             Effect::RevealTopOpponentChoosesToHand { count, counter } => {
                 let p = ctx.controller;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
