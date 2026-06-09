@@ -288,27 +288,26 @@ pub fn upheaval() -> CardDefinition {
     }
 }
 
-/// Rakshasa's Bargain — {4}{B} Sorcery. Real Oracle: as an additional
-/// cost, exile a creature card from your graveyard or pay 4 life. Draw
-/// four cards.
-///
-/// Approximation: collapses the modal additional cost into a flat 4 life
-/// payment (the more common play). The "exile a creature" alternative
-/// would need a multi-mode additional-cost primitive that isn't modeled.
+/// Rakshasa's Bargain — {2/B}{2/G}{2/U} Instant. Look at the top four cards
+/// of your library. Put two of them into your hand and the rest into your
+/// graveyard.
 pub fn rakshasas_bargain() -> CardDefinition {
+    use crate::mana::{mono_hybrid, Color};
     CardDefinition {
         name: "Rakshasa's Bargain",
-        cost: cost(&[generic(4), b(), b()]),
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(4) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(4) },
+        cost: cost(&[
+            mono_hybrid(2, Color::Black),
+            mono_hybrid(2, Color::Green),
+            mono_hybrid(2, Color::Blue),
         ]),
-        triggered_abilities: vec![],
+        card_types: vec![CardType::Instant],
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(4),
+            rest_to_graveyard: true,
+            pick_filter: None,
+            take: Some(Value::Const(2)),
+        },
         ..Default::default()
     }
 }

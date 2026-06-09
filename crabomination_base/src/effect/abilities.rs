@@ -411,6 +411,13 @@ pub enum StaticEffect {
         applies_to: Selector,
         ability: ActivatedAbility,
     },
+    /// Necrotic Ooze — "As long as this is on the battlefield, it has all
+    /// activated abilities of all creature cards in all graveyards." Surfaced
+    /// by `granted_abilities_for` (which walks every graveyard for creature
+    /// cards and clones their battlefield-usable activated abilities onto the
+    /// source). A self-only grant: only the permanent carrying this static
+    /// gains the abilities.
+    HasActivatedAbilitiesOfGraveyardCreatures,
     /// CR 700.5 / Theros gods — "As long as your devotion to [colors] is
     /// less than `threshold`, this isn't a creature." Resolved at
     /// `gather_continuous_effects` time (which can read devotion via the

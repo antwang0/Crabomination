@@ -6804,6 +6804,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // GrantActivatedAbility — surfaced as a virtual activated ability
             // in `activate_ability`; not a characteristic layer effect.
             | StaticEffect::GrantActivatedAbility { .. }
+            // Necrotic Ooze — surfaced via `granted_abilities_for`, not a layer.
+            | StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures
             // NotCreatureWhileDevotionBelow — needs live devotion count,
             // resolved in `gather_continuous_effects` against the GameState.
             | StaticEffect::NotCreatureWhileDevotionBelow { .. }

@@ -23493,6 +23493,27 @@ pub fn power_depot() -> CardDefinition {
     }
 }
 
+/// Necrotic Ooze — {2}{B}{B} 4/3 Ooze. As long as it's on the battlefield, it
+/// has all activated abilities of all creature cards in all graveyards (CR
+/// 702 ability-grant via `StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures`).
+pub fn necrotic_ooze() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Necrotic Ooze",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Ooze], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "As long as this is on the battlefield, it has all activated abilities of all creature cards in all graveyards.",
+            effect: StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures,
+        }],
+        ..Default::default()
+    }
+}
+
 /// The Gitrog Monster — {3}{B}{G} Legendary 6/6 Frog Horror with deathtouch.
 /// Upkeep: sacrifice it unless you sacrifice a land. You may play an additional
 /// land each turn. Whenever one or more land cards are put into your graveyard

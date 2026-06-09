@@ -5926,25 +5926,25 @@ fn evacuation_returns_all_creatures_to_owners() {
 }
 
 #[test]
-fn rakshasas_bargain_pays_4_life_and_draws_4() {
+fn rakshasas_bargain_takes_two_rest_to_graveyard() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::island());
     }
     let bargain = g.add_card_to_hand(0, catalog::rakshasas_bargain());
-    // Real Oracle: `{4}{B}{B}` Instant.
-    g.players[0].mana_pool.add_colorless(4);
-    g.players[0].mana_pool.add(Color::Black, 2);
-    let life_before = g.players[0].life;
+    // {2/B}{2/G}{2/U} — pay the generic side of each mono-hybrid pip.
+    g.players[0].mana_pool.add_colorless(6);
     let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
     g.perform_action(GameAction::CastSpell {
         card_id: bargain, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Rakshasa's Bargain castable");
+    .expect("Rakshasa's Bargain castable for 6 generic");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before - 4);
-    // Net hand: cast (-1) + draw 4 (+4) = +3.
-    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    // Cast (-1 the spell) + put 2 of the top 4 into hand = +1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "two of four kept");
+    // The spell + the two unchosen revealed cards land in the graveyard.
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3);
 }
 
 #[test]
@@ -41129,6 +41129,24 @@ fn skymarcher_aspirant_menace_with_blessing() {
     g.players[0].city_blessing = true;
     assert!(g.computed_permanent(asp).unwrap().keywords.contains(&Keyword::Menace),
         "menace with the city's blessing");
+}
+
+/// Necrotic Ooze gains the activated abilities of creature cards in
+/// graveyards — here, Llanowar Elves' `{T}: Add {G}` mana ability.
+#[test]
+fn necrotic_ooze_borrows_graveyard_creature_ability() {
+    let mut g = two_player_game();
+    let ooze = g.add_card_to_battlefield(0, catalog::necrotic_ooze());
+    g.clear_sickness(ooze);
+    // Llanowar Elves sits in the graveyard, lending its mana ability.
+    g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    // The borrowed ability surfaces at index = printed-ability count (0).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ooze, ability_index: 0, target: None, x_value: None,
+    }).expect("Ooze taps for {G} via Llanowar Elves' ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1, "produced green mana");
+    assert!(g.battlefield_find(ooze).unwrap().tapped, "Ooze tapped to pay the ability");
 }
 
 /// The Gitrog Monster draws a card when a land card is put into its

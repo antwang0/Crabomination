@@ -2819,6 +2819,12 @@ impl GameState {
                     while idx < self.battlefield.len() {
                         if ids.contains(&self.battlefield[idx].id) {
                             let c = self.battlefield.remove(idx);
+                            // CR 702.26e — a phased-out permanent is treated as
+                            // though it doesn't exist, so remove it from combat
+                            // if `Effect::PhaseOut` fires mid-combat (the
+                            // untap-step `do_phasing` path can't, but a cast /
+                            // ETB phase-out can — Talon Gates, Reality Ripple).
+                            self.remove_from_combat(c.id);
                             events.push(GameEvent::PermanentPhasedOut { card_id: c.id });
                             self.phased_out.push(c);
                         } else {

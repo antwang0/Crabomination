@@ -33,7 +33,6 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Mutated Cultist | ⏳ | Mutate primitive needed. |
-| Necrotic Ooze | ⏳ | Gains all activated abilities of creatures in graveyards. Big ability-borrow primitive. |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
 
 ### Red
@@ -52,7 +51,7 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
+| Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of *exiled* creatures (gated on a +1/+1 counter). The graveyard-borrow sibling now ships (`StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures`, Necrotic Ooze ✅); Cauldron needs the exile-zone + counter variant. |
 | The Mightstone and Weakstone | 🟡 | {5} Artifact; ETB `ChooseMode` (Draw 2 / target creature -5/-5 EOT); `{T}`: Add {C}{C}. Meld/assemble omitted. |
 
 ### Multicolor
@@ -62,7 +61,6 @@ work is listed below.
 | Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
 | Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
 | Saheeli Rai | 🟡 | {1}{U}{R} 3-loyalty Planeswalker. **+1**: Scry 1 + ping each opponent **and each planeswalker they control** for 1 (now faithful — the PW half rides `EachPermanent(Planeswalker & ControlledByOpponent)`, CR 120.3c). **-2**: Create a token copy of target friendly creature/artifact, grant haste, delay-trigger Exile at next end step. **-7**: Same body fired twice (the emblem-recurring "each end step" auto-recur is approximated). Tests: `saheeli_rai_plus_one_pings_each_opponent`, `saheeli_rai_minus_two_creates_haste_copy`. |
-| The Gitrog Monster | ⏳ | Land-as-discard / dredge engine. |
 | Zirda, the Dawnwaker | ⏳ | Companion + activated-cost reduction. Needs Companion primitive. |
 | Lonis, Genetics Expert | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {1}{G}{U} Legendary 2/2 Otter Detective. ETB trigger on other creatures you control creates a Clue token (the printed "investigate" rider via `clue_token()`). The "Sacrifice X Clues: target opp reveals top X cards" activated ability is engine-wide ⏳ (no per-activation X-cost prompt yet). Test: `lonis_genetics_expert_creates_clue_when_other_creature_enters`. |
 | Tamiyo, Collector of Tales | 🟡 | Push (claude/modern_decks batch 102): {2}{G}{U} 4-loyalty Planeswalker. **-2**: Return target card from gy → hand. **-3**: Search library → hand (the "same name as a card in target opponent's graveyard" filter is engine-wide ⏳ — falls back to `Any`). **-7**: Draw 4 (the "distinct nonland types in gy" scaling drops). The static's **sacrifice** half now ships (`StaticEffect::OpponentsCantMakeYouSacrifice`, shared with Sigarda); the "can't make you discard" half is still engine-wide ⏳. Test: `tamiyo_collector_minus_two_returns_card_from_graveyard`. |
@@ -70,14 +68,12 @@ work is listed below.
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
-| Rakshasa's Bargain | 🟡 | Pay 4 life + Draw 4. The "exile creature card from your graveyard" alternate additional cost is folded away (modal additional-cost not modeled). |
 
 ### Lands
 
 | Card | Status | Notes |
 |---|---|---|
 | Power Depot | 🟡 | Artifact Land, enters tapped, `{T}: Add {C}` + `{T}: Add one mana of any color`. The "spend only on artifact spells/abilities" mana restriction and Modular 1 are dropped. Test: `power_depot_enters_tapped_and_fixes_mana`. |
-| Talon Gates of Madara | ⏳ | TBD. |
 
 ## Engine features needed
 

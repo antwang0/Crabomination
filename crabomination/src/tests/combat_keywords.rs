@@ -1186,3 +1186,27 @@ fn cr_509_1g_cant_be_blocked_by_more_than_one() {
     );
     g.perform_action(GameAction::DeclareBlockers(vec![(b1, atk)])).expect("one blocker is fine");
 }
+
+// ── CR 702.26e — phasing out mid-combat leaves combat ─────────────────────────
+
+#[test]
+fn cr_702_26e_phase_out_removes_attacker_from_combat() {
+    use crate::effect::{Effect, Selector};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.attacking().len(), 1, "attacker declared");
+    // Phase the attacker out mid-combat: it leaves combat and the battlefield.
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(atk)), 0, 0);
+    let _ = g.resolve_effect(
+        &Effect::PhaseOut { what: Selector::Target(0) }, &ctx,
+    ).expect("phase out resolves");
+    assert!(g.battlefield_find(atk).is_none(), "attacker phased out");
+    assert!(g.attacking().is_empty(), "phased-out attacker no longer in combat");
+}

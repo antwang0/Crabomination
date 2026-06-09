@@ -1559,6 +1559,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         black_suns_zenith,
         // ── modern_decks batch 103 (mono-black cube expansion) ──
         mai_scornful_striker,
+        necrotic_ooze,
         vendetta,
         ultimate_price,
         walk_the_plank,

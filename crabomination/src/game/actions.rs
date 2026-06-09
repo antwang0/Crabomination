@@ -5346,6 +5346,30 @@ impl GameState {
                 }
             }
         }
+        // Necrotic Ooze — a permanent with
+        // `HasActivatedAbilitiesOfGraveyardCreatures` gains every battlefield-
+        // usable activated ability of every creature card in every graveyard.
+        // Skip graveyard-only activations (`from_graveyard` / `exile_self_cost`)
+        // — those function only from the graveyard, so the Ooze can't use them.
+        if self.battlefield_find(card_id).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(sa.effect, StaticEffect::HasActivatedAbilitiesOfGraveyardCreatures)
+            })
+        }) {
+            for pl in &self.players {
+                for card in &pl.graveyard {
+                    if !card.definition.is_creature() {
+                        continue;
+                    }
+                    for ab in &card.definition.activated_abilities {
+                        if ab.from_graveyard || ab.exile_self_cost {
+                            continue;
+                        }
+                        out.push(ab.clone());
+                    }
+                }
+            }
+        }
         // CR 702.95 — Soulbond-granted activated abilities (Deadeye Navigator's
         // flicker). A paired creature carrying a `soulbond_bonus` with
         // `activated_abilities` grants them to BOTH itself and its partner.
