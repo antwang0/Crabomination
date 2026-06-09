@@ -40902,3 +40902,67 @@ fn sojourners_companion_landcycles() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "cycled into graveyard");
     assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Plains"), "fetched a Plains");
 }
+
+// ── White Aura tutor + Soldier tribal ─────────────────────────────────────────
+
+/// Heliod's Pilgrim searches up an Aura on ETB.
+#[test]
+fn heliods_pilgrim_tutors_an_aura() {
+    let mut g = two_player_game();
+    let aura = g.add_card_to_library(0, catalog::pacifism());
+    g.add_card_to_library(0, catalog::island()); // a non-Aura decoy
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(aura))]));
+    let pilgrim = g.add_card_to_battlefield(0, catalog::heliods_pilgrim());
+    g.fire_self_etb_triggers(pilgrim, 0);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "Aura tutored to hand");
+}
+
+/// Field Marshal grants other Soldiers +1/+1 and first strike.
+#[test]
+fn field_marshal_buffs_soldiers() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::field_marshal());
+    let sol = g.add_card_to_battlefield(0, catalog::daru_warchief());
+    let c = g.computed_permanent(sol).unwrap();
+    assert!(c.keywords.contains(&Keyword::FirstStrike), "first strike");
+    // Daru Warchief base 1/1, +1/+1 from Field Marshal, +1/+2 from its own anthem.
+    assert_eq!((c.power, c.toughness), (3, 4));
+}
+
+/// Daru Warchief reduces a Soldier spell's cost by {1}.
+#[test]
+fn daru_warchief_reduces_soldier_cost() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::daru_warchief());
+    let sol = g.add_card_to_hand(0, catalog::field_marshal()); // {2}{W}{W} → {1}{W}{W}
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sol, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Soldier costs {1} less");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sol).is_some(), "Field Marshal resolved at reduced cost");
+}
+
+/// Catapult Master taps five Soldiers to exile a creature.
+#[test]
+fn catapult_master_exiles_with_five_soldiers() {
+    let mut g = two_player_game();
+    let master = g.add_card_to_battlefield(0, catalog::catapult_master());
+    g.clear_sickness(master);
+    let mut soldiers = vec![master];
+    for _ in 0..4 {
+        let s = g.add_card_to_battlefield(0, catalog::field_marshal());
+        g.clear_sickness(s);
+        soldiers.push(s);
+    }
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: master, ability_index: 0,
+        target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("activate Catapult Master");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "target creature exiled");
+}

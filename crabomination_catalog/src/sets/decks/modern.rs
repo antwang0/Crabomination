@@ -34848,3 +34848,122 @@ pub fn qumulox() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: white Aura tutor + Soldier tribal ──────────────────────────
+
+/// Heliod's Pilgrim — {2}{W} 1/2 Human Soldier. "When Heliod's Pilgrim enters
+/// the battlefield, you may search your library for an Aura card, reveal it,
+/// put it into your hand, then shuffle."
+pub fn heliods_pilgrim() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Heliod's Pilgrim",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::HasEnchantmentSubtype(EnchantmentSubtype::Aura),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Field Marshal — {2}{W}{W} 2/2 Human Soldier. Other Soldier creatures get
+/// +1/+1 and have first strike.
+pub fn field_marshal() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Soldier)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Field Marshal",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Soldier creatures get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Soldier creatures have first strike.",
+                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::FirstStrike },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Daru Warchief — {3}{W} 1/1 Human Soldier. Soldier spells you cast cost {1}
+/// less to cast. Soldiers you control get +1/+2.
+pub fn daru_warchief() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Daru Warchief",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Soldier spells you cast cost {1} less to cast.",
+                effect: StaticEffect::CostReduction {
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Soldier),
+                    amount: 1,
+                },
+            },
+            StaticAbility {
+                description: "Soldiers you control get +1/+2.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Soldier)
+                            .and(SelectionRequirement::ControlledByYou)),
+                    power: 1, toughness: 2,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Catapult Master — {4}{W}{W} 3/3 Human Soldier. "Tap five untapped Soldiers
+/// you control: Exile target creature."
+pub fn catapult_master() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Catapult Master",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Soldier), 5)),
+            effect: Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

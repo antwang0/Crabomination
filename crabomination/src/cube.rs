@@ -453,6 +453,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Impending Overlord (Duskmourn)
         overlord_of_the_mistmoors,
+        // ── modern_decks: Aura tutor + Soldier tribal ──
+        heliods_pilgrim,
+        field_marshal,
+        daru_warchief,
+        catapult_master,
         // ── Cube expansion ──
         reveillark,
         spirit_of_the_labyrinth,
