@@ -2664,6 +2664,10 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(fading_hope);
         v.push(third_path_iconoclast);
         v.push(crackling_drake);
+        v.push(slip_out_the_back);
+        v.push(niv_mizzet_parun);
+        v.push(aria_of_flame);
+        v.push(baral_chief_of_compliance);
     }
     if pair_contains(pair, Color::Black) {
         v.push(darkmoss_bridge);

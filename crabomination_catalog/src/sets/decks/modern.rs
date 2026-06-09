@@ -37314,3 +37314,125 @@ pub fn crackling_drake() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Slip Out the Back — {U} Instant. Put a +1/+1 counter on target creature, then
+/// it phases out (CR 702.26).
+pub fn slip_out_the_back() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Slip Out the Back",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
+            Effect::PhaseOut { what: Selector::Target(0) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Niv-Mizzet, Parun — {U}{U}{U}{R}{R}{R} 5/5 Legendary Dragon Wizard. Can't be
+/// countered. Flying. Whenever you draw a card, deal 1 to any target. Whenever a
+/// player casts an instant or sorcery, you draw a card.
+pub fn niv_mizzet_parun() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    CardDefinition {
+        name: "Niv-Mizzet, Parun",
+        cost: cost(&[u(), u(), u(), r(), r(), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::CantBeCountered, Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
+                effect: Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::ONE,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                    .with_filter(cast_is_instant_or_sorcery()),
+                effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Aria of Flame — {1}{R}{R} Enchantment. ETB gain 10 life. Whenever you cast an
+/// instant or sorcery, put a verse counter on this, then deal damage equal to
+/// the number of verse counters on it to any target.
+pub fn aria_of_flame() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Aria of Flame",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![
+            etb(Effect::GainLife { who: Selector::You, amount: Value::Const(10) }),
+            magecraft(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Verse,
+                    amount: Value::ONE,
+                },
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Player)
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Verse,
+                    },
+                },
+            ])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Baral, Chief of Compliance — {1}{U} 1/3 Human Wizard. Instant and sorcery
+/// spells you cast cost {1} less. (The "whenever a spell you control counters a
+/// spell, loot" rider needs a counter-event trigger — dropped.)
+pub fn baral_chief_of_compliance() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Baral, Chief of Compliance",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Instant and sorcery spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}

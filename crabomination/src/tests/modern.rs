@@ -42992,3 +42992,81 @@ fn crackling_drake_power_scales_with_spells() {
     assert_eq!(g.computed_permanent(drake).unwrap().power, 3, "two in gy + one in exile → 3 power");
     assert_eq!(g.computed_permanent(drake).unwrap().toughness, 4, "toughness fixed at 4");
 }
+
+/// Slip Out the Back counters a creature then phases it out.
+#[test]
+fn slip_out_the_back_pumps_and_phases() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::slip_out_the_back());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Slip Out the Back");
+    drain_stack(&mut g);
+    // Phased out → no longer on the battlefield, but its +1/+1 counter persists.
+    assert!(g.battlefield_find(bear).is_none(), "bear phased out");
+    assert!(g.phased_out.iter().any(|c| c.id == bear
+        && c.counter_count(crate::card::CounterType::PlusOnePlusOne) == 1),
+        "phased-out bear carries its +1/+1 counter");
+}
+
+/// Niv-Mizzet, Parun pings on each draw and draws when any instant/sorcery is cast.
+#[test]
+fn niv_mizzet_parun_draw_ping_loop() {
+    let mut g = two_player_game();
+    let niv = g.add_card_to_battlefield(0, catalog::niv_mizzet_parun());
+    assert!(niv == niv && catalog::niv_mizzet_parun().keywords.contains(&Keyword::CantBeCountered));
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    // Casting Lightning Bolt: Niv draws (cast IS), and that draw pings for 1.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    // Bolt's 3 + Niv's draw-ping 1 = 4 to the opponent.
+    assert_eq!(g.players[1].life, life - 4, "Bolt 3 + Niv draw-trigger ping 1");
+}
+
+/// Aria of Flame gains 10 life and escalates damage with verse counters.
+#[test]
+fn aria_of_flame_gains_life_and_scales_damage() {
+    let mut g = two_player_game();
+    let aria = g.add_card_to_hand(0, catalog::aria_of_flame());
+    let life0 = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aria, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Aria of Flame");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 10, "ETB gains 10 life");
+    // First instant cast: verse counter → 1 → 1 damage.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Player(1)), // Bolt's target
+        DecisionAnswer::Target(Target::Player(1)), // Aria's damage target
+    ]));
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 3 - 1, "Bolt 3 + Aria 1 (one verse counter)");
+}
+
+/// Baral makes instants and sorceries cost {1} less.
+#[test]
+fn baral_reduces_instant_sorcery_cost() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::baral_chief_of_compliance());
+    let bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bolt, None), 1, "instant costs 1 less");
+    let bear = crate::card::CardInstance::new(g.next_id(), catalog::grizzly_bears(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &bear, None), 0, "creatures unaffected");
+}
