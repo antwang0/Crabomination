@@ -3339,6 +3339,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_spell_squad(card_id, times, target, additional_targets, mode, x_value),
+            GameAction::CastSpellReplicate {
+                card_id,
+                times,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_spell_replicate(card_id, times, target, additional_targets, mode, x_value),
             GameAction::CastSpellSacrificeReduce {
                 card_id,
                 sacrifices,

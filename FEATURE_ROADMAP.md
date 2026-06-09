@@ -394,7 +394,11 @@ feature; sweep card-batch by card-batch.
 - **Spell-matters:** ✅ Escalate (`Effect::Escalate { modes,
   cost }` — CR 702.119; pick one or more modes, paying the escalate cost once
   per extra mode; Collective Brutality's discard-a-card), ⏳ Splice,
-  ⏳ Replicate, ⏳ Overload, ⏳ Cipher, ⏳ Surge, ✅ Spectacle
+  ✅ Replicate (CR 702.107 — `Keyword::Replicate(cost)` +
+  `GameAction::CastSpellReplicate { times }`: pay the replicate cost any number
+  of times, copy the spell that many times via `copy_stack_spell`; Pyromatics,
+  Train of Thought, Shattering Spree), ⏳ Overload (note: already shipped as
+  an alt-cost `effect_override`; see Tier 1), ⏳ Cipher, ⏳ Surge, ✅ Spectacle
   (`shortcut::spectacle` / `AlternativeCost.condition` —
   `Predicate::PlayerLostLifeThisTurn` + `Player.lost_life_this_turn`, CR
   702.111: cast for the spectacle cost if an opponent lost life this turn;

@@ -33796,3 +33796,43 @@ pub fn zephyrim() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Replicate (CR 702.107) ───────────────────────────────────────────────────
+// `Keyword::Replicate(cost)`; cast via `GameAction::CastSpellReplicate{times}`,
+// which copies the spell once per replicate payment.
+
+/// Pyromatics — {1}{R} Instant. Replicate {1}{R}. Deals 1 damage to any target.
+pub fn pyromatics() -> CardDefinition {
+    CardDefinition {
+        name: "Pyromatics",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Replicate(cost(&[generic(1), r()]))],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Train of Thought — {1}{U} Sorcery. Replicate {1}{U}. Draw a card.
+pub fn train_of_thought() -> CardDefinition {
+    CardDefinition {
+        name: "Train of Thought",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Replicate(cost(&[generic(1), u()]))],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Shattering Spree — {R} Sorcery. Replicate {R}. Destroy target artifact.
+pub fn shattering_spree() -> CardDefinition {
+    CardDefinition {
+        name: "Shattering Spree",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Replicate(cost(&[r()]))],
+        effect: Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ..Default::default()
+    }
+}

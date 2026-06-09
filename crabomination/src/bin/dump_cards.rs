@@ -113,6 +113,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Reconfigure(_) => "Reconfigure",
         Keyword::Offspring(_) => "Offspring",
         Keyword::Squad(_) => "Squad",
+        Keyword::Replicate(_) => "Replicate",
         Keyword::Fortify(_) => "Fortify",
         Keyword::Protection(_) => "Protection",
         Keyword::Landwalk(lt) => {

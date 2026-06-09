@@ -588,6 +588,11 @@ pub enum Keyword {
     /// payment (`Value::SquadCount` reads `CardInstance.squad_count`). Cast via
     /// `GameAction::CastSpellSquad`.
     Squad(crate::mana::ManaCost),
+    /// CR 702.107 — Replicate [cost]. An optional additional cast cost on an
+    /// instant/sorcery payable any number of times; when cast, the spell is
+    /// copied once per payment (copies may choose new targets). Cast via
+    /// `GameAction::CastSpellReplicate`.
+    Replicate(crate::mana::ManaCost),
     /// "This creature can't attack or block unless it has an even number of
     /// counters on it." (Zero is even.) Enforced in `declare_attackers` and
     /// `declare_blockers` (and the bot/legal-attacker gates) by reading the
@@ -1692,6 +1697,12 @@ impl CardDefinition {
     pub fn squad_cost(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Squad(cost) = kw { Some(cost) } else { None }
+        })
+    }
+    /// CR 702.107 — the Replicate cost if this card has `Keyword::Replicate`.
+    pub fn replicate_cost(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Replicate(cost) = kw { Some(cost) } else { None }
         })
     }
     /// CR 702.35 — the Madness cost if this card has `Keyword::Madness`.

@@ -1230,6 +1230,42 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.107 — cast an instant/sorcery paying its optional Replicate cost
+    /// `times` times. The replicate cost is charged that many extra times and
+    /// the spell is copied that many times on the stack (copies may choose new
+    /// targets).
+    pub(crate) fn cast_spell_replicate(
+        &mut self,
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let replicate = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.replicate_cost().cloned())
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Base cost first (pip-aware), then the replicate cost `times` times.
+        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        if times > 0 {
+            let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
+            for _ in 0..times {
+                combined.symbols.extend(replicate.symbols.iter().cloned());
+            }
+            self.try_pay_with_auto_tap(p, &combined)?;
+            // CR 702.107a — copy the spell once per replicate payment; copies
+            // may choose new targets.
+            self.copy_stack_spell(card_id, times as usize, true, &mut events);
+        }
+        Ok(events)
+    }
+
     /// CR 601.2b — cast a spell paying its optional "sacrifice any number of
     /// creatures, {N} less each" additional cost (Awaken the Blood Avatar).
     /// Each creature in `sacrifices` is sacrificed before the spell is put on

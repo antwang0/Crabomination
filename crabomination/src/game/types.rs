@@ -208,6 +208,18 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.107 — cast an instant/sorcery paying its optional Replicate cost
+    /// `times` times. The replicate cost is charged that many extra times and
+    /// the spell is copied that many times (copies may choose new targets).
+    CastSpellReplicate {
+        card_id: CardId,
+        times: u32,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// CR 702.170 — Plot a card from hand: pay its plot cost and exile it
     /// face-up. Special action, main phase + empty stack only.
     Plot { card_id: CardId },

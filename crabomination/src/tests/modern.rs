@@ -40227,3 +40227,62 @@ fn wasteland_raider_etb_each_player_sacrifices() {
     assert!(g.battlefield.iter().any(|c| c.controller == 0
         && c.definition.name == "Wasteland Raider"), "Raider stays");
 }
+
+// ── Replicate (CR 702.107) ───────────────────────────────────────────────────
+
+/// Pyromatics replicated twice resolves three times (original + two copies),
+/// dealing 3 total to the same player.
+#[test]
+fn replicate_pyromatics_twice_deals_three_total() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pyromatics());
+    g.players[0].mana_pool.add(Color::Red, 4);
+    g.players[0].mana_pool.add_colorless(4);
+    let life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: id, times: 2,
+        target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Pyromatics replicated twice");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life - 3, "original + two copies = 3 damage");
+}
+
+/// Train of Thought replicated once draws two (original + one copy).
+#[test]
+fn replicate_train_of_thought_once_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::train_of_thought());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: id, times: 1,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Train of Thought replicated once");
+    drain_stack(&mut g);
+
+    // -1 for casting it, +2 for original + copy draws.
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "drew two cards");
+}
+
+/// Shattering Spree cast with no replicate payments is a plain "destroy target
+/// artifact".
+#[test]
+fn replicate_shattering_spree_base_destroys_artifact() {
+    let mut g = two_player_game();
+    let art = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::shattering_spree());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: id, times: 0,
+        target: Some(Target::Permanent(art)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Shattering Spree");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
+}
