@@ -39521,3 +39521,57 @@ fn miracle_not_granted_on_later_draws() {
     let card = g.players[0].hand.iter().find(|c| c.id == bonfire).expect("in hand");
     assert!(card.granted_alt_cast_cost_eot.is_none(), "no miracle on a non-first draw");
 }
+
+#[test]
+fn murderous_redcap_etb_pings_for_its_power() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::murderous_redcap());
+    let opp_life = g.players[1].life;
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 1, "ETB pings for power 1");
+}
+
+#[test]
+fn stormbreath_dragon_becomes_monstrous_burns_by_hand() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::stormbreath_dragon());
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    let opp_life = g.players[1].life;
+    let opp_hand = g.players[1].hand.len() as i32;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("monstrosity activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - opp_hand, "burned by opponent's hand size");
+}
+
+#[test]
+fn noxious_gearhulk_etb_destroys_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_battlefield(0, catalog::noxious_gearhulk());
+    let life = g.players[0].life;
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "destroyed the creature");
+    assert_eq!(g.players[0].life, life + 2, "gained life equal to its toughness");
+}
+
+#[test]
+fn consecrated_sphinx_draws_two_when_opponent_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::consecrated_sphinx());
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_library(1, catalog::island());
+    g.players[1].cards_drawn_this_turn = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let my_hand = g.players[0].hand.len();
+    let mut events = vec![];
+    g.draw_one(1, &mut events); // opponent draws
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.len() >= my_hand + 2, "you drew two off the opponent's draw");
+}

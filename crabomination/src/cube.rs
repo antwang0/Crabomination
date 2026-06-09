@@ -1094,6 +1094,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         thought_scour,
         // ── Miracle (CR 702.94) ──
         temporal_mastery,
+        // ── Cube expansion ──
+        consecrated_sphinx,
         ancestral_recall,
         // frantic_search — ✅ "up to three" untap honored via
         // `Effect::Untap.up_to`. Disabled in cube pending color-balance
@@ -1279,6 +1281,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Cube expansion ──
+        noxious_gearhulk,
         // allied-color batch (modern_decks)
         festering_mummy,
         reassembling_skeleton,
@@ -1995,6 +1999,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Miracle (CR 702.94) ──
         bonfire_of_the_damned,
         reforge_the_soul,
+        // ── Cube expansion ──
+        stormbreath_dragon,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -2015,6 +2021,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(bloodtithe_harvester);
         v.push(drossforge_bridge);
         v.push(raucous_theater);
+        v.push(murderous_redcap);
         // ── modern_decks-15 (BR cross-pool removal) ──
         v.push(dreadbore);
         v.push(bedevil);

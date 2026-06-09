@@ -32765,3 +32765,96 @@ pub fn reforge_the_soul() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cube expansion: value creatures (existing primitives) ────────────────────
+
+/// Murderous Redcap — {2}{B}{R} 1/1 Goblin Assassin. Persist. When it enters,
+/// it deals damage equal to its power to any target.
+pub fn murderous_redcap() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Murderous Redcap",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin, CreatureType::Assassin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Persist],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::PowerOf(Box::new(Selector::This)),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Stormbreath Dragon — {3}{R}{R} 4/4 Dragon. Flying, haste, protection from
+/// white. Monstrosity 5. When it becomes monstrous, it deals damage to each
+/// opponent equal to the number of cards in their hand.
+pub fn stormbreath_dragon() -> CardDefinition {
+    use crate::effect::shortcut::{monstrosity, on_becomes_monstrous};
+    CardDefinition {
+        name: "Stormbreath Dragon",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dragon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Protection(Color::White)],
+        activated_abilities: vec![monstrosity(cost(&[generic(5), r()]), 5)],
+        triggered_abilities: vec![on_becomes_monstrous(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::HandSizeOf(PlayerRef::EachOpponent),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Noxious Gearhulk — {4}{B}{B} 5/4 Phyrexian Horror. Menace. When it enters,
+/// you may destroy target creature; if you do, gain life equal to its toughness.
+pub fn noxious_gearhulk() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Noxious Gearhulk",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Menace],
+        // "You may destroy target creature; if you do, gain life = its
+        // toughness." The target is bound to slot 0 by the Destroy selector;
+        // GainLife reads its toughness before it leaves. (The "may" collapses
+        // to mandatory — there is always a legal creature target in practice.)
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ToughnessOf(Box::new(Selector::Target(0))),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Consecrated Sphinx — {4}{U}{U} 4/6 Sphinx with flying. Whenever an opponent
+/// draws a card, you may draw two cards.
+pub fn consecrated_sphinx() -> CardDefinition {
+    CardDefinition {
+        name: "Consecrated Sphinx",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 4,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDrawn, EventScope::OpponentControl),
+            effect: Effect::MayDo {
+                description: "draw two cards".into(),
+                body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(2) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
