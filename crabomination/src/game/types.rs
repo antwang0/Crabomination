@@ -383,6 +383,10 @@ pub enum GameAction {
     /// 702.29c, "When you cycle this card" triggers fire from
     /// whatever zone the card winds up in after the discard.
     Cycle { card_id: CardId },
+    /// CR 702.77 — Activate a card's Reinforce ability from your hand. `card_id`
+    /// must carry a `Keyword::Reinforce(n, cost)`. Pays the cost, discards the
+    /// card, then puts N +1/+1 counters on `target`.
+    Reinforce { card_id: CardId, target: Target },
     /// CR 702.29e — Activate a card's Landcycling ability from your hand.
     /// `card_id` must carry a `Keyword::Landcycling(cost, type)`. Pays the
     /// cost, discards the card, then searches the library for a land of the

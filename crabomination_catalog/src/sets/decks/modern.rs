@@ -13067,6 +13067,24 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Bannerhide Krushok — {3}{G} 4/4 Beast with Reinforce 2—{1}{G} (CR 702.77):
+/// {1}{G}, Discard this card: put two +1/+1 counters on target creature. (MH3)
+pub fn bannerhide_krushok() -> CardDefinition {
+    CardDefinition {
+        name: "Bannerhide Krushok",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reinforce(2, cost(&[generic(1), g()]))],
+        ..Default::default()
+    }
+}
+
 /// Granite Witness — {2}{W}{U} 3/2 Gargoyle Detective artifact creature with
 /// flying and vigilance. Disguise {W/U}{W/U}. When turned face up, tap target
 /// creature. (MKM — the "tap or untap" choice collapses to tap.)

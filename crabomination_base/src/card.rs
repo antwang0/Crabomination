@@ -486,6 +486,9 @@ pub enum Keyword {
     Fortify(crate::mana::ManaCost),
     Morph(crate::mana::ManaCost),
     Megamorph(crate::mana::ManaCost),
+    /// CR 702.77 — Reinforce N—[cost]. "[cost], Discard this card: Put N +1/+1
+    /// counters on target creature." An activated ability usable from the hand.
+    Reinforce(u32, crate::mana::ManaCost),
     /// CR 702.166 — Disguise. Like Morph, but the face-down permanent is a 2/2
     /// with ward {2}; turn it face up for this cost. Casts face down for {3}.
     Disguise(crate::mana::ManaCost),

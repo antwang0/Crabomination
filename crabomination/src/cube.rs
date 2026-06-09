@@ -2235,6 +2235,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         nervous_gardener,
         greenbelt_radical,
+        bannerhide_krushok,
         experiment_twelve,
         culvert_ambusher,
         voracious_varmint,

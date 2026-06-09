@@ -42174,6 +42174,25 @@ fn bot_turns_up_affordable_face_down_creature() {
         "bot should turn up the face-down creature; got {action:?}");
 }
 
+/// Bannerhide Krushok's Reinforce 2 discards it to grow a creature (CR 702.77).
+#[test]
+fn reinforce_bannerhide_krushok_puts_two_counters() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::bannerhide_krushok());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Reinforce {
+        card_id: id, target: Target::Permanent(target),
+    }).expect("reinforce");
+    let t = g.battlefield_find(target).expect("here");
+    assert_eq!((t.power(), t.toughness()), (4, 4), "2/2 + two +1/+1 counters");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Krushok discarded as cost");
+    assert!(g.battlefield_find(id).is_none(), "Krushok not on the battlefield");
+}
+
 /// Granite Witness taps a creature when turned face up.
 #[test]
 fn disguise_granite_witness_turn_up_taps_creature() {

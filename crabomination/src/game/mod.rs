@@ -3581,6 +3581,7 @@ impl GameState {
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),
             GameAction::Cycle { card_id } => self.cycle_card(card_id),
+            GameAction::Reinforce { card_id, target } => self.reinforce_card(card_id, target),
             GameAction::Landcycle { card_id } => self.landcycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
             GameAction::Reconfigure { equipment, target } => {
@@ -3789,6 +3790,47 @@ impl GameState {
         }
         // Draw a card (Dredge can replace this draw, CR 702.52).
         self.draw_one(seat, &mut events);
+        Ok(events)
+    }
+
+    /// CR 702.77 — Activate a Reinforce ability from the hand. Pays the cost,
+    /// discards the card (firing discard triggers), then puts N +1/+1 counters
+    /// on the targeted creature.
+    fn reinforce_card(
+        &mut self,
+        card_id: crate::card::CardId,
+        target: crate::game::types::Target,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::{CounterType, Keyword};
+        let seat = self.player_with_priority();
+        let (cost, n) = self.players[seat]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| {
+                c.definition.keywords.iter().find_map(|kw| match kw {
+                    Keyword::Reinforce(n, mc) => Some((mc.clone(), *n)),
+                    _ => None,
+                })
+            })
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Target must be a creature on the battlefield.
+        let crate::game::types::Target::Permanent(tid) = target else {
+            return Err(GameError::InvalidTarget);
+        };
+        if !self
+            .battlefield
+            .iter()
+            .any(|c| c.id == tid && c.definition.is_creature())
+        {
+            return Err(GameError::InvalidTarget);
+        }
+        self.players[seat].mana_pool.pay(&cost).map_err(GameError::Mana)?;
+        let mut events = vec![];
+        self.discard_card(seat, card_id, &mut events);
+        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tid) {
+            c.add_counters(CounterType::PlusOnePlusOne, n);
+        }
         Ok(events)
     }
 
