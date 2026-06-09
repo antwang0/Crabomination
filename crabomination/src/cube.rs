@@ -281,6 +281,11 @@ fn colorless_pool() -> Vec<CardFactory> {
         mana_vault,
         chromatic_lantern,
         field_of_ruin,
+        // ── claude/modern_decks: colorless creature-lands ──
+        mutavault,
+        mishras_factory,
+        inkmoth_nexus,
+        blinkmoth_nexus,
         aetherflux_reservoir,
         mox_diamond,
         chrome_mox,

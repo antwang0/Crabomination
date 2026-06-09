@@ -23080,6 +23080,63 @@ fn animated_manland_can_attack() {
     .expect("animated manland attacks");
 }
 
+/// Mutavault taps for {C} and animates (for {1}) into a 2/2 Changeling that's
+/// still a land.
+#[test]
+fn mutavault_taps_for_c_and_animates_into_changeling() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::mutavault());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for {C}");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1, "produced colorless mana");
+    // Untap so the animate ability (no tap cost) just needs {1}.
+    g.battlefield_find_mut(land).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, x_value: None,
+    }).expect("animate for {1}");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert_eq!((post.power, post.toughness), (2, 2));
+    assert!(post.card_types.contains(&CardType::Land), "still a land");
+    assert!(post.keywords.contains(&Keyword::Changeling));
+}
+
+/// Inkmoth Nexus animates into a 1/1 flier with infect.
+#[test]
+fn inkmoth_nexus_animates_into_flying_infect() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::inkmoth_nexus());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, x_value: None,
+    }).expect("animate for {1}");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert_eq!((post.power, post.toughness), (1, 1));
+    assert!(post.keywords.contains(&Keyword::Flying));
+    assert!(post.keywords.contains(&Keyword::Infect));
+}
+
+/// Mishra's Factory animates into a 2/2 Assembly-Worker.
+#[test]
+fn mishras_factory_animates_into_assembly_worker() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::mishras_factory());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, x_value: None,
+    }).expect("animate for {1}");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert_eq!((post.power, post.toughness), (2, 2));
+    assert!(post.subtypes.creature_types.contains(&CreatureType::AssemblyWorker));
+}
+
 // ── Coverage backfill: burn / discard / sacrifice spells ────────────────────
 
 /// Char deals 4 to the targeted player and 2 to its caster.

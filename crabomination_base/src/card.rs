@@ -129,6 +129,8 @@ pub enum CreatureType {
     Gargoyle,
     // Innistrad Eye Horror (Concealing Curtains // Revealing Eye).
     Eye,
+    // Manland animate-into bodies (Mishra's Factory, Inkmoth / Blinkmoth Nexus).
+    AssemblyWorker, Blinkmoth,
 }
 
 /// Land subtypes (basic land types + others).

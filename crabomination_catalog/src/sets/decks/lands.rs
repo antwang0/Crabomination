@@ -711,6 +711,78 @@ pub fn needle_spires() -> CardDefinition {
     )
 }
 
+// ── Colorless creature-lands ({T}: Add {C}; animate into a creature) ─────────
+
+/// Build a colorless manland: enters untapped, `{T}: Add {C}`, and a
+/// mana-cost ability that animates it into a creature until end of turn. The
+/// "artifact creature" half of Mishra's/Inkmoth/Blinkmoth is approximated as a
+/// plain creature (no artifact-type add yet).
+fn colorless_manland(
+    name: &'static str,
+    animate_cost: ManaCost,
+    power: i32,
+    toughness: i32,
+    creature_types: Vec<crate::card::CreatureType>,
+    keywords: Vec<crate::card::Keyword>,
+) -> CardDefinition {
+    let animate = ActivatedAbility {
+        mana_cost: animate_cost,
+        effect: Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(power),
+            toughness: Value::Const(toughness),
+            creature_types,
+            keywords,
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add_colorless(), animate],
+        ..Default::default()
+    }
+}
+
+/// Mutavault — `{T}: Add {C}`. `{1}`: becomes a 2/2 creature with all creature
+/// types (Changeling) until end of turn (still a land).
+pub fn mutavault() -> CardDefinition {
+    use crate::card::Keyword;
+    colorless_manland("Mutavault", cost(&[generic(1)]), 2, 2, vec![], vec![Keyword::Changeling])
+}
+
+/// Mishra's Factory — `{T}: Add {C}`. `{1}`: becomes a 2/2 Assembly-Worker
+/// until end of turn (still a land). (The +1/+1 Assembly-Worker pump rider is
+/// dropped.)
+pub fn mishras_factory() -> CardDefinition {
+    use crate::card::CreatureType;
+    colorless_manland(
+        "Mishra's Factory", cost(&[generic(1)]), 2, 2,
+        vec![CreatureType::AssemblyWorker], vec![],
+    )
+}
+
+/// Inkmoth Nexus — `{T}: Add {C}`. `{1}`: becomes a 1/1 Blinkmoth with flying
+/// and infect until end of turn (still a land).
+pub fn inkmoth_nexus() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword};
+    colorless_manland(
+        "Inkmoth Nexus", cost(&[generic(1)]), 1, 1,
+        vec![CreatureType::Blinkmoth], vec![Keyword::Flying, Keyword::Infect],
+    )
+}
+
+/// Blinkmoth Nexus — `{T}: Add {C}`. `{1}`: becomes a 1/1 Blinkmoth with flying
+/// until end of turn (still a land). (The pump ability is dropped.)
+pub fn blinkmoth_nexus() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword};
+    colorless_manland(
+        "Blinkmoth Nexus", cost(&[generic(1)]), 1, 1,
+        vec![CreatureType::Blinkmoth], vec![Keyword::Flying],
+    )
+}
+
 /// Hengegate Pathway // Mistgate Pathway — W/U MDFC.
 pub fn hengegate_pathway() -> CardDefinition {
     pathway(
