@@ -449,7 +449,9 @@ feature; sweep card-batch by card-batch.
   Remaining: Parallax Dementia's steal-on-leave rider.
 - **Older mechanics:** ✅ Soulshift (`shortcut::soulshift(n)` — CR 702.46,
   dies → `MayDo(return target Spirit MV≤n from your graveyard)`), ⏳ Offering, ⏳ Epic, ⏳ Absorb,
-  ⏳ Affinity (have artifact count?), ⏳ Entwine,
+  ✅ Affinity for artifacts (`CardDefinition.affinity_filter` generic reduction;
+  Frogmite, Myr Enforcer, Thoughtcast, Somber Hoverguard, Qumulox, Sojourner's
+  Companion, Carapace Forger), ⏳ Entwine,
   ✅ Buyback (`Keyword::Buyback(cost)` + `GameAction::CastSpellBuyback` —
   CR 702.27, optional additional cost; bought-back spell returns to its
   owner's hand instead of the graveyard on resolution; surfaced in

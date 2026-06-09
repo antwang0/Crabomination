@@ -672,10 +672,14 @@ fn decide_library_search(
     DecisionAnswer::Search(Some(pick))
 }
 
-/// Bot heuristic for `Decision::ChooseCards` ("exile any number of target
-/// cards from graveyards"): exile every offered card an opponent owns, up to
-/// `max`. Skips the bot's own graveyard cards (no reason to self-mill into
-/// exile). Falls back to nothing when only own cards are offered.
+/// Bot heuristic for `Decision::ChooseCards`. Two cases:
+/// - **Put-onto-battlefield from hand** (Sneak Attack / Elvish Piper / Goblin
+///   Lackey): every candidate is in the bot's own hand. Cheat in the single
+///   biggest creature (highest mana value, then power) — that's the whole point
+///   of the effect. Without this the AutoDecider min-0 default declines and the
+///   bot never uses the card.
+/// - **Exile from graveyards** (Collect Evidence / Fateseal-style): exile every
+///   offered card an opponent owns, up to `max`, skipping the bot's own.
 fn decide_choose_cards(
     state: &GameState,
     seat: usize,
@@ -683,6 +687,24 @@ fn decide_choose_cards(
     max: u32,
 ) -> crate::decision::DecisionAnswer {
     use crate::decision::DecisionAnswer;
+    // Hand-source pick: take the biggest creature(s) we can.
+    let all_in_hand = !candidates.is_empty()
+        && candidates
+            .iter()
+            .all(|(id, _)| state.players[seat].hand.iter().any(|c| c.id == *id));
+    if all_in_hand {
+        let mut ranked: Vec<(crate::card::CardId, i32, i32)> = candidates
+            .iter()
+            .filter_map(|(id, _)| {
+                let c = state.players[seat].hand.iter().find(|c| c.id == *id)?;
+                Some((*id, c.definition.cost.cmc() as i32, c.definition.power))
+            })
+            .collect();
+        // Biggest first: highest mana value, then highest power.
+        ranked.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)));
+        let chosen: Vec<_> = ranked.into_iter().take(max as usize).map(|(id, ..)| id).collect();
+        return DecisionAnswer::Cards(chosen);
+    }
     let owner_of = |id: crate::card::CardId| -> Option<usize> {
         state
             .players
@@ -3358,6 +3380,25 @@ mod tests {
                 GameAction::CastBestow { target: Some(crate::game::Target::Permanent(t)), .. } if t == host)
         });
         assert!(bestowed, "bot offers a Bestow line enchanting its creature");
+    }
+
+    /// `decide_choose_cards` over the bot's own hand (Sneak Attack / Elvish
+    /// Piper) cheats in the biggest creature it can.
+    #[test]
+    fn bot_choose_cards_cheats_in_biggest_creature() {
+        use crate::decision::DecisionAnswer;
+        let mut g = two_player_game();
+        let small = g.add_card_to_hand(0, catalog::grizzly_bears()); // cmc 2
+        let big = g.add_card_to_hand(0, catalog::shivan_dragon());   // cmc 6
+        let candidates = vec![
+            (small, "Grizzly Bears".to_string()),
+            (big, "Shivan Dragon".to_string()),
+        ];
+        match decide_choose_cards(&g, 0, &candidates, 1) {
+            DecisionAnswer::Cards(v) => assert_eq!(v, vec![big],
+                "bot picks the highest-cmc creature to cheat in"),
+            other => panic!("expected Cards, got {other:?}"),
+        }
     }
 }
 

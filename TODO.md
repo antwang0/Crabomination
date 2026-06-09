@@ -54,10 +54,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   they control" rides `EachPermanent(Planeswalker & ControlledByOpponent)` with
   damage-to-PW (CR 120.3c). Karn Liberated's -14 and Ugin's -X exile-by-MV
   still approximate (no X-aware `ManaValueAtMostX` requirement yet).
-- ⏳ **Client crate can't be built/clippy'd in the web sandbox** (wayland-sys
-  build script needs system libs). Engine/catalog/server clippy is clean; the
-  client edits this run (miracle highlight, `miracle_hand` field) are minimal
-  and compile-checked by inspection only.
+- ✅ **Client crate builds + clippy + tests in the web sandbox** once
+  `apt-get install -y libwayland-dev libasound2-dev libudev-dev` is run (the
+  wayland-sys / alsa-sys / libudev build scripts need those system libs).
+  `cargo clippy --workspace --all-targets` and `cargo test --workspace` are
+  both green this run.
 - ⏳ **Dedicated immediate-blink primitive.** Restoration-style instant flicker
   is carded via `Exile { target } + Move { Target → Battlefield }` (Restoration
   Angel, Felidar Guardian). A single `Effect::FlickerImmediate { what }` would be

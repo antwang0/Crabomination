@@ -41073,10 +41073,9 @@ fn aqueous_form_grants_unblockable() {
 /// Keen Sense draws when the enchanted creature deals combat damage.
 #[test]
 fn keen_sense_is_green_curiosity() {
-    let mut g = two_player_game();
     let aura = catalog::keen_sense();
     assert_eq!(aura.cost, crate::mana::cost(&[crate::mana::g()]));
-    assert!(aura.equipped_bonus.unwrap().triggered_abilities.len() == 1);
+    assert_eq!(aura.equipped_bonus.unwrap().triggered_abilities.len(), 1);
 }
 
 // ── More tribal payoffs ───────────────────────────────────────────────────────

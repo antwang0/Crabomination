@@ -533,6 +533,7 @@ fn keyword_reminder(kw: &crabomination::card::Keyword) -> Option<&'static str> {
         K::Skulk => "Can't be blocked by creatures with greater power.",
         K::Shadow => "Can only block or be blocked by creatures with shadow.",
         K::Horsemanship => "Can only be blocked by creatures with horsemanship.",
+        K::Landwalk(_) => "Can't be blocked if the defending player controls a land of the named type.",
         K::Unblockable => "Can't be blocked.",
         K::CantBeBlockedByMoreThanOne => "Can't be blocked by more than one creature.",
         K::CantBeBlockedExceptByN(_) => "Can't be blocked except by that many or more creatures.",
@@ -848,6 +849,7 @@ mod tests {
             has_other_face: false,
             transformed: false,
             squad_count: None,
+            impending_counters: None,
         }
     }
 
