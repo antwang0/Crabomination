@@ -447,6 +447,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Cube expansion ──
+        reveillark,
         // enchantment-scaled attack tax (pillowfort)
         sphere_of_safety,
         // artifact/enchantment hate
@@ -903,6 +905,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     }
     if pair_contains(pair, Color::Black) {
         v.push(mourning_thrull);
+        v.push(sphinx_of_the_steel_wind);
         v.push(concealing_curtains);
         v.push(goldmire_bridge);
         v.push(mortify);
@@ -956,6 +959,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── Cube expansion ──
+        frost_titan,
         // untap-all combo enabler
         dramatic_reversal,
         // card-advantage instant (simplified)

@@ -32858,3 +32858,82 @@ pub fn consecrated_sphinx() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Sphinx of the Steel Wind — {5}{W}{B}{B} 6/6 Sphinx. Flying, first strike,
+/// lifelink, protection from red and from green.
+pub fn sphinx_of_the_steel_wind() -> CardDefinition {
+    CardDefinition {
+        name: "Sphinx of the Steel Wind",
+        cost: cost(&[generic(5), w(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![
+            Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink,
+            Keyword::Protection(Color::Red), Keyword::Protection(Color::Green),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Frost Titan — {4}{U}{U} 6/6 Giant. Ward {2} (CR's "counter unless pay {2}"
+/// targeting clause). When it enters or attacks, tap target permanent; it
+/// doesn't untap during its controller's next untap step (a stun counter).
+pub fn frost_titan() -> CardDefinition {
+    use crate::card::WardCost;
+    let tap_and_stun = || Effect::Seq(vec![
+        Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+        Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::Const(1) },
+    ]);
+    CardDefinition {
+        name: "Frost Titan",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Giant], ..Default::default() },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: tap_and_stun(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: tap_and_stun(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Reveillark — {4}{W} 4/3 Elemental with flying. When it leaves the
+/// battlefield, return up to two target creature cards with power 2 or less
+/// from your graveyard to the battlefield.
+pub fn reveillark() -> CardDefinition {
+    CardDefinition {
+        name: "Reveillark",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::Take {
+                    inner: Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(2)),
+                    }),
+                    count: Box::new(Value::Const(2)),
+                },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        }],
+        ..Default::default()
+    }
+}

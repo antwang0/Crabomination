@@ -39575,3 +39575,39 @@ fn consecrated_sphinx_draws_two_when_opponent_draws() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.len() >= my_hand + 2, "you drew two off the opponent's draw");
 }
+
+#[test]
+fn sphinx_of_the_steel_wind_has_its_keyword_suite() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::sphinx_of_the_steel_wind());
+    let cp = g.compute_battlefield();
+    let s = cp.iter().find(|c| c.id == id).unwrap();
+    for kw in [Keyword::Flying, Keyword::FirstStrike, Keyword::Lifelink,
+               Keyword::Protection(Color::Red), Keyword::Protection(Color::Green)] {
+        assert!(s.keywords.contains(&kw), "missing {kw:?}");
+    }
+}
+
+#[test]
+fn frost_titan_etb_taps_and_stuns_a_permanent() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let titan = g.add_card_to_battlefield(0, catalog::frost_titan());
+    g.fire_self_etb_triggers(titan, 0);
+    drain_stack(&mut g);
+    let l = g.battlefield_find(land).unwrap();
+    assert!(l.tapped, "tapped the target permanent");
+    assert_eq!(l.counter_count(CounterType::Stun), 1, "placed a stun counter");
+}
+
+#[test]
+fn reveillark_leaves_returns_small_creatures() {
+    let mut g = two_player_game();
+    let lark = g.add_card_to_battlefield(0, catalog::reveillark());
+    let mouse = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // power 2
+    g.remove_to_graveyard_with_triggers(lark);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == mouse), "returned a power-2 creature to the battlefield");
+}
