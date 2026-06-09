@@ -38160,3 +38160,64 @@ pub fn orcish_bowmasters() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Thought Reflection — {4}{U}{U}{U} Enchantment. If you would draw a card,
+/// draw two cards instead (CR 121.2a via `ControllerDrawsDoubled`).
+pub fn thought_reflection() -> CardDefinition {
+    CardDefinition {
+        name: "Thought Reflection",
+        cost: cost(&[generic(4), u(), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "If you would draw a card, draw two cards instead.",
+            effect: StaticEffect::ControllerDrawsDoubled,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Palisade Giant — {4}{W}{W} 1/12 Giant Soldier. All damage that would be
+/// dealt to you or another permanent you control is dealt to this instead
+/// (CR 614.9 via `RedirectDamageToSelf`).
+pub fn palisade_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Palisade Giant",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 12,
+        static_abilities: vec![StaticAbility {
+            description: "All damage that would be dealt to you or another permanent you control is dealt to this creature instead.",
+            effect: StaticEffect::RedirectDamageToSelf,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Chemister's Insight — {3}{U} Instant. Draw two cards. Jump-start (CR 702.103).
+pub fn chemisters_insight() -> CardDefinition {
+    CardDefinition {
+        name: "Chemister's Insight",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::JumpStart],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
+/// Radical Idea — {1}{U} Instant. Draw a card. Jump-start (CR 702.103).
+pub fn radical_idea() -> CardDefinition {
+    CardDefinition {
+        name: "Radical Idea",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::JumpStart],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ..Default::default()
+    }
+}

@@ -3310,11 +3310,16 @@ impl GameState {
         let card = self.players[p].graveyard[graveyard_pos].clone();
 
         // The card must have Flashback — printed, or granted until end of
-        // turn (the SOS "Flashback" instant).
-        let flashback_cost = card
-            .effective_flashback()
-            .ok_or(GameError::SorcerySpeedOnly)?
-            .clone();
+        // turn (the SOS "Flashback" instant) — or Jump-start (CR 702.103:
+        // cast for its own mana cost, discarding a card as an additional
+        // cost; same exile-after tail as flashback).
+        let jumpstart = card.effective_flashback().is_none()
+            && card.definition.keywords.contains(&Keyword::JumpStart);
+        let flashback_cost = match card.effective_flashback() {
+            Some(c) => c.clone(),
+            None if jumpstart => card.definition.cost.clone(),
+            None => return Err(GameError::SorcerySpeedOnly),
+        };
 
         // Timing: instants can be cast at instant speed, others at sorcery
         // speed. Honor Teferi-style opponent restriction.
@@ -3329,7 +3334,10 @@ impl GameState {
         // card name (the idiom for rare riders that would otherwise bloat
         // every CardDefinition literal). Reject up front if unpayable so no
         // mana is spent on an uncastable flashback.
-        let flashback_additional = flashback_additional_cost_for_name(card.definition.name);
+        let mut flashback_additional = flashback_additional_cost_for_name(card.definition.name);
+        if jumpstart {
+            flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1 });
+        }
         if !flashback_additional.is_empty()
             && !self.additional_costs_payable(p, &flashback_additional)
         {

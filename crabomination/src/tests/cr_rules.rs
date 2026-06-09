@@ -380,3 +380,85 @@ fn cr_702_46_cipher_encodes_then_recasts_on_combat_damage() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 12, "17 − 2 combat − 3 cipher copy");
 }
+
+// ── CR 614.9 — Damage redirection (Palisade Giant) ────────────────────────────
+
+/// Noncombat damage to the controller or their other permanents lands on the
+/// redirector; damage to the redirector itself applies normally.
+#[test]
+fn cr_614_9_palisade_giant_redirects_noncombat_damage() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::palisade_giant());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    // Bolt at the player: redirected to the giant.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    crate::game::cast_at(&mut g, bolt, Target::Player(0));
+    assert_eq!(g.players[0].life, 20, "player untouched");
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 3, "giant soaked the bolt");
+    // Bolt at the bear: also redirected.
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(crate::mana::Color::Red, 1);
+    crate::game::cast_at(&mut g, bolt2, Target::Permanent(bear));
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "bear untouched");
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 6, "giant soaked both");
+}
+
+/// Unblocked combat damage aimed at the redirector's controller is dealt to
+/// the redirector instead.
+#[test]
+fn cr_614_9_palisade_giant_redirects_combat_damage_to_player() {
+    let mut g = two_player_game();
+    let giant = g.add_card_to_battlefield(0, catalog::palisade_giant());
+    let attacker = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw()); // 6/6
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(0) }];
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "defender untouched");
+    assert_eq!(g.battlefield_find(giant).unwrap().damage, 6, "giant took the hit");
+}
+
+// ── CR 702.103 — Jump-start ───────────────────────────────────────────────────
+
+/// Jump-start casts from the graveyard for the card's own cost plus a
+/// discard, and exiles after resolving.
+#[test]
+fn cr_702_103_jump_start_casts_from_graveyard_and_exiles() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_graveyard(0, catalog::radical_idea());
+    let fodder = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFlashback {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("jump-start cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "discarded a card as cost");
+    assert!(g.exile.iter().any(|c| c.id == spell), "exiled after resolving (702.103b)");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Island"), "drew the card");
+}
+
+/// Jump-start is rejected with an empty hand (the discard is unpayable).
+#[test]
+fn cr_702_103_jump_start_requires_a_discard() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_graveyard(0, catalog::radical_idea());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::CastFlashback {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no card to discard → can't jump-start");
+}

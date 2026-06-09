@@ -13,6 +13,32 @@ impl GameState {
         self.deal_damage_to_from(ent, amount, None, events);
     }
 
+    /// CR 614.9 — if damage aimed at `ent` (a player, or a permanent that
+    /// player controls) is covered by a `RedirectDamageToSelf` static
+    /// (Palisade Giant), return the redirecting permanent. The redirector
+    /// never re-redirects its own damage.
+    pub(crate) fn damage_redirect_target(&self, ent: EntityRef) -> Option<crate::card::CardId> {
+        use crate::effect::StaticEffect;
+        let protected = match ent {
+            EntityRef::Player(p) => p,
+            EntityRef::Permanent(c) => self.battlefield_find(c)?.controller,
+            EntityRef::Card(_) => return None,
+        };
+        let aimed_at = match ent {
+            EntityRef::Permanent(c) => Some(c),
+            _ => None,
+        };
+        self.battlefield.iter().find_map(|c| {
+            (c.controller == protected
+                && Some(c.id) != aimed_at
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::RedirectDamageToSelf)))
+            .then_some(c.id)
+        })
+    }
+
     /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
     /// damage event aimed at `ent`. "Prevent all" shields zero the event;
     /// "prevent next N" shields soak up to N and then expire. The whole
@@ -97,6 +123,17 @@ impl GameState {
         // emitted. Damage-watching triggered abilities won't fire on
         // 0-damage events.
         if amount == 0 {
+            return;
+        }
+        // CR 614.9 — redirect the whole event to a Palisade-Giant-style
+        // permanent. One redirect per event (CR 614.5; the flag also stops
+        // two redirectors ping-ponging).
+        if !self.in_damage_redirect
+            && let Some(redirect) = self.damage_redirect_target(ent)
+        {
+            self.in_damage_redirect = true;
+            self.deal_damage_to_from(EntityRef::Permanent(redirect), amount, source, events);
+            self.in_damage_redirect = false;
             return;
         }
         // CR 702.16e — protection from the source's color prevents the whole

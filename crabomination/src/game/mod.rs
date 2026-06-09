@@ -679,6 +679,14 @@ pub struct GameState {
     /// spell's resolution and cleared after; transient, not serialized.
     #[serde(skip)]
     pub(crate) resolving_spell_lifelink_seat: Option<usize>,
+    /// Reentrancy guard for the CR 121.2a draw-doubling replacement — the
+    /// extra draws aren't themselves re-doubled (CR 614.5). Transient.
+    #[serde(skip)]
+    pub(crate) in_draw_double: bool,
+    /// Reentrancy guard for CR 614.9 damage redirection (one redirect per
+    /// damage event). Transient.
+    #[serde(skip)]
+    pub(crate) in_damage_redirect: bool,
     /// Temporary control changes awaiting reversion (Act of Treason /
     /// Threaten / Tempted by the Oriq). `Effect::GainControl` with a
     /// non-`Permanent` duration records the controller the permanent had
@@ -845,6 +853,8 @@ impl Clone for GameState {
             granted_triggers_eot: self.granted_triggers_eot.clone(),
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
+            in_draw_double: self.in_draw_double,
+            in_damage_redirect: self.in_damage_redirect,
             temporary_control: self.temporary_control.clone(),
             temporary_copies: self.temporary_copies.clone(),
             foretold_this_turn: self.foretold_this_turn.clone(),
@@ -951,6 +961,8 @@ impl GameState {
             granted_triggers_eot: std::collections::HashMap::new(),
             dies_to_exile_eot: std::collections::HashSet::new(),
             resolving_spell_lifelink_seat: None,
+            in_draw_double: false,
+            in_damage_redirect: false,
             temporary_control: Vec::new(),
             temporary_copies: Vec::new(),
             foretold_this_turn: std::collections::HashSet::new(),
@@ -3983,14 +3995,38 @@ impl GameState {
         if self.try_dredge_instead_of_draw(p, events) {
             return true;
         }
-        match self.players[p].draw_top() {
+        let drew = match self.players[p].draw_top() {
             Some(id) => {
                 events.push(GameEvent::CardDrawn { player: p, card_id: id });
                 self.maybe_grant_miracle(p, id);
                 true
             }
             None => false,
+        };
+        // CR 121.2a / 614 — "If you would draw a card, draw two instead"
+        // (Thought Reflection). Each doubler applies once per draw event
+        // (n doublers: 1 → 2^n); the replacement draws themselves aren't
+        // re-doubled (CR 614.5), enforced by the reentrancy flag.
+        if drew && !self.in_draw_double {
+            let doublers = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && c.definition.static_abilities.iter().any(|sa| {
+                            matches!(sa.effect, crate::effect::StaticEffect::ControllerDrawsDoubled)
+                        })
+                })
+                .count() as u32;
+            if doublers > 0 {
+                self.in_draw_double = true;
+                for _ in 0..(1u32 << doublers.min(8)) - 1 {
+                    self.draw_one(p, events);
+                }
+                self.in_draw_double = false;
+            }
         }
+        drew
     }
 
     /// CR 702.94 — Miracle. If `card_id` was the first card `p` drew this
@@ -7120,7 +7156,9 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::BargainCostReduction { .. }
             // OpponentsCantMakeYouSacrifice (Sigarda/Tamiyo) — consulted in
             // the `Effect::Sacrifice` resolver; no continuous-layer effect.
-            | StaticEffect::OpponentsCantMakeYouSacrifice => vec![],
+            | StaticEffect::OpponentsCantMakeYouSacrifice
+            | StaticEffect::ControllerDrawsDoubled
+            | StaticEffect::RedirectDamageToSelf => vec![],
         })
         .collect()
 }

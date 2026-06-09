@@ -477,7 +477,14 @@ fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {
         mana_cost: card.definition.cost.clone(),
         power: card.definition.base_power(),
         toughness: card.definition.base_toughness(),
-        flashback_cost: card.definition.has_flashback().cloned(),
+        // Jump-start (CR 702.103) rides the flashback cast path at the
+        // card's own cost (+ discard, paid at cast time).
+        flashback_cost: card.definition.has_flashback().cloned().or_else(|| {
+            card.definition
+                .keywords
+                .contains(&crate::card::Keyword::JumpStart)
+                .then(|| card.definition.cost.clone())
+        }),
         retrace: card.definition.has_retrace(),
         escape: card.definition.has_escape().map(|(c, n)| (c.clone(), n)),
         bestow_cost: card.definition.has_bestow().cloned(),

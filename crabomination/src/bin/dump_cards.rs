@@ -97,6 +97,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Ward(_) => "Ward",
         Keyword::Flashback(_) => "Flashback",
         Keyword::FlashbackTap(_) => "Flashback",
+        Keyword::JumpStart => "Jump-start",
         Keyword::Kicker(_) => "Kicker",
         Keyword::Buyback(_) => "Buyback",
         Keyword::Echo(_) => "Echo",

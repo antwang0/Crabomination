@@ -1619,6 +1619,21 @@ impl GameState {
     ) {
         match atk.target {
             AttackTarget::Player(p) => {
+                // CR 614.9 — Palisade-Giant-style redirect: combat damage
+                // aimed at the player lands on the redirector instead.
+                if let Some(redirect) =
+                    self.damage_redirect_target(crate::game::effects::EntityRef::Player(p))
+                {
+                    if let Some(c) = self.battlefield_find_mut(redirect) {
+                        c.damage += amount;
+                    }
+                    events.push(GameEvent::DamageDealt {
+                        amount,
+                        to_player: None,
+                        to_card: Some(redirect),
+                    });
+                    return;
+                }
                 if atk.has_infect {
                     self.players[p].poison_counters += amount;
                     events.push(GameEvent::PoisonAdded {

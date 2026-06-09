@@ -40184,6 +40184,24 @@ fn thespians_stage_becomes_copy_of_target_land() {
     assert_eq!(g.battlefield_find(stage).unwrap().definition.name, "Island");
 }
 
+/// CR 121.2a — Thought Reflection doubles each draw; two copies quadruple,
+/// and only the enchantment's controller is affected.
+#[test]
+fn cr_121_2a_thought_reflection_doubles_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::thought_reflection());
+    for _ in 0..8 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..2 { g.add_card_to_library(1, catalog::island()); }
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), 2, "one draw became two");
+    g.draw_one(1, &mut events);
+    assert_eq!(g.players[1].hand.len(), 1, "opponent draws normally");
+    g.add_card_to_battlefield(0, catalog::thought_reflection());
+    g.draw_one(0, &mut events);
+    assert_eq!(g.players[0].hand.len(), 6, "two doublers: 1 -> 4 (CR 614.5 stacking)");
+}
+
 // ── Misc modern staples ──────────────────────────────────────────────────────
 
 /// Get Lost destroys a creature and gives its controller two Map tokens.

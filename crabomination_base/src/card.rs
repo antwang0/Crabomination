@@ -416,6 +416,10 @@ pub enum Keyword {
     /// exclusive with `Keyword::Flashback(_)` in practice (a card has
     /// one Flashback variant or the other).
     FlashbackTap(u32),
+    /// CR 702.103 — Jump-start: cast from the graveyard for the card's own
+    /// mana cost plus discarding a card; exiles after resolving (rides the
+    /// flashback cast path). Chemister's Insight, Radical Idea.
+    JumpStart,
     Kicker(crate::mana::ManaCost),
     /// CR 702.27 — Buyback. An optional additional cost paid when casting
     /// the spell from hand; if paid, the spell returns to its owner's hand

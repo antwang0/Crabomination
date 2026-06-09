@@ -472,6 +472,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Hideaway land (CR 702.76)
         windbrisk_heights,
+        // Damage redirection (CR 614.9)
+        palisade_giant,
         // ── claude/modern_decks: white/multicolor staples ──
         archangel_of_tithes,
         defenestrated_phantom,
@@ -1025,6 +1027,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         last_thoughts,
         hidden_strings,
         aether_gust,
+        thought_reflection,
+        chemisters_insight,
+        radical_idea,
         distortion_strike,
         artful_dodge,
         hands_of_binding,

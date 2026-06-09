@@ -167,6 +167,18 @@ pub enum StaticEffect {
     /// CR 119.10 a gain of 0 isn't a gain, so the bonus only applies on a
     /// genuine positive delta.
     LifeGainBonus { target: PlayerStaticTarget, amount: i32 },
+    /// CR 121.2a / 614 — draw replacement: while active, when the source's
+    /// controller would draw a card, they draw two instead (Thought
+    /// Reflection, Alhammarret's Archive). Consulted per draw event in
+    /// `draw_one`; the extra draw is not itself re-doubled by the same
+    /// pass (CR 614.5), though stacked doublers each apply once.
+    ControllerDrawsDoubled,
+    /// CR 614.9 — damage redirection: all damage that would be dealt to the
+    /// source's controller or another permanent they control is dealt to the
+    /// source instead (Palisade Giant). Applied once per damage event
+    /// (CR 614.5). Combat damage aimed at the controller's *other creatures*
+    /// isn't redirected (blocker damage keeps its normal path).
+    RedirectDamageToSelf,
     /// CR 615.12 — while active, damage can't be prevented (global). A
     /// permanent-static sibling of `Effect::DamageCantBePreventedThisTurn`;
     /// `apply_prevention_shields` bypasses all shields while any source on the
