@@ -8,6 +8,28 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Face-down follow-ups (this run shipped manifest + the 2/2 object).**
+  - **Morph cast-face-down spell path** (CR 702.36): a `GameAction::CastFaceDown`
+    that pays {3} and casts the card as a face-down 2/2 creature spell, reusing
+    the new `CardInstance.face_up_def` swap + `turn_face_up_action`. No catalog
+    Morph cards yet, so deferred.
+  - **Disguise (CR 702.166c) / Cloak (CR 702.182)** — Disguise = morph with
+    ward {2}; Cloak = manifest that can always be turned up for mana cost. Both
+    ride the new face-down infra + a ward grant.
+  - **Manifest-dread "turn up if a creature card"** already works via
+    `TurnFaceUp`; a face-down noncreature can't be turned up (correct).
+- ⏳ **Cards deferred this run (each wants one small primitive):**
+  - **Umezawa's Jitte** — Equipment that puts charge counters on *itself* when
+    the equipped creature deals combat damage; needs an `EquipBonus` trigger
+    whose effect targets the equipment (not the equipped creature).
+  - **Leyline Binding** — Domain cost reduction ({1} less per basic land type
+    among your lands); add a `Value::DomainCount` / generic-reduction hook.
+  - **Orcish Bowmasters** — "whenever an opponent draws a card except the first
+    in their draw step" trigger scope.
+  - **Restless lands cycle** — manlands with per-card attack riders + typeless
+    land + dual color (only Restless Spire shipped so far).
+  - **Witch's Oven** — cost-sacrifice toughness visible at the ability's
+    resolution (capture sacrificed P/T on the activated-ability `StackItem`).
 - ⏳ **Client Squad/Replicate stepper.** `PlayerView.{squadable_hand,
   replicatable_hand}` now surface which hand cards can pay Squad (CR 702.157) /
   Replicate (CR 702.107) at least once; the client should render a "pay N
