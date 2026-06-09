@@ -823,7 +823,21 @@ impl GameState {
             replicatable: self.replicatable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
+            hand_activatable: self.hand_activatable_cards(seat),
         }
+    }
+
+    /// Hand cards the seat owns that carry at least one `from_hand` activated
+    /// ability (Talon Gates' `{4}` put-into-play, Spirit Guides' pitch mana).
+    /// A pure structural filter — `activate_ability` re-checks cost/zone — so
+    /// it needs no probe clone.
+    fn hand_activatable_cards(&self, seat: usize) -> Vec<CardId> {
+        self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| c.definition.activated_abilities.iter().any(|a| a.from_hand))
+            .map(|c| c.id)
+            .collect()
     }
 
     /// Extra generic mana the caster owes on top of `card`'s printed

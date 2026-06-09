@@ -41234,6 +41234,17 @@ fn talon_gates_from_hand_enters_and_phases_out_creature() {
     assert!(g.battlefield_find(bear).is_none(), "targeted creature phased out");
 }
 
+/// Talon Gates in hand is surfaced as `hand_activatable` so the client can
+/// offer its `{4}` from-hand put-into-play ability.
+#[test]
+fn talon_gates_surfaced_as_hand_activatable() {
+    let mut g = two_player_game();
+    let gates = g.add_card_to_hand(0, catalog::talon_gates_of_madara());
+    // Seat 0 holds priority at game start.
+    let aff = g.compute_hand_affordances(0);
+    assert!(aff.hand_activatable.contains(&gates), "from-hand ability surfaced");
+}
+
 /// Talon Gates' `{1}, {T}` ability fixes one mana of any color.
 #[test]
 fn talon_gates_taps_for_any_color() {

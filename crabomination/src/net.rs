@@ -345,6 +345,12 @@ pub struct ClientView {
     /// off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub activatable_permanents: Vec<CardId>,
+    /// CardIds in the viewer's hand carrying a `from_hand` activated ability
+    /// (Talon Gates of Madara's `{4}` put-into-play, Spirit Guides' pitch
+    /// mana). Lets the client offer the from-hand activation directly from the
+    /// hand. Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub hand_activatable: Vec<CardId>,
     /// Creatures the viewer controls that may be declared as attackers right
     /// now (only during the viewer's Declare Attackers step). Drives the
     /// client's legal-attacker highlight. Empty otherwise. `#[serde(default)]`

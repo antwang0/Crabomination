@@ -207,6 +207,11 @@ pub struct HandAffordances {
     /// `GameAction::CastFromZoneWithoutPaying`.
     pub miracle: Vec<CardId>,
     pub activatable_permanents: Vec<CardId>,
+    /// Hand cards carrying at least one `from_hand` activated ability (Talon
+    /// Gates of Madara's `{4}: put this onto the battlefield`, the Spirit
+    /// Guides' exile-for-mana). Surfaced so the client/bot can offer the
+    /// from-hand activation; affordability is re-checked by `activate_ability`.
+    pub hand_activatable: Vec<CardId>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
