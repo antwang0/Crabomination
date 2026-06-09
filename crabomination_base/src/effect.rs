@@ -419,6 +419,11 @@ pub enum Value {
     /// and similar payoffs. Backed by `Player.cards_drawn_this_turn`,
     /// reset on the player's untap.
     CardsDrawnThisTurn(PlayerRef),
+    /// Number of lands the player has played this turn (CR 305 / landfall).
+    /// Backed by `Player.lands_played_this_turn`; a `> 0` value powers
+    /// "if a land entered under your control this turn" landfall riders
+    /// (Groundswell, Searing Blaze). Reset on the player's untap.
+    LandsPlayedThisTurn(PlayerRef),
     /// Two raised to the inner value, clamped to a sane upper bound (≤30).
     /// Used by SOS Mathemagics — "target player draws 2ˣ cards" — so the
     /// X-cost bombshell scales correctly at the small/medium values

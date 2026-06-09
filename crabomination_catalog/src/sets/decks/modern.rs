@@ -37723,21 +37723,8 @@ fn bloodrush(mana: crate::mana::ManaCost, power: i32, toughness: i32, grant: Opt
     ActivatedAbility { mana_cost: mana, effect, from_hand: true, discard_self_cost: true, ..Default::default() }
 }
 
-/// Ghor-Clan Rampager — {2}{R}{G} 4/4 Trample. Bloodrush — {R}{G}: target
-/// attacking creature gets +4/+4 and gains trample.
-pub fn ghor_clan_rampager() -> CardDefinition {
-    CardDefinition {
-        name: "Ghor-Clan Rampager",
-        cost: cost(&[generic(2), r(), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
-        power: 4,
-        toughness: 4,
-        keywords: vec![Keyword::Trample],
-        activated_abilities: vec![bloodrush(cost(&[r(), g()]), 4, 4, Some(Keyword::Trample))],
-        ..Default::default()
-    }
-}
+// Ghor-Clan Rampager already ships in `sets::rtr` (Bloodrush {R}{G}: +4/+4 +
+// trample). The new Bloodrush creatures below reuse the same engine path.
 
 /// Slaughterhorn — {2}{G} 3/2 Beast. Bloodrush — {G}: target attacking creature
 /// gets +3/+2.
@@ -37818,6 +37805,130 @@ pub fn viashino_shanktail() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
         activated_abilities: vec![bloodrush(cost(&[generic(2), r()]), 3, 1, Some(Keyword::FirstStrike))],
+        ..Default::default()
+    }
+}
+
+// ── Pump / evasion one-shots ──────────────────────────────────────────────────
+
+/// Distortion Strike — {U} Sorcery. Target creature gets +1/+0 until end of turn
+/// and can't be blocked this turn. Rebound.
+pub fn distortion_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Distortion Strike",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Artful Dodge — {U} Sorcery. Target creature can't be blocked this turn.
+/// Flashback {U}.
+pub fn artful_dodge() -> CardDefinition {
+    CardDefinition {
+        name: "Artful Dodge",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[u()]))],
+        effect: Effect::GrantKeyword {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Unblockable,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Tainted Strike — {B} Instant. Target creature gets +1/+0 and gains infect
+/// until end of turn.
+pub fn tainted_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Tainted Strike",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Infect,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Groundswell — {G} Instant. Target creature gets +2/+2; +4/+4 instead if a
+/// land entered under your control this turn (landfall, CR 305).
+pub fn groundswell() -> CardDefinition {
+    let pump = |n: i32| Effect::PumpPT {
+        what: Selector::Target(0),
+        power: Value::Const(n),
+        toughness: Value::Const(n),
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Groundswell",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::LandsPlayedThisTurn(PlayerRef::You),
+                Value::Const(1),
+            ),
+            then: Box::new(pump(4)),
+            else_: Box::new(pump(2)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Faithless Salvaging — {1}{R} Instant. Discard a card, then draw a card.
+/// Rebound.
+pub fn faithless_salvaging() -> CardDefinition {
+    CardDefinition {
+        name: "Faithless Salvaging",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Rebound],
+        effect: Effect::Seq(vec![
+            Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wrap in Vigor — {1}{G} Instant. Regenerate each creature you control.
+pub fn wrap_in_vigor() -> CardDefinition {
+    CardDefinition {
+        name: "Wrap in Vigor",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Regenerate {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+        },
         ..Default::default()
     }
 }

@@ -330,6 +330,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].cards_drawn_this_turn as i32)
                 .unwrap_or(0),
+            Value::LandsPlayedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].lands_played_this_turn as i32)
+                .unwrap_or(0),
             Value::CreaturesDiedThisTurn(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].creatures_died_this_turn as i32)

@@ -1018,6 +1018,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Cipher (Gatecrash/Dragon's Maze) — CR 702.46
         last_thoughts,
+        distortion_strike,
+        artful_dodge,
         hands_of_binding,
         stolen_identity,
         paranoid_delusions,
@@ -1385,6 +1387,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         shadow_slice,
         midnight_recovery,
+        tainted_strike,
         shady_informant,
         alley_assailant,
         basilica_stalker,
@@ -1797,6 +1800,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Bloodrush (Gatecrash)
         skinbrand_goblin,
+        faithless_salvaging,
         viashino_shanktail,
         ghor_clan_rampager,
         zhur_taa_swine,
@@ -2256,6 +2260,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Bloodrush (Gatecrash)
         slaughterhorn,
         wasteland_viper,
+        groundswell,
+        wrap_in_vigor,
         nervous_gardener,
         greenbelt_radical,
         // ── modern_decks: mana dork + X-Hydra ──

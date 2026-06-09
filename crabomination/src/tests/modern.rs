@@ -43272,3 +43272,102 @@ fn bloodrush_rejects_non_attacking_target() {
         target: Some(Target::Permanent(idle)), x_value: None,
     }).is_err(), "no attacking creature → illegal target");
 }
+
+// ── Pump / evasion one-shots ──────────────────────────────────────────────────
+
+#[test]
+fn distortion_strike_pumps_and_unblockable() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::distortion_strike());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, spell, Target::Permanent(c));
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 2), "2/2 +1/+0");
+    assert!(cp.keywords.contains(&Keyword::Unblockable), "can't be blocked");
+}
+
+#[test]
+fn tainted_strike_grants_infect() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::tainted_strike());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, spell, Target::Permanent(c));
+    let cp = g.computed_permanent(c).unwrap();
+    assert_eq!(cp.power, 3, "2 +1");
+    assert!(cp.keywords.contains(&Keyword::Infect), "gained infect");
+}
+
+#[test]
+fn groundswell_landfall_scales_with_a_land_drop() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // No land played yet → +2/+2.
+    let s1 = g.add_card_to_hand(0, catalog::groundswell());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, s1, Target::Permanent(c));
+    assert_eq!(g.computed_permanent(c).unwrap().power, 4, "2/2 +2/+2 with no landfall");
+    // Now record a land drop and cast again → +4/+4.
+    g.players[0].lands_played_this_turn = 1;
+    let s2 = g.add_card_to_hand(0, catalog::groundswell());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    crate::game::cast_at(&mut g, s2, Target::Permanent(c));
+    assert_eq!(g.computed_permanent(c).unwrap().power, 8, "now +4/+4 too (4 + 4)");
+}
+
+#[test]
+fn artful_dodge_makes_target_unblockable() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::artful_dodge());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, spell, Target::Permanent(c));
+    assert!(g.computed_permanent(c).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
+#[test]
+fn faithless_salvaging_loots_one() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // a card to discard
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::faithless_salvaging());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast(&mut g, spell);
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Grizzly Bears").count(), 1,
+        "discarded a card");
+}
+
+#[test]
+fn wrap_in_vigor_shields_your_creatures() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::wrap_in_vigor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    crate::game::cast(&mut g, spell);
+    assert_eq!(g.battlefield_find(mine).unwrap().regeneration_shields, 1,
+        "each of your creatures got a regeneration shield");
+}
