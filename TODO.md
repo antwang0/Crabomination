@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Reinforce/face-down client affordances.** `GameAction::Reinforce` (CR
+  702.77) and `CastFaceDown`/`TurnFaceUp` are engine-complete and the bot uses
+  the face-down ones, but there's no `reinforceable_hand` affordance yet (the
+  client can't surface the from-hand Reinforce activation). `turn_up_able` ships.
+- ⏳ **MKM Disguise riders dropped this run (each wants one small primitive).**
+  - Granite Witness — "tap **or untap**" collapses to tap.
+  - Offender at Large — "**up to one** target" collapses to a required target.
+  - Experiment Twelve / Pyrotechnic Performer — "or another creature you control
+    is turned face up" collapses to a SelfSource-only trigger (no per-creature
+    turned-up binding for other permanents).
+  - Deferred (need new primitives): Coveted Falcon (control-swap + draw-per),
+    Aurelia's Vindicator (X-cost Disguise + exile-up-to-X + return-on-leave),
+    Concert Kaboomist (noncreature-spells-since-last-turn count), Boltbender
+    (choose new targets), Polygraph Orb (collect evidence).
 - ⏳ **Face-down follow-ups (this run shipped manifest + the 2/2 object).**
   - **Morph cast-face-down spell path** (CR 702.36): a `GameAction::CastFaceDown`
     that pays {3} and casts the card as a face-down 2/2 creature spell, reusing
