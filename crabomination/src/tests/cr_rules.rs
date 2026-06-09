@@ -365,18 +365,18 @@ fn cr_702_46_cipher_encodes_then_recasts_on_combat_damage() {
     g.clear_sickness(bear);
     let slice = g.add_card_to_hand(0, catalog::shadow_slice());
     g.players[0].mana_pool.add(crate::mana::Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(4);
     g.step = TurnStep::PreCombatMain;
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     crate::game::cast_at(&mut g, slice, Target::Player(1));
-    assert_eq!(g.players[1].life, 16, "Shadow Slice: 20 → 16");
+    assert_eq!(g.players[1].life, 17, "Shadow Slice: 20 → 17");
     assert!(g.exile.iter().any(|c| c.id == slice && c.encoded_on == Some(bear)),
         "Shadow Slice exiled encoded on the bear");
-    // Connect with the bear: 2 combat damage + a free Shadow Slice copy (−4).
+    // Connect with the bear: 2 combat damage + a free Shadow Slice copy (−3).
     g.attacking = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
     g.step = TurnStep::CombatDamage;
     g.resolve_combat().expect("combat damage");
     drain_stack(&mut g);
-    assert_eq!(g.players[1].life, 10, "16 − 2 combat − 4 cipher copy");
+    assert_eq!(g.players[1].life, 12, "17 − 2 combat − 3 cipher copy");
 }

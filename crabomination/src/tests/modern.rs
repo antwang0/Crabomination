@@ -43112,3 +43112,97 @@ fn voracious_hydra_doubles_counters_mode() {
     let h = g.computed_permanent(id).unwrap();
     assert_eq!((h.power, h.toughness), (6, 7), "0/1 + six +1/+1 counters");
 }
+
+// ── Cipher batch (CR 702.46) ──────────────────────────────────────────────────
+
+fn precombat(g: &mut GameState) {
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+}
+
+#[test]
+fn last_thoughts_draws_a_card() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let spell = g.add_card_to_hand(0, catalog::last_thoughts());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    precombat(&mut g);
+    let before = g.players[0].hand.len();
+    crate::game::cast(&mut g, spell);
+    assert_eq!(g.players[0].hand.len(), before, "spent one (Last Thoughts) and drew one");
+}
+
+#[test]
+fn paranoid_delusions_mills_target_player() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(1, catalog::grizzly_bears()); }
+    let spell = g.add_card_to_hand(0, catalog::paranoid_delusions());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    precombat(&mut g);
+    crate::game::cast_at(&mut g, spell, Target::Player(1));
+    assert_eq!(g.players[1].graveyard.len(), 3, "milled three");
+}
+
+#[test]
+fn midnight_recovery_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::midnight_recovery());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    precombat(&mut g);
+    crate::game::cast_at(&mut g, spell, Target::Permanent(dead));
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
+}
+
+#[test]
+fn hands_of_binding_taps_and_stuns() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(victim);
+    let spell = g.add_card_to_hand(0, catalog::hands_of_binding());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    precombat(&mut g);
+    crate::game::cast_at(&mut g, spell, Target::Permanent(victim));
+    let v = g.battlefield_find(victim).unwrap();
+    assert!(v.tapped, "victim tapped");
+    assert_eq!(v.counter_count(CounterType::Stun), 1, "stun counter applied");
+}
+
+#[test]
+fn stolen_identity_makes_a_token_copy() {
+    let mut g = two_player_game();
+    let orig = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::stolen_identity());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    precombat(&mut g);
+    crate::game::cast_at(&mut g, spell, Target::Permanent(orig));
+    let copies = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Grizzly Bears" && c.is_token)
+        .count();
+    assert_eq!(copies, 1, "a token copy of the bear under our control");
+}
+
+#[test]
+fn whispering_madness_wheels_each_player() {
+    let mut g = two_player_game();
+    // Seat 0 holds 2 cards (+ the spell); seat 1 holds 4.
+    for _ in 0..2 { g.add_card_to_hand(0, catalog::grizzly_bears()); }
+    for _ in 0..4 { g.add_card_to_hand(1, catalog::grizzly_bears()); }
+    for _ in 0..10 { g.add_card_to_library(0, catalog::island()); }
+    for _ in 0..10 { g.add_card_to_library(1, catalog::island()); }
+    let spell = g.add_card_to_hand(0, catalog::whispering_madness());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    precombat(&mut g);
+    crate::game::cast(&mut g, spell);
+    // Greatest discarded = 4 (seat 1), so each player draws 4.
+    assert_eq!(g.players[0].hand.len(), 4, "seat 0 drew up to the max (4)");
+    assert_eq!(g.players[1].hand.len(), 4, "seat 1 drew up to the max (4)");
+}

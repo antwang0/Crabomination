@@ -37556,17 +37556,141 @@ pub fn archangel_of_tithes() -> CardDefinition {
     }
 }
 
-/// Shadow Slice — {2}{B} Sorcery. Target player loses 4 life. Cipher (CR
+/// Shadow Slice — {4}{B} Sorcery. Target opponent loses 3 life. Cipher (CR
 /// 702.46 — exile encoded on a creature; recast free when it connects).
 pub fn shadow_slice() -> CardDefinition {
     CardDefinition {
         name: "Shadow Slice",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::LoseLife {
                 who: target_filtered(SelectionRequirement::Player),
-                amount: Value::Const(4),
+                amount: Value::Const(3),
+            },
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Last Thoughts — {3}{U} Sorcery. Draw a card. Cipher (CR 702.46).
+pub fn last_thoughts() -> CardDefinition {
+    CardDefinition {
+        name: "Last Thoughts",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Paranoid Delusions — {U}{B} Sorcery. Target player mills three cards. Cipher.
+pub fn paranoid_delusions() -> CardDefinition {
+    CardDefinition {
+        name: "Paranoid Delusions",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Mill {
+                who: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(3),
+            },
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Midnight Recovery — {3}{B} Sorcery. Return target creature card from your
+/// graveyard to your hand. Cipher (CR 702.46). (The "from your graveyard" zone
+/// filter is dropped, matching Disentomb.)
+pub fn midnight_recovery() -> CardDefinition {
+    CardDefinition {
+        name: "Midnight Recovery",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hands of Binding — {1}{U} Sorcery. Tap target creature an opponent controls;
+/// it doesn't untap during its controller's next untap step (a stun counter).
+/// Cipher (CR 702.46).
+pub fn hands_of_binding() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Hands of Binding",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Stolen Identity — {4}{U}{U} Sorcery. Create a token that's a copy of target
+/// artifact or creature. Cipher (CR 702.46).
+pub fn stolen_identity() -> CardDefinition {
+    CardDefinition {
+        name: "Stolen Identity",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                source: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
+                ),
+                extra_creature_types: vec![],
+                override_pt: None,
+                non_legendary: false,
+            },
+            Effect::Cipher,
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Whispering Madness — {2}{U}{B} Sorcery. Each player discards their hand,
+/// then draws cards equal to the greatest number discarded this way (the
+/// Windfall pattern). Cipher (CR 702.46).
+pub fn whispering_madness() -> CardDefinition {
+    CardDefinition {
+        name: "Whispering Madness",
+        cost: cost(&[generic(2), u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(100),
+                random: false,
+            },
+            Effect::Draw {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::MaxCardsDiscardedThisEffectByAnyPlayer,
             },
             Effect::Cipher,
         ]),

@@ -1016,6 +1016,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // Cipher (Gatecrash/Dragon's Maze) — CR 702.46
+        last_thoughts,
+        hands_of_binding,
+        stolen_identity,
+        paranoid_delusions,
+        whispering_madness,
         bubble_smuggler,
         faerie_snoop,
         granite_witness,
@@ -1378,6 +1384,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         shadow_slice,
+        midnight_recovery,
         shady_informant,
         alley_assailant,
         basilica_stalker,
