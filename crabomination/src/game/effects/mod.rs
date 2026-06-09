@@ -2152,14 +2152,14 @@ impl GameState {
                     ManaPayload::Colors(colors) => {
                         for c in colors {
                             add_one(self, p, *c);
-                            events.push(GameEvent::ManaAdded { player: p, color: *c });
+                            events.push(GameEvent::ManaAdded { player: p, color: *c, source: ctx.source });
                         }
                     }
                     ManaPayload::Colorless(v) => {
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
                         for _ in 0..n {
                             self.players[p].mana_pool.add_colorless(mult);
-                            events.push(GameEvent::ColorlessManaAdded { player: p });
+                            events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                         }
                     }
                     ManaPayload::OfColor(color, v) => {
@@ -2170,7 +2170,7 @@ impl GameState {
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
                         for _ in 0..n {
                             add_one(self, p, *color);
-                            events.push(GameEvent::ManaAdded { player: p, color: *color });
+                            events.push(GameEvent::ManaAdded { player: p, color: *color, source: ctx.source });
                         }
                     }
                     ManaPayload::ChosenColorOfSource => {
@@ -2180,11 +2180,11 @@ impl GameState {
                         match self.battlefield_find(source).and_then(|c| c.chosen_color) {
                             Some(c) => {
                                 add_one(self, p, c);
-                                events.push(GameEvent::ManaAdded { player: p, color: c });
+                                events.push(GameEvent::ManaAdded { player: p, color: c, source: ctx.source });
                             }
                             None => {
                                 self.players[p].mana_pool.add_colorless(mult);
-                                events.push(GameEvent::ColorlessManaAdded { player: p });
+                                events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                             }
                         }
                     }
@@ -2223,7 +2223,7 @@ impl GameState {
                         };
                         for _ in 0..n {
                             add_one(self, p, color);
-                            events.push(GameEvent::ManaAdded { player: p, color });
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
                     ManaPayload::ImprintedCardColor => {
@@ -2257,7 +2257,7 @@ impl GameState {
                             _ => legal[0],
                         };
                         add_one(self, p, color);
-                        events.push(GameEvent::ManaAdded { player: p, color });
+                        events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                     }
                     ManaPayload::DevotionOfChosenColor => {
                         // Nykthos — choose a color, then add mana of that
@@ -2284,7 +2284,7 @@ impl GameState {
                         let n = self.devotion_to(p, &[color]).max(0) as u32;
                         for _ in 0..n {
                             self.players[p].mana_pool.add(color, mult);
-                            events.push(GameEvent::ManaAdded { player: p, color });
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
                     ManaPayload::AnyColorOpponentCouldProduce
@@ -2321,7 +2321,7 @@ impl GameState {
                         }
                         if legal.is_empty() {
                             self.players[p].mana_pool.add_colorless(mult);
-                            events.push(GameEvent::ColorlessManaAdded { player: p });
+                            events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                         } else {
                             let source = ctx.source.unwrap_or(CardId(0));
                             let answer = self.decider.decide(
@@ -2336,7 +2336,7 @@ impl GameState {
                                 _ => legal[0],
                             };
                             add_one(self, p, color);
-                            events.push(GameEvent::ManaAdded { player: p, color });
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
                     ManaPayload::AnyColors(v) => {
@@ -2359,7 +2359,7 @@ impl GameState {
                                 _ => Color::White,
                             };
                             add_one(self, p, color);
-                            events.push(GameEvent::ManaAdded { player: p, color });
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
                     ManaPayload::Restricted(..) => {
@@ -2384,7 +2384,7 @@ impl GameState {
                                 _ => fallback,
                             };
                             add_one(self, p, color);
-                            events.push(GameEvent::ManaAdded { player: p, color });
+                            events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
                 }

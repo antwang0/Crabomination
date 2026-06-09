@@ -1384,8 +1384,8 @@ pub enum GameEventWire {
         face: crate::game::CastFace,
     },
     AbilityActivated { source: CardId },
-    ManaAdded { player: usize, color: Color },
-    ColorlessManaAdded { player: usize },
+    ManaAdded { player: usize, color: Color, #[serde(default)] source: Option<CardId> },
+    ColorlessManaAdded { player: usize, #[serde(default)] source: Option<CardId> },
     PermanentEntered { card_id: CardId },
     PermanentExiled { card_id: CardId },
     DamageDealt { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
@@ -1493,12 +1493,13 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::AbilityActivated { source } => {
                 GameEventWire::AbilityActivated { source: *source }
             }
-            GameEvent::ManaAdded { player, color } => GameEventWire::ManaAdded {
+            GameEvent::ManaAdded { player, color, source } => GameEventWire::ManaAdded {
                 player: *player,
                 color: *color,
+                source: *source,
             },
-            GameEvent::ColorlessManaAdded { player } => {
-                GameEventWire::ColorlessManaAdded { player: *player }
+            GameEvent::ColorlessManaAdded { player, source } => {
+                GameEventWire::ColorlessManaAdded { player: *player, source: *source }
             }
             GameEvent::PermanentEntered { card_id } => {
                 GameEventWire::PermanentEntered { card_id: *card_id }
@@ -1702,8 +1703,8 @@ impl GameEventWire {
             E::LandPlayed { player, card_id } => format!("P{player} played {}", name(*card_id)),
             E::SpellCast { player, card_id, .. } => format!("P{player} cast {}", name(*card_id)),
             E::AbilityActivated { source } => format!("{} ability activated", name(*source)),
-            E::ManaAdded { player, color } => format!("P{player} adds {color:?}"),
-            E::ColorlessManaAdded { player } => format!("P{player} adds colorless"),
+            E::ManaAdded { player, color, .. } => format!("P{player} adds {color:?}"),
+            E::ColorlessManaAdded { player, .. } => format!("P{player} adds colorless"),
             E::PermanentEntered { card_id } => {
                 format!("{} entered the battlefield", name(*card_id))
             }

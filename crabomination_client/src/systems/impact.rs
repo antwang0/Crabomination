@@ -8,7 +8,7 @@
 //! self-despawn on a short timer and are tagged `InGameRoot`, so leaving the
 //! match cleans them up with the rest of the HUD.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::f32::consts::TAU;
 
 use bevy::prelude::*;
@@ -222,63 +222,108 @@ pub fn spawn_mana_motes(
     view: Res<CurrentView>,
     bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
     stack_cards: Query<(&Transform, &GameCardId), With<StackCard>>,
+    // Lands that were tapped as of the previous frame, so we can tell which
+    // ones *newly* tapped in the current batch — `ManaAdded` carries no source
+    // permanent, but the lands that just tapped this batch are what produced
+    // the mana. Kept across frames; the view only changes on a batch.
+    mut prev_tapped: Local<HashSet<CardId>>,
 ) {
-    if events.0.is_empty() {
+    let Some(cv) = &view.0 else {
+        prev_tapped.clear();
         return;
-    }
-    let Some(cv) = &view.0 else { return };
-
-    let stack_pos = |id: CardId| {
-        stack_cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation)
     };
-    // Destination: the spell cast this batch → the top stack item → table
-    // centre (only if something is actually on the stack). Empty stack ⇒ skip.
-    let cast_id = events.0.iter().find_map(|e| match e {
-        GameEventWire::SpellCast { card_id, .. } => Some(*card_id),
-        _ => None,
-    });
-    let dest = cast_id
-        .and_then(stack_pos)
-        .or_else(|| match cv.stack.last() {
-            Some(StackItemView::Known(k)) => stack_pos(k.source),
-            _ => None,
-        })
-        .or_else(|| (!cv.stack.is_empty()).then_some(Vec3::new(0.0, 0.9, 0.0)));
-    let Some(mut dest) = dest else { return };
-    dest.y += 0.2;
 
-    // Tapped-land world positions per controller, for round-robin mote origins.
     let land_pos: HashMap<CardId, Vec3> =
         bf_cards.iter().map(|(t, g)| (g.0, t.translation)).collect();
-    let mut tapped_lands: HashMap<usize, Vec<Vec3>> = HashMap::new();
-    for p in &cv.battlefield {
-        if p.is_land()
-            && p.tapped
-            && let Some(pos) = land_pos.get(&p.id)
-        {
-            tapped_lands.entry(p.controller).or_default().push(*pos);
+    let current_tapped: HashSet<CardId> = cv
+        .battlefield
+        .iter()
+        .filter(|p| p.is_land() && p.tapped)
+        .map(|p| p.id)
+        .collect();
+
+    if !events.0.is_empty() {
+        let stack_pos = |id: CardId| {
+            stack_cards.iter().find(|(_, g)| g.0 == id).map(|(t, _)| t.translation)
+        };
+        // Destination: the spell cast this batch → the top stack item → table
+        // centre (only if something is on the stack). Empty stack ⇒ skip.
+        let cast_id = events.0.iter().find_map(|e| match e {
+            GameEventWire::SpellCast { card_id, .. } => Some(*card_id),
+            _ => None,
+        });
+        let dest = cast_id
+            .and_then(stack_pos)
+            .or_else(|| match cv.stack.last() {
+                Some(StackItemView::Known(k)) => stack_pos(k.source),
+                _ => None,
+            })
+            .or_else(|| (!cv.stack.is_empty()).then_some(Vec3::new(0.0, 0.9, 0.0)));
+
+        if let Some(mut dest) = dest {
+            dest.y += 0.2;
+
+            // Source pools per controller: the lands that *newly* tapped this
+            // batch (the ones that produced this mana), with all of a player's
+            // tapped lands as a fallback if we somehow saw no fresh tap (e.g.
+            // mana from a non-land source).
+            let mut newly: HashMap<usize, Vec<Vec3>> = HashMap::new();
+            let mut all_tapped: HashMap<usize, Vec<Vec3>> = HashMap::new();
+            for p in &cv.battlefield {
+                if !p.is_land() || !p.tapped {
+                    continue;
+                }
+                let Some(&pos) = land_pos.get(&p.id) else { continue };
+                all_tapped.entry(p.controller).or_default().push(pos);
+                if !prev_tapped.contains(&p.id) {
+                    newly.entry(p.controller).or_default().push(pos);
+                }
+            }
+
+            let mut next_src: HashMap<usize, usize> = HashMap::new();
+            for ev in &events.0 {
+                let (player, color, source) = match ev {
+                    GameEventWire::ManaAdded { player, color, source } => {
+                        (*player, Some(*color), *source)
+                    }
+                    GameEventWire::ColorlessManaAdded { player, source } => {
+                        (*player, None, *source)
+                    }
+                    _ => continue,
+                };
+                // Prefer the exact producing permanent the engine now reports;
+                // fall back to a newly-tapped (else any) land of the player for
+                // sourceless mana (rituals, devotion / X-cost effects).
+                let mut start = match source.and_then(|sid| land_pos.get(&sid).copied()) {
+                    Some(pos) => pos,
+                    None => {
+                        let sources = newly
+                            .get(&player)
+                            .filter(|v| !v.is_empty())
+                            .or_else(|| all_tapped.get(&player).filter(|v| !v.is_empty()));
+                        let Some(sources) = sources else { continue };
+                        let slot = next_src.entry(player).or_default();
+                        let pos = sources[*slot % sources.len()];
+                        *slot += 1;
+                        pos
+                    }
+                };
+                start.y += 0.3;
+                commands.spawn((
+                    ManaMote {
+                        start,
+                        end: dest,
+                        age: 0.0,
+                        ttl: MANA_MOTE_TTL,
+                        color: mana_color(color),
+                    },
+                    InGameRoot,
+                ));
+            }
         }
     }
 
-    let mut next_land: HashMap<usize, usize> = HashMap::new();
-    for ev in &events.0 {
-        let (player, color) = match ev {
-            GameEventWire::ManaAdded { player, color } => (*player, Some(*color)),
-            GameEventWire::ColorlessManaAdded { player } => (*player, None),
-            _ => continue,
-        };
-        let Some(lands) = tapped_lands.get(&player).filter(|l| !l.is_empty()) else {
-            continue;
-        };
-        let slot = next_land.entry(player).or_default();
-        let mut start = lands[*slot % lands.len()];
-        *slot += 1;
-        start.y += 0.3;
-        commands.spawn((
-            ManaMote { start, end: dest, age: 0.0, ttl: MANA_MOTE_TTL, color: mana_color(color) },
-            InGameRoot,
-        ));
-    }
+    *prev_tapped = current_tapped;
 }
 
 #[allow(clippy::too_many_arguments)]

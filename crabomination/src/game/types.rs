@@ -872,8 +872,12 @@ pub enum GameEvent {
     /// replays can render the correct cost.
     SpellCast { player: usize, card_id: CardId, face: CastFace },
     AbilityActivated { source: CardId },
-    ManaAdded { player: usize, color: Color },
-    ColorlessManaAdded { player: usize },
+    /// `source` is the permanent that produced the mana (a tapped land, a mana
+    /// rock, …) when known, so clients can anchor mana-flow visuals to it.
+    /// `None` for mana with no single permanent source (rituals, X-cost /
+    /// devotion effects resolved through a decision).
+    ManaAdded { player: usize, color: Color, source: Option<CardId> },
+    ColorlessManaAdded { player: usize, source: Option<CardId> },
     PermanentEntered { card_id: CardId },
     PermanentExiled { card_id: CardId },
     DamageDealt { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },

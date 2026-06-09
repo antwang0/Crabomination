@@ -5692,7 +5692,7 @@ impl GameState {
                         Some(r) => self.players[player].mana_pool.add_restricted(*c, 1, r),
                         None => self.players[player].mana_pool.add(*c, 1),
                     }
-                    events.push(GameEvent::ManaAdded { player, color: *c });
+                    events.push(GameEvent::ManaAdded { player, color: *c, source: None });
                 }
                 Ok(events)
             }
@@ -5704,7 +5704,7 @@ impl GameState {
                 let mut events = Vec::with_capacity(n as usize);
                 for _ in 0..n {
                     self.players[player].mana_pool.add(*c, 1);
-                    events.push(GameEvent::ManaAdded { player, color: *c });
+                    events.push(GameEvent::ManaAdded { player, color: *c, source: None });
                 }
                 Ok(events)
             }
