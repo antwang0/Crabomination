@@ -475,6 +475,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         windbrisk_heights,
         // Damage redirection (CR 614.9)
         palisade_giant,
+        skyclave_apparition,
         // ── claude/modern_decks: white/multicolor staples ──
         archangel_of_tithes,
         defenestrated_phantom,
@@ -1722,6 +1723,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         disowned_ancestor,
     ];
     if pair_contains(pair, Color::Red) {
+        v.push(kroxa_titan_of_deaths_hunger);
         v.push(terminate);
         v.push(voldaren_epicure);
         v.push(bloodtithe_harvester);
@@ -2290,6 +2292,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Hideaway land (CR 702.76)
         mosswort_bridge,
         shifting_woodland,
+        gilded_goose,
+        shifting_ceratops,
+        thrun_the_last_troll,
         // Bloodrush (Gatecrash)
         slaughterhorn,
         wasteland_viper,
@@ -2693,6 +2698,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(fangkeepers_familiar);
     }
     if pair_contains(pair, Color::Blue) {
+        v.push(uro_titan_of_natures_wrath);
         v.push(gaeas_skyfolk);
         v.push(talisman_of_curiosity);
         v.push(tanglepool_bridge);

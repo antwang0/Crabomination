@@ -707,6 +707,34 @@ impl GameState {
             let Some(pos) = self.exile.iter().position(|c| c.id == cid) else {
                 continue;
             };
+            // Skyclave Apparition: the card stays in exile; its owner gets
+            // an X/X blue Illusion (X = the card's mana value) instead.
+            if self.exile[pos].exiled_by.map(|l| l.return_to)
+                == Some(ExileReturnZone::IllusionToken)
+            {
+                let owner = self.exile[pos].owner;
+                let mv = self.exile[pos].definition.cost.cmc() as i32;
+                self.exile[pos].exiled_by = None;
+                let def = crate::card::CardDefinition {
+                    name: "Illusion",
+                    cost: crate::mana::ManaCost::default(),
+                    card_types: vec![crate::card::CardType::Creature],
+                    subtypes: crate::card::Subtypes {
+                        creature_types: vec![crate::card::CreatureType::Illusion],
+                        ..Default::default()
+                    },
+                    power: mv,
+                    toughness: mv,
+                    ..Default::default()
+                };
+                let id = self.next_id();
+                let mut inst = crate::card::CardInstance::new_token(id, def, owner);
+                inst.controller = owner;
+                self.battlefield.push(inst);
+                events.push(GameEvent::TokenCreated { card_id: id });
+                events.push(GameEvent::PermanentEntered { card_id: id });
+                continue;
+            }
             let mut card = self.exile.remove(pos);
             let return_to = card.exiled_by.take().map(|l| l.return_to);
             let owner = card.owner;

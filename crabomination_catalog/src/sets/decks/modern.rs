@@ -38561,3 +38561,230 @@ pub fn bomat_courier() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Kroxa, Titan of Death's Hunger — {B}{R} 6/6 Legendary Elder Giant.
+/// On enter or attack: each player discards; opponents who didn't discard a
+/// nonland card lose 3. Sacrificed unless it escaped. Escape {B}{B}{R}{R},
+/// exile five.
+pub fn kroxa_titan_of_deaths_hunger() -> CardDefinition {
+    let rip = Effect::Seq(vec![
+        Effect::Discard {
+            who: Selector::Player(PlayerRef::EachPlayer),
+            amount: Value::Const(1),
+            random: false,
+        },
+        Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachOpponent),
+            body: Box::new(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::DiscardedNonlandThisEffect {
+                    who: PlayerRef::Triggerer,
+                })),
+                then: Box::new(Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::Triggerer),
+                    amount: Value::Const(3),
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+        },
+    ]);
+    CardDefinition {
+        name: "Kroxa, Titan of Death's Hunger",
+        cost: cost(&[b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Escape(cost(&[b(), b(), r(), r()]), 5)],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                rip.clone(),
+                Effect::If {
+                    cond: Predicate::Not(Box::new(Predicate::SourceCastFromEscape)),
+                    then: Box::new(Effect::SacrificeSource),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: rip,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Uro, Titan of Nature's Wrath — {G}{U} 6/6 Legendary Elder Giant.
+/// On enter or attack: gain 3, draw, may drop a hand land. Sacrificed unless
+/// it escaped. Escape {G}{G}{U}{U}, exile five.
+pub fn uro_titan_of_natures_wrath() -> CardDefinition {
+    let feast = Effect::Seq(vec![
+        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        Effect::PutFromHandOntoBattlefield {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land,
+            count: Value::Const(1),
+            tapped: false,
+            haste: false,
+            sacrifice_eot: false,
+        },
+    ]);
+    CardDefinition {
+        name: "Uro, Titan of Nature's Wrath",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Escape(cost(&[g(), g(), u(), u()]), 5)],
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                feast.clone(),
+                Effect::If {
+                    cond: Predicate::Not(Box::new(Predicate::SourceCastFromEscape)),
+                    then: Box::new(Effect::SacrificeSource),
+                    else_: Box::new(Effect::Noop),
+                },
+            ])),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: feast,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Skyclave Apparition — {1}{W}{W} 2/2 Kor Spirit. ETB exiles a nonland,
+/// nontoken permanent you don't control with MV ≤ 4; when the Apparition
+/// leaves, the card's owner gets an X/X blue Illusion (X = its MV) instead
+/// of the card back.
+pub fn skyclave_apparition() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Skyclave Apparition",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kor, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Nonland
+                    .and(SelectionRequirement::NotToken)
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::ManaValueAtMost(4)),
+            ),
+            return_to: ExileReturnZone::IllusionToken,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Gilded Goose — {G} 0/2 Bird, flying. ETB Food; {1}{G}, {T}: Food;
+/// {T}, sacrifice a Food: add one mana of any color.
+pub fn gilded_goose() -> CardDefinition {
+    use crate::card::ArtifactSubtype;
+    let food = || Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: crabomination_base::tokens::food_token(),
+    };
+    CardDefinition {
+        name: "Gilded Goose",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 0,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(food())],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1), g()]),
+                effect: food(),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_other_filter: Some((
+                    SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Food),
+                    1,
+                )),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shifting Ceratops — {2}{G}{G} 5/4 Dinosaur. Can't be countered; protection
+/// from blue; {G}: gains your choice of reach, trample, or haste until end of
+/// turn.
+pub fn shifting_ceratops() -> CardDefinition {
+    let grant = |kw: Keyword| Effect::GrantKeyword {
+        what: Selector::This,
+        keyword: kw,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Shifting Ceratops",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Dinosaur], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::CantBeCountered, Keyword::Protection(Color::Blue)],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[g()]),
+            effect: Effect::ChooseMode(vec![
+                grant(Keyword::Reach),
+                grant(Keyword::Trample),
+                grant(Keyword::Haste),
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thrun, the Last Troll — {2}{G}{G} 4/4 Legendary Troll Shaman. Can't be
+/// countered; hexproof (printed: can't be targeted by opponents); {1}{G}:
+/// regenerate.
+pub fn thrun_the_last_troll() -> CardDefinition {
+    CardDefinition {
+        name: "Thrun, the Last Troll",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::CantBeCountered, Keyword::Hexproof],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            effect: Effect::Regenerate { what: Selector::This },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

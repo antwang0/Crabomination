@@ -43912,3 +43912,155 @@ fn bomat_courier_stashes_and_cashes_out() {
     assert!(g.players[0].hand.iter().any(|c| c.id == stash1), "stash in hand");
     assert!(!g.players[0].hand.iter().any(|c| c.id == junk), "old hand discarded");
 }
+
+/// Kroxa cast normally rips a card from each player, then sacrifices itself;
+/// escaped, it sticks around.
+#[test]
+fn kroxa_sacrifices_unless_escaped() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_hand(1, catalog::island()); // a LAND discard → still loses 3
+    let kroxa = g.add_card_to_hand(0, catalog::kroxa_titan_of_deaths_hunger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast(&mut g, kroxa);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(kroxa).is_none(), "hard-cast Kroxa sacrificed");
+    assert_eq!(g.players[1].life, 17, "opponent discarded a land → lost 3");
+    // Escape it back: {B}{B}{R}{R} + exile five from the graveyard.
+    let fodder: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastEscape {
+        card_id: kroxa, exile_cards: fodder, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("escape Kroxa");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(kroxa).is_some(), "escaped Kroxa survives its ETB");
+}
+
+/// Uro gains 3, draws, and ramps on ETB; sacrifices itself when hard-cast.
+#[test]
+fn uro_etb_feast_then_sacrifice() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let hand_land = g.add_card_to_hand(0, catalog::forest());
+    let uro = g.add_card_to_hand(0, catalog::uro_titan_of_natures_wrath());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![hand_land])]));
+    crate::game::cast(&mut g, uro);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 23, "gained 3");
+    assert!(g.battlefield_find(hand_land).is_some(), "land dropped from hand");
+    assert!(g.battlefield_find(uro).is_none(), "hard-cast Uro sacrificed");
+}
+
+/// Skyclave Apparition exiles a cheap permanent; killing the Apparition
+/// leaves the card in exile and mints an MV-sized Illusion instead.
+#[test]
+fn skyclave_apparition_exiles_and_leaves_an_illusion() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::witchs_oven()); // MV 1
+    let sky = g.add_card_to_hand(0, catalog::skyclave_apparition());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, sky, Target::Permanent(target));
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == target), "oven exiled");
+    g.remove_from_battlefield_to_graveyard(sky);
+    assert!(g.exile.iter().any(|c| c.id == target), "card stays in exile");
+    let illusion = g.battlefield.iter()
+        .find(|c| c.controller == 1 && c.definition.name == "Illusion")
+        .expect("owner got an Illusion");
+    assert_eq!((illusion.definition.power, illusion.definition.toughness), (1, 1), "X = MV 1");
+}
+
+/// Gilded Goose makes Food and converts a Food into any color of mana.
+#[test]
+fn gilded_goose_food_engine() {
+    let mut g = two_player_game();
+    let goose = g.add_card_to_hand(0, catalog::gilded_goose());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast(&mut g, goose);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Food"), "ETB Food");
+    g.clear_sickness(goose);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: goose, ability_index: 1, target: None, x_value: None,
+    }).expect("sac Food for mana");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Food"), "Food eaten");
+    assert_eq!(g.players[0].mana_pool.total(), 1, "one mana of any color");
+}
+
+/// Shifting Ceratops can't be countered and picks an evasion grant.
+#[test]
+fn shifting_ceratops_uncounterable_and_modal_grant() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let dino = g.add_card_to_hand(0, catalog::shifting_ceratops());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: dino, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast");
+    // Opponent tries to counter: the spell is flagged uncounterable.
+    let counter = g.add_card_to_hand(1, catalog::cancel());
+    g.players[1].mana_pool.add(Color::Blue, 2);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter, target: Some(Target::Permanent(dino)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Cancel");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dino).is_some(), "resolved through the counter");
+    // {G}: gains haste (mode 2).
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.priority.player_with_priority = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(2)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dino, ability_index: 0, target: None, x_value: None,
+    }).expect("modal grant");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(dino).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Thrun regenerates out of a destroy.
+#[test]
+fn thrun_regenerates() {
+    let mut g = two_player_game();
+    let thrun = g.add_card_to_battlefield(0, catalog::thrun_the_last_troll());
+    g.clear_sickness(thrun);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: thrun, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate shield");
+    drain_stack(&mut g);
+    // Hexproof blocks targeted removal entirely — wipe the board instead.
+    let wrath = g.add_card_to_hand(1, catalog::supreme_verdict());
+    g.players[1].mana_pool.add(Color::White, 2);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    crate::game::cast(&mut g, wrath);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(thrun).is_some(), "regenerated through the wrath");
+    assert!(g.battlefield_find(thrun).unwrap().tapped, "regeneration taps");
+}

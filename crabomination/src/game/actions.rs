@@ -6570,12 +6570,15 @@ impl GameState {
                 },
                 None => ability.effect,
             };
+            // CR 601.2b — a modal activated ability's mode is chosen as part
+            // of the activation (Shifting Ceratops's reach/trample/haste).
+            let mode = self.pick_trigger_mode(&queued_effect, card_id);
             self.stack.push(StackItem::Trigger {
                 source: card_id,
                 controller: p,
                 effect: Box::new(queued_effect),
                 target,
-                mode: None,
+                mode,
                 x_value: activated_x,
                 converged_value: 0,
                 trigger_source: None,

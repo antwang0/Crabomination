@@ -1817,6 +1817,10 @@ pub enum ExileReturnZone {
     /// Return to its owner's hand (Brain Maggot, Tidehollow Sculler,
     /// Kitesail Freebooter).
     Hand,
+    /// The card stays in exile; its owner instead creates an X/X blue
+    /// Illusion token, X = the exiled card's mana value (Skyclave
+    /// Apparition).
+    IllusionToken,
 }
 
 /// Records that a card sits in exile because of another permanent's
