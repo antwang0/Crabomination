@@ -449,6 +449,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── Cube expansion ──
         reveillark,
+        spirit_of_the_labyrinth,
+        archon_of_justice,
         // enchantment-scaled attack tax (pillowfort)
         sphere_of_safety,
         // artifact/enchantment hate
@@ -1289,6 +1291,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Cube expansion ──
         noxious_gearhulk,
         sheoldred_whispering_one,
+        phyrexian_crusader,
         // allied-color batch (modern_decks)
         festering_mummy,
         reassembling_skeleton,

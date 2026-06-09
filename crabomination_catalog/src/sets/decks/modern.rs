@@ -33042,3 +33042,62 @@ pub fn sheoldred_whispering_one() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Cube expansion: white/black keyword bodies + value ───────────────────────
+
+/// Phyrexian Crusader — {1}{B}{B} 2/2 Zombie Knight. First strike, protection
+/// from red and from white, infect.
+pub fn phyrexian_crusader() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Crusader",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie, CreatureType::Knight], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![
+            Keyword::FirstStrike, Keyword::Infect,
+            Keyword::Protection(Color::Red), Keyword::Protection(Color::White),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Spirit of the Labyrinth — {W}{W} 3/1 Spirit. Each player can't draw more
+/// than one card each turn (CR 121 — `CapDrawsPerTurn` over every player).
+pub fn spirit_of_the_labyrinth() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{PlayerStaticTarget, StaticEffect};
+    CardDefinition {
+        name: "Spirit of the Labyrinth",
+        cost: cost(&[w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Each player can't draw more than one card each turn.",
+            effect: StaticEffect::CapDrawsPerTurn { target: PlayerStaticTarget::EachPlayer, max: 1 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Archon of Justice — {3}{W}{W} 4/4 Archon with flying. When it dies, exile
+/// target permanent.
+pub fn archon_of_justice() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Archon of Justice",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Archon], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_dies(Effect::Exile {
+            what: target_filtered(SelectionRequirement::Permanent),
+        })],
+        ..Default::default()
+    }
+}

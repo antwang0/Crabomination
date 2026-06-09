@@ -39712,3 +39712,35 @@ fn sheoldred_whispering_one_forces_opponent_sacrifice_on_their_upkeep() {
     assert!(!g.battlefield.iter().any(|c| c.id == victim),
         "the opponent sacrificed a creature at their upkeep");
 }
+
+#[test]
+fn phyrexian_crusader_has_protection_and_infect() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::phyrexian_crusader());
+    let cp = g.compute_battlefield();
+    let c = cp.iter().find(|c| c.id == id).unwrap();
+    for kw in [Keyword::FirstStrike, Keyword::Infect,
+               Keyword::Protection(Color::Red), Keyword::Protection(Color::White)] {
+        assert!(c.keywords.contains(&kw), "missing {kw:?}");
+    }
+}
+
+#[test]
+fn spirit_of_the_labyrinth_caps_draws_at_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::spirit_of_the_labyrinth());
+    let _ = g.compute_battlefield();
+    assert_eq!(g.draw_cap_for(0), Some(1), "your draws capped to one");
+    assert_eq!(g.draw_cap_for(1), Some(1), "opponent draws capped to one too");
+}
+
+#[test]
+fn archon_of_justice_exiles_a_permanent_on_death() {
+    let mut g = two_player_game();
+    let archon = g.add_card_to_battlefield(0, catalog::archon_of_justice());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.remove_to_graveyard_with_triggers(archon);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "dies-trigger exiled a permanent");
+}
