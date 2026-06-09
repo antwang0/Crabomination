@@ -41005,3 +41005,76 @@ fn kinsbaile_cavalier_grants_double_strike() {
     assert!(g.computed_permanent(real_knight).unwrap().keywords.contains(&Keyword::DoubleStrike),
         "other Knight gets double strike");
 }
+
+// ── Auras (enchantress support) ───────────────────────────────────────────────
+
+/// Ethereal Armor gives +1/+1 per enchantment you control and first strike.
+#[test]
+fn ethereal_armor_scales_with_enchantments() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let armor = g.add_card_to_hand(0, catalog::ethereal_armor());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: armor, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ethereal Armor");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    // One enchantment (the Armor itself) → +1/+1; 2/2 → 3/3.
+    assert_eq!((c.power, c.toughness), (3, 3), "+1/+1 per enchantment");
+    assert!(c.keywords.contains(&Keyword::FirstStrike), "first strike");
+}
+
+/// Curiosity draws when the enchanted creature deals combat damage to a player.
+#[test]
+fn curiosity_draws_on_combat_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let cur = g.add_card_to_hand(0, catalog::curiosity());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.add_card_to_library(0, catalog::island());
+    g.perform_action(GameAction::CastSpell {
+        card_id: cur, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Curiosity");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand = g.players[0].hand.len();
+    g.declare_attackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    for _ in 0..14 {
+        if g.players[0].hand.len() > hand { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew off combat damage");
+}
+
+/// Aqueous Form makes the enchanted creature unblockable.
+#[test]
+fn aqueous_form_grants_unblockable() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let af = g.add_card_to_hand(0, catalog::aqueous_form());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: af, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Aqueous Form");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(bear).unwrap().keywords.contains(&Keyword::Unblockable));
+}
+
+/// Keen Sense draws when the enchanted creature deals combat damage.
+#[test]
+fn keen_sense_is_green_curiosity() {
+    let mut g = two_player_game();
+    let aura = catalog::keen_sense();
+    assert_eq!(aura.cost, crate::mana::cost(&[crate::mana::g()]));
+    assert!(aura.equipped_bonus.unwrap().triggered_abilities.len() == 1);
+}

@@ -461,6 +461,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Spirit + Knight tribal
         empyrean_eagle,
         kinsbaile_cavalier,
+        // Auras (enchantress support)
+        ethereal_armor,
         // ── Cube expansion ──
         reveillark,
         spirit_of_the_labyrinth,
@@ -983,6 +985,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         qumulox,
         // ── modern_decks: Spirit tribal ──
         supreme_phantom,
+        // Auras (curiosity / unblockable)
+        curiosity,
+        aqueous_form,
         // ── modern_decks: Merfolk + blue Slivers tribal ──
         master_of_the_pearl_trident,
         merfolk_mistbinder,
@@ -2155,6 +2160,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         dwynen_gilt_leaf_daen,
         // Affinity artifact creature (modern_decks)
         carapace_forger,
+        // Aura (enchantress draw)
+        keen_sense,
         // ── Cube expansion ──
         hornet_queen,
         // team-pump finishers (Overrun variants)

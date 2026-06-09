@@ -35054,3 +35054,99 @@ pub fn kinsbaile_cavalier() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: Auras (enchantress / hexproof-aggro support) ────────────────
+
+/// Ethereal Armor — {W} Aura. "Enchant creature. Enchanted creature gets +1/+1
+/// for each enchantment you control and has first strike."
+pub fn ethereal_armor() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus, EquipScale};
+    CardDefinition {
+        name: "Ethereal Armor",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::FirstStrike],
+            scale: Some(EquipScale {
+                filter: SelectionRequirement::Enchantment.and(SelectionRequirement::ControlledByYou),
+                per_power: 1,
+                per_toughness: 1,
+                count_self_counters: None,
+            }),
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Curiosity — {U} Aura. "Whenever enchanted creature deals damage to a player,
+/// you may draw a card." (Modeled off combat damage, like the Sword cycle.)
+pub fn curiosity() -> CardDefinition {
+    aura_damage_draw("Curiosity", cost(&[u()]))
+}
+
+/// Keen Sense — {G} Aura. Green Curiosity.
+pub fn keen_sense() -> CardDefinition {
+    aura_damage_draw("Keen Sense", cost(&[g()]))
+}
+
+fn aura_damage_draw(name: &'static str, mana: ManaCost) -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Aqueous Form — {U} Aura. "Enchant creature. Enchanted creature can't be
+/// blocked. Whenever it attacks, scry 1."
+pub fn aqueous_form() -> CardDefinition {
+    use crate::card::{EnchantmentSubtype, EquipBonus};
+    CardDefinition {
+        name: "Aqueous Form",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        equipped_bonus: Some(EquipBonus {
+            keywords: vec![Keyword::Unblockable],
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            }],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
