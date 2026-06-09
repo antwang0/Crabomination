@@ -109,6 +109,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Madness(_) => "Madness",
         Keyword::Morph(_) => "Morph",
         Keyword::Megamorph(_) => "Megamorph",
+        Keyword::Disguise(_) => "Disguise",
         Keyword::Equip(_) => "Equip",
         Keyword::Reconfigure(_) => "Reconfigure",
         Keyword::Offspring(_) => "Offspring",

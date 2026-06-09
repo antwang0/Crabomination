@@ -484,6 +484,9 @@ pub enum Keyword {
     Fortify(crate::mana::ManaCost),
     Morph(crate::mana::ManaCost),
     Megamorph(crate::mana::ManaCost),
+    /// CR 702.166 — Disguise. Like Morph, but the face-down permanent is a 2/2
+    /// with ward {2}; turn it face up for this cost. Casts face down for {3}.
+    Disguise(crate::mana::ManaCost),
     Prowess,
     Ward(WardCost),
     Changeling,
@@ -1769,6 +1772,17 @@ pub fn facedown_creature_definition() -> CardDefinition {
     }
 }
 
+/// CR 702.166c — a face-down permanent cast/manifested via Disguise (or Cloak)
+/// is a 2/2 colorless creature with ward {2}.
+pub fn facedown_disguise_definition() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Ward(WardCost::Mana(crate::mana::ManaCost {
+            symbols: vec![crate::mana::ManaSymbol::Generic(2)],
+        }))],
+        ..facedown_creature_definition()
+    }
+}
+
 /// CR 603.6e linked exile — where a card returns when the permanent that
 /// exiled it (Banisher Priest, Brain Maggot, Oblivion Ring, …) leaves the
 /// battlefield.
@@ -2196,8 +2210,18 @@ impl CardInstance {
         if self.face_up_def.is_some() {
             return;
         }
+        // CR 702.166c — a Disguise permanent is face down with ward {2}.
+        let disguised = self
+            .definition
+            .keywords
+            .iter()
+            .any(|k| matches!(k, Keyword::Disguise(_)));
         self.face_up_def = Some(self.definition.clone());
-        self.definition = Arc::new(facedown_creature_definition());
+        self.definition = Arc::new(if disguised {
+            facedown_disguise_definition()
+        } else {
+            facedown_creature_definition()
+        });
         self.face_down = true;
     }
 

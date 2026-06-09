@@ -710,6 +710,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Buyback(cost) => format!("Buyback {}", cost.summary()),
         K::Morph(cost) => format!("Morph {}", cost.summary()),
         K::Megamorph(cost) => format!("Megamorph {}", cost.summary()),
+        K::Disguise(cost) => format!("Disguise {}", cost.summary()),
         K::Saddle(n) => format!("Saddle {n}"),
         K::Casualty(n) => format!("Casualty {n}"),
         K::Escape(cost, n) => format!("Escape {}, exile {n}", cost.summary()),

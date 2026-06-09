@@ -837,7 +837,12 @@ impl GameState {
             .iter()
             .filter(|c| {
                 c.definition.keywords.iter().any(|k| {
-                    matches!(k, crate::card::Keyword::Morph(_) | crate::card::Keyword::Megamorph(_))
+                    matches!(
+                        k,
+                        crate::card::Keyword::Morph(_)
+                            | crate::card::Keyword::Megamorph(_)
+                            | crate::card::Keyword::Disguise(_)
+                    )
                 })
             })
             .map(|c| c.id)

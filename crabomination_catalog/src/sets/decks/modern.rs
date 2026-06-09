@@ -12995,6 +12995,78 @@ pub fn grim_haruspex() -> CardDefinition {
     }
 }
 
+// ── Disguise (CR 702.166) ─────────────────────────────────────────────────────
+
+/// Defenestrated Phantom — {4}{W}{W} 4/3 Spirit with flying. Disguise {4}{W}
+/// (cast face down for {3} as a 2/2 ward-{2} creature, turn up for {4}{W}). (MKM)
+pub fn defenestrated_phantom() -> CardDefinition {
+    CardDefinition {
+        name: "Defenestrated Phantom",
+        cost: cost(&[generic(4), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Disguise(cost(&[generic(4), w()]))],
+        ..Default::default()
+    }
+}
+
+/// Nervous Gardener — {1}{G} 2/2 Dryad. Disguise {G}. When turned face up,
+/// search your library for a basic land card → hand. (MKM)
+pub fn nervous_gardener() -> CardDefinition {
+    CardDefinition {
+        name: "Nervous Gardener",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Disguise(cost(&[g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bubble Smuggler — {1}{U} 2/1 Octopus Fish. Disguise {5}{U}. As it's turned
+/// face up, put four +1/+1 counters on it. (MKM)
+pub fn bubble_smuggler() -> CardDefinition {
+    CardDefinition {
+        name: "Bubble Smuggler",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Octopus, CreatureType::Fish],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Disguise(cost(&[generic(5), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Spikeshot Elder — {R} 1/1 Goblin Shaman. `{1}{R}{R}: deals damage equal to
 /// its power to any target.` (LRW)
 pub fn spikeshot_elder() -> CardDefinition {

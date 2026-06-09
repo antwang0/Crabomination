@@ -1506,7 +1506,7 @@ impl GameState {
             .hand
             .iter()
             .find(|c| c.id == card_id)
-            .map(|c| c.definition.keywords.iter().any(|k| matches!(k, Keyword::Morph(_) | Keyword::Megamorph(_))))
+            .map(|c| c.definition.keywords.iter().any(|k| matches!(k, Keyword::Morph(_) | Keyword::Megamorph(_) | Keyword::Disguise(_))))
             .ok_or(GameError::CardNotInHand(card_id))?;
         if !has_morph {
             return Err(GameError::CardNotInHand(card_id));
@@ -1556,7 +1556,7 @@ impl GameState {
             // Morph / Megamorph turn-up cost takes precedence; otherwise a
             // manifested creature card turns up for its mana cost.
             let morph_cost = real.keywords.iter().find_map(|kw| match kw {
-                Keyword::Morph(mc) | Keyword::Megamorph(mc) => Some(mc.clone()),
+                Keyword::Morph(mc) | Keyword::Megamorph(mc) | Keyword::Disguise(mc) => Some(mc.clone()),
                 _ => None,
             });
             match morph_cost {
@@ -1587,8 +1587,9 @@ impl GameState {
                 c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
             }
         }
+        // The returned events are dispatched once by `perform_action`; an extra
+        // internal dispatch here double-fired turn-up triggers (CR 603.2).
         events.push(GameEvent::TurnedFaceUp { card_id });
-        self.dispatch_triggers_for_events(&[GameEvent::TurnedFaceUp { card_id }]);
         Ok(events)
     }
 

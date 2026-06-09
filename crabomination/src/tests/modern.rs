@@ -42065,6 +42065,69 @@ fn ainok_survivalist_morph_cast_and_megamorph_turn_up() {
     assert!(g.battlefield_find(victim).is_none(), "turn-up trigger destroyed the artifact");
 }
 
+/// Defenestrated Phantom: Disguise casts a face-down 2/2 with ward {2}, then
+/// turns up into the 4/3 flyer for {4}{W}.
+#[test]
+fn disguise_defenestrated_phantom_face_down_has_ward_then_turns_up() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::defenestrated_phantom());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down for {3}");
+    drain_stack(&mut g);
+    let fd = g.battlefield_find(id).expect("on battlefield");
+    assert!(fd.face_down, "entered face down");
+    assert_eq!((fd.power(), fd.toughness()), (2, 2), "face-down 2/2");
+    assert_eq!(fd.ward_cost(), Some(2), "Disguise grants ward {{2}} while face down");
+    // Turn it up for its disguise cost {4}{W}.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {4}{W}");
+    let up = g.battlefield_find(id).expect("still here");
+    assert!(!up.face_down);
+    assert_eq!((up.power(), up.toughness()), (4, 3));
+    assert!(up.definition.keywords.contains(&Keyword::Flying));
+    assert_eq!(up.ward_cost(), None, "real face has no ward");
+}
+
+/// Nervous Gardener's turn-face-up trigger tutors a basic land to hand.
+#[test]
+fn disguise_nervous_gardener_turn_up_searches_basic_land() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::nervous_gardener());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {G}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest), "basic land tutored to hand");
+}
+
+/// Bubble Smuggler enters play four +1/+1 counters bigger when turned face up.
+#[test]
+fn disguise_bubble_smuggler_turn_up_adds_four_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::bubble_smuggler());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {5}{U}");
+    drain_stack(&mut g);
+    let up = g.battlefield_find(id).expect("still here");
+    assert_eq!((up.power(), up.toughness()), (6, 5), "2/1 + four +1/+1 counters");
+}
+
 /// Restless Reef animates into a 4/3 and surveils 2 on attack.
 #[test]
 fn restless_reef_animates_and_surveils_on_attack() {
