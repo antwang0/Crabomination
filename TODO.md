@@ -17,6 +17,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   creature to slot 0. Umezawa's Jitte now charges when its equipped creature is
   blocked. (Fires once per damaged creature — a minor over-count for Jitte under
   multi-block.)
+- ⏳ **Cipher follow-ups (CR 702.46 shipped this run).** Remaining Cipher cards
+  each want one extra primitive: Hidden Strings (two-target tap-or-untap),
+  Trait Doctoring (grant a color / land type to a permanent), Stolen Identity's
+  encore (already plays via the free-copy path). Rubblehulk's Bloodrush wants a
+  `Value::LandsControlled`-scaled pump + a `*/*` = lands CDA body.
+- ⏳ **UI render edits remain blocked** in the web sandbox (wayland-sys /
+  alsa-sys / libudev build scripts need system libs). The server `PlayerView`
+  is the verifiable surface; `ExileCardView.encoded_on` (Cipher carrier) ships
+  this run for the client to badge once it can build.
 - ⏳ **Aether Gust + Subtlety-style "spell or permanent → top/bottom of
   library".** Aether Gust hits a red/green *spell or permanent* and the owner
   chooses top or bottom; the spell-counter half rides `CounteredSpellZone::
