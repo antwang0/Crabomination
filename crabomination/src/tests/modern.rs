@@ -42850,3 +42850,60 @@ fn simian_sling_pings_defender_when_blocked() {
     g.resolve_effect(&trig, &ctx).unwrap();
     assert_eq!(g.players[1].life, opp - 1, "becomes-blocked pings each opponent for 1");
 }
+
+/// Painful Truths draws and loses life equal to the colors of mana spent (Converge).
+#[test]
+fn painful_truths_draws_and_loses_per_converge() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::painful_truths());
+    // Pay {2}{B} with three distinct colors → converge 3.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let (hand, life) = (g.players[0].hand.len(), g.players[0].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Painful Truths");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 3, "converge 3 → draw 3 (minus the cast card)");
+    assert_eq!(g.players[0].life, life - 3, "converge 3 → lose 3 life");
+}
+
+/// Prophetic Bolt deals 4 and digs for a card.
+#[test]
+fn prophetic_bolt_burns_and_digs() {
+    let mut g = two_player_game();
+    let keep = g.add_card_to_library(0, catalog::lightning_bolt());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::grizzly_bears()); }
+    let id = g.add_card_to_hand(0, catalog::prophetic_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(keep))]));
+    for c in [Color::Blue, Color::Red] { g.players[0].mana_pool.add(c, 1); }
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Prophetic Bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4, "4 damage to the player");
+    assert!(g.players[0].hand.iter().any(|c| c.id == keep), "dug the chosen card into hand");
+}
+
+/// Reality Shift exiles a creature and manifests the controller's top card.
+#[test]
+fn reality_shift_exiles_and_manifests() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_library(1, catalog::lightning_bolt()); // becomes a face-down 2/2
+    let id = g.add_card_to_hand(0, catalog::reality_shift());
+    for c in [Color::Blue] { g.players[0].mana_pool.add(c, 1); }
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Reality Shift");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim exiled");
+    assert!(g.exile.iter().any(|c| c.id == victim), "victim is in exile");
+    assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.face_down),
+        "controller manifested a face-down 2/2");
+}

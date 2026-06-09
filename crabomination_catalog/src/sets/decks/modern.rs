@@ -37139,3 +37139,66 @@ pub fn umezawas_jitte() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Painful Truths — {2}{B} Sorcery. Converge — draw X and lose X life, where X
+/// is the number of colors of mana spent to cast it.
+pub fn painful_truths() -> CardDefinition {
+    CardDefinition {
+        name: "Painful Truths",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::ConvergedValue },
+            Effect::LoseLife { who: Selector::You, amount: Value::ConvergedValue },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Prophetic Bolt — {3}{U}{R} Instant. Deal 4 damage to any target, then look at
+/// the top four cards of your library, put one into your hand and the rest on
+/// the bottom.
+pub fn prophetic_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Prophetic Bolt",
+        cost: cost(&[generic(3), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: false,
+                pick_filter: None,
+                take: None,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Reality Shift — {1}{U} Instant. Exile target creature; its controller
+/// manifests the top card of their library (CR 701.34). (Manifest fires before
+/// the exile so the controller is still bound.)
+pub fn reality_shift() -> CardDefinition {
+    CardDefinition {
+        name: "Reality Shift",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Manifest {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                amount: Value::Const(1),
+            },
+            Effect::Exile { what: target_filtered(SelectionRequirement::Creature) },
+        ]),
+        ..Default::default()
+    }
+}

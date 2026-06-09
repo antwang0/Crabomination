@@ -2655,10 +2655,15 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(waterlogged_grove);
         // ── claude/modern_decks: RevealTopLandToBattlefieldElseHand ramp ──
         v.push(coiling_oracle);
+        // ── modern_decks: Manifest removal + Izzet card advantage ──
+        v.push(reality_shift);
+        v.push(prophetic_bolt);
     }
     if pair_contains(pair, Color::Black) {
         v.push(darkmoss_bridge);
         v.push(underground_mortuary);
+        // ── modern_decks: Converge card draw ──
+        v.push(painful_truths);
         v.push(tear_asunder);
         v.push(assassins_trophy);
         v.push(maelstrom_pulse);
