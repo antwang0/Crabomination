@@ -13067,6 +13067,93 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Granite Witness — {2}{W}{U} 3/2 Gargoyle Detective artifact creature with
+/// flying and vigilance. Disguise {W/U}{W/U}. When turned face up, tap target
+/// creature. (MKM — the "tap or untap" choice collapses to tap.)
+pub fn granite_witness() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
+    let wu = || hybrid(Color::White, Color::Blue);
+    CardDefinition {
+        name: "Granite Witness",
+        cost: cost(&[generic(2), w(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Gargoyle, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![
+            Keyword::Flying,
+            Keyword::Vigilance,
+            Keyword::Disguise(cost(&[wu(), wu()])),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Creature) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Experiment Twelve — {3}{G} 4/4 Elf Lizard Warrior with trample. Disguise
+/// {4}{G}. When turned face up, put +1/+1 counters on it equal to its power.
+/// (MKM — the "another creature you control" clause is simplified to this one.)
+pub fn experiment_twelve() -> CardDefinition {
+    CardDefinition {
+        name: "Experiment Twelve",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Lizard, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Disguise(cost(&[generic(4), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::PowerOf(Box::new(Selector::This)),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Culvert Ambusher — {3}{G}{G} 4/5 Wurm Horror. When it enters or is turned
+/// face up, target creature must block this turn if able. Disguise {4}{G}. (MKM)
+pub fn culvert_ambusher() -> CardDefinition {
+    use crate::effect::Duration;
+    let force = || Effect::GrantKeyword {
+        what: target_filtered(SelectionRequirement::Creature),
+        keyword: Keyword::MustBlock,
+        duration: Duration::EndOfTurn,
+    };
+    CardDefinition {
+        name: "Culvert Ambusher",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Disguise(cost(&[generic(4), g()]))],
+        triggered_abilities: vec![
+            etb(force()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: force(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Alley Assailant — {2}{B} 3/3 Vampire Rogue that enters tapped. Disguise
 /// {4}{B}{B}. When turned face up, target opponent loses 3 life and you gain 3.
 /// (MKM)

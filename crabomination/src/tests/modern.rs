@@ -42174,6 +42174,61 @@ fn bot_turns_up_affordable_face_down_creature() {
         "bot should turn up the face-down creature; got {action:?}");
 }
 
+/// Granite Witness taps a creature when turned face up.
+#[test]
+fn disguise_granite_witness_turn_up_taps_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::granite_witness());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).expect("here").tapped, "target creature tapped");
+}
+
+/// Experiment Twelve doubles in size when turned face up.
+#[test]
+fn disguise_experiment_twelve_turn_up_doubles_power() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::experiment_twelve());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    drain_stack(&mut g);
+    let w = g.battlefield_find(id).expect("here");
+    // 4/4 base, +4/+4 from counters equal to its power (4).
+    assert_eq!((w.power(), w.toughness()), (8, 8));
+}
+
+/// Culvert Ambusher forces a creature to block when it enters.
+#[test]
+fn disguise_culvert_ambusher_etb_forces_block() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::culvert_ambusher());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Culvert Ambusher");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(victim).unwrap().keywords.contains(&Keyword::MustBlock),
+        "target must block this turn");
+}
+
 /// Alley Assailant enters tapped and drains 3 when it's turned face up.
 #[test]
 fn disguise_alley_assailant_enters_tapped_and_drains_on_turn_up() {

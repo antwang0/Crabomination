@@ -1013,6 +1013,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         bubble_smuggler,
         faerie_snoop,
+        granite_witness,
         otawara_soaring_city,
         restless_spire,
         restless_reef,
@@ -2234,6 +2235,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         nervous_gardener,
         greenbelt_radical,
+        experiment_twelve,
+        culvert_ambusher,
         voracious_varmint,
         hide_in_plain_sight,
         boseiju_who_endures,
