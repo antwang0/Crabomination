@@ -1032,6 +1032,17 @@ pub struct PermanentView {
     /// "⭯ transformed" indicator. Populated by `project_permanent`.
     #[serde(default)]
     pub transformed: bool,
+    /// CR 708 — true when this permanent is on the battlefield face down
+    /// (morph / manifest). The client renders a generic 2/2 card back.
+    /// Populated by `project_permanent`.
+    #[serde(default)]
+    pub face_down: bool,
+    /// CR 708.2 — for a face-down permanent the viewer is allowed to look at
+    /// (their own), the real card's name; `None` for opponents' face-down
+    /// permanents and all face-up permanents. Lets the controller's client
+    /// label its own morph/manifest while keeping it hidden from opponents.
+    #[serde(default)]
+    pub face_down_name: Option<String>,
 }
 
 impl PermanentView {

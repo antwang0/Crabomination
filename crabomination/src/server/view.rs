@@ -75,6 +75,7 @@ fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
                         &block_map,
                         &state.prevention_shields,
                         &state.battlefield,
+                        viewer_seat,
                     )
                 })
                 .collect()
@@ -487,6 +488,7 @@ fn project_permanent(
     block_map: &[(CardId, CardId)],
     prevention_shields: &[crate::game::types::PreventionShield],
     battlefield: &[CardInstance],
+    viewer_seat: usize,
 ) -> PermanentView {
     use crate::game::types::PreventionTarget;
     let cp = computed.iter().find(|c| c.id == card.id);
@@ -615,6 +617,12 @@ fn project_permanent(
         // definition is the back face, so it always carries a `front_face`.
         has_other_face: card.definition.back_face.is_some() || card.front_face.is_some(),
         transformed: card.transformed,
+        // CR 708 — face-down permanents render as a 2/2 card back; only the
+        // controller may peek at the real card's identity (708.2).
+        face_down: card.face_down && card.face_up_def.is_some(),
+        face_down_name: (card.face_down && card.controller == viewer_seat)
+            .then(|| card.face_up_def.as_ref().map(|d| d.name.to_string()))
+            .flatten(),
     }
 }
 
@@ -1472,6 +1480,33 @@ mod tests {
         assert_eq!(v.players[0].devotion[2], 3, "devotion to black = 3");
         assert_eq!(v.players[0].devotion[0], 0, "no white devotion");
         assert_eq!(v.players[1].devotion[2], 0, "opponent has no devotion");
+    }
+
+    #[test]
+    fn face_down_permanent_hidden_from_opponent_visible_to_controller() {
+        let mut state = two_player_game();
+        let top = state.next_id();
+        state.players[0].library.insert(
+            0,
+            crate::card::CardInstance::new(top, catalog::grizzly_bears(), 0),
+        );
+        let ctx = crate::game::effects::EffectContext::for_ability(top, 0, None);
+        let mut events = vec![];
+        state.manifest_card(top, 0, &ctx, &mut events);
+
+        // Controller (seat 0) sees the face-down flag and the real name.
+        let own = project(&state, 0);
+        let mine = own.battlefield.iter().find(|p| p.id == top).unwrap();
+        assert!(mine.face_down);
+        assert_eq!(mine.name, "", "the public name stays blank");
+        assert_eq!(mine.face_down_name.as_deref(), Some("Grizzly Bears"));
+
+        // Opponent (seat 1) sees a nameless 2/2 with no peek.
+        let opp = project(&state, 1);
+        let theirs = opp.battlefield.iter().find(|p| p.id == top).unwrap();
+        assert!(theirs.face_down);
+        assert_eq!(theirs.name, "");
+        assert!(theirs.face_down_name.is_none(), "opponent can't peek");
     }
 
     #[test]

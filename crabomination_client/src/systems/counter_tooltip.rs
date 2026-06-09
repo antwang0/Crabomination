@@ -125,6 +125,16 @@ pub fn update_alt_tooltip(
 fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     let mut lines = Vec::new();
 
+    // CR 708 — face-down permanents (morph / manifest) render as a 2/2. Show
+    // the hidden status, and — for the controller, who may look at their own
+    // face-down cards (708.2) — the real card's name the server revealed.
+    if p.face_down {
+        match &p.face_down_name {
+            Some(name) => lines.push(format!("Face-down 2/2 (yours: {name})")),
+            None => lines.push("Face-down 2/2".to_string()),
+        }
+    }
+
     // P/T summary — only if modified, since the peek popup shows the
     // printed P/T as part of the card art.
     if p.card_types.contains(&CardType::Creature)
@@ -850,6 +860,8 @@ mod tests {
             transformed: false,
             squad_count: None,
             impending_counters: None,
+            face_down: false,
+            face_down_name: None,
         }
     }
 
