@@ -2689,6 +2689,25 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(paradox_gardens);
         v.push(embrace_the_paradox);
     }
+    // ── Onslaught/Zendikar fetch lands — included when the pair shares one of
+    // the two basic types each fetch can find (so they fix the deck's colors).
+    let fetches: [(CardFactory, [Color; 2]); 10] = [
+        (flooded_strand, [Color::White, Color::Blue]),
+        (polluted_delta, [Color::Blue, Color::Black]),
+        (bloodstained_mire, [Color::Black, Color::Red]),
+        (wooded_foothills, [Color::Red, Color::Green]),
+        (windswept_heath, [Color::Green, Color::White]),
+        (misty_rainforest, [Color::Green, Color::Blue]),
+        (scalding_tarn, [Color::Blue, Color::Red]),
+        (verdant_catacombs, [Color::Black, Color::Green]),
+        (arid_mesa, [Color::Red, Color::White]),
+        (marsh_flats, [Color::White, Color::Black]),
+    ];
+    for (f, colors) in fetches {
+        if colors.iter().any(|&c| pair_contains(pair, c)) {
+            v.push(f);
+        }
+    }
     v
 }
 
