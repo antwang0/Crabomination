@@ -41131,6 +41131,85 @@ fn skymarcher_aspirant_menace_with_blessing() {
         "menace with the city's blessing");
 }
 
+/// The Gitrog Monster draws a card when a land card is put into its
+/// controller's graveyard (here, by milling a Forest off the top).
+#[test]
+fn gitrog_draws_when_land_hits_graveyard() {
+    use crate::effect::{Effect, Selector, PlayerRef, Value};
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let gitrog = g.add_card_to_battlefield(0, catalog::the_gitrog_monster());
+    // Forest on top of the library + a spell to draw.
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let top = g.players[0].library.iter().position(|c| c.id == forest).unwrap();
+    let f = g.players[0].library.remove(top);
+    g.players[0].library.insert(0, f);
+    let hand0 = g.players[0].hand.len();
+    let ctx = EffectContext::for_trigger(gitrog, 0, None, 0);
+    let events = g.resolve_effect(
+        &Effect::Mill { who: Selector::Player(PlayerRef::You), amount: Value::Const(1) }, &ctx,
+    ).expect("mill resolves");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == forest), "Forest milled");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand0 + 1, "milling a land drew a card off Gitrog");
+}
+
+/// Gitrog's upkeep cost sacrifices a land to spare itself (bot keeps the
+/// 6/6 by paying the weakest land).
+#[test]
+fn gitrog_upkeep_sacrifices_a_land_to_survive() {
+    use crate::effect::Effect;
+    use crate::card::SelectionRequirement;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let gitrog = g.add_card_to_battlefield(0, catalog::the_gitrog_monster());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let ctx = EffectContext::for_trigger(gitrog, 0, None, 0);
+    g.resolve_effect(
+        &Effect::SacrificeSourceUnlessSacrifice {
+            filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+        },
+        &ctx,
+    ).expect("upkeep cost resolves");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gitrog).is_some(), "Gitrog spared");
+    assert!(g.battlefield_find(land).is_none(), "a land was sacrificed instead");
+}
+
+/// Talon Gates of Madara's `{4}` from-hand ability puts it onto the
+/// battlefield; the ETB phase-out then removes a target creature.
+#[test]
+fn talon_gates_from_hand_enters_and_phases_out_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gates = g.add_card_to_hand(0, catalog::talon_gates_of_madara());
+    g.players[0].mana_pool.add_colorless(4);
+    // Ability index 2 = {4}: put this from hand onto the battlefield.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gates, ability_index: 2, target: None, x_value: None,
+    }).expect("activate from-hand put-into-play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(gates).is_some(), "Talon Gates entered the battlefield");
+    assert!(g.players[0].hand.iter().all(|c| c.id != gates), "left hand");
+    // ETB phased the opponent's bear out (no longer on battlefield).
+    assert!(g.battlefield_find(bear).is_none(), "targeted creature phased out");
+}
+
+/// Talon Gates' `{1}, {T}` ability fixes one mana of any color.
+#[test]
+fn talon_gates_taps_for_any_color() {
+    let mut g = two_player_game();
+    let gates = g.add_card_to_battlefield(0, catalog::talon_gates_of_madara());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: gates, ability_index: 1, target: None, x_value: Some(0),
+    }).expect("tap for any color");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "spent one generic, produced one mana");
+}
+
 /// Casting a Merfolk with Merrow Reejerey out fires its tap/untap trigger
 /// cleanly (AutoDecider taps a permanent; no panic).
 #[test]

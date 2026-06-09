@@ -1120,6 +1120,14 @@ pub enum EventKind {
     /// the transforming permanent is the event subject (`EventScope::SelfSource`
     /// for "when this transforms"). Matched to `GameEvent::Transformed`.
     Transformed,
+    /// A **land card** was put into a graveyard from anywhere (death,
+    /// sacrifice, mill, discard, spell resolution). Matched to
+    /// `GameEvent::CardPutIntoGraveyard { is_land: true, .. }`. Not a
+    /// fan-out kind: "Whenever one or more land cards are put into your
+    /// graveyard … draw a card" (The Gitrog Monster) fires once per batch
+    /// of simultaneous land-to-graveyard events. Use `EventScope::YourControl`
+    /// (the graveyard owner is the event player).
+    LandPutIntoGraveyard,
 }
 
 /// Whose events does this trigger listen for?
@@ -2303,6 +2311,13 @@ pub enum Effect {
     /// Lightning) where `Effect::Move { This → Graveyard }` would skip the
     /// `CreatureDied` event.
     SacrificeSource,
+    /// "Sacrifice this permanent unless you sacrifice a [filter]." (The Gitrog
+    /// Monster's upkeep cost.) The controller may sacrifice one permanent
+    /// matching `filter` they control to spare the source; if they have none —
+    /// or a UI seat declines — the source is sacrificed instead. AutoDecider
+    /// keeps the source by sacrificing the weakest matching permanent when one
+    /// is available.
+    SacrificeSourceUnlessSacrifice { filter: SelectionRequirement },
     /// "Sacrifice any number of [filter]. [payoff] for each one." The
     /// controller chooses how many to sacrifice via `Decision::ChooseAmount`
     /// (AutoDecider sacrifices none). For each sacrifice, `per_each` runs

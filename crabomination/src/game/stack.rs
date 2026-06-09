@@ -2365,8 +2365,22 @@ impl GameState {
             // Cacophony Scamp). Removed when the trigger resolves.
             self.leaves_bf_lki.insert(id, c.clone());
         }
+        // Capture owner + land-ness before removal so we can emit a
+        // `CardPutIntoGraveyard` event (CR 700 — "put into a graveyard from
+        // the battlefield") once we confirm the card actually landed in the
+        // graveyard (Finality / dies-to-exile redirects send it elsewhere).
+        let gy_info = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == id)
+            .map(|c| (c.owner, c.definition.card_types.contains(&crate::card::CardType::Land)));
         self.remove_from_battlefield_to_graveyard(id);
         let mut out = Vec::new();
+        if let Some((owner, is_land)) = gy_info
+            && self.players[owner].graveyard.iter().any(|c| c.id == id)
+        {
+            out.push(GameEvent::CardPutIntoGraveyard { player: owner, card_id: id, is_land });
+        }
         for (source, effect, controller) in leave_triggers {
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));

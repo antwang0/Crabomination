@@ -45,6 +45,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
+        (EventKind::LandPutIntoGraveyard, GameEvent::CardPutIntoGraveyard { is_land: true, .. }) => true,
         (EventKind::CardExiled, GameEvent::PermanentExiled { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
@@ -275,6 +276,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::ColorlessManaAdded { player, .. }
         | GameEvent::CardLeftGraveyard { player, .. }
+        | GameEvent::CardPutIntoGraveyard { player, .. }
         | GameEvent::CardCycled { player, .. }
         | GameEvent::EnergyGained { player, .. }
         | GameEvent::Expended { player, .. }
@@ -352,6 +354,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         | GameEvent::DiceRolled { player, .. }
         | GameEvent::ColorlessManaAdded { player, .. } => Some(EntityRef::Player(*player)),
         GameEvent::CardLeftGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CardPutIntoGraveyard { card_id, .. } => Some(EntityRef::Card(*card_id)),
         // The "subject" of a BecameTarget event is the permanent that
         // became the target — what `Selector::TriggerSource` should bind
         // to for any filter predicate.

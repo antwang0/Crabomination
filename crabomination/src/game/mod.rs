@@ -1937,7 +1937,14 @@ impl GameState {
             events.push(crate::game::GameEvent::PermanentExiled { card_id: cid });
             true
         } else {
+            let cid = card.id;
+            let is_land = card.definition.card_types.contains(&crate::card::CardType::Land);
             self.players[owner].send_to_graveyard(card);
+            events.push(crate::game::GameEvent::CardPutIntoGraveyard {
+                player: owner,
+                card_id: cid,
+                is_land,
+            });
             false
         }
     }
@@ -3572,9 +3579,12 @@ impl GameState {
                 .or_insert(0) += 1;
         }
 
+        let is_land = !was_nonland;
         match madness {
             None => {
+                let owner = card.owner;
                 self.players[p].graveyard.push(card);
+                events.push(GameEvent::CardPutIntoGraveyard { player: owner, card_id, is_land });
             }
             Some(cost) => {
                 // CR 702.35a — exile instead of graveyard, then offer the
@@ -3587,6 +3597,9 @@ impl GameState {
                         let c = self.exile.remove(pos);
                         let owner = c.owner;
                         self.players[owner].graveyard.push(c);
+                        events.push(GameEvent::CardPutIntoGraveyard {
+                            player: owner, card_id, is_land,
+                        });
                     }
                 }
             }

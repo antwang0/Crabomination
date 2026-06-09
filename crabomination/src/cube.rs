@@ -313,6 +313,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         glimmerpost,
         cloudpost,
         lotus_field,
+        talon_gates_of_madara,
         // ── modern_decks: mana-fixing artifact land ──
         power_depot,
         // ── Modern utility artifacts ──
@@ -1704,6 +1705,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-17 ──
         v.push(grim_flayer);
         v.push(grisly_salvage);
+        v.push(the_gitrog_monster);
     }
     if pair_contains(pair, Color::White) {
         // ── modern_decks-14 (WB cross-pool removal) ──

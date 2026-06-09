@@ -4450,6 +4450,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SacrificeSourceUnlessSacrifice { filter } => {
+                // CR 701.16 — "Sacrifice this permanent unless you sacrifice a
+                // [filter]" (The Gitrog Monster's upkeep). The controller may
+                // spare the source by sacrificing one matching permanent; with
+                // no candidate (or a UI seat declining) the source is
+                // sacrificed instead.
+                let Some(src) = ctx.source else { return Ok(()); };
+                let p = ctx.controller;
+                let candidates = self.sacrifice_candidates(p, filter, Some(src));
+                let spare = if candidates.is_empty() {
+                    false
+                } else if self.players[p].wants_ui {
+                    matches!(
+                        self.decider.decide(&crate::decision::Decision::OptionalTrigger {
+                            source: src,
+                            description: "Sacrifice a permanent to keep this one?".into(),
+                        }),
+                        crate::decision::DecisionAnswer::Bool(true)
+                    )
+                } else {
+                    // Bots keep the source by paying the weakest candidate.
+                    true
+                };
+                if spare {
+                    let pick = self.auto_pick_sacrifices(&candidates, 1, Some(src), false, false);
+                    for id in pick {
+                        self.sacrifice_one(id, p, events);
+                    }
+                } else {
+                    self.run_effect(&Effect::SacrificeSource, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::SacrificeGreatestMV { who, count, filter, by_power } => {
                 // Pick the greatest match by mana value (or power, with
                 // `by_power`). Used by Soul Shatter ("greatest mana value") and

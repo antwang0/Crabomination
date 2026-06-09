@@ -992,6 +992,12 @@ pub enum GameEvent {
     /// exiled from there). Fires per card removed. Used by Strixhaven
     /// "cards leave your graveyard" payoffs.
     CardLeftGraveyard { player: usize, card_id: CardId },
+    /// A card was put into `player`'s graveyard from anywhere (battlefield
+    /// death/sacrifice, mill, discard, spell resolution). `is_land` is
+    /// precomputed from the card's types so trigger matching needn't re-look
+    /// up the (already-moved) card. Drives `EventKind::LandPutIntoGraveyard`
+    /// (The Gitrog Monster).
+    CardPutIntoGraveyard { player: usize, card_id: CardId, is_land: bool },
     /// A permanent became the target of a spell or activated ability.
     /// `target` is the permanent being targeted; `caster` is the player
     /// who cast the spell / activated the ability. Fires per target at

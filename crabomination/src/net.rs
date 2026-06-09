@@ -1469,6 +1469,9 @@ pub enum GameEventWire {
     /// can animate "card returned from graveyard" or highlight Lorehold
     /// "cards left graveyard this turn" payoffs.
     CardLeftGraveyard { player: usize, card_id: CardId },
+    /// Wire mirror of `GameEvent::CardPutIntoGraveyard`. Surfaced so client
+    /// UIs can log "card put into graveyard" / animate graveyard arrivals.
+    CardPutIntoGraveyard { player: usize, card_id: CardId },
     /// Wire mirror of `GameEvent::BecameTarget`. Surfaced so client UIs
     /// can highlight a permanent that just got targeted by a spell or
     /// ability (Tenured Concocter's "you may draw" trigger, future
@@ -1688,6 +1691,12 @@ impl From<&GameEvent> for GameEventWire {
                     card_id: *card_id,
                 }
             }
+            GameEvent::CardPutIntoGraveyard { player, card_id, .. } => {
+                GameEventWire::CardPutIntoGraveyard {
+                    player: *player,
+                    card_id: *card_id,
+                }
+            }
             GameEvent::BecameTarget { target, caster } => GameEventWire::BecameTarget {
                 target: *target,
                 caster: *caster,
@@ -1840,6 +1849,9 @@ impl GameEventWire {
             } => format!("P{player} surveil {looked_at} ({graveyarded} to graveyard)"),
             E::CardLeftGraveyard { player, card_id } => {
                 format!("P{player} {} left graveyard", name(*card_id))
+            }
+            E::CardPutIntoGraveyard { player, card_id } => {
+                format!("P{player} put {} into graveyard", name(*card_id))
             }
             E::BecameTarget { target, caster } => {
                 format!("{} targeted by P{caster}", name(*target))

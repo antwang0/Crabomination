@@ -125,6 +125,7 @@ impl Effect {
                 branches.iter().any(|e| e.requires_target())
             }
             Effect::SacrificeSource => false,
+            Effect::SacrificeSourceUnlessSacrifice { .. } => false,
             Effect::GrantNextInstantOrSorceryDiscountThisTurn { .. } => false,
             Effect::ReturnSelfAsEnchantment => false,
             Effect::Transform { what } => sel_has_target(what),

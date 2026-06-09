@@ -23493,6 +23493,86 @@ pub fn power_depot() -> CardDefinition {
     }
 }
 
+/// The Gitrog Monster — {3}{B}{G} Legendary 6/6 Frog Horror with deathtouch.
+/// Upkeep: sacrifice it unless you sacrifice a land. You may play an additional
+/// land each turn. Whenever one or more land cards are put into your graveyard
+/// from anywhere, draw a card.
+pub fn the_gitrog_monster() -> CardDefinition {
+    use crate::card::{StaticAbility, Supertype};
+    use crate::effect::StaticEffect;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "The Gitrog Monster",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Deathtouch],
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+                effect: Effect::SacrificeSourceUnlessSacrifice {
+                    filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LandPutIntoGraveyard, EventScope::YourControl),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Talon Gates of Madara — Land — Gate. ETB: up to one target creature phases
+/// out. `{T}`: Add {C}. `{1}, {T}`: Add one mana of any color. `{4}`: Put this
+/// card from your hand onto the battlefield (a from-hand activated ability).
+pub fn talon_gates_of_madara() -> CardDefinition {
+    use crate::card::{ActivatedAbility, LandType};
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Talon Gates of Madara",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Gate], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::PhaseOut {
+            what: target_filtered(SelectionRequirement::Creature),
+        })],
+        activated_abilities: vec![
+            super::super::tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            // {4}: Put this card from your hand onto the battlefield.
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                from_hand: true,
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Virtue of Loyalty // Ardenvale Fealty — {3}{W}{W} Enchantment // {1}{W}
 /// Instant — Adventure (CR 715). Adventure: create a 2/2 white Knight with
 /// vigilance. Enchantment: at the beginning of your end step, put a +1/+1
