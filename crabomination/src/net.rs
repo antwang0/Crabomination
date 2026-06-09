@@ -351,6 +351,11 @@ pub struct ClientView {
     /// hand. Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub hand_activatable: Vec<CardId>,
+    /// CR 702.36 — CardIds in the viewer's hand with Morph/Megamorph that can
+    /// be cast face down for {3} right now. Lets the client offer "cast face
+    /// down". Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub morphable_hand: Vec<CardId>,
     /// Creatures the viewer controls that may be declared as attackers right
     /// now (only during the viewer's Declare Attackers step). Drives the
     /// client's legal-attacker highlight. Empty otherwise. `#[serde(default)]`

@@ -824,7 +824,25 @@ impl GameState {
             miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),
+            morphable: self.morphable_hand_cards_on(&template, seat),
         }
+    }
+
+    /// Cards in `seat`'s hand they could cast face down via Morph right now
+    /// (CR 702.36): the card has Morph/Megamorph and paying {3} at sorcery
+    /// speed is legal. Surfaced in `PlayerView.morphable_hand`.
+    fn morphable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| {
+                c.definition.keywords.iter().any(|k| {
+                    matches!(k, crate::card::Keyword::Morph(_) | crate::card::Keyword::Megamorph(_))
+                })
+            })
+            .map(|c| c.id)
+            .filter(|&id| Self::would_accept_on(template, GameAction::CastFaceDown { card_id: id }))
+            .collect()
     }
 
     /// Hand cards the seat owns that carry at least one `from_hand` activated

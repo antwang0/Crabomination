@@ -212,6 +212,9 @@ pub struct HandAffordances {
     /// Guides' exile-for-mana). Surfaced so the client/bot can offer the
     /// from-hand activation; affordability is re-checked by `activate_ability`.
     pub hand_activatable: Vec<CardId>,
+    /// CR 702.36 — hand cards with Morph/Megamorph castable face down for {3}
+    /// right now, so the client can offer the "cast face down" action.
+    pub morphable: Vec<CardId>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

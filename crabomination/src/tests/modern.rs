@@ -42162,3 +42162,22 @@ fn restless_cottage_makes_food_on_attack() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Food" && c.controller == 0));
 }
+
+/// A Morph card in hand with {3} available is surfaced as morphable.
+#[test]
+fn morph_card_surfaced_as_morphable_affordance() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::ainok_survivalist());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    let aff = g.compute_hand_affordances(0);
+    assert!(aff.morphable.contains(&id), "Morph card with {{3}} is morphable");
+    // Without mana it isn't offered.
+    let mut g2 = two_player_game();
+    let id2 = g2.add_card_to_hand(0, catalog::ainok_survivalist());
+    g2.active_player_idx = 0;
+    g2.priority.player_with_priority = 0;
+    let aff2 = g2.compute_hand_affordances(0);
+    assert!(!aff2.morphable.contains(&id2), "not morphable without {{3}}");
+}

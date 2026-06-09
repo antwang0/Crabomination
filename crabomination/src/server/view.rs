@@ -122,6 +122,7 @@ fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
         splittable_right_hand: affordances.splittable_right,
         activatable_permanents: affordances.activatable_permanents,
         hand_activatable: affordances.hand_activatable,
+        morphable_hand: affordances.morphable,
         legal_attackers: viewer.map(|s| state.legal_attackers(s)).unwrap_or_default(),
         legal_blockers: viewer.map(|s| state.legal_blockers(s)).unwrap_or_default(),
         permanents_to_graveyard_this_turn: state.permanents_to_graveyard_this_turn,

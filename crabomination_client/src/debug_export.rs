@@ -225,6 +225,7 @@ mod tests {
             splittable_right_hand: vec![],
             activatable_permanents: vec![],
             hand_activatable: vec![],
+            morphable_hand: vec![],
             legal_attackers: vec![],
             legal_blockers: vec![],
         }
