@@ -8,6 +8,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Resolution-time target legality (CR 608.2b).** Only *token-copy* spells
+  now fizzle when their single target stops matching the spell's filter
+  (`continue_spell_resolution`, scoped to `is_token`). It relies on the
+  filter's battlefield-gated clauses (e.g. `ControlledByOpponent` returns false
+  off-battlefield), so a zone-blind filter (`Permanent`/`Creature`, kept loose
+  for reanimate targeting) still doesn't fizzle — Demonstrate copies of
+  Excavation Technique over-count Treasures when several resolve against one
+  destroyed permanent. A real fix wants either zone-aware battlefield-target
+  requirements (distinct from "creature card in graveyard") or a general
+  608.2b check applied to *all* spells, not just copies.
+- ⏳ **Demonstrate "you may" + opponent choice (CR 702.150).** `Effect::
+  Demonstrate` always copies (the optional "you may" collapses) and auto-picks
+  the lowest-seat opponent rather than prompting the caster. Fine for bots;
+  a `wants_ui` caster should get a yes/no + opponent picker.
 - ⏳ **Impending / Hideaway follow-ups (this run shipped the keywords).**
   - Impending (CR 702.183, `Keyword::Impending(n)`): the client should badge the
     `PermanentView.impending_counters` countdown (engine + view ship it; the

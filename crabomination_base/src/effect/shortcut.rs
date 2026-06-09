@@ -662,6 +662,16 @@ pub fn cascade(mv: u32) -> TriggeredAbility {
     }
 }
 
+/// Demonstrate (CR 702.150) — the self-cast trigger that copies the spell for
+/// its caster and an opponent (each copy may choose new targets). Attach to a
+/// card's `triggered_abilities`; see `Effect::Demonstrate`.
+pub fn demonstrate() -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+        effect: Effect::Demonstrate,
+    }
+}
+
 /// Strixhaven Repartee trigger: "Whenever you cast an instant or sorcery
 /// spell that targets a creature, `effect`." Bundles the magecraft
 /// filter (instant or sorcery) with `Predicate::CastSpellTargetsMatch`

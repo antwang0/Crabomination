@@ -29,6 +29,9 @@ Sequence, Torrent Sculptor // Flamethrower Sonata, Blex // Search for Blex.
 
 ✅ also: Rowan//Will, Mila//Lukka (planeswalker MDFCs), Valentin//Lisette
 (`StaticEffect::ExileDyingOpponentCreatures` death-replacement + reflexive).
+Demonstrate cycle ✅ — Creative / Excavation / Healing / Incarnation /
+Replication Technique + Transforming Flourish (`Effect::Demonstrate`, CR
+702.150).
 
 ⏳ work remaining printed STX cards, grouped by blocker:
   (Hone counters ✅ — `CounterType::Hone` + `Effect::HoneFromHand` + the

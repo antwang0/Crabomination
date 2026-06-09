@@ -2215,7 +2215,13 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::prismari::prismari_brewscholar_b158,
         super::prismari::prismari_flickerflame_b158,
         super::prismari::prismari_cogworks_b158,
-        // ── mono (13 factories) ──
+        // ── mono (19 factories) ──
+        super::mono::excavation_technique,
+        super::mono::healing_technique,
+        super::mono::replication_technique,
+        super::mono::incarnation_technique,
+        super::mono::creative_technique,
+        super::mono::transforming_flourish,
         super::mono::pop_quiz,
         super::mono::mascot_exhibition,
         super::mono::plumb_the_forbidden,

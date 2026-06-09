@@ -5912,6 +5912,19 @@ impl GameState {
                 card.definition.effect.clone()
             }
         });
+        // CR 608.2b — a copy of a spell whose single target no longer matches
+        // the spell's target filter (e.g. an earlier copy already destroyed it)
+        // is removed from the stack without resolving. Scoped to token copies
+        // so ordinary spells are untouched; the copy just ceases to exist (it's
+        // already off the stack here).
+        if card.is_token
+            && additional_targets.is_empty()
+            && let Some(t) = &target
+            && let Some(filter) = effect.target_filter_for_slot(0)
+            && !self.evaluate_requirement_static(&filter, t, caster, Some(card.id))
+        {
+            return Ok(Vec::new());
+        }
         let mut ctx = EffectContext::for_spell_with_source_and_origin(
             card.id,
             card.definition.name,

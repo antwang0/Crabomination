@@ -296,6 +296,20 @@ impl GameState {
         choose_new_targets: bool,
         events: &mut Vec<GameEvent>,
     ) {
+        self.copy_stack_spell_controlled(cid, n, choose_new_targets, None, events);
+    }
+
+    /// As `copy_stack_spell`, but `controller` (when `Some`) controls the
+    /// copies and chooses their new targets — CR 702.150 Demonstrate hands a
+    /// copy to an opponent.
+    pub(crate) fn copy_stack_spell_controlled(
+        &mut self,
+        cid: CardId,
+        n: usize,
+        choose_new_targets: bool,
+        controller: Option<usize>,
+        events: &mut Vec<GameEvent>,
+    ) {
         use crate::game::types::StackItem;
         // Locate the matching Spell on the stack (topmost wins).
         let Some(idx) = self.stack.iter().rposition(|s| {
@@ -309,7 +323,7 @@ impl GameState {
         {
             return;
         }
-        let (orig_card_def, caster, target, additional_targets, mode, x_value, converged_value) =
+        let (orig_card_def, orig_caster, target, additional_targets, mode, x_value, converged_value) =
             if let StackItem::Spell {
                 card, caster, target, additional_targets, mode, x_value, converged_value, ..
             } = &self.stack[idx]
@@ -326,6 +340,7 @@ impl GameState {
             } else {
                 return;
             };
+        let caster = controller.unwrap_or(orig_caster);
         for _ in 0..n {
             // Per copy, optionally let the controller choose a new primary
             // target (CR 115.7). Legal targets are enumerated against the
@@ -370,8 +385,15 @@ impl GameState {
         if legal.is_empty() {
             return original.clone();
         }
-        // Offer the original first so the conservative default keeps it.
-        if let Some(orig) = original {
+        // Offer the original first so the conservative default keeps it —
+        // but only when it's actually legal for *this* chooser. A
+        // Demonstrate copy handed to an opponent (CR 702.150 / 707.12) often
+        // can't keep the caster's target ("…you control"), so forcing it
+        // would pick an illegal target; in that case leave the legal set as
+        // enumerated so the default lands on a legal object.
+        if let Some(orig) = original
+            && legal.contains(orig)
+        {
             legal.retain(|t| t != orig);
             legal.insert(0, orig.clone());
         }
@@ -5859,6 +5881,24 @@ impl GameState {
                 };
                 for cid in candidate_ids {
                     self.copy_stack_spell(cid, n, true, events);
+                }
+                Ok(())
+            }
+
+            Effect::Demonstrate => {
+                // CR 702.150 — copy this spell for its caster, then an
+                // opponent of the caster's choosing also copies it; every
+                // copy may choose new targets. Fired from a self-cast
+                // trigger, so `ctx.source` is the spell still on the stack.
+                let spell_id = match ctx.source {
+                    Some(c) => c,
+                    None => return Ok(()),
+                };
+                self.copy_stack_spell(spell_id, 1, true, events);
+                // Pick an opponent (the lowest-seat opponent by default; a
+                // single-opponent game has exactly one).
+                if let Some(&opp) = self.opponents_of(ctx.controller).first() {
+                    self.copy_stack_spell_controlled(spell_id, 1, true, Some(opp), events);
                 }
                 Ok(())
             }

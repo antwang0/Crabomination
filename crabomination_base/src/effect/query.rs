@@ -111,6 +111,7 @@ impl Effect {
         }
         match self {
             Effect::Noop => false,
+            Effect::Demonstrate => false,
             Effect::Myriad => false,
             Effect::Enlist => false,
             Effect::StudyTopCard { .. } => false,

@@ -397,7 +397,10 @@ feature; sweep card-batch by card-batch.
   Skewer the Critics, Light Up the Stage), ✅ Addendum
   (`shortcut::addendum` / `cast_during_your_main` — CR 702.124; resolution-time
   main-phase gate; Sphinx's Insight, Precognitive Perception),
-  ⏳ Conspire, ⏳ Demonstrate.
+  ⏳ Conspire, ✅ Demonstrate (CR 702.150 — `Effect::Demonstrate` +
+  `shortcut::demonstrate`: a SpellCast/SelfSource trigger copies the spell for
+  its caster and an opponent, each copy may choose new targets; the STX
+  Technique cycle + Transforming Flourish).
 - **Resource systems:** ✅ Energy ({E}) — `Player.energy` pool +
   `Effect::AddEnergy` / `Effect::PayEnergy`; surfaced in `PlayerView.energy`
   + HUD chip; bot spends surplus via `pick_energy_payoff`. Wired the

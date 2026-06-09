@@ -13,7 +13,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 // ── Pop Quiz ────────────────────────────────────────────────────────────────
 
@@ -800,3 +800,138 @@ pub fn environmental_sciences() -> CardDefinition {
     }
 }
 
+
+// ── Demonstrate cycle (the STX "Technique" sorceries, CR 702.150) ────────────
+// Each fires `shortcut::demonstrate()` — a SpellCast/SelfSource trigger running
+// `Effect::Demonstrate`, which copies the spell for its caster and an opponent
+// (both copies may choose new targets).
+
+/// Excavation Technique — {3}{W} Sorcery. Demonstrate. Destroy target nonland
+/// permanent; its controller creates two Treasure tokens.
+pub fn excavation_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Excavation Technique",
+        cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(2),
+                definition: crabomination_base::tokens::treasure_token(),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+            },
+        ]),
+        triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
+        ..Default::default()
+    }
+}
+
+/// Healing Technique — {3}{G} Sorcery. Demonstrate. Return target card from
+/// your graveyard to your hand; gain life equal to its mana value; exile self.
+pub fn healing_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Healing Technique",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Sorcery],
+        exile_on_resolve: true,
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Any),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
+        ..Default::default()
+    }
+}
+
+/// Replication Technique — {4}{U} Sorcery. Demonstrate. Create a token that's a
+/// copy of target permanent you control.
+pub fn replication_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Replication Technique",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(
+                SelectionRequirement::Permanent.and(SelectionRequirement::ControlledByYou),
+            ),
+            extra_creature_types: vec![],
+            override_pt: None,
+            non_legendary: false,
+        },
+        triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
+        ..Default::default()
+    }
+}
+
+/// Incarnation Technique — {4}{B} Sorcery. Demonstrate. Mill five, then return
+/// a creature card from your graveyard to the battlefield.
+pub fn incarnation_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Incarnation Technique",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(5) },
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        ]),
+        triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
+        ..Default::default()
+    }
+}
+
+/// Creative Technique — {4}{R} Sorcery. Demonstrate. Shuffle your library, then
+/// exile cards from the top until a nonland card; you may cast it for free, the
+/// rest go to the bottom. (The reveal-until-nonland + free-cast rides
+/// `Effect::Cascade` with no real MV gate, after the shuffle.)
+pub fn creative_technique() -> CardDefinition {
+    CardDefinition {
+        name: "Creative Technique",
+        cost: cost(&[generic(4), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ShuffleLibrary { who: PlayerRef::You },
+            Effect::Cascade { max_mv: Value::Const(99) },
+        ]),
+        triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
+        ..Default::default()
+    }
+}
+
+/// Transforming Flourish — {2}{R} Instant. Demonstrate. Destroy target artifact
+/// or creature you don't control. (The "its controller impulse-casts the top
+/// nonland card" rider is dropped — no controller-of-target impulse primitive.)
+pub fn transforming_flourish() -> CardDefinition {
+    CardDefinition {
+        name: "Transforming Flourish",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Creature)
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+        triggered_abilities: vec![crate::effect::shortcut::demonstrate()],
+        ..Default::default()
+    }
+}
