@@ -212,9 +212,13 @@ pub struct HandAffordances {
     /// Guides' exile-for-mana). Surfaced so the client/bot can offer the
     /// from-hand activation; affordability is re-checked by `activate_ability`.
     pub hand_activatable: Vec<CardId>,
-    /// CR 702.36 — hand cards with Morph/Megamorph castable face down for {3}
-    /// right now, so the client can offer the "cast face down" action.
+    /// CR 702.36 — hand cards with Morph/Megamorph/Disguise castable face down
+    /// for {3} right now, so the client can offer the "cast face down" action.
     pub morphable: Vec<CardId>,
+    /// CR 708.5 — face-down permanents the seat controls whose turn-up cost
+    /// (Morph/Megamorph/Disguise cost, or a manifested/cloaked creature card's
+    /// mana cost) is payable right now, so the client can offer "turn face up".
+    pub turn_up_able: Vec<CardId>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

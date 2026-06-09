@@ -42128,6 +42128,28 @@ fn disguise_bubble_smuggler_turn_up_adds_four_counters() {
     assert_eq!((up.power(), up.toughness()), (6, 5), "2/1 + four +1/+1 counters");
 }
 
+/// A face-down permanent the seat can pay to unmask is surfaced in the
+/// `turn_up_able` affordance (drives the client's turn-up highlight).
+#[test]
+fn turn_up_able_affordance_lists_payable_face_down_permanent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::defenestrated_phantom());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // Not yet affordable ({4}{W} turn-up cost): absent from the affordance.
+    assert!(!g.compute_hand_affordances(0).turn_up_able.contains(&id));
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    assert!(g.compute_hand_affordances(0).turn_up_able.contains(&id),
+        "payable face-down permanent is surfaced");
+}
+
 /// The bot unmasks an affordable face-down Disguise creature in its main phase.
 #[test]
 fn bot_turns_up_affordable_face_down_creature() {

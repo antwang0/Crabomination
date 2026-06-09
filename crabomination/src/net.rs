@@ -356,6 +356,11 @@ pub struct ClientView {
     /// down". Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub morphable_hand: Vec<CardId>,
+    /// CR 708.5 — face-down permanents the viewer controls that can be turned
+    /// face up right now (turn-up cost payable). Lets the client offer "turn
+    /// face up". Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub turn_up_able: Vec<CardId>,
     /// Creatures the viewer controls that may be declared as attackers right
     /// now (only during the viewer's Declare Attackers step). Drives the
     /// client's legal-attacker highlight. Empty otherwise. `#[serde(default)]`

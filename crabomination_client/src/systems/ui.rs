@@ -333,7 +333,15 @@ pub fn update_activatable_highlights(
     } else {
         view.0
             .as_ref()
-            .map(|cv| cv.activatable_permanents.iter().copied().collect())
+            // Face-down permanents the viewer can turn face up (CR 708.5) glow
+            // alongside permanents with an activatable ability.
+            .map(|cv| {
+                cv.activatable_permanents
+                    .iter()
+                    .chain(cv.turn_up_able.iter())
+                    .copied()
+                    .collect()
+            })
             .unwrap_or_default()
     };
 

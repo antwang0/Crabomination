@@ -825,7 +825,21 @@ impl GameState {
             activatable_permanents: self.activatable_permanents_on(&template, seat),
             hand_activatable: self.hand_activatable_cards(seat),
             morphable: self.morphable_hand_cards_on(&template, seat),
+            turn_up_able: self.turn_up_able_permanents_on(&template, seat),
         }
+    }
+
+    /// CR 708.5 — face-down permanents `seat` controls whose turn-up cost is
+    /// payable right now. Dry-run-gated through `would_accept` (which derives
+    /// the cost and enforces the manifested-noncreature rule). Surfaced in
+    /// `PlayerView.turn_up_able`.
+    fn turn_up_able_permanents_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.face_down && c.face_up_def.is_some())
+            .map(|c| c.id)
+            .filter(|&id| Self::would_accept_on(template, GameAction::TurnFaceUp { card_id: id }))
+            .collect()
     }
 
     /// Cards in `seat`'s hand they could cast face down via Morph right now
