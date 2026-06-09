@@ -14,7 +14,8 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   dry-run-gated on a payable cost + creature target). `turn_up_able` ships.
 - ⏳ **MKM Disguise riders dropped this run (each wants one small primitive).**
   - ✅ Granite Witness — "tap **or untap**" now ships via `ChooseMode([Tap, Untap])`.
-  - Offender at Large — "**up to one** target" collapses to a required target.
+  - ✅ Offender at Large — "**up to one** target" now rides `Effect::MayDo` (the
+    controller may decline the pump). CR 115.1b.
   - Experiment Twelve / Pyrotechnic Performer — "or another creature you control
     is turned face up" collapses to a SelfSource-only trigger (no per-creature
     turned-up binding for other permanents).
@@ -1027,6 +1028,17 @@ was elided in a doc-compaction pass — recover it from
 picking an item up.
 
 ### Done (✅) — wired, see git/code for detail
+- ✅ **CR 702.43 — Domain** — `Value::DomainCount(PlayerRef)` (distinct basic
+  land types among a player's lands, 0–5) + `StaticEffect::SelfCostReducedByDomain`
+  generic cost reduction. Tribal Flames (X damage = domain), Leyline Binding
+  (Flash enchant, {1} less per basic type, exile-until-leaves). Test
+  `cr_702_43_domain_counts_distinct_basic_land_types`.
+- ✅ **CR 702.6e — Equipment-granted triggered abilities** — `EquipBonus.
+  triggered_abilities` fire as printed on the equipped creature; with
+  `triggers_on_equipment` they resolve with the Equipment as source (Umezawa's
+  Jitte's charge counters). Test `cr_702_6e_equip_trigger_resolves_on_the_equipment`.
+  Remaining ⏳: combat-damage-**to-a-creature** isn't dispatched (Jitte only
+  charges on damage to a player).
 - ✅ **CR 702.41 — Affinity (for artifacts)** — rides the existing
   `CardDefinition.affinity_filter` generic cost reduction (`SelectionRequirement::
   Artifact`). Somber Hoverguard, Qumulox, Sojourner's Companion, Carapace Forger.

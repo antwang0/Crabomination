@@ -13241,15 +13241,18 @@ pub fn alley_assailant() -> CardDefinition {
 }
 
 /// Offender at Large — {4}{R} 5/4 Giant Rogue. When it enters or is turned face
-/// up, target creature gets +2/+0 until end of turn. Disguise {4}{R}. (MKM — the
-/// "up to one target" collapses to a required target.)
+/// up, up to one target creature gets +2/+0 until end of turn. Disguise {4}{R}.
+/// (MKM — "up to one target" rides `Effect::MayDo`, so the controller may decline.)
 pub fn offender_at_large() -> CardDefinition {
     use crate::effect::Duration;
-    let pump = || Effect::PumpPT {
-        what: target_filtered(SelectionRequirement::Creature),
-        power: Value::Const(2),
-        toughness: Value::Const(0),
-        duration: Duration::EndOfTurn,
+    let pump = || Effect::MayDo {
+        description: "give up to one target creature +2/+0".into(),
+        body: Box::new(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        }),
     };
     CardDefinition {
         name: "Offender at Large",

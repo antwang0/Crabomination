@@ -4,7 +4,8 @@
 //! death-replacement at the destroy funnel (CR 614), Exchange control
 //! (CR 701.12), Fight + deathtouch (CR 701.14 / 702.2), and the
 //! defending-player binding for "a creature you control attacks"
-//! triggers (CR 509.2 / 603.2).
+//! triggers (CR 509.2 / 603.2), Domain (CR 702.43), and Equipment-granted
+//! triggers resolving on the Equipment (CR 702.6e).
 
 use crate::catalog;
 use crate::game::types::{Attack, AttackTarget};
@@ -213,4 +214,43 @@ fn cr_509_2_attack_trigger_binds_attackers_defending_player() {
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 19, "defending player (seat 1) lost 1 life");
+}
+
+// ── CR 702.43 — Domain ────────────────────────────────────────────────────────
+
+/// Domain counts the number of distinct basic land types among the player's
+/// lands (0–5), driving both `Value::DomainCount` payoffs (Tribal Flames) and
+/// `StaticEffect::SelfCostReducedByDomain` cost reduction (Leyline Binding).
+#[test]
+fn cr_702_43_domain_counts_distinct_basic_land_types() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::leyline_binding(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 0, "no lands → domain 0");
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest()); // duplicate type doesn't recount
+    g.add_card_to_battlefield(0, catalog::island());
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 2,
+        "two distinct basic types → domain 2");
+}
+
+// ── CR 702.6e — Equipment-granted triggered ability on the Equipment ──────────
+
+/// `EquipBonus.triggers_on_equipment` makes the granted combat-damage trigger
+/// resolve with the Equipment as its source, so Umezawa's Jitte's counters land
+/// on the Equipment rather than the equipped creature.
+#[test]
+fn cr_702_6e_equip_trigger_resolves_on_the_equipment() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let jitte = g.add_card_to_battlefield(0, catalog::umezawas_jitte());
+    g.battlefield.iter_mut().find(|c| c.id == jitte).unwrap().attached_to = Some(attacker);
+    // Fire the combat-damage-to-player trigger directly.
+    g.fire_combat_damage_to_player_triggers(attacker, 1, 2);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jitte).unwrap().counter_count(CounterType::Charge), 2,
+        "charge counters landed on the Equipment, not the creature");
+    assert_eq!(g.battlefield_find(attacker).unwrap().counter_count(CounterType::Charge), 0,
+        "the equipped creature got no counters");
 }

@@ -42445,13 +42445,17 @@ fn disguise_alley_assailant_enters_tapped_and_drains_on_turn_up() {
     assert_eq!(g.players[0].life, me_before + 3, "you gain 3");
 }
 
-/// Offender at Large pumps a creature +2/+0 when turned face up.
+/// Offender at Large pumps up to one creature +2/+0 when turned face up
+/// (CR 115.1b — the "up to one target" rides Effect::MayDo).
 #[test]
 fn disguise_offender_at_large_turn_up_pumps_target() {
     let mut g = two_player_game();
     let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::offender_at_large());
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(buddy))]));
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Target(Target::Permanent(buddy)),
+    ]));
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
     g.players[0].mana_pool.add_colorless(3);
@@ -42463,6 +42467,19 @@ fn disguise_offender_at_large_turn_up_pumps_target() {
     drain_stack(&mut g);
     assert_eq!((g.computed_permanent(buddy).unwrap().power, g.computed_permanent(buddy).unwrap().toughness),
         (4, 2), "Grizzly Bears 2/2 +2/+0");
+}
+
+/// Offender at Large's controller may target zero creatures ("up to one").
+#[test]
+fn offender_at_large_may_decline_its_target() {
+    let mut g = two_player_game();
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::offender_at_large());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    g.dispatch_triggers_for_events(&[crate::game::types::GameEvent::PermanentEntered { card_id: id }]);
+    drain_stack(&mut g);
+    assert_eq!((g.computed_permanent(buddy).unwrap().power, g.computed_permanent(buddy).unwrap().toughness),
+        (2, 2), "declined: no pump");
 }
 
 /// Faerie Snoop's turn-up digs two cards, taking one to hand.

@@ -1642,7 +1642,7 @@ impl GameState {
     /// Confidence and friends. The trigger source is bound to the
     /// graveyard card itself so a `Move(SelfSource → Hand)` body
     /// returns the right card.
-    fn fire_combat_damage_to_player_triggers(
+    pub(crate) fn fire_combat_damage_to_player_triggers(
         &mut self,
         source: CardId,
         damaged_player: usize,
