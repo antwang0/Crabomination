@@ -4702,6 +4702,52 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Manifest { who, amount } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                for _ in 0..n {
+                    let Some(top_id) = self.players[p].library.first().map(|c| c.id) else { break };
+                    self.manifest_card(top_id, p, ctx, events);
+                }
+                Ok(())
+            }
+
+            Effect::ManifestDread { who } => {
+                use crate::decision::{Decision, DecisionAnswer};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Look at the top two cards; choose one to manifest, the other
+                // goes to the graveyard. With one card left, manifest it.
+                let top: Vec<(CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(2)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if top.is_empty() { return Ok(()); }
+                let chosen = if top.len() == 1 {
+                    top[0].0
+                } else {
+                    let source = ctx.source.unwrap_or(CardId(0));
+                    let answer = self.decider.decide(&Decision::ChooseCards {
+                        source,
+                        prompt: "Manifest which card? (the other goes to your graveyard)".to_string(),
+                        candidates: top.clone(),
+                        min: 1,
+                        max: 1,
+                    });
+                    match answer {
+                        DecisionAnswer::Cards(v) if !v.is_empty() => v[0],
+                        _ => top[0].0,
+                    }
+                };
+                let other = top.iter().map(|(id, _)| *id).find(|id| *id != chosen);
+                self.manifest_card(chosen, p, ctx, events);
+                if let Some(other_id) = other {
+                    self.move_card_to(other_id, &ZoneDest::Graveyard, ctx, events);
+                }
+                Ok(())
+            }
+
             Effect::Search { who, filter, to } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

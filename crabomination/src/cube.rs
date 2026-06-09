@@ -2488,6 +2488,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         elder_gargaroth,
         // ── claude/modern_decks push: new green cards ──
         vengevine,
+        hauntwoods_shrieker,
         finale_of_devastation,
         archdruids_charm,
         kodamas_reach,

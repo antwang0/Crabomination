@@ -1495,6 +1495,52 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 708.5 — turn a face-down permanent face up. Special action (no
+    /// stack): pay its Morph/Megamorph cost, or — for a manifested creature
+    /// card — its mana cost. Restores the real definition and fires
+    /// `EventKind::TurnedFaceUp`.
+    pub(crate) fn turn_face_up_action(
+        &mut self,
+        card_id: CardId,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        // Locate the face-down permanent and derive its turn-up cost from the
+        // stashed real definition.
+        let cost = {
+            let c = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == card_id && c.controller == p && c.face_down)
+                .ok_or(GameError::CardNotOnBattlefield(card_id))?;
+            let real = c.face_up_def.as_ref().ok_or(GameError::InvalidTarget)?;
+            // Morph / Megamorph turn-up cost takes precedence; otherwise a
+            // manifested creature card turns up for its mana cost.
+            let morph_cost = real.keywords.iter().find_map(|kw| match kw {
+                Keyword::Morph(mc) | Keyword::Megamorph(mc) => Some(mc.clone()),
+                _ => None,
+            });
+            match morph_cost {
+                Some(mc) => mc,
+                None if real.is_creature() => real.cost.clone(),
+                // A face-down noncreature (manifested land/spell) can't be
+                // turned face up.
+                None => return Err(GameError::InvalidTarget),
+            }
+        };
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let mut events = receipt.auto_events;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
+            c.turn_face_up();
+        }
+        events.push(GameEvent::TurnedFaceUp { card_id });
+        self.dispatch_triggers_for_events(&[GameEvent::TurnedFaceUp { card_id }]);
+        Ok(events)
+    }
+
     /// CR 702.143c — cast a foretold card from exile for its foretell cost.
     /// Legal only on a turn after the card was foretold; timing follows the
     /// card's normal cast timing.

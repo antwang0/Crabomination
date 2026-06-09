@@ -55,6 +55,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::Explored, GameEvent::Explored { .. }) => true,
         (EventKind::BecameMonstrous, GameEvent::BecameMonstrous { .. }) => true,
         (EventKind::Transformed, GameEvent::Transformed { .. }) => true,
+        (EventKind::TurnedFaceUp, GameEvent::TurnedFaceUp { .. }) => true,
         (EventKind::EnergyGained, GameEvent::EnergyGained { .. }) => true,
         (EventKind::Expend, GameEvent::Expended { .. }) => true,
         (EventKind::WonCoinFlip, GameEvent::CoinFlipWon { .. }) => true,
@@ -158,6 +159,11 @@ pub(crate) fn event_matches_spec(
             // permanent that transformed.
             event,
             GameEvent::Transformed { card_id } if *card_id == source.id
+        ) || matches!(
+            // CR 708.8 — "When this is turned face up." Source must equal
+            // the flipped permanent.
+            event,
+            GameEvent::TurnedFaceUp { card_id } if *card_id == source.id
         ) || matches!(
             // "When this becomes the target of a spell or ability." The
             // implicit target==source.id check above already constrained it;

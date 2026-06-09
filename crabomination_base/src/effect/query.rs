@@ -118,6 +118,8 @@ impl Effect {
             Effect::ExileTopWithCounters { .. } => false,
             Effect::HoneFromHand { .. } => false,
             Effect::PutFromHandOntoBattlefield { .. } => false,
+            Effect::Manifest { .. } => false,
+            Effect::ManifestDread { .. } => false,
             Effect::CatchUpBasicLands => false,
             Effect::ExileFromHandTaxed { .. } => false,
             Effect::Hideaway { .. } => false,

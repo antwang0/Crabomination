@@ -1753,6 +1753,20 @@ impl CardDefinition {
     }
 }
 
+/// CR 708.2 — the characteristics of a face-down permanent: a 2/2 colorless
+/// creature with no name, types, subtypes, abilities, or mana cost. Used as
+/// the active `definition` while a permanent is face down (morph / manifest);
+/// the real card is stashed in `CardInstance.face_up_def`.
+pub fn facedown_creature_definition() -> CardDefinition {
+    CardDefinition {
+        name: "",
+        card_types: vec![CardType::Creature],
+        power: 2,
+        toughness: 2,
+        ..Default::default()
+    }
+}
+
 /// CR 603.6e linked exile — where a card returns when the permanent that
 /// exiled it (Banisher Priest, Brain Maggot, Oblivion Ring, …) leaves the
 /// battlefield.
@@ -1844,6 +1858,13 @@ pub struct CardInstance {
     /// permanent can flip back. In-memory only (not serialized): the serde
     /// wire stores the front name and rebuilds this on load.
     pub front_face: Option<Arc<CardDefinition>>,
+    /// CR 708 — while this permanent is on the battlefield face down (morph /
+    /// manifest), `definition` is swapped to the vanilla 2/2 face-down
+    /// definition and the real card is stashed here so it can be turned face
+    /// up (and is restored as the card leaves the battlefield). In-memory
+    /// only: the serde wire stores the real name + a `face_down_permanent`
+    /// flag and rebuilds this on load.
+    pub face_up_def: Option<Arc<CardDefinition>>,
     pub is_token: bool,
     pub used_loyalty_ability_this_turn: bool,
     /// True if this card was cast via an evoke alternative cost — it will
@@ -2064,6 +2085,7 @@ impl CardInstance {
             face_down: false,
             transformed: false,
             front_face: None,
+            face_up_def: None,
             is_token: false,
             used_loyalty_ability_this_turn: false,
             evoked: false,
@@ -2165,6 +2187,29 @@ impl CardInstance {
         self.definition.keywords.contains(&Keyword::Protection(color))
     }
 
+    /// CR 708 — flip this permanent face down: stash the real definition in
+    /// `face_up_def` and swap `definition` to the vanilla 2/2 face-down
+    /// creature. No-op if already face down.
+    pub fn turn_face_down(&mut self) {
+        if self.face_up_def.is_some() {
+            return;
+        }
+        self.face_up_def = Some(self.definition.clone());
+        self.definition = Arc::new(facedown_creature_definition());
+        self.face_down = true;
+    }
+
+    /// CR 708.5/708.10 — flip this permanent face up (or restore the real
+    /// card as it leaves the battlefield), restoring its real definition.
+    /// Returns the real definition's name when a flip actually happened.
+    pub fn turn_face_up(&mut self) -> Option<&'static str> {
+        let real = self.face_up_def.take()?;
+        let name = real.name;
+        self.definition = real;
+        self.face_down = false;
+        Some(name)
+    }
+
     pub fn can_attack(&self) -> bool {
         self.definition.is_creature()
             && !self.tapped
@@ -2249,6 +2294,12 @@ struct CardInstanceWire {
     #[serde(default)]
     bestowed: bool,
     face_down: bool,
+    /// CR 708 — on the battlefield face down (morph / manifest). `name` stores
+    /// the real card's name so the registry resolves it; on load the real
+    /// definition is stashed and `definition` swapped to the vanilla 2/2.
+    /// `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    face_down_permanent: bool,
     /// CR 712 — showing the back face. `name` always stores the FRONT face's
     /// name so the registry resolves it; the back is recovered as
     /// `front.back_face` on load. `#[serde(default)]` for back-compat.
@@ -2363,8 +2414,9 @@ impl serde::Serialize for CardInstance {
             // a transformed permanent's active definition is the (unregistered)
             // back face.
             name: self
-                .front_face
+                .face_up_def
                 .as_ref()
+                .or(self.front_face.as_ref())
                 .map(|f| f.name.to_string())
                 .unwrap_or_else(|| self.definition.name.to_string()),
             owner: self.owner,
@@ -2381,6 +2433,7 @@ impl serde::Serialize for CardInstance {
             bought_back: self.bought_back,
             bestowed: self.bestowed,
             face_down: self.face_down,
+            face_down_permanent: self.face_up_def.is_some(),
             transformed: self.transformed,
             is_token: self.is_token,
             used_loyalty_ability_this_turn: self.used_loyalty_ability_this_turn,
@@ -2442,6 +2495,11 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.bought_back = wire.bought_back;
         c.bestowed = wire.bestowed;
         c.face_down = wire.face_down;
+        // CR 708 — restore a face-down permanent: stash the real definition
+        // (resolved from `name`) and swap to the vanilla 2/2 face-down body.
+        if wire.face_down_permanent {
+            c.turn_face_down();
+        }
         // CR 712 — restore a transformed permanent: stash the front, flip the
         // active definition to the back face.
         if wire.transformed

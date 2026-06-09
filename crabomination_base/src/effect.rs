@@ -1120,6 +1120,10 @@ pub enum EventKind {
     /// the transforming permanent is the event subject (`EventScope::SelfSource`
     /// for "when this transforms"). Matched to `GameEvent::Transformed`.
     Transformed,
+    /// CR 708.8 — a permanent was turned face up ("when this creature is
+    /// turned face up", megamorph payoffs). The flipped permanent is the
+    /// subject (`EventScope::SelfSource`). Matched to `GameEvent::TurnedFaceUp`.
+    TurnedFaceUp,
     /// A **land card** was put into a graveyard from anywhere (death,
     /// sacrifice, mill, discard, spell resolution). Matched to
     /// `GameEvent::CardPutIntoGraveyard { is_land: true, .. }`. Not a
@@ -2411,6 +2415,16 @@ pub enum Effect {
         haste: bool,
         sacrifice_eot: bool,
     },
+
+    /// CR 701.34 — Manifest: put the top `amount` cards of `who`'s library
+    /// onto the battlefield face down as 2/2 creatures (the real card is
+    /// stashed and can be turned face up for its mana cost if it's a creature).
+    Manifest { who: PlayerRef, amount: Value },
+
+    /// CR 702.166 — Manifest dread: look at the top two cards of `who`'s
+    /// library, put one onto the battlefield face down as a 2/2 creature, and
+    /// the other into their graveyard.
+    ManifestDread { who: PlayerRef },
 
     /// Reveal the top `count` cards of the controller's library; an opponent
     /// chooses one of them, which goes to the controller's hand. Each

@@ -94,6 +94,10 @@ pub enum GameAction {
     /// CR 702.143 — Foretell a card from hand: pay {2} and exile it
     /// face-down to cast later for its foretell cost.
     Foretell { card_id: CardId },
+    /// CR 708.5 — turn a face-down permanent face up (special action, any time
+    /// you have priority): pay its Morph cost, or — for a manifested creature
+    /// card — its mana cost. Fires `EventKind::TurnedFaceUp`.
+    TurnFaceUp { card_id: CardId },
     /// CR 702.143c — cast a previously foretold card from exile for its
     /// foretell cost.
     CastForetold {
@@ -960,6 +964,8 @@ pub enum GameEvent {
     BecameMonstrous { card_id: CardId },
     /// CR 712 — a permanent transformed to its other face.
     Transformed { card_id: CardId },
+    /// CR 708.8 — a face-down permanent was turned face up.
+    TurnedFaceUp { card_id: CardId },
     TokenCreated { card_id: CardId },
     CardMilled { player: usize, card_id: CardId },
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },

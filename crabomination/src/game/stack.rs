@@ -2234,6 +2234,9 @@ impl GameState {
         // (the SBA in `check_state_based_actions` clears the partner's side).
         let mut card = card;
         card.soulbond_partner = None;
+        // CR 708.10 — a face-down permanent is turned face up as it leaves
+        // the battlefield (no-op unless it carries a stashed real definition).
+        card.turn_face_up();
         match zone {
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
             // graveyard arrival to exile.

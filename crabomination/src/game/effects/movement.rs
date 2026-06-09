@@ -274,6 +274,26 @@ impl GameState {
         })
     }
 
+    /// CR 701.34 — manifest the card `cid` (in player `p`'s library): flip it
+    /// face down in place so it enters as a vanilla 2/2 (no real-card ETB
+    /// triggers), then put it onto the battlefield under `p`'s control.
+    pub(crate) fn manifest_card(
+        &mut self,
+        cid: CardId,
+        p: usize,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        if let Some(c) = self.players[p].library.iter_mut().find(|c| c.id == cid) {
+            c.turn_face_down();
+        }
+        let dest = ZoneDest::Battlefield {
+            controller: crate::effect::PlayerRef::Seat(p),
+            tapped: false,
+        };
+        self.move_card_to(cid, &dest, ctx, events);
+    }
+
     pub(crate) fn move_card_to(
         &mut self,
         cid: CardId,
@@ -291,6 +311,9 @@ impl GameState {
         if let Some(pos) = self.battlefield.iter().position(|c| c.id == cid) {
             let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(cid);
+            // CR 708.10 — a face-down permanent is turned face up as it leaves
+            // the battlefield (no-op unless it carries a stashed real def).
+            card.turn_face_up();
             card.damage = 0;
             card.tapped = false;
             card.attached_to = None;

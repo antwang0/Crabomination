@@ -164,9 +164,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - Werewolf night→day check approximates "a player cast two or more spells
     last turn" as the global `spells_cast_last_turn >= 2`; a true per-player
     last-turn tally would be more faithful.
-  - Manifest dread (Hauntwoods Shrieker) + DFC sagas + Rooms (Unholy Annex)
-    + meld (Westvale/Hanweir, Mightstone/Weakstone) still need their own
-    subsystems on top of the transform engine.
+  - Manifest dread ✅ (Hauntwoods Shrieker; `Effect::Manifest`/`ManifestDread`
+    + face-down 2/2 object + `GameAction::TurnFaceUp`). DFC sagas + Rooms
+    (Unholy Annex) + meld (Westvale/Hanweir, Mightstone/Weakstone) + the Morph
+    cast-face-down spell path still need their own subsystems on top.
 
 - ⏳ **Remaining STX printed cards (each needs a new primitive):**
   - ✅ **Hone counters + cast-from-exile** — `CounterType::Hone` +
@@ -1038,7 +1039,8 @@ picking an item up.
 - ✅ **CR 709 — Split Cards** + **702.102 Fuse** + **702.127 Aftermath** (~23 cards; client half-picker modal + multi-target fused halves still ⏳; 709.4/709.4b dual-name/combined-MV-in-non-stack-zones not modeled).
 - ✅ **CR 510 — Combat Damage Step** (player damage-assignment order/over-assign; a `DecisionWire::AssignCombatDamage` client modal for a networked human still ⏳).
 - ✅ **CR 114 — Emblems** (`Player.emblems` + `Effect::CreateEmblem`; supersedes the old ⏳ audit row — see FEATURE_ROADMAP Tier 3).
-- ✅ **CR 712 — Transforming Permanents** — `Effect::Transform` toggles a DFC permanent's active face in place (same object; counters/tapped/attachments persist), fires `EventKind::Transformed` for "when this transforms," and round-trips through serde + `GameSnapshot` (front name + `transformed` flag rebuild the back face). Concealing Curtains, Delver of Secrets, Thing in the Ice, The Everflowing Well, Search for Azcanta, Growing Rites of Itlimoc, Kessig Prowler, Village Watch. Still ⏳: DFC sagas, meld, manifest/disguise face-down.
+- ✅ **CR 712 — Transforming Permanents** — `Effect::Transform` toggles a DFC permanent's active face in place (same object; counters/tapped/attachments persist), fires `EventKind::Transformed` for "when this transforms," and round-trips through serde + `GameSnapshot` (front name + `transformed` flag rebuild the back face). Concealing Curtains, Delver of Secrets, Thing in the Ice, The Everflowing Well, Search for Azcanta, Growing Rites of Itlimoc, Kessig Prowler, Village Watch. Still ⏳: DFC sagas, meld, Morph cast-face-down, Disguise/Cloak.
+- 🟡 **CR 708 — Face-Down Permanents** — `CardInstance.face_up_def` + `facedown_creature_definition` (vanilla 2/2), turned face up on leaving the battlefield (708.10) and round-tripped through serde. `Effect::Manifest` / `ManifestDread` (701.34 / 702.166), `GameAction::TurnFaceUp` (708.5, Morph/manifest cost), `EventKind::TurnedFaceUp` (708.8 — "when this is turned face up"). Hauntwoods Shrieker. Still ⏳: Morph cast-face-down spell path (CR 702.36), Disguise/Cloak (ward + colorless 2/2).
 - ✅ **CR 702.146 — Daybound/Nightbound** — `Keyword::{Daybound,Nightbound}` flip with the day/night cycle (`set_day_night`); daybound entrant makes it day (702.146e). Village Watch // Village Reavers. Still ⏳: cast-a-daybound-spell day entry; the full no-spells night-entry beyond CR 502.2.
 - ✅ **CR 702.114 — Devoid** — `Keyword::Devoid` CDA honored in `colors_from_card` (color base returns empty); colorless despite colored pips. Mist Intruder, Sludge Crawler, Reality Hemorrhage, Touch of the Void.
 - ✅ **CR 702.115 — Ingest** — `shortcut::ingest()` combat-damage trigger + `Effect::ExileTopOfLibrary { who, amount }` (Mill routed to exile). Mist Intruder, Sludge Crawler.
@@ -1080,7 +1082,7 @@ picking an item up.
 - 🟡 **CR 118 — Costs** — interactive mana-ability decline (118.3c); hybrid-pip per-reduction choice (118.7e); general unpayable-cost gate (118.6).
 - 🟡 **CR 113 — Abilities** — emblems+CDA zones (113.6); counter-target-ability (113.9); full ability removal (113.10b); "can't have" anti-grant (113.11).
 - 🟡 **CR 115 — Targets** — Aura subtype (115.1b); zero-target cast-time gate (115.6); change-target corners (115.7a-d, cross-spell exchange). Same-target rejection *within one multi-target instance* (115.3) ✅ — `Effect::distinct_target_count` + a cast-time duplicate check reject the same object filling two divide/support slots (Forked Bolt); cross-clause sharing stays legal.
-- 🟡 **CR 116 — Special Actions** — morph / face-down (116.2b); Companion from outside the game (116.2g). (Foretell/Plot/Suspend special actions now ✅.)
+- 🟡 **CR 116 — Special Actions** — Companion from outside the game (116.2g). (Foretell/Plot/Suspend ✅; manifest turn-face-up `GameAction::TurnFaceUp` ✅ — CR 708.5. Morph cast-face-down spell path still ⏳.)
 - 🟡 **CR 105 — Colors** — type-line + color rewrite rider (105.3 second half).
 - ✅ **CR 705 — Flipping a Coin** — Mana Clash two-player flip-off loop (705.2), 705.3 advantage/Krark's Thumb, win-a-flip trigger (`EventKind::WonCoinFlip`/`GameEvent::CoinFlipWon`, Chance Encounter) and lose-a-flip trigger (`EventKind::LostCoinFlip`/`GameEvent::CoinFlipLost`, emitted on the tails path of FlipCoin + ManaClash). Remaining ⏳: opponent-chooses-half flips (Karplusan Minotaur).
 - 🟡 **CR 122 — Counters** — defense counters / Battle type (122.1g). Counter-clear on zone change (122.2) ✅ — `place_card_in_dest` clears `counters`/`keyword_counters` and re-seeds planeswalker base loyalty (CR 306.5b); `-0/-1` / `-1/-0` counter types ✅.

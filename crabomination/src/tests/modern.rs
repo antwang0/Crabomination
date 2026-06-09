@@ -41690,3 +41690,73 @@ fn merrow_reejerey_trigger_resolves_on_merfolk_cast() {
     assert!(g.battlefield_find(merfolk).is_some(), "Merfolk resolved");
     let _ = land; // the trigger may tap/untap any permanent; just assert no panic
 }
+
+// ── Manifest / face-down permanents (CR 708, 701.34, 702.166) ────────────────
+
+/// Hauntwoods Shrieker's attack trigger manifests dread: the top library card
+/// enters as a face-down 2/2 (no name, colorless), and the other top card goes
+/// to the graveyard.
+#[test]
+fn hauntwoods_shrieker_manifest_dread_makes_face_down_two_two() {
+    let mut g = two_player_game();
+    let shrieker = g.add_card_to_battlefield(0, catalog::hauntwoods_shrieker());
+    g.clear_sickness(shrieker);
+    // Top two: a 3/3 (Grizzly Bears is 2/2 — use a distinctive creature) and a land.
+    let top = g.next_id();
+    g.players[0].library.insert(0, CardInstance::new(top, catalog::elder_gargaroth(), 0));
+    let second = g.next_id();
+    g.players[0].library.insert(1, CardInstance::new(second, catalog::forest(), 0));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: shrieker, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    // AutoDecider keeps the top (first) candidate: Elder Gargaroth is manifested.
+    let manifested = g.battlefield_find(top).expect("manifested card on battlefield");
+    assert!(manifested.face_down, "enters face down");
+    assert_eq!((manifested.power(), manifested.toughness()), (2, 2), "face-down 2/2");
+    assert_eq!(manifested.definition.name, "", "no name while face down");
+    assert!(manifested.definition.cost.colors().is_empty(), "colorless while face down");
+    assert!(manifested.definition.subtypes.creature_types.is_empty(), "no subtypes while face down");
+    // The other top card went to the graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == second), "other card to graveyard");
+}
+
+/// A manifested creature card can be turned face up for its mana cost (CR
+/// 708.5), restoring its real characteristics; a manifested card leaves as the
+/// real card.
+#[test]
+fn manifest_turn_face_up_restores_real_card() {
+    let mut g = two_player_game();
+    let top = g.next_id();
+    g.players[0].library.insert(0, CardInstance::new(top, catalog::elder_gargaroth(), 0));
+    let ctx = crate::game::effects::EffectContext::for_ability(top, 0, None);
+    let mut events = vec![];
+    g.manifest_card(top, 0, &ctx, &mut events);
+    assert!(g.battlefield_find(top).expect("on bf").face_down, "manifested face down");
+    // Turn it face up for Elder Gargaroth's {3}{G}{G}.
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::TurnFaceUp { card_id: top }).expect("turn face up");
+    let c = g.battlefield_find(top).expect("still on bf");
+    assert!(!c.face_down, "now face up");
+    assert_eq!(c.definition.name, "Elder Gargaroth");
+    assert_eq!((c.power(), c.toughness()), (6, 6));
+}
+
+/// A face-down permanent is turned face up as it leaves the battlefield (CR
+/// 708.10): it lands in the graveyard as the real card.
+#[test]
+fn face_down_creature_dies_as_real_card() {
+    let mut g = two_player_game();
+    let top = g.next_id();
+    g.players[0].library.insert(0, CardInstance::new(top, catalog::elder_gargaroth(), 0));
+    let ctx = crate::game::effects::EffectContext::for_ability(top, 0, None);
+    let mut events = vec![];
+    g.manifest_card(top, 0, &ctx, &mut events);
+    g.remove_from_battlefield_to_graveyard(top);
+    let gy = g.players[0].graveyard.iter().find(|c| c.id == top).expect("in graveyard");
+    assert_eq!(gy.definition.name, "Elder Gargaroth", "restored to real card in graveyard");
+    assert!(!gy.face_down);
+}

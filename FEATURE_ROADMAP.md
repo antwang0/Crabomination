@@ -232,8 +232,14 @@ not how Magic works" moments.
   Well. Remaining: Daybound/Nightbound auto-flip, DFC sagas.
 - ⏳ **Flip cards** (Kamigawa), **Meld** (Mightstone/Weakstone et al.),
   **Prototype**, **Omen**.
-- ⏳ **Face-down permanents** generalized (Morph exists as a keyword; needs
-  the 2/2-face-down object, manifest, disguise/cloak, cloak).
+- 🟡 **Face-down permanents** — the 2/2-face-down object ships (CR 708):
+  `CardInstance.face_up_def` stashes the real card while `definition` is the
+  vanilla 2/2 (`facedown_creature_definition`), restored on leaving the
+  battlefield (708.10) and round-tripped through serde. `Effect::Manifest` /
+  `ManifestDread` (701.34 / 702.166) + `GameAction::TurnFaceUp` (708.5,
+  Morph/manifest cost) + `EventKind::TurnedFaceUp` (708.8). Hauntwoods
+  Shrieker. Remaining ⏳: the Morph cast-face-down spell path and
+  Disguise/Cloak.
 - ⏳ **Ante / conspiracy / dungeon (venture) / sticker / attraction** zones
   (low priority; only for novelty formats).
 - ✅ **Emblems** as command-zone objects (planeswalker ultimates) —

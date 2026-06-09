@@ -44,7 +44,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Hauntwoods Shrieker | ⏳ | Manifest dread (face-down permanents). |
 | Shifting Woodland | ⏳ | Delirium-gated continuous "becomes a copy of a gy permanent" (layer-1 loop). |
 
 ### Artifacts & Planeswalkers (mono / colorless)
@@ -100,6 +99,7 @@ are listed in `DECK_FEATURES.md`.
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | ✅ | Damping Sphere (`AdditionalCostAfterFirstSpell`), flat `AdditionalCost`, and the Trinisphere "minimum cost" floor (`SpellCostFloor`, untapped-gated) all ship. Elite Spellbinder reuses the existing tax static. |
 | "Cast spells without paying mana" static | 🟡 | Omniscience ✅ (`StaticEffect::CastHandSpellsFree`); Aluren ✅ (`StaticEffect::AnyoneCastsCheapCreaturesFree { max_mv }` — any player free-casts MV≤3 creatures at flash). Remaining: Maelstrom Archangel (combat-damage variant). |
 | Name-a-card primitive | 🟡 | `Effect::NameCard` + `Decision::NameCard` + `CardInstance.named_card` ship Pithing Needle / Phyrexian Revoker (ETB stamps a name; `activate_ability` suppresses non-mana abilities of matching sources). Same-name exile (Crumble to Dust) is wired via `Effect::ExileSameNameAsTarget`. Remaining consumers: reveal-until-find (Spoils of the Vault), hand-discard-by-name (Cabal Therapy). |
+| Face-down permanents (morph / manifest) | 🟡 | CR 708 — `CardInstance.face_up_def` stashes the real card while `definition` is the vanilla 2/2 (`facedown_creature_definition`); turns face up on leaving the battlefield (CR 708.10). `Effect::Manifest` / `Effect::ManifestDread` (CR 701.34 / 702.166) put library cards onto the battlefield face down; `GameAction::TurnFaceUp` pays the Morph/manifest cost and fires `EventKind::TurnedFaceUp` (CR 708.5/708.8). Hauntwoods Shrieker ✅. Remaining ⏳: the full Morph **cast-face-down** spell path and Disguise/Cloak. |
 | Token-copy of permanent | 🟡 | Populate ✅ (`Effect::Populate`, CR 701.32 — Growing Ranks). `CreateTokenCopyOf` ✅, with a `non_legendary` rider (CR 707.2e — strips the copy's supertypes; Helm of the Host ✅). Mockingbird/Phantasmal Image clone-enter ✅ via `BecomeCopyOf`. Remaining: a true *continuous* "becomes a copy" layer-1 loop (Mirrorform aura). |
 | Multi-pick decisions over revealed library cards | 🟡 | Atraxa Draw-4 stand-in is wired. Reveal-and-sort by card type, Dig Through Time, Mind's Desire all need a richer multi-pick decision. |
 | Investigate + Clue token | 🟡 | Clue tokens ship (`clue_token()`; Tireless Tracker, Lonis create them). **Map tokens** now ship too (`map_token()` — CR 111.10s explore-token: {1},{T},Sac → target creature you control explores; Loot, the Pathfinder mints one). The "sacrifice a Clue" payoff ✅ rides `sac_other_filter: HasArtifactSubtype(Clue)` (Tireless Tracker's `{2}, Sac a Clue: Draw` + its sacrifice-a-Clue trigger). Remaining ⏳: a variable-X "sacrifice X Clues" prompt (Lonis's second ability). |

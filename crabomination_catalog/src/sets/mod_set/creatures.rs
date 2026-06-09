@@ -5233,6 +5233,27 @@ pub fn elder_gargaroth() -> CardDefinition {
     }
 }
 
+/// Hauntwoods Shrieker — {1}{G}{G} 3/3 Beast Mutant. "Whenever this creature
+/// attacks, manifest dread." (CR 702.166 — look at the top two cards, manifest
+/// one as a face-down 2/2, the other to the graveyard.)
+pub fn hauntwoods_shrieker() -> CardDefinition {
+    CardDefinition {
+        name: "Hauntwoods Shrieker",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Mutant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::ManifestDread {
+            who: crate::effect::PlayerRef::You,
+        })],
+        ..Default::default()
+    }
+}
+
 // ── Evolve (CR 702.100) ───────────────────────────────────────────────────────
 
 /// Cloudfin Raptor — {U}, 0/1 Bird. "Evolve. Flying."
