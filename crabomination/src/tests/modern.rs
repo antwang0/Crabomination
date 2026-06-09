@@ -40680,3 +40680,90 @@ fn goblin_piledriver_pumps_per_attacking_goblin() {
     // base 1 + 2 per the two other attacking Goblins = 5.
     assert_eq!(g.computed_permanent(pd).unwrap().power, 5, "+4 from two other Goblins");
 }
+
+// ── Merfolk + Sliver tribal ───────────────────────────────────────────────────
+
+/// Master of the Pearl Trident pumps other Merfolk +1/+1 and grants islandwalk.
+#[test]
+fn master_of_pearl_trident_buffs_other_merfolk() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let lord = g.add_card_to_battlefield(0, catalog::master_of_the_pearl_trident());
+    let other = g.add_card_to_battlefield(0, catalog::cursecatcher());
+    let oc = g.computed_permanent(other).unwrap();
+    assert_eq!((oc.power, oc.toughness), (2, 2), "Cursecatcher 1/1 → 2/2");
+    assert!(oc.keywords.contains(&Keyword::Landwalk(crate::card::LandType::Island)), "islandwalk");
+    // The lord doesn't pump itself.
+    assert_eq!(g.computed_permanent(lord).unwrap().power, 2);
+}
+
+/// Merfolk Mistbinder buffs only your other Merfolk.
+#[test]
+fn merfolk_mistbinder_buffs_your_other_merfolk() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::merfolk_mistbinder());
+    let mine = g.add_card_to_battlefield(0, catalog::cursecatcher());
+    let theirs = g.add_card_to_battlefield(1, catalog::cursecatcher());
+    assert_eq!(g.computed_permanent(mine).unwrap().power, 2, "your Merfolk pumped");
+    assert_eq!(g.computed_permanent(theirs).unwrap().power, 1, "opponent's Merfolk untouched");
+}
+
+/// Cursecatcher counters an instant/sorcery unless its controller pays {1}.
+#[test]
+fn cursecatcher_taxes_instant() {
+    // P0 casts a Bolt at P1, then sacrifices Cursecatcher targeting it. P0 has
+    // no mana left to pay the {1}, so the Bolt is countered.
+    let mut g = two_player_game();
+    let catcher = g.add_card_to_battlefield(0, catalog::cursecatcher());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bolt");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: catcher, ability_index: 0,
+        target: Some(Target::Permanent(bolt)), x_value: None,
+    }).expect("activate Cursecatcher");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "Bolt countered (unpaid)");
+    assert_eq!(g.players[1].life, 20, "Bolt never resolved");
+}
+
+/// Galerider Sliver gives every Sliver flying (yours and opponents').
+#[test]
+fn galerider_sliver_grants_flying_to_all_slivers() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::galerider_sliver());
+    let opp_sliver = g.add_card_to_battlefield(1, catalog::heart_sliver());
+    assert!(g.computed_permanent(opp_sliver).unwrap().keywords.contains(&Keyword::Flying),
+        "opponent's Sliver also gains flying");
+}
+
+/// Heart Sliver gives all Slivers haste.
+#[test]
+fn heart_sliver_grants_haste() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hs = g.add_card_to_battlefield(0, catalog::heart_sliver());
+    assert!(g.computed_permanent(hs).unwrap().keywords.contains(&Keyword::Haste));
+}
+
+/// Crystalline Sliver gives all Slivers shroud (untargetable).
+#[test]
+fn crystalline_sliver_grants_shroud() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let cs = g.add_card_to_battlefield(0, catalog::crystalline_sliver());
+    assert!(g.computed_permanent(cs).unwrap().keywords.contains(&Keyword::Shroud));
+}
+
+/// Merrow Reejerey buffs other Merfolk and triggers on a Merfolk spell cast.
+#[test]
+fn merrow_reejerey_buffs_and_triggers_on_merfolk_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::merrow_reejerey());
+    let other = g.add_card_to_battlefield(0, catalog::cursecatcher());
+    assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Merfolk pumped");
+}

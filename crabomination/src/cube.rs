@@ -967,6 +967,13 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_floodpits,
         make_disappear,
+        // ── modern_decks: Merfolk + blue Slivers tribal ──
+        master_of_the_pearl_trident,
+        merfolk_mistbinder,
+        merrow_reejerey,
+        cursecatcher,
+        galerider_sliver,
+        crystalline_sliver,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1694,6 +1701,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_lackey,
         warren_instigator,
         goblin_piledriver,
+        // red Sliver
+        heart_sliver,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god

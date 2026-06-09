@@ -34364,3 +34364,212 @@ pub fn goblin_piledriver() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: Merfolk + Sliver tribal ─────────────────────────────────────
+
+/// Master of the Pearl Trident — {U}{U} 2/2 Merfolk. Other Merfolk get +1/+1
+/// and have islandwalk.
+pub fn master_of_the_pearl_trident() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Master of the Pearl Trident",
+        cost: cost(&[u(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Merfolk get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Merfolk have islandwalk.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(),
+                    keyword: Keyword::Landwalk(LandType::Island),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Merfolk Mistbinder — {1}{U} 2/2 Merfolk Wizard. Other Merfolk you control
+/// get +1/+1.
+pub fn merfolk_mistbinder() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Merfolk Mistbinder",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Merfolk you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1, toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Merrow Reejerey — {2}{U} 2/2 Merfolk Soldier. Other Merfolk get +1/+1.
+/// "Whenever you cast a Merfolk spell, you may tap or untap target permanent."
+pub fn merrow_reejerey() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Merrow Reejerey",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Merfolk get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Merfolk)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1, toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Merfolk),
+                }),
+            effect: Effect::MayDo {
+                description: "Tap or untap target permanent?".to_string(),
+                body: Box::new(Effect::ChooseMode(vec![
+                    Effect::Tap { what: target_filtered(SelectionRequirement::Any) },
+                    Effect::Untap { what: target_filtered(SelectionRequirement::Any), up_to: None },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cursecatcher — {U} 1/1 Merfolk Wizard. "Sacrifice Cursecatcher: Counter
+/// target instant or sorcery spell unless its controller pays {1}."
+pub fn cursecatcher() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Cursecatcher",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::CounterUnlessPaid {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    ),
+                ),
+                mana_cost: cost(&[generic(1)]),
+                exile: false,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Galerider Sliver — {U} 1/1 Sliver. All Sliver creatures have flying.
+pub fn galerider_sliver() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Galerider Sliver",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Sliver)),
+                keyword: Keyword::Flying,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Heart Sliver — {1}{R} 1/1 Sliver. All Slivers have haste.
+pub fn heart_sliver() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Heart Sliver",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Sliver)),
+                keyword: Keyword::Haste,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crystalline Sliver — {1}{U} 2/2 Sliver. All Slivers have shroud.
+pub fn crystalline_sliver() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Crystalline Sliver",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have shroud.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Sliver)),
+                keyword: Keyword::Shroud,
+            },
+        }],
+        ..Default::default()
+    }
+}
