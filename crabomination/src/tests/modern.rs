@@ -39949,3 +39949,66 @@ fn heartfire_immolator_sac_deals_three() {
     assert_eq!(g.players[1].life, 17, "dealt 3 to opponent");
     assert!(g.battlefield_find(id).is_none(), "sacrificed itself");
 }
+
+/// Cenote Scout explores on entry (lands → hand, else +1/+1 counter).
+#[test]
+fn cenote_scout_explores_on_entry() {
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::grizzly_bears()); // nonland on top → +1/+1
+    let id = g.add_card_to_battlefield(0, catalog::cenote_scout());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "explored into a +1/+1 counter");
+}
+
+/// Anthem of Champions pumps your creatures +1/+1 but not opponents'.
+#[test]
+fn anthem_of_champions_pumps_your_creatures() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::anthem_of_champions());
+    let p = |g: &GameState, id| {
+        let c = g.computed_permanent(id).unwrap();
+        (c.power, c.toughness)
+    };
+    assert_eq!(p(&g, mine), (3, 3), "your bear is pumped");
+    assert_eq!(p(&g, theirs), (2, 2), "opponent's bear is not");
+}
+
+/// Warleader's Call pings each opponent when a creature you control enters.
+#[test]
+fn warleaders_call_pings_on_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::warleaders_call());
+    let before = g.players[1].life;
+    // Cast a creature from hand so the real ETB event dispatches to the anthem.
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, before - 1, "each opponent took 1");
+}
+
+/// Deep-Cavern Bat exiles a card from the opponent's hand until it leaves play.
+#[test]
+fn deep_cavern_bat_exiles_from_opponent_hand() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bat = g.add_card_to_battlefield(0, catalog::deep_cavern_bat());
+    g.fire_self_etb_triggers(bat, 0);
+    drain_stack(&mut g);
+    assert!(!g.players[1].hand.iter().any(|c| c.id == victim), "card left opponent's hand");
+    assert!(g.exile.iter().any(|c| c.id == victim), "card is exiled");
+    // When the Bat leaves, the card returns to its owner's hand.
+    g.remove_to_graveyard_with_triggers(bat);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == victim), "card returned on Bat leaving");
+}

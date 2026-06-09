@@ -1296,6 +1296,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_balemurk,
         get_lost,
+        deep_cavern_bat,
         // ── Cube expansion ──
         noxious_gearhulk,
         sheoldred_whispering_one,
@@ -1677,6 +1678,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_boilerbilges,
         heartfire_immolator,
+        warleaders_call,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god
@@ -2098,6 +2100,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_hauntwoods,
+        cenote_scout,
+        anthem_of_champions,
         // ── Cube expansion ──
         hornet_queen,
         // team-pump finishers (Overrun variants)

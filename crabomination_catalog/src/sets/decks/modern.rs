@@ -33346,3 +33346,105 @@ pub fn heartfire_immolator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Cenote Scout — {G} 1/1 Merfolk Scout. When it enters, it explores.
+pub fn cenote_scout() -> CardDefinition {
+    use crate::effect::shortcut::etb_explore;
+    CardDefinition {
+        name: "Cenote Scout",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![etb_explore()],
+        ..Default::default()
+    }
+}
+
+/// Anthem of Champions — {G}{W} Enchantment. Creatures you control get +1/+1.
+pub fn anthem_of_champions() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Anthem of Champions",
+        cost: cost(&[g(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Warleader's Call — {1}{R}{W} Enchantment. Creatures you control get +1/+1.
+/// Whenever a creature you control enters, deal 1 damage to each opponent.
+pub fn warleaders_call() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Warleader's Call",
+        cost: cost(&[generic(1), r(), w()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Deep-Cavern Bat — {1}{B} 1/1 Bat with flying and lifelink. ETB: exile a
+/// nonland card from target opponent's hand until this leaves play.
+pub fn deep_cavern_bat() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Deep-Cavern Bat",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bat],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileChosenUntilSourceLeaves {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+                return_to: ExileReturnZone::Hand,
+            },
+        }],
+        ..Default::default()
+    }
+}
