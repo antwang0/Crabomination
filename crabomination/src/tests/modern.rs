@@ -40629,3 +40629,54 @@ fn quicksilver_amulet_puts_creature_in() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(dragon).is_some(), "creature put onto battlefield");
 }
+
+// ── Goblin tribal cheats ──────────────────────────────────────────────────────
+
+/// Goblin Lackey puts a Goblin from hand onto the battlefield on combat damage.
+#[test]
+fn goblin_lackey_cheats_goblin_on_combat_damage() {
+    let mut g = two_player_game();
+    let lackey = g.add_card_to_battlefield(0, catalog::goblin_lackey());
+    g.clear_sickness(lackey);
+    let krenko = g.add_card_to_hand(0, catalog::krenko_mob_boss());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![krenko])]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: lackey, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    for _ in 0..16 {
+        if g.battlefield_find(krenko).is_some() { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(krenko).is_some(), "Krenko cheated into play");
+}
+
+/// Warren Instigator carries double strike and the same combat-damage cheat.
+#[test]
+fn warren_instigator_has_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::warren_instigator());
+    assert!(g.computed_permanent(id).unwrap().keywords.contains(&Keyword::DoubleStrike));
+}
+
+/// Goblin Piledriver gets +2/+0 per other attacking Goblin.
+#[test]
+fn goblin_piledriver_pumps_per_attacking_goblin() {
+    let mut g = two_player_game();
+    let pd = g.add_card_to_battlefield(0, catalog::goblin_piledriver());
+    let g1 = g.add_card_to_battlefield(0, catalog::skirk_prospector());
+    let g2 = g.add_card_to_battlefield(0, catalog::skirk_prospector());
+    for id in [pd, g1, g2] { g.clear_sickness(id); }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![
+        Attack { attacker: pd, target: AttackTarget::Player(1) },
+        Attack { attacker: g1, target: AttackTarget::Player(1) },
+        Attack { attacker: g2, target: AttackTarget::Player(1) },
+    ]).expect("attacks");
+    drain_stack(&mut g);
+    // base 1 + 2 per the two other attacking Goblins = 5.
+    assert_eq!(g.computed_permanent(pd).unwrap().power, 5, "+4 from two other Goblins");
+}

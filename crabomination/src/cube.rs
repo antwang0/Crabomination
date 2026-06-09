@@ -1690,6 +1690,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sneak_attack,
         through_the_breach,
         skred,
+        // Goblin tribal cheats
+        goblin_lackey,
+        warren_instigator,
+        goblin_piledriver,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god

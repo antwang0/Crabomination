@@ -34267,3 +34267,100 @@ pub fn skred() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: Goblin tribal cheats ────────────────────────────────────────
+
+/// Goblin Lackey — {R} 1/1 Goblin. "Whenever Goblin Lackey deals combat damage
+/// to a player, you may put a Goblin permanent card from your hand onto the
+/// battlefield."
+pub fn goblin_lackey() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Lackey",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Goblin], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Warren Instigator — {R} 1/1 Goblin Berserker. Double strike. "Whenever
+/// Warren Instigator deals combat damage to a player, you may put a Goblin
+/// creature card from your hand onto the battlefield."
+pub fn warren_instigator() -> CardDefinition {
+    CardDefinition {
+        name: "Warren Instigator",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::DoubleStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                count: Value::Const(1),
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Piledriver — {1}{R} 1/2 Goblin Warrior. Protection from blue.
+/// "Whenever Goblin Piledriver attacks, it gets +2/+0 until end of turn for
+/// each other attacking Goblin."
+pub fn goblin_piledriver() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin Piledriver",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(Color::Blue)],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Times(
+                    Box::new(Value::Const(2)),
+                    Box::new(Value::CountOf(Box::new(Selector::EachPermanent(
+                        SelectionRequirement::And(
+                            Box::new(SelectionRequirement::HasCreatureType(CreatureType::Goblin)),
+                            Box::new(SelectionRequirement::And(
+                                Box::new(SelectionRequirement::IsAttacking),
+                                Box::new(SelectionRequirement::OtherThanSource),
+                            )),
+                        ),
+                    )))),
+                ),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
