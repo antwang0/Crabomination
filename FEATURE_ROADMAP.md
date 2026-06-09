@@ -238,8 +238,8 @@ not how Magic works" moments.
   battlefield (708.10) and round-tripped through serde. `Effect::Manifest` /
   `ManifestDread` (701.34 / 702.166) + `GameAction::TurnFaceUp` (708.5,
   Morph/manifest cost) + `EventKind::TurnedFaceUp` (708.8). Hauntwoods
-  Shrieker. Remaining ⏳: the Morph cast-face-down spell path and
-  Disguise/Cloak.
+  Shrieker, Ainok Survivalist (Morph/Megamorph cast-face-down ✅ via
+  `GameAction::CastFaceDown`). Remaining ⏳: Disguise/Cloak.
 - ⏳ **Ante / conspiracy / dungeon (venture) / sticker / attraction** zones
   (low priority; only for novelty formats).
 - ✅ **Emblems** as command-zone objects (planeswalker ultimates) —

@@ -94,6 +94,8 @@ pub enum GameAction {
     /// CR 702.143 — Foretell a card from hand: pay {2} and exile it
     /// face-down to cast later for its foretell cost.
     Foretell { card_id: CardId },
+    /// CR 702.36b — cast a card with Morph face down as a 2/2 creature for {3}.
+    CastFaceDown { card_id: CardId },
     /// CR 708.5 — turn a face-down permanent face up (special action, any time
     /// you have priority): pay its Morph cost, or — for a manifested creature
     /// card — its mana cost. Fires `EventKind::TurnedFaceUp`.

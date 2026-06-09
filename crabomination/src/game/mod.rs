@@ -3384,6 +3384,7 @@ impl GameState {
             } => self.cast_bestow(card_id, target, additional_targets, mode, x_value),
             GameAction::Suspend { card_id } => self.suspend_card(card_id),
             GameAction::Foretell { card_id } => self.foretell_card(card_id),
+            GameAction::CastFaceDown { card_id } => self.cast_face_down(card_id),
             GameAction::TurnFaceUp { card_id } => self.turn_face_up_action(card_id),
             GameAction::CastForetold {
                 card_id,

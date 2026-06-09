@@ -42037,3 +42037,30 @@ fn restless_spire_animates_first_strike() {
     assert!(post.card_types.contains(&CardType::Land), "still a land");
     assert!(post.keywords.contains(&Keyword::FirstStrike));
 }
+
+/// Morph: Ainok Survivalist is cast face down for {3} as a 2/2, then turned up
+/// for its Megamorph {G} — entering a +1/+1 counter (3/2) and firing its
+/// turn-face-up trigger to destroy an opponent's artifact.
+#[test]
+fn ainok_survivalist_morph_cast_and_megamorph_turn_up() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::null_rod()); // an artifact
+    let id = g.add_card_to_hand(0, catalog::ainok_survivalist());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down for {3}");
+    drain_stack(&mut g);
+    let fd = g.battlefield_find(id).expect("on battlefield");
+    assert!(fd.face_down, "entered face down");
+    assert_eq!((fd.power(), fd.toughness()), (2, 2), "face-down 2/2");
+    // Turn it up via Megamorph {G}.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {G}");
+    drain_stack(&mut g);
+    let up = g.battlefield_find(id).expect("still here");
+    assert!(!up.face_down);
+    assert_eq!(up.definition.name, "Ainok Survivalist");
+    assert_eq!((up.power(), up.toughness()), (3, 2), "2/1 + megamorph +1/+1 counter");
+    assert!(g.battlefield_find(victim).is_none(), "turn-up trigger destroyed the artifact");
+}

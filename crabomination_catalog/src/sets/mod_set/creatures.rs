@@ -5254,6 +5254,37 @@ pub fn hauntwoods_shrieker() -> CardDefinition {
     }
 }
 
+/// Ainok Survivalist — {1}{G} 2/1 Human Warrior. Megamorph {G} (CR 702.36e).
+/// When it's turned face up, destroy target artifact or enchantment an opponent
+/// controls.
+pub fn ainok_survivalist() -> CardDefinition {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Ainok Survivalist",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Megamorph(cost(&[g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    crate::card::SelectionRequirement::Artifact
+                        .or(crate::card::SelectionRequirement::Enchantment)
+                        .and(crate::card::SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Evolve (CR 702.100) ───────────────────────────────────────────────────────
 
 /// Cloudfin Raptor — {U}, 0/1 Bird. "Evolve. Flying."

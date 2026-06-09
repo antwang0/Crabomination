@@ -1495,6 +1495,46 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.36b — cast a card with Morph face down as a 2/2 creature for {3}.
+    /// The card is set face down (its real definition stashed) before going on
+    /// the stack, so it's a nameless colorless 2/2 creature spell and enters the
+    /// battlefield face down; turn it up later for its Morph cost.
+    pub(crate) fn cast_face_down(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let has_morph = self
+            .players[p]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .map(|c| c.definition.keywords.iter().any(|k| matches!(k, Keyword::Morph(_) | Keyword::Megamorph(_))))
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        if !has_morph {
+            return Err(GameError::CardNotInHand(card_id));
+        }
+        // Morph is a creature cast: sorcery-speed timing.
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let cost = crate::mana::ManaCost {
+            symbols: vec![crate::mana::ManaSymbol::Generic(3)],
+        };
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        let mut card = self
+            .players[p]
+            .remove_from_hand(card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        card.turn_face_down();
+        let mut events = receipt.auto_events;
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(p, card, None, vec![], None, 0, 0, mana_spent);
+        Ok(events)
+    }
+
     /// CR 708.5 — turn a face-down permanent face up. Special action (no
     /// stack): pay its Morph/Megamorph cost, or — for a manifested creature
     /// card — its mana cost. Restores the real definition and fires
@@ -1527,6 +1567,14 @@ impl GameState {
                 None => return Err(GameError::InvalidTarget),
             }
         };
+        // CR 702.36e — Megamorph turns the permanent up with a +1/+1 counter.
+        let megamorph = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.face_up_def.as_ref())
+            .map(|d| d.keywords.iter().any(|k| matches!(k, Keyword::Megamorph(_))))
+            .unwrap_or(false);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         let mut events = receipt.auto_events;
@@ -1535,6 +1583,9 @@ impl GameState {
         }
         if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
             c.turn_face_up();
+            if megamorph {
+                c.add_counters(crate::card::CounterType::PlusOnePlusOne, 1);
+            }
         }
         events.push(GameEvent::TurnedFaceUp { card_id });
         self.dispatch_triggers_for_events(&[GameEvent::TurnedFaceUp { card_id }]);

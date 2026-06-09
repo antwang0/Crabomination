@@ -2510,6 +2510,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks push: new green cards ──
         vengevine,
         hauntwoods_shrieker,
+        ainok_survivalist,
         hamlet_glutton,
         welcome_to_sweettooth,
         finale_of_devastation,
