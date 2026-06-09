@@ -466,6 +466,7 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: white/multicolor staples ──
+        eiganjo_seat_of_the_empire,
         phelia_exuberant_shepherd,
         phlage_titan_of_fires_fury,
         // Impending Overlord (Duskmourn)
@@ -1006,6 +1007,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        otawara_soaring_city,
+        restless_spire,
         overlord_of_the_floodpits,
         make_disappear,
         // ── modern_decks: Affinity (CR 702.41) ──
@@ -1359,6 +1362,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        takenuma_abandoned_mire,
         // black Sliver + zombie payoffs
         leeching_sliver,
         shepherd_of_rot,
@@ -1765,6 +1769,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── claude/modern_decks: red utility land ──
         kessig_wolf_run,
+        sokenzan_crucible_of_defiance,
         overlord_of_the_boilerbilges,
         heartfire_immolator,
         warleaders_call,
@@ -2206,6 +2211,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        boseiju_who_endures,
         // green Slivers + tribal lords
         muscle_sliver,
         predatory_sliver,

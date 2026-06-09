@@ -783,6 +783,163 @@ pub fn blinkmoth_nexus() -> CardDefinition {
     )
 }
 
+/// Restless Spire — U/R creature-land. Enters tapped, `{T}: Add {U} or {R}`.
+/// `{U}{R}`: becomes a 2/1 Elemental with first strike until end of turn (still
+/// a land). Whenever it attacks, scry 1.
+pub fn restless_spire() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword};
+    use crate::effect::Duration;
+    let animate = ActivatedAbility {
+        mana_cost: cost(&[u(), crate::mana::r()]),
+        effect: Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(1),
+            creature_types: vec![CreatureType::Elemental],
+            keywords: vec![Keyword::FirstStrike],
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Restless Spire",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(Color::Blue), tap_add(Color::Red), animate],
+        triggered_abilities: vec![
+            etb_tap(),
+            crate::effect::shortcut::on_attack(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Channel lands (Kamigawa: Neon Dynasty legendary lands) ───────────────────
+
+/// Build a Channel land: a legendary land that taps for one color and has a
+/// from-hand "Channel — [cost], Discard this card: [effect]" ability (CR
+/// 702.16, via `from_hand` + `discard_self_cost`). Channel-cost-reduction and
+/// basic-land-search riders are dropped.
+fn channel_land(
+    name: &'static str,
+    color: Color,
+    channel_cost: ManaCost,
+    channel_effect: Effect,
+) -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add(color),
+            ActivatedAbility {
+                mana_cost: channel_cost,
+                effect: channel_effect,
+                from_hand: true,
+                discard_self_cost: true,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Boseiju, Who Endures — `{T}: Add {G}`. Channel — {1}{G}: destroy target
+/// artifact, enchantment, or nonbasic land. (Opponent-only + basic-search
+/// riders dropped.)
+pub fn boseiju_who_endures() -> CardDefinition {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::shortcut::target_filtered;
+    channel_land(
+        "Boseiju, Who Endures",
+        Color::Green,
+        cost(&[generic(1), crate::mana::g()]),
+        Effect::Destroy {
+            what: target_filtered(R::Artifact.or(R::Enchantment).or(R::IsNonbasicLand)),
+        },
+    )
+}
+
+/// Otawara, Soaring City — `{T}: Add {U}`. Channel — {3}{U}: return target
+/// artifact, creature, enchantment, or planeswalker to its owner's hand.
+pub fn otawara_soaring_city() -> CardDefinition {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::shortcut::target_filtered;
+    channel_land(
+        "Otawara, Soaring City",
+        Color::Blue,
+        cost(&[generic(3), u()]),
+        Effect::Move {
+            what: target_filtered(R::Artifact.or(R::Creature).or(R::Enchantment).or(R::Planeswalker)),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        },
+    )
+}
+
+/// Eiganjo, Seat of the Empire — `{T}: Add {W}`. Channel — {1}{W}: deal 4
+/// damage to target creature. (The printed attacking/blocking restriction and
+/// X-scaling are simplified to a flat 4 to any creature.)
+pub fn eiganjo_seat_of_the_empire() -> CardDefinition {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::shortcut::target_filtered;
+    channel_land(
+        "Eiganjo, Seat of the Empire",
+        Color::White,
+        cost(&[generic(1), crate::mana::w()]),
+        Effect::DealDamage { to: target_filtered(R::Creature), amount: Value::Const(4) },
+    )
+}
+
+/// Sokenzan, Crucible of Defiance — `{T}: Add {R}`. Channel — {1}{R}: create
+/// two 1/1 red Spirit creature tokens with haste.
+pub fn sokenzan_crucible_of_defiance() -> CardDefinition {
+    let spirit = crate::card::TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![crate::card::Keyword::Haste],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes {
+            creature_types: vec![crate::card::CreatureType::Spirit],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    channel_land(
+        "Sokenzan, Crucible of Defiance",
+        Color::Red,
+        cost(&[generic(1), crate::mana::r()]),
+        Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: spirit },
+    )
+}
+
+/// Takenuma, Abandoned Mire — `{T}: Add {B}`. Channel — {1}{B}: return a
+/// creature or planeswalker card from your graveyard to your hand. (Cost
+/// reduction dropped.)
+pub fn takenuma_abandoned_mire() -> CardDefinition {
+    use crate::card::SelectionRequirement as R;
+    channel_land(
+        "Takenuma, Abandoned Mire",
+        Color::Black,
+        cost(&[generic(1), crate::mana::b()]),
+        Effect::Move {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: R::Creature.or(R::Planeswalker),
+                },
+                Value::Const(1),
+            ),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        },
+    )
+}
+
 /// Kessig Wolf Run — `{T}: Add {C}`. `{X}{R}, {T}`: target creature gets
 /// +X/+0 and gains trample until end of turn.
 pub fn kessig_wolf_run() -> CardDefinition {

@@ -41969,3 +41969,71 @@ fn gingerbrute_sacrifices_for_life() {
     assert_eq!(g.players[0].life, life + 3);
     assert!(g.battlefield_find(id).is_none(), "sacrificed");
 }
+
+// ── Channel lands (Kamigawa legendary lands) ─────────────────────────────────
+
+/// Boseiju, Who Endures channels from hand ({1}{G}, discard it) to destroy a
+/// target nonbasic land.
+#[test]
+fn boseiju_channel_destroys_nonbasic() {
+    let mut g = two_player_game();
+    let boseiju = g.add_card_to_hand(0, catalog::boseiju_who_endures());
+    let target = g.add_card_to_battlefield(1, catalog::mishras_factory());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    // The channel ability is index 1 (index 0 is the tap-for-{G} mana ability).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: boseiju, ability_index: 1, target: Some(Target::Permanent(target)), x_value: None,
+    }).expect("channel Boseiju");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(target).is_none(), "nonbasic land destroyed");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == boseiju), "Boseiju discarded to channel");
+}
+
+/// Sokenzan channels for two 1/1 hasty Spirits.
+#[test]
+fn sokenzan_channel_makes_two_spirits() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::sokenzan_crucible_of_defiance());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("channel Sokenzan");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Spirit" && c.controller == 0).count(), 2);
+}
+
+/// Takenuma channels to return a creature card from your graveyard to hand.
+#[test]
+fn takenuma_channel_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::takenuma_abandoned_mire());
+    let dead = g.next_id();
+    g.players[0].graveyard.push(CardInstance::new(dead, catalog::grizzly_bears(), 0));
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("channel Takenuma");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "creature returned to hand");
+}
+
+/// Restless Spire animates into a 2/1 first-strike Elemental.
+#[test]
+fn restless_spire_animates_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_spire());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate for {U}{R}");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert_eq!((post.power, post.toughness), (2, 1));
+    assert!(post.card_types.contains(&CardType::Land), "still a land");
+    assert!(post.keywords.contains(&Keyword::FirstStrike));
+}
