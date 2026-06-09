@@ -42907,3 +42907,88 @@ fn reality_shift_exiles_and_manifests() {
     assert!(g.battlefield.iter().any(|c| c.controller == 1 && c.face_down),
         "controller manifested a face-down 2/2");
 }
+
+/// Rite of Flame adds {R}{R}.
+#[test]
+fn rite_of_flame_adds_two_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::rite_of_flame());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Rite of Flame");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 2, "net RR after paying R");
+}
+
+/// Censor counters a spell unless its controller pays {1}, and can be cycled.
+#[test]
+fn censor_counters_unless_paid() {
+    let mut g = two_player_game();
+    // Opponent casts a spell; we Censor it with no mana for them to pay.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp casts bear");
+    let censor = g.add_card_to_hand(0, catalog::censor());
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: censor, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Censor");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "bear countered (no mana to pay)");
+}
+
+/// Fading Hope bounces a creature and scries if its mana value was 3 or less.
+#[test]
+fn fading_hope_bounces_and_scries_cheap_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2 → scry
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::fading_hope());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::ScryOrder { kept_top: vec![top], bottom: vec![] },
+    ]));
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Fading Hope");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bear back in owner's hand");
+}
+
+/// Third Path Iconoclast mints a 1/1 artifact Soldier on a noncreature cast.
+#[test]
+fn third_path_iconoclast_makes_soldier_on_noncreature_spell() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::third_path_iconoclast());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast a noncreature spell");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Soldier" && c.controller == 0
+        && c.definition.is_artifact()), "made a 1/1 artifact Soldier");
+}
+
+/// Crackling Drake's power equals instants/sorceries in your graveyard + exile.
+#[test]
+fn crackling_drake_power_scales_with_spells() {
+    let mut g = two_player_game();
+    let drake = g.add_card_to_battlefield(0, catalog::crackling_drake());
+    assert_eq!(g.computed_permanent(drake).unwrap().power, 0, "no spells → 0 power");
+    let (i1, i2, i3) = (g.next_id(), g.next_id(), g.next_id());
+    g.players[0].graveyard.push(crate::card::CardInstance::new(i1, catalog::lightning_bolt(), 0));
+    g.players[0].graveyard.push(crate::card::CardInstance::new(i2, catalog::ponder(), 0));
+    g.exile.push(crate::card::CardInstance::new(i3, catalog::tribal_flames(), 0));
+    assert_eq!(g.computed_permanent(drake).unwrap().power, 3, "two in gy + one in exile → 3 power");
+    assert_eq!(g.computed_permanent(drake).unwrap().toughness, 4, "toughness fixed at 4");
+}

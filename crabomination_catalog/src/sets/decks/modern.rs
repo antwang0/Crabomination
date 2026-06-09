@@ -37202,3 +37202,115 @@ pub fn reality_shift() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Rite of Flame — {R} Sorcery. Add {R}{R}.
+pub fn rite_of_flame() -> CardDefinition {
+    CardDefinition {
+        name: "Rite of Flame",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: crate::effect::shortcut::add_mana(vec![Color::Red, Color::Red]),
+        ..Default::default()
+    }
+}
+
+/// Censor — {1}{U} Instant. Counter target spell unless its controller pays {1}.
+/// Cycling {U}.
+pub fn censor() -> CardDefinition {
+    CardDefinition {
+        name: "Censor",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Cycling(cost(&[u()]))],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(1)]),
+            exile: false,
+        },
+        ..Default::default()
+    }
+}
+
+/// Fading Hope — {U} Instant. Return target creature to its owner's hand; if its
+/// mana value was 3 or less, scry 1.
+pub fn fading_hope() -> CardDefinition {
+    CardDefinition {
+        name: "Fading Hope",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::If {
+                cond: Predicate::ValueAtMost(
+                    Value::ManaValueOf(Box::new(Selector::Target(0))),
+                    Value::Const(3),
+                ),
+                then: Box::new(Effect::Scry { who: PlayerRef::You, amount: Value::ONE }),
+                else_: Box::new(Effect::Noop),
+            },
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Third Path Iconoclast — {U}{R} 2/1 Human Monk. Whenever you cast a noncreature
+/// spell, create a 1/1 colorless Soldier artifact creature token.
+pub fn third_path_iconoclast() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_noncreature;
+    CardDefinition {
+        name: "Third Path Iconoclast",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_noncreature()),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Soldier".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Soldier],
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crackling Drake — {U}{U}{R}{R} */4 Drake with flying. Power = instant and
+/// sorcery cards you own in exile and your graveyard. ETB: draw a card.
+pub fn crackling_drake() -> CardDefinition {
+    CardDefinition {
+        name: "Crackling Drake",
+        cost: cost(&[u(), u(), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::ONE,
+        })],
+        ..Default::default()
+    }
+}

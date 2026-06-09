@@ -2608,8 +2608,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(ghor_clan_rampager);
         v.push(slagwoods_bridge);
         v.push(elegant_parlor);
-        // ── modern_decks: Domain payoff ──
+        // ── modern_decks: Domain payoff + ritual ──
         v.push(tribal_flames);
+        v.push(rite_of_flame);
         // ── modern_decks batch 102 (RG cube expansion) ──
         v.push(territorial_kavu);
         v.push(omnath_locus_of_rage);
@@ -2658,6 +2659,11 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks: Manifest removal + Izzet card advantage ──
         v.push(reality_shift);
         v.push(prophetic_bolt);
+        // ── modern_decks: Izzet spells-matter batch ──
+        v.push(censor);
+        v.push(fading_hope);
+        v.push(third_path_iconoclast);
+        v.push(crackling_drake);
     }
     if pair_contains(pair, Color::Black) {
         v.push(darkmoss_bridge);

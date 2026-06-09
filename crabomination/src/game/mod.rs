@@ -2729,6 +2729,15 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                crate::card::DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t } => {
+                    let gy = &self.players[card.controller].graveyard;
+                    let is_is = |c: &CardInstance| c.definition.is_instant() || c.definition.is_sorcery();
+                    let n = gy.iter().filter(|c| is_is(c)).count() as i32
+                        + self.exile.iter()
+                            .filter(|c| c.owner == card.controller && is_is(c))
+                            .count() as i32;
+                    (n, base_t)
+                }
             };
             all_effects.push(ContinuousEffect {
                 timestamp: card.id.0 as u64,
@@ -6616,6 +6625,7 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
         "Burrowguard Mentor" => Some(DynamicPt::CreaturesControlled { base: 0 }),
         "Lumra, Bellow of the Woods" => Some(DynamicPt::LandsControlled { base: 0 }),
         "Broodstar" => Some(DynamicPt::ArtifactsControlled { base: 0 }),
+        "Crackling Drake" => Some(DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t: 4 }),
         _ => None,
     }
 }
