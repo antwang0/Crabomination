@@ -7348,6 +7348,17 @@ impl GameState {
                 .source
                 .and_then(|src| self.attack_for(src).map(|a| a.target))
                 .and_then(|target| self.defender_for(target))
+                // "Whenever a [creature] you control attacks" triggers fire
+                // off *another* permanent, so `ctx.source` (the ability's
+                // owner) isn't the attacker — read the defending player from
+                // the triggering attacker instead. (Leeching Sliver.)
+                .or_else(|| match ctx.trigger_source {
+                    Some(EntityRef::Permanent(att)) => self
+                        .attack_for(att)
+                        .map(|a| a.target)
+                        .and_then(|target| self.defender_for(target)),
+                    _ => None,
+                })
                 // Fallback for post-combat-damage triggers: by the time a
                 // `DealsCombatDamageToPlayer` body resolves, the attack
                 // record is gone, so `attack_for` returns nothing. The

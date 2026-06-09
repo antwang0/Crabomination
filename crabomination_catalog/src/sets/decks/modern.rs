@@ -12,6 +12,7 @@ use crate::card::{
     Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value, WardCost,
 };
 use crate::card::{CounterType, EventKind, EventScope, EventSpec};
+use crate::card::{StaticAbility, StaticEffect};
 use crate::effect::shortcut::{
     each_your_creature, etb, etb_explore, explore, investigate, on_dies, target_filtered,
 };
@@ -35378,6 +35379,405 @@ pub fn skymarcher_aspirant() -> CardDefinition {
                 condition: Predicate::HasCityBlessing { who: PlayerRef::You },
                 power: 0, toughness: 0, keywords: vec![Keyword::Menace],
             },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── modern_decks: Sliver tribal batch ─────────────────────────────────────────
+// Every Sliver here rides the shared anthem / keyword-grant / grant-ability
+// statics. "All Sliver" lords affect both players' Slivers; "you control"
+// lords are scoped to the controller's board (and to themselves).
+
+fn all_slivers() -> Selector {
+    Selector::EachPermanent(SelectionRequirement::HasCreatureType(CreatureType::Sliver))
+}
+fn your_slivers() -> Selector {
+    Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Sliver)
+            .and(SelectionRequirement::ControlledByYou),
+    )
+}
+fn sliver(name: &'static str, c: ManaCost, power: i32, toughness: i32) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: c,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sliver], ..Default::default() },
+        power,
+        toughness,
+        ..Default::default()
+    }
+}
+
+/// Sinew Sliver — {1}{W} 1/1. All Sliver creatures get +1/+1.
+pub fn sinew_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers get +1/+1.",
+            effect: StaticEffect::PumpPT { applies_to: all_slivers(), power: 1, toughness: 1 },
+        }],
+        ..sliver("Sinew Sliver", cost(&[generic(1), w()]), 1, 1)
+    }
+}
+
+/// Muscle Sliver — {1}{G} 1/1. All Sliver creatures get +1/+1.
+pub fn muscle_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers get +1/+1.",
+            effect: StaticEffect::PumpPT { applies_to: all_slivers(), power: 1, toughness: 1 },
+        }],
+        ..sliver("Muscle Sliver", cost(&[generic(1), g()]), 1, 1)
+    }
+}
+
+/// Predatory Sliver — {1}{G} 1/1. Sliver creatures you control get +1/+1.
+pub fn predatory_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control get +1/+1.",
+            effect: StaticEffect::PumpPT { applies_to: your_slivers(), power: 1, toughness: 1 },
+        }],
+        ..sliver("Predatory Sliver", cost(&[generic(1), g()]), 1, 1)
+    }
+}
+
+/// Megantic Sliver — {5}{G} 3/3. Sliver creatures you control get +3/+3.
+pub fn megantic_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control get +3/+3.",
+            effect: StaticEffect::PumpPT { applies_to: your_slivers(), power: 3, toughness: 3 },
+        }],
+        ..sliver("Megantic Sliver", cost(&[generic(5), g()]), 3, 3)
+    }
+}
+
+/// Steelform Sliver — {2}{W} 2/2. Sliver creatures you control get +0/+1.
+pub fn steelform_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control get +0/+1.",
+            effect: StaticEffect::PumpPT { applies_to: your_slivers(), power: 0, toughness: 1 },
+        }],
+        ..sliver("Steelform Sliver", cost(&[generic(2), w()]), 2, 2)
+    }
+}
+
+/// Winged Sliver — {1}{U} 1/1. All Sliver creatures have flying.
+pub fn winged_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "All Slivers have flying.",
+            effect: StaticEffect::GrantKeyword { applies_to: all_slivers(), keyword: Keyword::Flying },
+        }],
+        ..sliver("Winged Sliver", cost(&[generic(1), u()]), 1, 1)
+    }
+}
+
+/// Striking Sliver — {R} 1/1. Sliver creatures you control have first strike.
+pub fn striking_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have first strike.",
+            effect: StaticEffect::GrantKeyword { applies_to: your_slivers(), keyword: Keyword::FirstStrike },
+        }],
+        ..sliver("Striking Sliver", cost(&[r()]), 1, 1)
+    }
+}
+
+/// Sentinel Sliver — {1}{W} 2/2. Sliver creatures you control have vigilance.
+pub fn sentinel_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have vigilance.",
+            effect: StaticEffect::GrantKeyword { applies_to: your_slivers(), keyword: Keyword::Vigilance },
+        }],
+        ..sliver("Sentinel Sliver", cost(&[generic(1), w()]), 2, 2)
+    }
+}
+
+/// Bonescythe Sliver — {3}{W} 2/2. Sliver creatures you control have double strike.
+pub fn bonescythe_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have double strike.",
+            effect: StaticEffect::GrantKeyword { applies_to: your_slivers(), keyword: Keyword::DoubleStrike },
+        }],
+        ..sliver("Bonescythe Sliver", cost(&[generic(3), w()]), 2, 2)
+    }
+}
+
+/// Blur Sliver — {2}{R} 2/2. Sliver creatures you control have haste.
+pub fn blur_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have haste.",
+            effect: StaticEffect::GrantKeyword { applies_to: your_slivers(), keyword: Keyword::Haste },
+        }],
+        ..sliver("Blur Sliver", cost(&[generic(2), r()]), 2, 2)
+    }
+}
+
+/// Belligerent Sliver — {2}{R} 2/2. Sliver creatures you control have menace.
+pub fn belligerent_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have menace.",
+            effect: StaticEffect::GrantKeyword { applies_to: your_slivers(), keyword: Keyword::Menace },
+        }],
+        ..sliver("Belligerent Sliver", cost(&[generic(2), r()]), 2, 2)
+    }
+}
+
+/// Venom Sliver — {1}{G} 1/1. Sliver creatures you control have deathtouch.
+pub fn venom_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have deathtouch.",
+            effect: StaticEffect::GrantKeyword { applies_to: your_slivers(), keyword: Keyword::Deathtouch },
+        }],
+        ..sliver("Venom Sliver", cost(&[generic(1), g()]), 1, 1)
+    }
+}
+
+/// Sliver Hivelord — {W}{U}{B}{R}{G} 5/5 Legendary. Sliver creatures you control
+/// have indestructible.
+pub fn sliver_hivelord() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have indestructible.",
+            effect: StaticEffect::GrantKeyword { applies_to: your_slivers(), keyword: Keyword::Indestructible },
+        }],
+        ..sliver("Sliver Hivelord", cost(&[w(), u(), b(), r(), g()]), 5, 5)
+    }
+}
+
+/// Leeching Sliver — {1}{B} 1/1. Whenever a Sliver you control attacks, defending
+/// player loses 1 life.
+pub fn leeching_sliver() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Sliver),
+                },
+            ),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::DefendingPlayer),
+                amount: Value::Const(1),
+            },
+        }],
+        ..sliver("Leeching Sliver", cost(&[generic(1), b()]), 1, 1)
+    }
+}
+
+/// Manaweft Sliver — {1}{G} 1/1. Sliver creatures you control have
+/// "{T}: Add one mana of any color."
+pub fn manaweft_sliver() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Slivers you control have \"{T}: Add one mana of any color.\"",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: your_slivers(),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    },
+                    ..Default::default()
+                },
+            },
+        }],
+        ..sliver("Manaweft Sliver", cost(&[generic(1), g()]), 1, 1)
+    }
+}
+
+// ── modern_decks: more tribal lords + zombie payoffs ──────────────────────────
+
+/// Sylvan Advocate — {1}{G} 2/3 Elf Druid Ally. Vigilance. As long as you control
+/// six or more lands, this and land creatures you control get +2/+2.
+pub fn sylvan_advocate() -> CardDefinition {
+    let six_lands = || Predicate::ValueAtLeast(
+        Value::CountOf(Box::new(Selector::EachPermanent(
+            SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+        ))),
+        Value::Const(6),
+    );
+    CardDefinition {
+        name: "Sylvan Advocate",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid, CreatureType::Ally],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        static_abilities: vec![
+            StaticAbility {
+                description: "With six+ lands, this gets +2/+2.",
+                effect: StaticEffect::PumpSelfIf { condition: six_lands(), power: 2, toughness: 2, keywords: vec![] },
+            },
+            StaticAbility {
+                description: "With six+ lands, land creatures you control get +2/+2.",
+                effect: StaticEffect::PumpTeamIf {
+                    condition: six_lands(),
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Land
+                            .and(SelectionRequirement::Creature)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    power: 2,
+                    toughness: 2,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wilt-Leaf Liege — {1}{G/W}{G/W}{G/W} 4/4 Elf Knight. Other green creatures you
+/// control get +1/+1; other white creatures you control get +1/+1. (The
+/// opponent-discard payoff is dropped.)
+pub fn wilt_leaf_liege() -> CardDefinition {
+    use crate::mana::hybrid;
+    let others_of = |color| Selector::EachPermanent(
+        SelectionRequirement::Creature
+            .and(SelectionRequirement::HasColor(color))
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Wilt-Leaf Liege",
+        cost: cost(&[generic(1), hybrid(Color::Green, Color::White),
+                     hybrid(Color::Green, Color::White), hybrid(Color::Green, Color::White)]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other green creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others_of(Color::Green), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other white creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others_of(Color::White), power: 1, toughness: 1 },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shepherd of Rot — {1}{B} 1/1 Zombie Cleric. {T}: Each player loses 1 life for
+/// each Zombie on the battlefield.
+pub fn shepherd_of_rot() -> CardDefinition {
+    CardDefinition {
+        name: "Shepherd of Rot",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+                ))),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Death's-Head Buzzard — {1}{B}{B} 2/1 Bird. Flying. When it dies, all creatures
+/// get -1/-1 until end of turn.
+pub fn deaths_head_buzzard() -> CardDefinition {
+    CardDefinition {
+        name: "Death's-Head Buzzard",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_dies(Effect::PumpPT {
+            what: Selector::EachPermanent(SelectionRequirement::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Cemetery Reaper — {1}{B}{B} 2/2 Zombie. Other Zombie creatures you control get
+/// +1/+1. {2}{B}, {T}: Exile target creature card from a graveyard. Create a 2/2
+/// black Zombie creature token.
+pub fn cemetery_reaper() -> CardDefinition {
+    CardDefinition {
+        name: "Cemetery Reaper",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Zombies you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::Seq(vec![
+                Effect::ExileTaggedWithSource {
+                    what: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::InGraveyard
+                            .and(SelectionRequirement::Creature),
+                    },
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Zombie".into(),
+                        power: 2,
+                        toughness: 2,
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Black],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Zombie],
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                },
+            ]),
+            ..Default::default()
         }],
         ..Default::default()
     }

@@ -40759,6 +40759,141 @@ fn crystalline_sliver_grants_shroud() {
     assert!(g.computed_permanent(cs).unwrap().keywords.contains(&Keyword::Shroud));
 }
 
+/// Muscle Sliver's +1/+1 anthem stacks onto another Sliver and itself.
+#[test]
+fn muscle_sliver_pumps_all_slivers() {
+    let mut g = two_player_game();
+    let ms = g.add_card_to_battlefield(0, catalog::muscle_sliver());
+    let other = g.add_card_to_battlefield(0, catalog::striking_sliver());
+    assert_eq!(g.computed_permanent(ms).unwrap().power, 2, "lord buffs itself");
+    assert_eq!(g.computed_permanent(other).unwrap().toughness, 2, "other Sliver buffed");
+}
+
+/// Predatory Sliver only buffs Slivers their controller owns, not opponents'.
+#[test]
+fn predatory_sliver_only_buffs_your_slivers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::predatory_sliver());
+    let opp = g.add_card_to_battlefield(1, catalog::striking_sliver());
+    assert_eq!(g.computed_permanent(opp).unwrap().power, 1, "opponent's Sliver unaffected");
+}
+
+/// Striking Sliver grants first strike only to its controller's Slivers.
+#[test]
+fn striking_sliver_grants_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let ss = g.add_card_to_battlefield(0, catalog::striking_sliver());
+    let opp = g.add_card_to_battlefield(1, catalog::venom_sliver());
+    assert!(g.computed_permanent(ss).unwrap().keywords.contains(&Keyword::FirstStrike));
+    assert!(!g.computed_permanent(opp).unwrap().keywords.contains(&Keyword::FirstStrike),
+        "opponent's Sliver doesn't get first strike");
+}
+
+/// Sliver Hivelord makes the controller's Slivers indestructible.
+#[test]
+fn sliver_hivelord_grants_indestructible() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let hl = g.add_card_to_battlefield(0, catalog::sliver_hivelord());
+    let other = g.add_card_to_battlefield(0, catalog::muscle_sliver());
+    assert!(g.computed_permanent(hl).unwrap().keywords.contains(&Keyword::Indestructible));
+    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::Indestructible));
+}
+
+/// Manaweft Sliver grants every Sliver you control a "{T}: Add any color" ability.
+#[test]
+fn manaweft_sliver_grants_mana_ability() {
+    let mut g = two_player_game();
+    let mw = g.add_card_to_battlefield(0, catalog::manaweft_sliver());
+    g.clear_sickness(mw);
+    // The granted "{T}: add any color" is the Sliver's only activated ability (index 0).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mw, ability_index: 0, target: None, x_value: None,
+    }).expect("Manaweft taps for mana via its granted ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "Manaweft Sliver produced one mana");
+}
+
+/// Sylvan Advocate only pumps itself once you control six or more lands.
+#[test]
+fn sylvan_advocate_pumps_with_six_lands() {
+    let mut g = two_player_game();
+    let sa = g.add_card_to_battlefield(0, catalog::sylvan_advocate());
+    assert_eq!(g.computed_permanent(sa).unwrap().power, 2, "no buff below six lands");
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    assert_eq!(g.computed_permanent(sa).unwrap().power, 4, "+2/+2 with six lands");
+}
+
+/// Wilt-Leaf Liege buffs other green creatures but not the white-only ones twice.
+#[test]
+fn wilt_leaf_liege_buffs_green_creatures() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::wilt_leaf_liege());
+    let elf = g.add_card_to_battlefield(0, catalog::sylvan_advocate()); // green Elf, base 2/3
+    assert_eq!(g.computed_permanent(elf).unwrap().power, 3, "green creature gets +1/+1");
+}
+
+/// Death's-Head Buzzard wraths -1/-1 to all creatures when it dies.
+#[test]
+fn deaths_head_buzzard_shrinks_all_on_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::deaths_head_buzzard());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Burn the buzzard so its dies-trigger fires (-1/-1 to everything).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let buzz = g.battlefield.iter().find(|c| c.definition.name == "Death's-Head Buzzard").unwrap().id;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(buzz)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the buzzard");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).unwrap().toughness, 1, "opposing bear shrunk to 1/1");
+}
+
+/// Shepherd of Rot drains each player by the number of Zombies in play.
+#[test]
+fn shepherd_of_rot_drains_per_zombie() {
+    let mut g = two_player_game();
+    let shep = g.add_card_to_battlefield(0, catalog::shepherd_of_rot());
+    g.add_card_to_battlefield(0, catalog::cemetery_reaper()); // a second Zombie
+    g.clear_sickness(shep);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shep, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Shepherd of Rot");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 18, "you lose 2 (two Zombies)");
+    assert_eq!(g.players[1].life, 18, "opponent loses 2 (two Zombies)");
+}
+
+/// Cemetery Reaper's anthem buffs other Zombies you control.
+#[test]
+fn cemetery_reaper_buffs_other_zombies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::cemetery_reaper());
+    let other = g.add_card_to_battlefield(0, catalog::shepherd_of_rot());
+    assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Zombie gets +1/+1");
+}
+
+/// Leeching Sliver drains the defending player when a Sliver attacks.
+#[test]
+fn leeching_sliver_drains_on_sliver_attack() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::leeching_sliver());
+    let attacker = g.add_card_to_battlefield(0, catalog::muscle_sliver());
+    g.battlefield.iter_mut().find(|c| c.id == attacker).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let events = g.declare_attackers(vec![Attack { attacker, target: AttackTarget::Player(1) }])
+        .expect("Sliver attacks");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "defending player lost 1 life");
+}
+
 /// Merrow Reejerey buffs other Merfolk and triggers on a Merfolk spell cast.
 #[test]
 fn merrow_reejerey_buffs_and_triggers_on_merfolk_cast() {

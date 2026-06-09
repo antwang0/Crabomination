@@ -365,6 +365,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         golos_tireless_pilgrim,
         ramos_dragon_engine,
         omnath_locus_of_creation,
+        sliver_hivelord,
         maelstrom_archangel,
         maelstrom_nexus,
         leyline_of_the_guildpact,
@@ -462,6 +463,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         field_marshal,
         daru_warchief,
         catapult_master,
+        // white Slivers
+        sinew_sliver,
+        steelform_sliver,
+        sentinel_sliver,
+        bonescythe_sliver,
         // Spirit + Knight tribal
         empyrean_eagle,
         kinsbaile_cavalier,
@@ -1005,6 +1011,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cursecatcher,
         galerider_sliver,
         crystalline_sliver,
+        winged_sliver,
         // Hideaway land (CR 702.76)
         shelldock_isle,
         // ── Cube expansion ──
@@ -1334,6 +1341,11 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // black Sliver + zombie payoffs
+        leeching_sliver,
+        shepherd_of_rot,
+        deaths_head_buzzard,
+        cemetery_reaper,
         overlord_of_the_balemurk,
         get_lost,
         deep_cavern_bat,
@@ -1738,8 +1750,11 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_lackey,
         warren_instigator,
         goblin_piledriver,
-        // red Sliver
+        // red Slivers
         heart_sliver,
+        striking_sliver,
+        blur_sliver,
+        belligerent_sliver,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god
@@ -2160,6 +2175,14 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // green Slivers + tribal lords
+        muscle_sliver,
+        predatory_sliver,
+        megantic_sliver,
+        venom_sliver,
+        manaweft_sliver,
+        sylvan_advocate,
+        wilt_leaf_liege,
         overlord_of_the_hauntwoods,
         cenote_scout,
         anthem_of_champions,
