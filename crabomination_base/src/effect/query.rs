@@ -316,7 +316,8 @@ impl Effect {
             }
             Effect::BecomeBasicLand { what, .. }
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
-            Effect::BecomeCopyOf { what, source, .. } => {
+            Effect::BecomeCopyOf { what, source, .. }
+            | Effect::BecomeCopyOfFor { what, source, .. } => {
                 sel_has_target(what) || sel_has_target(source)
             }
             Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
@@ -539,6 +540,10 @@ impl Effect {
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
             Effect::DelayUntil { body, .. } => body.primary_target_filter(),
+            // The copy *source* is the targeted slot ("becomes a copy of
+            // target land").
+            Effect::BecomeCopyOf { source, .. }
+            | Effect::BecomeCopyOfFor { source, .. } => sel_filter(source),
             Effect::WhenTargetDiesThisTurn { .. } => Some(&SelectionRequirement::Creature),
             // Modal cards: surface the first mode's filter as the
             // representative one (UI/bot still need *some* filter to

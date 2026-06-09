@@ -243,6 +243,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         grim_monolith,
         mirror_universe,
         disrupting_scepter,
+        // Copy lands (CR 707 — BecomeCopyOfFor).
+        vesuva,
+        thespians_stage,
         // No-maximum-hand-size + play-lands-from-graveyard statics.
         reliquary_tower,
         thought_vessel,

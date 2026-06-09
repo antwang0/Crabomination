@@ -132,6 +132,7 @@ impl GameState {
         if self.step == TurnStep::EndCombat {
             self.expire_end_of_combat_effects();
             self.revert_temporary_control(&[crate::effect::Duration::EndOfCombat]);
+            self.revert_temporary_copies(&[crate::effect::Duration::EndOfCombat]);
             let mut cleanup = self.process_attacking_token_cleanup();
             events.append(&mut cleanup);
         }
@@ -1373,6 +1374,11 @@ impl GameState {
             crate::effect::Duration::EndOfTurn,
             crate::effect::Duration::UntilNextTurn,
         ]);
+        // CR 707 — "becomes a copy ... until end of turn" swaps snap back.
+        self.revert_temporary_copies(&[
+            crate::effect::Duration::EndOfTurn,
+            crate::effect::Duration::UntilNextTurn,
+        ]);
         // CR 702.143b — foretold-this-turn cards become castable next turn.
         self.foretold_this_turn.clear();
         self.plotted_this_turn.clear();
@@ -2244,6 +2250,8 @@ impl GameState {
         // CR 708.10 — a face-down permanent is turned face up as it leaves
         // the battlefield (no-op unless it carries a stashed real definition).
         card.turn_face_up();
+        // CR 707 — a temporary copy reverts as it leaves.
+        self.revert_copy_on_leave(&mut card);
         match zone {
             // CR 614.6 — Rest in Peace / Leyline of the Void redirect the
             // graveyard arrival to exile.

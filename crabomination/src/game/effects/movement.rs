@@ -314,6 +314,8 @@ impl GameState {
             // CR 708.10 — a face-down permanent is turned face up as it leaves
             // the battlefield (no-op unless it carries a stashed real def).
             card.turn_face_up();
+            // CR 707 — a temporary copy reverts as it leaves.
+            self.revert_copy_on_leave(&mut card);
             card.damage = 0;
             card.tapped = false;
             card.attached_to = None;

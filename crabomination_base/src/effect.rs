@@ -2115,6 +2115,21 @@ pub enum Effect {
         #[serde(default)]
         extra_creature_types: Vec<crate::card::CreatureType>,
     },
+    /// CR 707.2 — continuous (layer-1) sibling of `BecomeCopyOf`: each
+    /// `what` becomes a copy of `source` for `duration`, via a
+    /// `Modification::CopyCardDefinition` continuous effect (the snapshot is
+    /// locked in at resolution). `non_legendary` strips the Legendary
+    /// supertype from the copy (CR 707.2e — Echoing Equation's "except
+    /// they aren't legendary"). Computed characteristics (types, colors,
+    /// keywords, P/T) and printed-ability dispatch both honor the copy
+    /// while it lasts.
+    BecomeCopyOfFor {
+        what: Selector,
+        source: Selector,
+        duration: Duration,
+        #[serde(default)]
+        non_legendary: bool,
+    },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
     /// Target becomes a creature with the given P/T and creature types,

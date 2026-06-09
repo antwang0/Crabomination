@@ -40149,6 +40149,41 @@ fn orcish_bowmasters_punishes_extra_draws_only() {
     assert_eq!(army.counter_count(CounterType::PlusOnePlusOne), 1, "amass 1");
 }
 
+/// Vesuva enters tapped as a copy of a land on the battlefield.
+#[test]
+fn vesuva_enters_tapped_as_land_copy() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let v = g.add_card_to_hand(0, catalog::vesuva());
+    g.perform_action(GameAction::PlayLand(v)).expect("play Vesuva");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(v).unwrap();
+    assert!(c.tapped, "enters tapped");
+    assert_eq!(c.definition.name, "Forest", "copies the Forest");
+}
+
+/// Thespian's Stage copies a land on activation and stays that land.
+#[test]
+fn thespians_stage_becomes_copy_of_target_land() {
+    let mut g = two_player_game();
+    let stage = g.add_card_to_battlefield(0, catalog::thespians_stage());
+    let island = g.add_card_to_battlefield(1, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stage, ability_index: 1,
+        target: Some(Target::Permanent(island)), x_value: None,
+    }).expect("copy activation");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(stage).unwrap().definition.name, "Island");
+    // Permanent duration: cleanup does not revert.
+    g.do_cleanup();
+    assert_eq!(g.battlefield_find(stage).unwrap().definition.name, "Island");
+}
+
 // ── Misc modern staples ──────────────────────────────────────────────────────
 
 /// Get Lost destroys a creature and gives its controller two Map tokens.

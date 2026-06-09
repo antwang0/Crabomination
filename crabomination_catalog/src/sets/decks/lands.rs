@@ -14,6 +14,7 @@ use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, LandType,
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{ActivatedAbility, ManaPayload, PlayerRef, Predicate};
 use crate::mana::{Color, ManaCost, cost, g, generic, r, u, w};
 
@@ -670,6 +671,60 @@ pub fn windbrisk_heights() -> CardDefinition {
             Value::Const(3),
         ),
     )
+}
+
+/// Vesuva — Land. Enters tapped as a copy of any land on the battlefield
+/// (CR 707; the copy persists while Vesuva remains, via `BecomeCopyOfFor`
+/// with a Permanent duration — it reverts to printed Vesuva on leaving).
+pub fn vesuva() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Vesuva",
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![
+            etb_tap(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(
+                        SelectionRequirement::Land.and(SelectionRequirement::OtherThanSource),
+                    ),
+                    duration: Duration::Permanent,
+                    non_legendary: false,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Thespian's Stage — Land. `{T}: Add {C}`; `{2}, {T}`: becomes a copy of
+/// target land. (The printed "except it has this ability" rider is dropped —
+/// the copy loses the re-copy ability.)
+pub fn thespians_stage() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Thespian's Stage",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(2)]),
+                effect: Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(
+                        SelectionRequirement::Land.and(SelectionRequirement::OtherThanSource),
+                    ),
+                    duration: Duration::Permanent,
+                    non_legendary: false,
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
 }
 
 // ── Manlands (CR 702 — lands that animate into creatures) ───────────────────

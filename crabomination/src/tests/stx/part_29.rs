@@ -52,6 +52,64 @@ fn augmenter_pugilist_pumps_with_eight_lands() {
     assert_eq!(pt(&g), (8, 8), "eight lands → +5/+5");
 }
 
+/// Echoing Equation: each other creature you control becomes a copy of the
+/// target until end of turn (legendary stripped); cleanup reverts the swap.
+#[test]
+fn echoing_equation_copies_until_end_of_turn() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(0, catalog::sheoldred_the_apocalypse()); // legendary 4/5
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let eq = *catalog::augmenter_pugilist().back_face.unwrap();
+    let id = g.add_card_to_hand(0, eq);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, id, Target::Permanent(big));
+    let bear = g.battlefield_find(small).unwrap();
+    assert_eq!(bear.definition.name, "Sheoldred, the Apocalypse", "copied the target");
+    assert!(!bear.definition.supertypes.contains(&crate::card::Supertype::Legendary),
+        "copy isn't legendary (CR 707.2e)");
+    assert_eq!((bear.definition.power, bear.definition.toughness), (4, 5));
+    assert_eq!(g.battlefield_find(theirs).unwrap().definition.name, "Grizzly Bears",
+        "opponent's creature unaffected");
+    assert_eq!(g.battlefield_find(big).unwrap().definition.name, "Sheoldred, the Apocalypse");
+    // The copy's printed abilities are live: an opponent draw fires the loss trigger.
+    g.add_card_to_library(1, catalog::island());
+    let opp = g.players[1].life;
+    let mut events = Vec::new();
+    g.draw_one(1, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp - 4, "two Sheoldred triggers — copy included");
+    // Cleanup reverts the swap.
+    g.do_cleanup();
+    assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Grizzly Bears",
+        "copy reverted at end of turn");
+}
+
+/// A temporary copy that dies reverts to its printed self in the graveyard
+/// (CR 707 — the copy effect ends with the object).
+#[test]
+fn temporary_copy_reverts_when_leaving_battlefield() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(0, catalog::colossal_dreadmaw());
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eq = *catalog::augmenter_pugilist().back_face.unwrap();
+    let id = g.add_card_to_hand(0, eq);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, id, Target::Permanent(big));
+    assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Colossal Dreadmaw");
+    g.remove_from_battlefield_to_graveyard(small);
+    let dead = g.players[0].graveyard.iter().find(|c| c.id == small).unwrap();
+    assert_eq!(dead.definition.name, "Grizzly Bears", "printed card in the graveyard");
+    assert!(g.temporary_copies.is_empty(), "revert entry consumed");
+}
+
 // ── Torrent Sculptor ──────────────────────────────────────────────────────────
 
 #[test]

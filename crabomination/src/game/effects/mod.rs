@@ -5881,6 +5881,47 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeCopyOfFor { what, source, duration, non_legendary } => {
+                // CR 707.2 — continuous copy: swap the definition now and
+                // schedule the revert (`temporary_copies`), mirroring the
+                // Act-of-Treason control plumbing. Battlefield-leave reverts
+                // via `revert_copy_on_leave`.
+                let src = self
+                    .resolve_selector(source, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id());
+                let src_def = src
+                    .and_then(|id| self.battlefield.iter().find(|c| c.id == id))
+                    .map(|c| c.definition.clone());
+                let Some(src_def) = src_def else { return Ok(()) };
+                let copy_def = if *non_legendary {
+                    let mut d = (*src_def).clone();
+                    d.supertypes.retain(|s| !matches!(s, crate::card::Supertype::Legendary));
+                    std::sync::Arc::new(d)
+                } else {
+                    src_def
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    // The copied permanent itself never re-copies ("each
+                    // *other* creature"; self-copy is identity anyway).
+                    if Some(cid) == src {
+                        continue;
+                    }
+                    let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) else {
+                        continue;
+                    };
+                    let original = std::mem::replace(&mut c.definition, copy_def.clone());
+                    self.temporary_copies.push(crate::game::TempCopy {
+                        card: cid,
+                        original_name: original.name.to_string(),
+                        original: Some(original),
+                        duration: *duration,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::ResetCreature {
                 what,
                 power,

@@ -687,6 +687,14 @@ pub struct GameState {
     /// for snapshot back-compat.
     #[serde(default)]
     pub(crate) temporary_control: Vec<TempControl>,
+    /// Temporary "becomes a copy" definition swaps awaiting reversion
+    /// (`Effect::BecomeCopyOfFor`, CR 707.2). Records the pre-copy
+    /// definition; the swap snaps back when the duration ends, mirroring
+    /// `temporary_control`. Entries whose card left the battlefield are
+    /// dropped (a new object keeps nothing). `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub(crate) temporary_copies: Vec<TempCopy>,
     /// CR 702.143b — cards foretold this turn can't be cast from exile until
     /// a later turn. Tracks the cards a player foretold during the current
     /// turn; cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
@@ -730,6 +738,29 @@ pub(crate) struct TempControl {
     pub(crate) card: CardId,
     pub(crate) original_controller: usize,
     pub(crate) duration: crate::effect::Duration,
+}
+
+/// A pending copy-reversion entry — see `GameState.temporary_copies`.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub(crate) struct TempCopy {
+    pub(crate) card: CardId,
+    /// Live handle to the pre-copy definition. Skipped in snapshots —
+    /// recovered by name through the registry resolver on load (the same
+    /// name-keyed round-trip `CardInstance` uses).
+    #[serde(skip)]
+    pub(crate) original: Option<std::sync::Arc<crate::card::CardDefinition>>,
+    pub(crate) original_name: String,
+    pub(crate) duration: crate::effect::Duration,
+}
+
+impl TempCopy {
+    /// The pre-copy definition: the live Arc, or a registry lookup after a
+    /// snapshot round-trip.
+    fn original_def(&self) -> Option<std::sync::Arc<crate::card::CardDefinition>> {
+        self.original.clone().or_else(|| {
+            crabomination_base::registry::resolve_card(&self.original_name).map(std::sync::Arc::new)
+        })
+    }
 }
 
 /// Manual `Clone` impl so the bot can dry-run an action against a copy
@@ -815,6 +846,7 @@ impl Clone for GameState {
             dies_to_exile_eot: self.dies_to_exile_eot.clone(),
             resolving_spell_lifelink_seat: self.resolving_spell_lifelink_seat,
             temporary_control: self.temporary_control.clone(),
+            temporary_copies: self.temporary_copies.clone(),
             foretold_this_turn: self.foretold_this_turn.clone(),
             plotted_cards: self.plotted_cards.clone(),
             plotted_this_turn: self.plotted_this_turn.clone(),
@@ -920,6 +952,7 @@ impl GameState {
             dies_to_exile_eot: std::collections::HashSet::new(),
             resolving_spell_lifelink_seat: None,
             temporary_control: Vec::new(),
+            temporary_copies: Vec::new(),
             foretold_this_turn: std::collections::HashSet::new(),
             plotted_cards: std::collections::HashSet::new(),
             plotted_this_turn: std::collections::HashSet::new(),
@@ -3067,6 +3100,45 @@ impl GameState {
             }
         }
         self.temporary_control = kept;
+    }
+
+    /// CR 707 / 611.2c — a "becomes a copy" effect ends when the object
+    /// leaves the battlefield: restore the pre-copy definition on the
+    /// departing card and drop its pending revert entries. Called from the
+    /// battlefield-leave funnels alongside `turn_face_up`.
+    pub(crate) fn revert_copy_on_leave(&mut self, card: &mut crate::card::CardInstance) {
+        // The oldest entry holds the original printed definition.
+        if let Some(pos) = self.temporary_copies.iter().position(|tc| tc.card == card.id) {
+            if let Some(def) = self.temporary_copies[pos].original_def() {
+                card.definition = def;
+            }
+            self.temporary_copies.retain(|tc| tc.card != card.id);
+        }
+    }
+
+    /// Revert temporary "becomes a copy" definition swaps
+    /// (`Effect::BecomeCopyOfFor`) whose `Duration` is in `which`. Reverted
+    /// in reverse order so stacked copies unwind to the oldest original.
+    /// Entries whose card left the battlefield are dropped (the copy effect
+    /// ended with the object).
+    pub(crate) fn revert_temporary_copies(&mut self, which: &[crate::effect::Duration]) {
+        let mut kept = Vec::new();
+        for tc in std::mem::take(&mut self.temporary_copies).into_iter().rev() {
+            if !self.battlefield.iter().any(|c| c.id == tc.card) {
+                continue; // card left play — nothing to revert
+            }
+            if which.contains(&tc.duration) {
+                if let Some(def) = tc.original_def()
+                    && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == tc.card)
+                {
+                    c.definition = def;
+                }
+            } else {
+                kept.push(tc);
+            }
+        }
+        kept.reverse();
+        self.temporary_copies = kept;
     }
 
     /// Expire all `UntilEndOfCombat` continuous effects (CR 511.2 —

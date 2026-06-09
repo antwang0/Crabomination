@@ -50,10 +50,32 @@ pub fn emergent_sequence() -> CardDefinition {
     }
 }
 
+/// Echoing Equation — {3}{U}{U} Sorcery, back face of Augmenter Pugilist.
+/// Choose target creature you control. Each other creature you control
+/// becomes a copy of it until end of turn, except they aren't legendary
+/// (CR 707.2 / `Effect::BecomeCopyOfFor`).
+fn echoing_equation() -> CardDefinition {
+    CardDefinition {
+        name: "Echoing Equation",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::BecomeCopyOfFor {
+            // The resolver skips the copy source, giving "each other".
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            source: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            duration: Duration::EndOfTurn,
+            non_legendary: true,
+        },
+        ..Default::default()
+    }
+}
+
 /// Augmenter Pugilist — {1}{G}{G} 3/3 Troll Druid with trample. While you
-/// control eight or more lands it gets +5/+5. (Front face of the Augmenter
-/// Pugilist // Echoing Equation MDFC; the back-face copy effect is a
-/// continuous layer-1 rewrite not yet modeled, so only the creature ships.)
+/// control eight or more lands it gets +5/+5. // Echoing Equation.
 pub fn augmenter_pugilist() -> CardDefinition {
     CardDefinition {
         name: "Augmenter Pugilist",
@@ -80,6 +102,7 @@ pub fn augmenter_pugilist() -> CardDefinition {
                 keywords: vec![],
             },
         }],
+        back_face: Some(Box::new(echoing_equation())),
         ..Default::default()
     }
 }
