@@ -443,7 +443,9 @@ pub enum Keyword {
     /// shuffle). "When you cycle" triggers still fire (it is a cycling ability).
     Landcycling(crate::mana::ManaCost, LandType),
     Echo(crate::mana::ManaCost),
-    CumulativeUpkeep(crate::mana::ManaCost),
+    /// CR 702.24 — Cumulative upkeep: at the controller's upkeep, add an age
+    /// counter, then pay the cost once per age counter or sacrifice this.
+    CumulativeUpkeep(CumulativeUpkeepCost),
     /// CR 702.32 — Fading N. Enters with N fade counters. At the beginning
     /// of its controller's upkeep, remove a fade counter from it; if you
     /// can't, sacrifice it.
@@ -667,6 +669,16 @@ pub enum Keyword {
     /// paired creature gains is carried in `CardDefinition.soulbond_bonus`.
     /// Deadeye Navigator, Wolfir Silverheart.
     Soulbond,
+}
+
+/// CR 702.24 — the maintenance cost paid (once per age counter) to keep a
+/// permanent with cumulative upkeep. Mana (Mystic Remora), life (Glacial
+/// Chasm), or sacrificing a matching permanent (Phyrexian Soulgorger).
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CumulativeUpkeepCost {
+    Mana(crate::mana::ManaCost),
+    Life(u32),
+    Sacrifice(Box<SelectionRequirement>),
 }
 
 /// Composable filter for valid targets of a spell or ability.

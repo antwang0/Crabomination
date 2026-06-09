@@ -41054,6 +41054,22 @@ fn curiosity_draws_on_combat_damage() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew off combat damage");
 }
 
+/// Ophidian Eye (flash Curiosity) attaches and grants the damage-draw bonus.
+#[test]
+fn ophidian_eye_attaches_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let eye = g.add_card_to_hand(0, catalog::ophidian_eye());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: eye, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ophidian Eye");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(eye).and_then(|c| c.attached_to), Some(bear), "attached to the bear");
+}
+
 /// Aqueous Form makes the enchanted creature unblockable.
 #[test]
 fn aqueous_form_grants_unblockable() {
@@ -41148,6 +41164,22 @@ fn cr_702_24_cumulative_upkeep_pays_or_sacrifices() {
     // Unpaid: a second upkeep with an empty pool sacrifices it.
     g.process_cumulative_upkeep();
     assert!(g.battlefield_find(remora).is_none(), "unpaid cumulative upkeep sacrifices Remora");
+}
+
+/// CR 702.24 — Phyrexian Soulgorger's sacrifice cumulative upkeep eats another
+/// creature to survive, and is sacrificed when none is available.
+#[test]
+fn cr_702_24_cumulative_upkeep_sacrifice_variant() {
+    let mut g = two_player_game();
+    let gorger = g.add_card_to_battlefield(0, catalog::phyrexian_soulgorger());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.process_cumulative_upkeep();
+    assert!(g.battlefield_find(gorger).is_some(), "Soulgorger survives by sacrificing");
+    assert!(g.battlefield_find(fodder).is_none(), "the other creature was sacrificed");
+    // Next upkeep: no other creature → Soulgorger is sacrificed.
+    g.process_cumulative_upkeep();
+    assert!(g.battlefield_find(gorger).is_none(), "no fodder → Soulgorger sacrificed");
 }
 
 /// Necrotic Ooze gains the activated abilities of creature cards in

@@ -385,12 +385,12 @@ pub fn rhystic_study() -> CardDefinition {
 /// that player pays {4}." The caster is asked to pay {4} (`UnlessPlayerPays`);
 /// if they decline/can't, you draw.
 pub fn mystic_remora() -> CardDefinition {
-    use crate::card::Keyword;
+    use crate::card::{CumulativeUpkeepCost, Keyword};
     CardDefinition {
         name: "Mystic Remora",
         cost: cost(&[u()]),
         card_types: vec![CardType::Enchantment],
-        keywords: vec![Keyword::CumulativeUpkeep(cost(&[generic(1)]))],
+        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Mana(cost(&[generic(1)])))],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::OpponentControl)
                 .with_filter(crate::effect::Predicate::EntityMatches {

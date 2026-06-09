@@ -1720,14 +1720,15 @@ impl GameState {
     /// CR 702.24 — Cumulative upkeep. As a turn-based action at the active
     /// player's upkeep, each permanent they control with
     /// `Keyword::CumulativeUpkeep(cost)` gets one age counter; its controller
-    /// then pays `cost` once per age counter on it from their floating pool,
-    /// or sacrifices it. (Following `PayManaOrElse`, payment is auto from the
-    /// pool when affordable — an interactive pay prompt is a follow-up.)
+    /// then pays `cost` once per age counter on it (mana from the pool, life,
+    /// or sacrificing matching permanents), or sacrifices the permanent.
+    /// (Following `PayManaOrElse`, mana is auto-paid from the pool when
+    /// affordable — an interactive pay prompt is a follow-up.)
     pub(crate) fn process_cumulative_upkeep(&mut self) -> Vec<crate::game::GameEvent> {
-        use crate::card::{CounterType, Keyword};
+        use crate::card::{CounterType, CumulativeUpkeepCost, Keyword};
         let active = self.active_player_idx;
         let mut events = Vec::new();
-        let affected: Vec<(CardId, crate::mana::ManaCost)> = self
+        let affected: Vec<(CardId, CumulativeUpkeepCost)> = self
             .battlefield
             .iter()
             .filter(|c| c.controller == active)
@@ -1748,13 +1749,41 @@ impl GameState {
                 count: 1,
             });
             let n = self.battlefield_find(id).map(|c| c.counter_count(CounterType::Age)).unwrap_or(1);
-            // Total = cost × age counters (repeat the pip list N times).
-            let mut symbols = Vec::new();
-            for _ in 0..n {
-                symbols.extend(cost.symbols.iter().cloned());
-            }
-            let total = crate::mana::ManaCost::new(symbols);
-            let paid = self.players[active].mana_pool.pay(&total).is_ok();
+            let paid = match &cost {
+                CumulativeUpkeepCost::Mana(mc) => {
+                    // Total = cost × age counters (repeat the pip list N times).
+                    let mut symbols = Vec::new();
+                    for _ in 0..n {
+                        symbols.extend(mc.symbols.iter().cloned());
+                    }
+                    self.players[active].mana_pool.pay(&crate::mana::ManaCost::new(symbols)).is_ok()
+                }
+                CumulativeUpkeepCost::Life(per) => {
+                    let total = per * n;
+                    // Auto-pay life only while it leaves the player alive.
+                    if self.players[active].life > total as i32 {
+                        self.adjust_life(active, -(total as i32));
+                        events.push(crate::game::GameEvent::LifeLost { player: active, amount: total });
+                        true
+                    } else {
+                        false
+                    }
+                }
+                CumulativeUpkeepCost::Sacrifice(filter) => {
+                    // Need N matching permanents (other than the source) to pay.
+                    let cands = self.sacrifice_candidates(active, filter, Some(id));
+                    let cands: Vec<CardId> = cands.into_iter().filter(|&c| c != id).collect();
+                    if cands.len() >= n as usize {
+                        let pick = self.auto_pick_sacrifices(&cands, n as usize, Some(id), false, false);
+                        for sid in pick {
+                            self.sacrifice_one(sid, active, &mut events);
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }
+            };
             if !paid {
                 events.push(crate::game::GameEvent::PermanentSacrificed { card_id: id, who: active });
                 if self.battlefield_find(id).map(|c| c.definition.is_creature()).unwrap_or(false) {

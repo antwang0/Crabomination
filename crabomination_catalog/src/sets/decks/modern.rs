@@ -23514,6 +23514,28 @@ pub fn necrotic_ooze() -> CardDefinition {
     }
 }
 
+/// Phyrexian Soulgorger — {3} Snow Artifact Creature — Phyrexian Construct
+/// 8/8. Cumulative upkeep—Sacrifice a creature (CR 702.24).
+pub fn phyrexian_soulgorger() -> CardDefinition {
+    use crate::card::{CumulativeUpkeepCost, Keyword, Supertype};
+    CardDefinition {
+        name: "Phyrexian Soulgorger",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![Supertype::Snow],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 8,
+        toughness: 8,
+        keywords: vec![Keyword::CumulativeUpkeep(CumulativeUpkeepCost::Sacrifice(Box::new(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )))],
+        ..Default::default()
+    }
+}
+
 /// The Gitrog Monster — {3}{B}{G} Legendary 6/6 Frog Horror with deathtouch.
 /// Upkeep: sacrifice it unless you sacrifice a land. You may play an additional
 /// land each turn. Whenever one or more land cards are put into your graveyard
@@ -35197,6 +35219,11 @@ pub fn curiosity() -> CardDefinition {
 /// Keen Sense — {G} Aura. Green Curiosity.
 pub fn keen_sense() -> CardDefinition {
     aura_damage_draw("Keen Sense", cost(&[g()]))
+}
+
+/// Ophidian Eye — {1}{U} Aura. Flash Curiosity ("draw on damage to a player").
+pub fn ophidian_eye() -> CardDefinition {
+    aura_damage_draw("Ophidian Eye", cost(&[generic(1), u()]))
 }
 
 fn aura_damage_draw(name: &'static str, mana: ManaCost) -> CardDefinition {

@@ -304,6 +304,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         damping_sphere,
         zuran_orb,
         soul_conduit,
+        phyrexian_soulgorger,
         chromatic_star,
         soul_guide_lantern,
         wasteland,
@@ -993,6 +994,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         supreme_phantom,
         // Auras (curiosity / unblockable)
         curiosity,
+        ophidian_eye,
         aqueous_form,
         // Merfolk/Wizard cost reducer
         stonybrook_banneret,
