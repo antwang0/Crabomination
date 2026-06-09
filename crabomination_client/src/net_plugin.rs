@@ -584,7 +584,7 @@ fn update_spectator_banner(
 
 /// The card id a cast action targets, for tracking whether a pending cast
 /// is still castable.
-fn cast_action_card_id(action: &GameAction) -> crabomination::card::CardId {
+pub fn cast_action_card_id(action: &GameAction) -> crabomination::card::CardId {
     match action {
         GameAction::CastSpell { card_id, .. }
         | GameAction::CastSpellBack { card_id, .. }

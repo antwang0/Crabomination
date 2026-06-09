@@ -14,7 +14,7 @@ use crabomination::{
 };
 
 use crate::game::{GameLog, LegalTargets};
-use crate::net_plugin::{CurrentView, NetOutbox};
+use crate::net_plugin::{cast_action_card_id, CurrentView, NetOutbox, PendingManaCast};
 use crate::scryfall;
 use crate::theme::{self, HoverTint, UiFonts};
 
@@ -183,6 +183,8 @@ pub fn spawn_decision_ui(
     existing: Query<Entity, With<DecisionModal>>,
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
+    pending_mana_cast: Res<PendingManaCast>,
+    outbox: Option<Res<NetOutbox>>,
 ) {
     let Some(cv) = &view.0 else {
         // Mulligan / no view yet — tear down any existing modal.
@@ -306,9 +308,26 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_card_picker_modal(&mut commands, &asset_server, &ui_fonts, prompt, candidates);
         }
-        DecisionWire::OptionalTrigger { description, .. } => {
+        DecisionWire::OptionalTrigger { source, description } => {
             state.spawned_for = Some(key);
-            spawn_optional_modal(&mut commands, &ui_fonts, description);
+            // The CR 601.2g "spend leftover floating mana, or keep it and tap
+            // lands?" confirmation fires for the very card the player is
+            // actively assembling mana to pay for via the manual-tap flow —
+            // its `source` is that spell/ability. They tapped those sources
+            // *to* pay this cost, so being asked whether to spend the mana
+            // they just tapped is pure noise. Auto-answer "spend" and skip the
+            // modal in that case; show it normally otherwise.
+            let paying_for_this = pending_mana_cast
+                .0
+                .as_ref()
+                .is_some_and(|pc| cast_action_card_id(&pc.action) == *source);
+            if paying_for_this {
+                if let Some(outbox) = &outbox {
+                    outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Bool(true)));
+                }
+            } else {
+                spawn_optional_modal(&mut commands, &ui_fonts, description);
+            }
         }
         DecisionWire::OrderTriggers { triggers, .. } => {
             if state.trigger_order.is_empty() {
