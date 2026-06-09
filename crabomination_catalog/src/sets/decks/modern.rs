@@ -13067,6 +13067,42 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Burrenton Bombardier — {2}{W} 2/2 Kithkin Soldier with flying. Reinforce
+/// 2—{2}{W} (CR 702.77). (MOR)
+pub fn burrenton_bombardier() -> CardDefinition {
+    CardDefinition {
+        name: "Burrenton Bombardier",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Reinforce(2, cost(&[generic(2), w()]))],
+        ..Default::default()
+    }
+}
+
+/// Mosquito Guard — {W} 1/1 Kithkin Soldier with first strike. Reinforce
+/// 1—{1}{W} (CR 702.77). (MOR)
+pub fn mosquito_guard() -> CardDefinition {
+    CardDefinition {
+        name: "Mosquito Guard",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike, Keyword::Reinforce(1, cost(&[generic(1), w()]))],
+        ..Default::default()
+    }
+}
+
 /// Bannerhide Krushok — {3}{G} 4/4 Beast with Reinforce 2—{1}{G} (CR 702.77):
 /// {1}{G}, Discard this card: put two +1/+1 counters on target creature. (MH3)
 pub fn bannerhide_krushok() -> CardDefinition {

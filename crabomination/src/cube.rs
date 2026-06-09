@@ -469,6 +469,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         defenestrated_phantom,
         museum_nightwatch,
         crowd_control_warden,
+        burrenton_bombardier,
+        mosquito_guard,
         eiganjo_seat_of_the_empire,
         restless_fortress,
         phelia_exuberant_shepherd,

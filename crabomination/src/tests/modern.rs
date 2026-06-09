@@ -42174,6 +42174,49 @@ fn bot_turns_up_affordable_face_down_creature() {
         "bot should turn up the face-down creature; got {action:?}");
 }
 
+/// Mosquito Guard's Reinforce 1 grows a creature by one counter.
+#[test]
+fn reinforce_mosquito_guard_puts_one_counter() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    // The body is a 1/1 first striker.
+    let body = g.add_card_to_battlefield(0, catalog::mosquito_guard());
+    assert!(g.battlefield_find(body).unwrap().definition.keywords.contains(&Keyword::FirstStrike));
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mosquito_guard());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Reinforce {
+        card_id: id, target: Target::Permanent(target),
+    }).expect("reinforce");
+    assert_eq!((g.battlefield_find(target).unwrap().power(), g.battlefield_find(target).unwrap().toughness()),
+        (3, 3), "2/2 + one +1/+1 counter");
+}
+
+/// Burrenton Bombardier is a 2/2 flyer with Reinforce 2.
+#[test]
+fn burrenton_bombardier_is_a_flyer_with_reinforce() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::burrenton_bombardier());
+    assert!(matches!(
+        catalog::burrenton_bombardier().keywords.iter().find(|k| matches!(k, Keyword::Reinforce(..))),
+        Some(Keyword::Reinforce(2, _))
+    ));
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::Reinforce {
+        card_id: id, target: Target::Permanent(target),
+    }).expect("reinforce");
+    assert_eq!((g.battlefield_find(target).unwrap().power(), g.battlefield_find(target).unwrap().toughness()),
+        (4, 4), "2/2 + two +1/+1 counters");
+}
+
 /// Bannerhide Krushok's Reinforce 2 discards it to grow a creature (CR 702.77).
 #[test]
 fn reinforce_bannerhide_krushok_puts_two_counters() {
