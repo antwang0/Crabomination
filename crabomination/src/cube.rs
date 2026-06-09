@@ -471,6 +471,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         talon_sliver,
         watcher_sliver,
         leonin_warleader,
+        shared_triumph,
         // Spirit + Knight tribal
         empyrean_eagle,
         kinsbaile_cavalier,
@@ -1356,6 +1357,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         lord_of_the_accursed,
         lilianas_mastery,
         captivating_vampire,
+        frogtosser_banneret,
         overlord_of_the_balemurk,
         get_lost,
         deep_cavern_bat,
@@ -1760,12 +1762,15 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_lackey,
         warren_instigator,
         goblin_piledriver,
-        // red Slivers
+        // red Slivers + goblins/sweepers
         heart_sliver,
         striking_sliver,
         blur_sliver,
         belligerent_sliver,
         two_headed_sliver,
+        dragonlords_servant,
+        goblin_war_strike,
+        pyrohemia,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god

@@ -40896,6 +40896,65 @@ fn cemetery_reaper_buffs_other_zombies() {
     assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Zombie gets +1/+1");
 }
 
+/// Shared Triumph anthems the chosen creature type.
+#[test]
+fn shared_triumph_buffs_chosen_type() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let zombie = g.add_card_to_battlefield(0, catalog::shepherd_of_rot());
+    let triumph = g.add_card_to_battlefield(0, catalog::shared_triumph());
+    // Stamp the chosen type directly (the ETB NameCreatureType auto-pick is
+    // exercised separately for Cavern of Souls / Adaptive Automaton).
+    g.battlefield.iter_mut().find(|c| c.id == triumph).unwrap().chosen_creature_type =
+        Some(CreatureType::Zombie);
+    assert_eq!(g.computed_permanent(zombie).unwrap().power, 2, "chosen-type creature buffed");
+}
+
+/// Dragonlord's Servant makes Dragon spells cost {1} less.
+#[test]
+fn dragonlords_servant_reduces_dragon_spells() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragonlords_servant());
+    // Shivan Dragon ({4}{R}{R}) should be castable for one less generic.
+    let dragon = g.add_card_to_hand(0, catalog::shivan_dragon());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3); // {3}{R}{R} after the {1} reduction
+    g.perform_action(GameAction::CastSpell {
+        card_id: dragon, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dragon costs {1} less");
+}
+
+/// Goblin War Strike burns for the number of Goblins you control.
+#[test]
+fn goblin_war_strike_scales_with_goblins() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dragonlords_servant()); // a Goblin
+    g.add_card_to_battlefield(0, catalog::frogtosser_banneret()); // another Goblin
+    let id = g.add_card_to_hand(0, catalog::goblin_war_strike());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Goblin War Strike");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "two Goblins → 2 damage");
+}
+
+/// Pyrohemia pings every creature and player for 1.
+#[test]
+fn pyrohemia_pings_everything() {
+    let mut g = two_player_game();
+    let pyro = g.add_card_to_battlefield(0, catalog::pyrohemia());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: pyro, ability_index: 0, target: None, x_value: None,
+    }).expect("activate Pyrohemia");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19, "you take 1");
+    assert_eq!(g.players[1].life, 19, "opponent takes 1");
+    assert_eq!(g.battlefield_find(bear).unwrap().damage, 1, "bear took 1");
+}
+
 /// Lord of the Accursed pumps other Zombies and can grant all Zombies menace.
 #[test]
 fn lord_of_the_accursed_pumps_and_grants_menace() {

@@ -36125,3 +36125,129 @@ pub fn voice_of_the_woods() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: chosen-type anthem, cost reducers, red sweepers (batch 5) ────
+
+/// Shared Triumph — {1}{W} Enchantment. As it enters, choose a creature type.
+/// Creatures of the chosen type get +1/+1.
+pub fn shared_triumph() -> CardDefinition {
+    CardDefinition {
+        name: "Shared Triumph",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![etb(Effect::NameCreatureType { what: Selector::This })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures of the chosen type get +1/+1.",
+            effect: StaticEffect::AnthemForChosenType { power: 1, toughness: 1, exclude_source: false },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dragonlord's Servant — {1}{R} 1/3 Goblin Shaman. Dragon spells you cast cost
+/// {1} less to cast.
+pub fn dragonlords_servant() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonlord's Servant",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Dragon spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Dragon),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Frogtosser Banneret — {1}{B} 1/1 Goblin Rogue. Haste. Goblin and Rogue spells
+/// you cast cost {1} less to cast.
+pub fn frogtosser_banneret() -> CardDefinition {
+    CardDefinition {
+        name: "Frogtosser Banneret",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        static_abilities: vec![StaticAbility {
+            description: "Goblin and Rogue spells you cast cost {1} less to cast.",
+            effect: StaticEffect::CostReduction {
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                    .or(SelectionRequirement::HasCreatureType(CreatureType::Rogue)),
+                amount: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin War Strike — {R} Sorcery. Deals damage to target player or planeswalker
+/// equal to the number of Goblins you control.
+pub fn goblin_war_strike() -> CardDefinition {
+    CardDefinition {
+        name: "Goblin War Strike",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Player),
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin)
+                    .and(SelectionRequirement::ControlledByYou),
+            ))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Pyrohemia — {2}{R}{R} Enchantment. At the beginning of the end step, if no
+/// creatures are on the battlefield, sacrifice it. {R}: deals 1 damage to each
+/// creature and each player. (Red Pestilence.)
+pub fn pyrohemia() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Pyrohemia",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::SelectorExists(
+                    Selector::EachPermanent(SelectionRequirement::Creature),
+                )))),
+            effect: Effect::SacrificeSource,
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            effect: Effect::Seq(vec![
+                Effect::ForEach {
+                    selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::Const(1),
+                    }),
+                },
+                Effect::ForEach {
+                    selector: Selector::Player(PlayerRef::EachPlayer),
+                    body: Box::new(Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::Const(1),
+                    }),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
