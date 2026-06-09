@@ -481,7 +481,7 @@ pub fn strixhaven_spawner() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         supertypes: vec![],
-    
+
         static_abilities: vec![],
         equipped_bonus: None,
     };
@@ -1353,7 +1353,7 @@ pub fn diviners_wand() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 1,
-            keywords: vec![Keyword::Flying], scale: None, triggered_abilities: vec![] }),
+            keywords: vec![Keyword::Flying], scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }

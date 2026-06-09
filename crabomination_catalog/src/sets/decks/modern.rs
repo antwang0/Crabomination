@@ -2938,7 +2938,7 @@ pub fn satyr_wayfinder() -> CardDefinition {
                 count: Value::Const(4),
                 rest_to_graveyard: true,
                 pick_filter: Some(SelectionRequirement::Land),
-            
+
                 take: None,
             },
         }],
@@ -3897,7 +3897,7 @@ pub fn raise_the_alarm() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -4237,8 +4237,7 @@ pub fn gnarled_scarhide() -> CardDefinition {
             toughness: 1,
             keywords: vec![Keyword::CantBlock],
             scale: None,
-            triggered_abilities: vec![],
-        }),
+            triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -4807,7 +4806,7 @@ pub fn regisaur_alpha() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -5043,7 +5042,7 @@ pub fn raptor_hatchling() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     equipped_bonus: None,
                 },
@@ -5182,7 +5181,7 @@ pub fn spectral_procession() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -5255,7 +5254,7 @@ pub fn beast_within() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     equipped_bonus: None,
                 },
@@ -5923,7 +5922,7 @@ pub fn anticipate() -> CardDefinition {
             count: Value::Const(3),
             rest_to_graveyard: false,
             pick_filter: None,
-        
+
             take: None,
         },
         ..Default::default()
@@ -6756,7 +6755,7 @@ pub fn doomed_dissenter() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -8845,7 +8844,7 @@ pub fn seasoned_pyromancer() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     equipped_bonus: None,
                 },
@@ -8913,7 +8912,7 @@ pub fn forbidden_alchemy() -> CardDefinition {
             count: Value::Const(4),
             rest_to_graveyard: true,
             pick_filter: None,
-        
+
             take: None,
         },
         ..Default::default()
@@ -9742,7 +9741,7 @@ pub fn glint_nest_crane() -> CardDefinition {
             count: Value::Const(4),
             rest_to_graveyard: false,
             pick_filter: Some(SelectionRequirement::Artifact),
-        
+
             take: None,
         })],
         ..Default::default()
@@ -10873,7 +10872,7 @@ pub fn murmuring_mystic() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -11170,7 +11169,7 @@ pub fn strategic_planning() -> CardDefinition {
             count: Value::Const(3),
             rest_to_graveyard: true,
             pick_filter: None,
-        
+
             take: None,
         },
         ..Default::default()
@@ -11880,7 +11879,7 @@ pub fn ophiomancer() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         equipped_bonus: None,
     };
@@ -12051,7 +12050,7 @@ pub fn white_suns_zenith() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-    
+
         static_abilities: vec![],
         equipped_bonus: None,
     };
@@ -15177,7 +15176,7 @@ pub fn lingering_souls() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -16194,7 +16193,7 @@ pub fn gift_of_orzhova() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Flying, Keyword::Lifelink], scale: None, triggered_abilities: vec![] }),
+            keywords: vec![Keyword::Flying, Keyword::Lifelink], scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -16473,7 +16472,7 @@ pub fn rancor() -> CardDefinition {
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             toughness: 0,
-            keywords: vec![Keyword::Trample], scale: None, triggered_abilities: vec![] }),
+            keywords: vec![Keyword::Trample], scale: None, triggered_abilities: vec![], ..Default::default() }),
         // Self-recursion: leaves battlefield → return from graveyard to hand.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
@@ -16584,7 +16583,7 @@ fn simple_aura(
                 filter: SelectionRequirement::Creature,
             },
         },
-        equipped_bonus: Some(crate::card::EquipBonus { power, toughness, keywords, scale: None, triggered_abilities: vec![] }),
+        equipped_bonus: Some(crate::card::EquipBonus {  power, toughness, keywords, scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -16832,7 +16831,7 @@ pub fn decree_of_justice() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -18122,7 +18121,7 @@ pub fn young_pyromancer() -> CardDefinition {
                 },
                 activated_abilities: vec![],
                 triggered_abilities: vec![],
-            
+
                 static_abilities: vec![],
                 equipped_bonus: None,
             },
@@ -18175,7 +18174,7 @@ pub fn omnath_locus_of_rage() -> CardDefinition {
                 amount: Value::Const(3),
             },
         }],
-    
+
         static_abilities: vec![],
         equipped_bonus: None,
     };
@@ -18354,7 +18353,7 @@ pub fn lightning_greaves() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 0,
             toughness: 0,
-            keywords: vec![Keyword::Haste, Keyword::Shroud], scale: None, triggered_abilities: vec![] }),
+            keywords: vec![Keyword::Haste, Keyword::Shroud], scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -18379,7 +18378,7 @@ pub fn bonesplitter() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 0,
-            keywords: vec![], scale: None, triggered_abilities: vec![] }),
+            keywords: vec![], scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -18404,7 +18403,7 @@ pub fn shuko() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 0,
-            keywords: vec![], scale: None, triggered_abilities: vec![] }),
+            keywords: vec![], scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -18432,8 +18431,7 @@ pub fn skullclamp() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-            }],
-        }),
+            }], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -18457,7 +18455,7 @@ pub fn lavaspur_boots() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
-            keywords: vec![Keyword::Haste], scale: None, triggered_abilities: vec![] }),
+            keywords: vec![Keyword::Haste], scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -18689,7 +18687,7 @@ pub fn kozileks_command() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     equipped_bonus: None,
                 },
@@ -18759,7 +18757,7 @@ pub fn eldrazi_confluence() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     equipped_bonus: None,
                 },
@@ -19164,7 +19162,7 @@ pub fn kari_zev_skyship_raider() -> CardDefinition {
                     },
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
-                
+
                     static_abilities: vec![],
                     equipped_bonus: None,
                 },
@@ -20786,7 +20784,7 @@ pub fn esikas_chariot() -> CardDefinition {
                         },
                         activated_abilities: vec![],
                         triggered_abilities: vec![],
-                    
+
                         static_abilities: vec![],
                         equipped_bonus: None,
                     },
@@ -21558,8 +21556,7 @@ pub fn trusty_machete() -> CardDefinition {
             toughness: 1,
             keywords: vec![],
             scale: None,
-            triggered_abilities: vec![],
-        }),
+            triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -21582,8 +21579,7 @@ pub fn darksteel_axe() -> CardDefinition {
             toughness: 0,
             keywords: vec![],
             scale: None,
-            triggered_abilities: vec![],
-        }),
+            triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -21611,8 +21607,7 @@ pub fn cranial_plating() -> CardDefinition {
                 per_toughness: 0,
                 count_self_counters: None,
             }),
-            triggered_abilities: vec![],
-        }),
+            triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -22751,7 +22746,7 @@ pub fn impulse() -> CardDefinition {
             count: Value::Const(4),
             rest_to_graveyard: false,
             pick_filter: None,
-        
+
             take: None,
         },
         ..Default::default()
@@ -23595,7 +23590,7 @@ pub fn kestia_the_cultivator() -> CardDefinition {
         power: 4,
         toughness: 4,
         bestow: Some(cost(&[generic(3), g(), w(), u()])),
-        equipped_bonus: Some(EquipBonus { power: 4, toughness: 4, keywords: vec![], scale: None, triggered_abilities: vec![] }),
+        equipped_bonus: Some(EquipBonus {  power: 4, toughness: 4, keywords: vec![], scale: None, triggered_abilities: vec![], ..Default::default() }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
                 .with_filter(Predicate::EntityMatches {
@@ -23740,7 +23735,7 @@ pub fn parallax_dementia() -> CardDefinition {
             what: Selector::This,
             to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
         },
-        equipped_bonus: Some(crate::card::EquipBonus { power: 3, toughness: 2, keywords: vec![], scale: None, triggered_abilities: vec![] }),
+        equipped_bonus: Some(crate::card::EquipBonus {  power: 3, toughness: 2, keywords: vec![], scale: None, triggered_abilities: vec![], ..Default::default() }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
             effect: Effect::DestroyNoRegen {
@@ -23908,7 +23903,7 @@ pub fn nettlecyst() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 1,
                 count_self_counters: None,
-            }), triggered_abilities: vec![] }),
+            }), triggered_abilities: vec![], ..Default::default() }),
         // Living weapon (CR 702.91): mint a Germ and attach on ETB.
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
@@ -23985,7 +23980,7 @@ pub fn lion_sash() -> CardDefinition {
                 per_power: 1,
                 per_toughness: 1,
                 count_self_counters: Some(CounterType::PlusOnePlusOne),
-            }), triggered_abilities: vec![] }),
+            }), triggered_abilities: vec![], ..Default::default() }),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             effect: Effect::Seq(vec![
@@ -24324,8 +24319,7 @@ pub fn sword_of_body_and_mind() -> CardDefinition {
                     Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: wolf },
                     Effect::Mill { who: Selector::Player(PlayerRef::Target(0)), amount: Value::Const(10) },
                 ]),
-            }],
-        }),
+            }], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -24351,8 +24345,7 @@ fn sword(name: &'static str, prot: [Color; 2], rider: Effect) -> CardDefinition 
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: rider,
-            }],
-        }),
+            }], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -25139,8 +25132,7 @@ pub fn batterskull() -> CardDefinition {
             toughness: 4,
             keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
             scale: None,
-            triggered_abilities: vec![],
-        }),
+            triggered_abilities: vec![], ..Default::default() }),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken { who: PlayerRef::You, count: Value::Const(1), definition: germ },
             Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
@@ -25181,8 +25173,7 @@ fn simple_equipment(
             toughness,
             keywords,
             scale: None,
-            triggered_abilities: vec![],
-        }),
+            triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -25282,8 +25273,7 @@ fn combat_damage_equipment(
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: rider,
-            }],
-        }),
+            }], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -31499,8 +31489,7 @@ pub fn hardened_scale_armor() -> CardDefinition {
             to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Creature },
         },
         equipped_bonus: Some(crate::card::EquipBonus {
-            power: 3, toughness: 3, keywords: vec![], scale: None, triggered_abilities: vec![],
-        }),
+            power: 3, toughness: 3, keywords: vec![], scale: None, triggered_abilities: vec![], ..Default::default() }),
         ..Default::default()
     }
 }
@@ -37030,8 +37019,7 @@ pub fn simian_sling() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
                 effect: ping(),
-            }],
-        }),
+            }], ..Default::default() }),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
             effect: ping(),
@@ -37081,6 +37069,70 @@ pub fn tribal_flames() -> CardDefinition {
             ),
             amount: Value::DomainCount(PlayerRef::You),
         },
+        ..Default::default()
+    }
+}
+
+/// Umezawa's Jitte — {2} Legendary Artifact — Equipment. Whenever equipped
+/// creature deals combat damage, put two charge counters on this. Remove a
+/// charge counter: choose one — equipped creature gets +2/+2; or target
+/// creature gets -1/-1; or you gain 2 life. Equip {2}. (The combat trigger
+/// fires on damage to a player; combat-damage-to-a-creature isn't dispatched.)
+pub fn umezawas_jitte() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType, EquipBonus};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Umezawa's Jitte",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
+            triggered_abilities: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(2),
+                },
+            }],
+            ..Default::default()
+        }),
+        activated_abilities: vec![
+            // Equipped creature gets +2/+2 until end of turn.
+            ActivatedAbility {
+                remove_counter_cost: Some((CounterType::Charge, 1)),
+                effect: Effect::PumpPT {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    power: Value::Const(2),
+                    toughness: Value::Const(2),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            // Target creature gets -1/-1 until end of turn.
+            ActivatedAbility {
+                remove_counter_cost: Some((CounterType::Charge, 1)),
+                effect: Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-1),
+                    toughness: Value::Const(-1),
+                    duration: Duration::EndOfTurn,
+                },
+                ..Default::default()
+            },
+            // You gain 2 life.
+            ActivatedAbility {
+                remove_counter_cost: Some((CounterType::Charge, 1)),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

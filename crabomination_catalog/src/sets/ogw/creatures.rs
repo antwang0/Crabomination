@@ -2065,8 +2065,7 @@ pub fn visions_of_brutality() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::LoseLife { who: Selector::You, amount: Value::TriggerEventAmount },
-            }],
-        }),
+            }], ..Default::default() }),
         ..Default::default()
     }
 }

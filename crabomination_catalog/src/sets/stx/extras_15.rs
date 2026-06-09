@@ -75,8 +75,7 @@ pub fn zephyr_boots() -> CardDefinition {
                     Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                     Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
                 ]),
-            }],
-        }),
+            }], ..Default::default() }),
         ..Default::default()
     }
 }

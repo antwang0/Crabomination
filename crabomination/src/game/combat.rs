@@ -1686,6 +1686,10 @@ impl GameState {
                     continue;
                 }
                 let Some(bonus) = &eq.definition.equipped_bonus else { continue };
+                // CR 702.6e — the granted ability fires off the creature, unless
+                // the Equipment opts to fire off itself (Umezawa's Jitte puts the
+                // counters on the Equipment, so `Selector::This` must read it).
+                let trig_source = if bonus.triggers_on_equipment { eq.id } else { source };
                 for t in &bonus.triggered_abilities {
                     if t.event.kind == EventKind::DealsCombatDamageToPlayer
                         && matches!(
@@ -1694,7 +1698,7 @@ impl GameState {
                                 | crate::effect::EventScope::AnyPlayer
                         )
                     {
-                        triggers.push((source, t.effect.clone(), atk_ctrl));
+                        triggers.push((trig_source, t.effect.clone(), atk_ctrl));
                     }
                 }
             }

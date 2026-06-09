@@ -34,9 +34,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Manifest-dread "turn up if a creature card"** already works via
     `TurnFaceUp`; a face-down noncreature can't be turned up (correct).
 - ⏳ **Cards deferred this run (each wants one small primitive):**
-  - **Umezawa's Jitte** — Equipment that puts charge counters on *itself* when
-    the equipped creature deals combat damage; needs an `EquipBonus` trigger
-    whose effect targets the equipment (not the equipped creature).
+  - ✅ **Umezawa's Jitte** — ships via `EquipBonus.triggers_on_equipment` (the
+    granted combat-damage trigger resolves with the Equipment as source, so the
+    charge counters land on Jitte) + three `remove_counter_cost` activated
+    abilities (+2/+2 / -1/-1 / gain 2). ⏳ remaining: the trigger only fires on
+    combat damage **to a player** — `DealsCombatDamageToCreature` isn't dispatched.
   - ✅ **Leyline Binding** — Domain cost reduction ({1} less per basic land type)
     ships via `StaticEffect::SelfCostReducedByDomain` + `Value::DomainCount`;
     Tribal Flames reuses the Value for its X-damage. (Leyline Binding, Tribal Flames.)

@@ -1398,6 +1398,13 @@ pub struct EquipBonus {
     /// cycle's combat-damage triggers. Empty for the common static-bonus case.
     #[serde(default)]
     pub triggered_abilities: Vec<crate::effect::TriggeredAbility>,
+    /// When true, `triggered_abilities` resolve with the **Equipment** as the
+    /// trigger source (so `Selector::This` reads the Equipment, not the equipped
+    /// creature). Umezawa's Jitte's "whenever equipped creature deals combat
+    /// damage, put two charge counters on this Equipment". `false` keeps the
+    /// default CR 702.6e behavior (the ability fires off the creature).
+    #[serde(default)]
+    pub triggers_on_equipment: bool,
 }
 
 /// CR 702.95 — the bonus each member of a Soulbond pair gains while paired.

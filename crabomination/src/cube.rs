@@ -389,6 +389,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         stonecoil_serpent,
         // ── equip-granted dies trigger (CR 702.6e) ──
         skullclamp,
+        // ── modern_decks: equip-trigger that charges the equipment ──
+        umezawas_jitte,
         // ── modern_decks: living weapon + board-scaled equip bonus ──
         nettlecyst,
         // ── modern_decks: begin-combat token-copy equipment ──

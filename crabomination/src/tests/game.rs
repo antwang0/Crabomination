@@ -6340,7 +6340,7 @@ fn cr_702_16f_protection_blocks_equip() {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
-        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, keywords: vec![], scale: None, triggered_abilities: vec![] }),
+        equipped_bonus: Some(EquipBonus { power: 2, toughness: 0, ..Default::default() }),
         ..Default::default()
     };
     let blade = g.add_card_to_battlefield(0, red_equip);

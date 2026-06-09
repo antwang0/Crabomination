@@ -31096,6 +31096,42 @@ fn sword_of_body_and_mind_combat_damage_makes_wolf_and_mills() {
     assert!(g.players[1].graveyard.len() >= opp_gy + 10, "defender milled ten");
 }
 
+/// Umezawa's Jitte gains two charge counters when the equipped creature deals
+/// combat damage to a player, then a charge counter can be spent for -1/-1.
+#[test]
+fn umezawas_jitte_charges_on_combat_damage_then_shrinks() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::looter_il_kor()); // shadow → unblockable
+    for _ in 0..5 { g.add_card_to_library(0, catalog::grizzly_bears()); } // loot needs a library
+    let jitte = g.add_card_to_battlefield(0, catalog::umezawas_jitte());
+    g.battlefield_find_mut(jitte).unwrap().attached_to = Some(attacker);
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    for _ in 0..14 {
+        if g.battlefield_find(jitte).map(|c| c.counter_count(CounterType::Charge)).unwrap_or(0) >= 2 { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.battlefield_find(jitte).unwrap().counter_count(CounterType::Charge), 2,
+        "two charge counters from combat damage");
+    // Spend a charge counter to shrink an opponent's creature.
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: jitte, ability_index: 1, target: Some(Target::Permanent(victim)), x_value: None,
+    }).expect("activate -1/-1");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jitte).unwrap().counter_count(CounterType::Charge), 1,
+        "one charge counter spent");
+    let v = g.battlefield_find(victim).unwrap();
+    assert_eq!((v.power(), v.toughness()), (1, 1), "2/2 → 1/1 from -1/-1");
+}
+
 #[test]
 fn sword_of_feast_and_famine_discards_and_untaps_lands() {
     let mut g = two_player_game();
