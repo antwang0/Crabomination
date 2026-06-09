@@ -39611,3 +39611,16 @@ fn reveillark_leaves_returns_small_creatures() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == mouse), "returned a power-2 creature to the battlefield");
 }
+
+#[test]
+fn miracle_window_surfaces_in_hand_affordances() {
+    let mut g = two_player_game();
+    let bonfire = g.add_card_to_library(0, catalog::bonfire_of_the_damned());
+    g.players[0].cards_drawn_this_turn = 0;
+    // Give priority to seat 0 so affordances compute for them.
+    g.priority.player_with_priority = 0;
+    let mut events = vec![];
+    g.draw_one(0, &mut events);
+    let aff = g.compute_hand_affordances(0);
+    assert!(aff.miracle.contains(&bonfire), "miracle window surfaced as an affordance");
+}

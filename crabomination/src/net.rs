@@ -279,6 +279,11 @@ pub struct ClientView {
     /// snapshot back-compat.
     #[serde(default)]
     pub bestowable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with a live Miracle window (CR 702.94),
+    /// castable for the miracle cost this turn. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub miracle_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Bargain they could cast right now
     /// (CR 702.176), so the client can offer a "sacrifice for Bargain?"
     /// toggle. `#[serde(default)]` for snapshot back-compat.

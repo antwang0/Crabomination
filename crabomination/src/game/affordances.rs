@@ -358,6 +358,23 @@ impl GameState {
         out
     }
 
+    /// CardIds in the caster's hand with a live Miracle window (CR 702.94) —
+    /// revealed as the turn's first draw, castable for the cheaper miracle
+    /// cost. A pure structural filter (no dry-run): the stamped
+    /// `granted_alt_cast_cost_eot` + `may_play_until` for this seat is the
+    /// signal `maybe_grant_miracle` leaves behind.
+    pub fn miracle_hand_cards(&self, caster: usize) -> Vec<CardId> {
+        self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| {
+                c.granted_alt_cast_cost_eot.is_some()
+                    && c.may_play_until.as_ref().is_some_and(|p| p.player == caster)
+            })
+            .map(|c| c.id)
+            .collect()
+    }
+
     /// CardIds in the caster's hand they could cast right now paying the
     /// optional Buyback cost (CR 702.27). Mirrors `kickable_hand_cards`.
     pub fn buyback_hand_cards(&self, caster: usize) -> Vec<CardId> {
@@ -739,6 +756,7 @@ impl GameState {
             adventurable: self.adventurable_hand_cards_on(&template, seat),
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             bargainable: self.bargainable_hand_cards_on(&template, seat),
+            miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
         }
     }
