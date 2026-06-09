@@ -8,6 +8,19 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Cube bombs still needing primitives.** Noticed-but-deferred this run:
+  Skyclave Apparition (exile-permanent + size-on-leave Illusion token),
+  Duplicant (imprint + P/T-from-exiled), Grafdigger's Cage (a "can't enter from
+  gy/library + can't cast from gy/library" static), Hostage Taker, Gonti
+  (cast an opponent's exiled card). Each wants one targeted engine primitive.
+- ⏳ **`EachOpponentPlaneswalker` was unneeded** — Saheeli's "each planeswalker
+  they control" rides `EachPermanent(Planeswalker & ControlledByOpponent)` with
+  damage-to-PW (CR 120.3c). Karn Liberated's -14 and Ugin's -X exile-by-MV
+  still approximate (no X-aware `ManaValueAtMostX` requirement yet).
+- ⏳ **Client crate can't be built/clippy'd in the web sandbox** (wayland-sys
+  build script needs system libs). Engine/catalog/server clippy is clean; the
+  client edits this run (miracle highlight, `miracle_hand` field) are minimal
+  and compile-checked by inspection only.
 - ⏳ **Dedicated immediate-blink primitive.** Restoration-style instant flicker
   is carded via `Exile { target } + Move { Target → Battlefield }` (Restoration
   Angel, Felidar Guardian). A single `Effect::FlickerImmediate { what }` would be
