@@ -286,6 +286,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         mishras_factory,
         inkmoth_nexus,
         blinkmoth_nexus,
+        // ── claude/modern_decks: colorless artifacts ──
+        mana_crypt,
+        null_rod,
         aetherflux_reservoir,
         mox_diamond,
         chrome_mox,
@@ -461,6 +464,9 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── claude/modern_decks: white/multicolor staples ──
+        phelia_exuberant_shepherd,
+        phlage_titan_of_fires_fury,
         // Impending Overlord (Duskmourn)
         overlord_of_the_mistmoors,
         // ── modern_decks: Aura tutor + Soldier tribal ──
@@ -1572,6 +1578,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cling_to_dust,
         kroxa,
         uro,
+        ribbons_of_night,
         cruel_celebrant,
         mayhem_devil,
         beacon_of_destruction,

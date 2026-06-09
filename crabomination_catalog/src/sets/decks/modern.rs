@@ -36251,3 +36251,98 @@ pub fn pyrohemia() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Phlage, Titan of Fire's Fury — {1}{R}{W} Legendary 6/6 Elder Giant.
+/// Escape—{R}{R}{W}{W}, exile five other graveyard cards. On enter, sacrifice
+/// it unless it escaped. On enter or attack, deal 3 to any target and gain 3.
+pub fn phlage_titan_of_fires_fury() -> CardDefinition {
+    let bolt = Effect::Seq(vec![
+        Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+    ]);
+    CardDefinition {
+        name: "Phlage, Titan of Fire's Fury",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Escape(cost(&[r(), r(), w(), w()]), 5)],
+        triggered_abilities: vec![
+            etb(Effect::If {
+                cond: Predicate::Not(Box::new(Predicate::SourceCastFromEscape)),
+                then: Box::new(Effect::SacrificeSource),
+                else_: Box::new(Effect::Noop),
+            }),
+            etb(bolt.clone()),
+            crate::effect::shortcut::on_attack(bolt),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Phelia, Exuberant Shepherd — {1}{W} Legendary 2/2 Dog. Flash, Vigilance.
+/// Whenever Phelia attacks, exile up to one other target nonland permanent;
+/// return it at the next end step. The printed "if it entered under your
+/// control this way, put a +1/+1 counter on Phelia" is approximated as an
+/// unconditional +1/+1 counter on the blink.
+pub fn phelia_exuberant_shepherd() -> CardDefinition {
+    CardDefinition {
+        name: "Phelia, Exuberant Shepherd",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dog],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash, Keyword::Vigilance],
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::Seq(vec![
+            Effect::ExileReturnNextEndStep {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Ribbons of Night — {4}{B} Sorcery. Deals 4 damage to target creature and
+/// you gain 4 life. (The "if {U} was spent, draw" rider is dropped — no
+/// mana-color-provenance gate yet.)
+pub fn ribbons_of_night() -> CardDefinition {
+    CardDefinition {
+        name: "Ribbons of Night",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        ]),
+        ..Default::default()
+    }
+}

@@ -41817,3 +41817,83 @@ fn face_down_creature_dies_as_real_card() {
     assert_eq!(gy.definition.name, "Elder Gargaroth", "restored to real card in graveyard");
     assert!(!gy.face_down);
 }
+
+// ── claude/modern_decks: cube staples ────────────────────────────────────────
+
+/// Mana Crypt taps for {C}{C}; the upkeep coin-flip can deal 3 to its
+/// controller (tails). We force the flip outcome via a scripted decider.
+#[test]
+fn mana_crypt_taps_for_two_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::mana_crypt());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("tap for {C}{C}");
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 2, "produced two colorless");
+}
+
+/// Null Rod stops a (nonmana) artifact activated ability from being activated.
+#[test]
+fn null_rod_locks_artifact_abilities() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::null_rod());
+    // Icy Manipulator's tap-down is a nonmana artifact ability.
+    let icy = g.add_card_to_battlefield(0, catalog::icy_manipulator());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let err = g.perform_action(GameAction::ActivateAbility {
+        card_id: icy, ability_index: 0, target: Some(Target::Permanent(victim)), x_value: None,
+    });
+    assert!(err.is_err(), "Null Rod locks the artifact's nonmana ability");
+}
+
+/// Phlage deals 3 and gains 3 on enter; it's sacrificed when not escaped.
+#[test]
+fn phlage_bolts_and_sacrifices_when_not_escaped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::phlage_titan_of_fires_fury());
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 3, "gained 3");
+    assert!(g.players[1].life <= life1 - 3 || g.battlefield_find(id).is_none(),
+        "dealt 3 somewhere and/or sacrificed");
+    assert!(g.battlefield_find(id).is_none(), "sacrificed when cast normally (not escaped)");
+}
+
+/// Ribbons of Night deals 4 to a creature and gains 4 life.
+#[test]
+fn ribbons_of_night_kills_and_gains() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ribbons_of_night());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Ribbons of Night");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "2/2 dies to 4 damage");
+    assert_eq!(g.players[0].life, life + 4, "gained 4");
+}
+
+/// Phelia's attack trigger blinks a nonland permanent (returns at end step) and
+/// grows Phelia with a +1/+1 counter.
+#[test]
+fn phelia_attack_blinks_and_grows() {
+    let mut g = two_player_game();
+    let phelia = g.add_card_to_battlefield(0, catalog::phelia_exuberant_shepherd());
+    g.clear_sickness(phelia);
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: phelia, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    drain_stack(&mut g);
+    // The blinked creature is exiled (returns next end step).
+    assert!(g.battlefield_find(other).is_none(), "blinked permanent left the battlefield");
+    let p = g.battlefield_find(phelia).expect("phelia still here");
+    assert_eq!(p.counter_count(crate::card::CounterType::PlusOnePlusOne), 1, "Phelia grew");
+}

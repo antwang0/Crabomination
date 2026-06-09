@@ -1810,3 +1810,47 @@ pub fn chrome_mox() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Mana Crypt — {0} Artifact. `{T}: Add {C}{C}`. At the beginning of your
+/// upkeep, flip a coin; if you lose the flip (tails), it deals 3 damage to you.
+pub fn mana_crypt() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Mana Crypt",
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::FlipCoin {
+                count: Value::Const(1),
+                on_heads: Box::new(Effect::Noop),
+                on_tails: Box::new(Effect::DealDamage { to: Selector::You, amount: Value::Const(3) }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Null Rod — {2} Artifact. "Activated abilities of artifacts can't be
+/// activated unless they're mana abilities."
+pub fn null_rod() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Null Rod",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "Activated abilities of artifacts can't be activated unless they're mana abilities.",
+            effect: StaticEffect::ArtifactActivatedAbilitiesLocked,
+        }],
+        ..Default::default()
+    }
+}
