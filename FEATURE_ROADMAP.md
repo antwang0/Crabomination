@@ -85,7 +85,9 @@ not how Magic works" moments.
    ETB replacement (enters with counters / as a copy / under your
    control; **enters tapped** now ships via `StaticEffect::EntersTapped` +
    `apply_enters_tapped_replacement` (CR 614.13 — Imposing Sovereign,
-   Authority of the Consuls, Blind Obedience, Kismet); "exile non-cast
+   Authority of the Consuls, Blind Obedience, Kismet; **also self-source**
+   `EntersTapped { This }` so a permanent can enter tapped on its own —
+   Overlord of the Hauntwoods' "Everywhere" omniland); "exile non-cast
    nontoken creatures instead" ships via
    `StaticEffect::ExileNontokenCreaturesNotCast` — Containment Priest;
    **opponent's nontoken creature would-die → exile instead** ships via
