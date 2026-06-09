@@ -945,9 +945,24 @@ impl GameState {
             return;
         };
         let mut should_tap = false;
+        // A permanent's own `EntersTapped { applies_to: This/Source }` (e.g.
+        // Overlord of the Hauntwoods' "Everywhere" land token) taps itself —
+        // the cross-permanent loop below skips the entering card, so handle the
+        // self case up front.
+        for sa in &self.battlefield[idx].definition.static_abilities {
+            if let StaticEffect::EntersTapped { applies_to } = &sa.effect
+                && matches!(applies_to, crate::effect::Selector::This)
+            {
+                should_tap = true;
+                break;
+            }
+        }
         for src in &self.battlefield {
             if src.id == card_id {
                 continue;
+            }
+            if should_tap {
+                break;
             }
             for sa in &src.definition.static_abilities {
                 let StaticEffect::EntersTapped { applies_to } = &sa.effect else {
@@ -4044,6 +4059,11 @@ impl GameState {
         }
         if alt.blitz {
             card.blitzed = true;
+        }
+        if alt.impending > 0 {
+            // CR 702.183 — enters with N time counters; stamped now, applied
+            // at ETB resolution.
+            card.impending_counters = alt.impending;
         }
         if alt.marks_kicked {
             // CR 702.108 — Surge: stamp the spell kicked so "if its surge

@@ -2469,6 +2469,7 @@ pub fn snuff_out() -> CardDefinition {
             flash: false,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
         }),
         ..Default::default()
     }
@@ -4074,6 +4075,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             flash: false,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
         }),
         ..Default::default()
     }
@@ -6976,6 +6978,7 @@ pub fn rout() -> CardDefinition {
             flash: true,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
             ..Default::default()
         }),
         ..Default::default()
@@ -33098,6 +33101,176 @@ pub fn archon_of_justice() -> CardDefinition {
         triggered_abilities: vec![on_dies(Effect::Exile {
             what: target_filtered(SelectionRequirement::Permanent),
         })],
+        ..Default::default()
+    }
+}
+
+// ── Duskmourn Overlords (Impending — CR 702.183) ─────────────────────────────
+// Each is a {Enchantment Creature — Avatar Horror} with Impending N and a
+// "whenever this enters or attacks" trigger. Cast for the impending cost it
+// enters as a non-creature with N time counters that tick off at end step.
+
+/// Overlord of the Floodpits — {3}{U}{U} 5/3 Flying. Impending 4—{1}{U}{U}.
+/// Enters-or-attacks: draw two cards, then discard a card.
+pub fn overlord_of_the_floodpits() -> CardDefinition {
+    use crate::effect::shortcut::{etb, impending, on_attack};
+    let loot = Effect::Seq(vec![
+        Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+    ]);
+    CardDefinition {
+        name: "Overlord of the Floodpits",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Impending(4)],
+        alternative_cost: Some(impending(4, cost(&[generic(1), u(), u()]))),
+        triggered_abilities: vec![etb(loot.clone()), on_attack(loot)],
+        ..Default::default()
+    }
+}
+
+/// Overlord of the Boilerbilges — {4}{R}{R} 5/5. Impending 4—{2}{R}{R}.
+/// Enters-or-attacks: deals 4 damage to any target.
+pub fn overlord_of_the_boilerbilges() -> CardDefinition {
+    use crate::effect::shortcut::{deal, etb, impending, on_attack};
+    let bolt = deal(4, target_filtered(SelectionRequirement::Any));
+    CardDefinition {
+        name: "Overlord of the Boilerbilges",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Impending(4)],
+        alternative_cost: Some(impending(4, cost(&[generic(2), r(), r()]))),
+        triggered_abilities: vec![etb(bolt.clone()), on_attack(bolt)],
+        ..Default::default()
+    }
+}
+
+/// Overlord of the Mistmoors — {5}{W}{W} 6/6. Impending 4—{2}{W}{W}.
+/// Enters-or-attacks: create two 2/1 white Insect tokens with flying.
+pub fn overlord_of_the_mistmoors() -> CardDefinition {
+    use crate::effect::shortcut::{etb, impending, on_attack};
+    let make = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(2),
+        definition: TokenDefinition {
+            name: "Insect".into(),
+            power: 2,
+            toughness: 1,
+            keywords: vec![Keyword::Flying],
+            card_types: vec![CardType::Creature],
+            colors: vec![Color::White],
+            subtypes: Subtypes {
+                creature_types: vec![CreatureType::Insect],
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+    };
+    CardDefinition {
+        name: "Overlord of the Mistmoors",
+        cost: cost(&[generic(5), w(), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Impending(4)],
+        alternative_cost: Some(impending(4, cost(&[generic(2), w(), w()]))),
+        triggered_abilities: vec![etb(make.clone()), on_attack(make)],
+        ..Default::default()
+    }
+}
+
+/// Overlord of the Balemurk — {3}{B}{B} 5/5. Impending 5—{1}{B}.
+/// Enters-or-attacks: mill four, then return a creature card from your
+/// graveyard to your hand. (The target is chosen as the trigger goes on the
+/// stack, so just-milled cards aren't eligible; the non-Avatar / planeswalker
+/// riders collapse to "creature card.")
+pub fn overlord_of_the_balemurk() -> CardDefinition {
+    use crate::effect::shortcut::{etb, impending, on_attack};
+    let body = Effect::Seq(vec![
+        Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+        Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::InGraveyard),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+    ]);
+    CardDefinition {
+        name: "Overlord of the Balemurk",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Impending(5)],
+        alternative_cost: Some(impending(5, cost(&[generic(1), b()]))),
+        triggered_abilities: vec![etb(body.clone()), on_attack(body)],
+        ..Default::default()
+    }
+}
+
+/// Overlord of the Hauntwoods — {3}{G}{G} 6/5. Impending 4—{1}{G}{G}.
+/// Enters-or-attacks: create a tapped colorless land token named Everywhere
+/// that is every basic land type (taps for any color via its intrinsic basic
+/// mana abilities).
+pub fn overlord_of_the_hauntwoods() -> CardDefinition {
+    use crate::card::{LandType, StaticAbility};
+    use crate::effect::shortcut::{etb, impending, on_attack};
+    let make = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(1),
+        definition: TokenDefinition {
+            name: "Everywhere".into(),
+            card_types: vec![CardType::Land],
+            subtypes: Subtypes {
+                land_types: vec![
+                    LandType::Plains,
+                    LandType::Island,
+                    LandType::Swamp,
+                    LandType::Mountain,
+                    LandType::Forest,
+                ],
+                ..Default::default()
+            },
+            static_abilities: vec![StaticAbility {
+                description: "Everywhere enters the battlefield tapped.",
+                effect: crate::effect::StaticEffect::EntersTapped { applies_to: Selector::This },
+            }],
+            ..Default::default()
+        },
+    };
+    CardDefinition {
+        name: "Overlord of the Hauntwoods",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 5,
+        keywords: vec![Keyword::Impending(4)],
+        alternative_cost: Some(impending(4, cost(&[generic(1), g(), g()]))),
+        triggered_abilities: vec![etb(make.clone()), on_attack(make)],
         ..Default::default()
     }
 }

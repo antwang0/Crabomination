@@ -1578,6 +1578,63 @@ impl GameState {
         });
     }
 
+    /// CR 702.183 — a permanent cast for its Impending cost enters with N
+    /// time counters (stamped on `CardInstance.impending_counters` at cast).
+    pub(crate) fn apply_impending_etb(
+        &mut self,
+        cid: CardId,
+        events: &mut Vec<crate::game::GameEvent>,
+    ) {
+        use crate::card::CounterType;
+        let Some(card) = self.battlefield_find_mut(cid) else { return };
+        let n = card.impending_counters;
+        if n == 0 {
+            return;
+        }
+        card.impending_counters = 0;
+        card.add_counters(CounterType::Time, n);
+        events.push(crate::game::GameEvent::CounterAdded {
+            card_id: cid,
+            counter_type: CounterType::Time,
+            count: n,
+        });
+    }
+
+    /// CR 702.183 — at the beginning of the active player's end step, remove
+    /// one time counter from each Impending permanent they control. Unlike
+    /// Vanishing there's no sacrifice: when the last counter comes off the
+    /// permanent simply stops being a non-creature (the layer effect reads
+    /// the live counter count) and turns into a creature.
+    pub(crate) fn process_impending(&mut self) -> Vec<crate::game::GameEvent> {
+        use crate::card::{CounterType, Keyword};
+        let active = self.active_player_idx;
+        let mut events = Vec::new();
+        let affected: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == active
+                    && c.counter_count(CounterType::Time) > 0
+                    && c.definition
+                        .keywords
+                        .iter()
+                        .any(|k| matches!(k, Keyword::Impending(_)))
+            })
+            .map(|c| c.id)
+            .collect();
+        for id in affected {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.remove_counters(CounterType::Time, 1);
+            }
+            events.push(crate::game::GameEvent::CounterRemoved {
+                card_id: id,
+                counter_type: CounterType::Time,
+                count: 1,
+            });
+        }
+        events
+    }
+
     /// CR 702.32 / 702.62 — at the beginning of the active player's upkeep,
     /// each Fading / Vanishing permanent they control removes a counter (and
     /// is sacrificed when it runs out). Processed as a turn-based action at
@@ -2336,6 +2393,27 @@ impl GameState {
                         modification: Modification::RemoveCardType(CardType::Creature),
                     });
                 }
+            }
+        }
+        // CR 702.183 — Impending: a permanent with the Impending keyword isn't
+        // a creature while it has a time counter. Emit a layer-4
+        // RemoveCardType(Creature) self-effect while counters remain.
+        for card in &self.battlefield {
+            let is_impending = card
+                .definition
+                .keywords
+                .iter()
+                .any(|k| matches!(k, crate::card::Keyword::Impending(_)));
+            if is_impending && card.counter_count(crate::card::CounterType::Time) > 0 {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Source,
+                    layer: Layer::L4Type,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::RemoveCardType(CardType::Creature),
+                });
             }
         }
         // "This creature gets +X/+Y for each [filter] you control."

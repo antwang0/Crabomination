@@ -117,6 +117,14 @@ pub fn evoke(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
     crate::card::AlternativeCost { mana_cost, evoke_sacrifice: true, ..Default::default() }
 }
 
+/// Impending N—[cost] (CR 702.183): cast for `mana_cost`; the permanent enters
+/// with `n` time counters and isn't a creature until they tick off (one per
+/// controller's upkeep). Pair with `Keyword::Impending(n)` on the card so the
+/// layer + upkeep machinery recognizes it.
+pub fn impending(n: u32, mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost {
+    crate::card::AlternativeCost { mana_cost, impending: n, ..Default::default() }
+}
+
 /// Surge (CR 702.108) alternative cost: cast for `mana_cost` if you or a
 /// teammate cast another spell this turn. `with_rider` stamps the spell
 /// "kicked" so "if its surge cost was paid" ETB riders fire.
@@ -179,6 +187,7 @@ pub fn emerge(mana_cost: crate::mana::ManaCost) -> crate::card::AlternativeCost 
     crate::card::AlternativeCost {
         mana_cost,
         emerge: Some(SelectionRequirement::Creature),
+        impending: 0,
         ..Default::default()
     }
 }

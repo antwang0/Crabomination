@@ -259,6 +259,7 @@ pub fn brush_off() -> CardDefinition {
             flash: false,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
         }),
         ..Default::default()
     }
@@ -381,6 +382,7 @@ pub fn run_behind() -> CardDefinition {
             flash: false,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
         }),
         ..Default::default()
     }
@@ -1280,6 +1282,7 @@ pub fn ajanis_response() -> CardDefinition {
             flash: false,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
         }),
         ..Default::default()
     }
@@ -1467,6 +1470,7 @@ pub fn wilt_in_the_heat() -> CardDefinition {
             flash: false,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
         }),
         ..Default::default()
     }

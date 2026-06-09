@@ -452,6 +452,12 @@ pub enum Keyword {
     /// beginning of its controller's upkeep, remove a time counter from it;
     /// when the last is removed, sacrifice it.
     Vanishing(u32),
+    /// CR 702.183 — Impending N—[cost]. May be cast for its impending cost;
+    /// if so it enters with N time counters and isn't a creature while it has
+    /// one. At the beginning of its controller's end step, remove a time
+    /// counter (no sacrifice — it just turns into a creature when the last
+    /// comes off). The impending mana cost rides `AlternativeCost.impending`.
+    Impending(u32),
     Retrace,
     /// CR 702.139 — Escape. Cast this card from your graveyard by paying
     /// its escape mana cost plus exiling N other cards from your
@@ -1532,6 +1538,12 @@ pub struct AlternativeCost {
     /// reduction). Elder Deep-Fiend, Wretched Gryff, Distended Mindbender.
     #[serde(default)]
     pub emerge: Option<SelectionRequirement>,
+    /// CR 702.183 — Impending N. When non-zero, casting via this alternative
+    /// cost stamps the resolving permanent with N time counters
+    /// (`CardInstance.impending_counters`), so it enters as a non-creature
+    /// that turns into a creature once the counters tick off.
+    #[serde(default)]
+    pub impending: u32,
 }
 
 impl CardDefinition {
@@ -1799,6 +1811,11 @@ pub struct CardInstance {
     /// — on ETB it gains haste and a death-draw rider, and is sacrificed at
     /// the next end step.
     pub blitzed: bool,
+    /// CR 702.183 — number of time counters this permanent should enter with
+    /// because it was cast for its Impending cost. Consumed at ETB (the
+    /// counters are added to the permanent), then irrelevant. 0 = cast
+    /// normally / not impending.
+    pub impending_counters: u32,
     /// True if this card was cast from its owner's hand on its current
     /// trip through the stack. Used by the rebound resolution path to
     /// distinguish hand-casts (rebound triggers) from re-casts from exile
@@ -2000,6 +2017,7 @@ impl CardInstance {
             cast_from_suspend: false,
             cast_from_escape: false,
             blitzed: false,
+            impending_counters: 0,
             cast_from_hand: false,
             cast_via_flashback: false,
             cast_from_exile: false,
@@ -2193,6 +2211,8 @@ struct CardInstanceWire {
     cast_from_escape: bool,
     #[serde(default)]
     blitzed: bool,
+    #[serde(default)]
+    impending_counters: u32,
     cast_from_hand: bool,
     /// `#[serde(default)]` so snapshots predating the field deserialize
     /// as `false` (matching the old "not cast via flashback" path).
@@ -2315,6 +2335,7 @@ impl serde::Serialize for CardInstance {
             cast_from_suspend: self.cast_from_suspend,
             cast_from_escape: self.cast_from_escape,
             blitzed: self.blitzed,
+            impending_counters: self.impending_counters,
             cast_from_hand: self.cast_from_hand,
             cast_via_flashback: self.cast_via_flashback,
             cast_from_exile: self.cast_from_exile,
@@ -2383,6 +2404,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_suspend = wire.cast_from_suspend;
         c.cast_from_escape = wire.cast_from_escape;
         c.blitzed = wire.blitzed;
+        c.impending_counters = wire.impending_counters;
         c.cast_from_hand = wire.cast_from_hand;
         c.cast_via_flashback = wire.cast_via_flashback;
         c.cast_from_exile = wire.cast_from_exile;

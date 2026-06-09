@@ -39744,3 +39744,110 @@ fn archon_of_justice_exiles_a_permanent_on_death() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bear), "dies-trigger exiled a permanent");
 }
+
+// ── Impending (CR 702.183) — Duskmourn Overlords ─────────────────────────────
+
+/// Cast for the impending cost, an Overlord enters with N time counters, isn't
+/// a creature, and still fires its enters-or-attacks trigger.
+#[test]
+fn impending_overlord_enters_as_noncreature_with_time_counters() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::overlord_of_the_mistmoors());
+    // Impending 4—{2}{W}{W}.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Overlord for its impending cost");
+    drain_stack(&mut g);
+    let r = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!(r.counter_count(CounterType::Time), 4, "enters with 4 time counters");
+    assert!(r.definition.keywords.contains(&Keyword::Impending(4)));
+    // Layer-4 RemoveCardType: it isn't a creature while a time counter remains.
+    let computed = g.computed_permanent(id).expect("computed");
+    assert!(!computed.card_types.contains(&CardType::Creature),
+        "Overlord isn't a creature while it has a time counter");
+    // The enters-or-attacks trigger still fired: two Insect tokens minted.
+    let insects = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.name == "Insect").count();
+    assert_eq!(insects, 2, "ETB trigger created two Insect tokens");
+}
+
+/// A time counter ticks off at the controller's end step; when the last is
+/// removed the Overlord turns into a creature.
+#[test]
+fn impending_time_counters_tick_off_and_it_becomes_a_creature() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::overlord_of_the_boilerbilges());
+    // Impending 4—{2}{R}{R}.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for impending cost");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Time), 4);
+    // Four end-step ticks remove all four counters.
+    g.active_player_idx = 0;
+    for expect_left in [3, 2, 1, 0] {
+        g.process_impending();
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Time), expect_left);
+    }
+    // With no time counters it's a creature again.
+    let computed = g.computed_permanent(id).expect("computed");
+    assert!(computed.card_types.contains(&CardType::Creature),
+        "becomes a creature once the last time counter is gone");
+}
+
+/// Cast for its normal cost, an Overlord enters as a creature immediately with
+/// no time counters.
+#[test]
+fn impending_overlord_cast_normally_is_a_creature() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::overlord_of_the_floodpits());
+    // Full cost {3}{U}{U}.
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for full cost");
+    drain_stack(&mut g);
+    let r = g.battlefield_find(id).expect("on battlefield");
+    assert_eq!(r.counter_count(CounterType::Time), 0, "no time counters on a normal cast");
+    let computed = g.computed_permanent(id).expect("computed");
+    assert!(computed.card_types.contains(&CardType::Creature), "a normal cast is a creature");
+}
+
+/// Overlord of the Hauntwoods' enters-or-attacks trigger mints a tapped
+/// "Everywhere" land token that is every basic land type.
+#[test]
+fn impending_hauntwoods_creates_tapped_omniland() {
+    use crate::card::LandType;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::overlord_of_the_hauntwoods());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1); // impending {1}{G}{G}
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast for impending cost");
+    drain_stack(&mut g);
+    let token = g.battlefield.iter()
+        .find(|c| c.controller == 0 && c.definition.name == "Everywhere")
+        .expect("Everywhere land token minted");
+    assert!(token.tapped, "the land token enters tapped");
+    for lt in [LandType::Plains, LandType::Island, LandType::Swamp, LandType::Mountain, LandType::Forest] {
+        assert!(token.definition.subtypes.land_types.contains(&lt), "has every basic land type");
+    }
+}

@@ -239,6 +239,11 @@ impl GameState {
                 if self.monarch == Some(self.active_player_idx) {
                     self.draw_one(self.active_player_idx, &mut events);
                 }
+                // CR 702.183 — Impending time counters tick at the beginning of
+                // the controller's end step; the permanent becomes a creature
+                // when the last is gone.
+                let mut imp = self.process_impending();
+                events.append(&mut imp);
                 self.fire_step_triggers(TurnStep::End);
                 self.give_priority_to_active();
             }
@@ -607,6 +612,10 @@ impl GameState {
                     }
                     // CR 702.32 / 702.62 — Fading / Vanishing enter-with-counters.
                     self.apply_fading_vanishing_etb(card_id, &mut events);
+                    // CR 702.183 — Impending: a permanent cast for its impending
+                    // cost enters with N time counters (and isn't a creature
+                    // until they tick off).
+                    self.apply_impending_etb(card_id, &mut events);
                     // CR 707 — "enters as a copy of [filter]" replacement.
                     // Applied here, before the first SBA sweep, so a 0/0
                     // copier (Clone, Phantasmal Image) never dies as a 0/0.

@@ -103,6 +103,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::CumulativeUpkeep(_) => "Cumulative upkeep",
         Keyword::Fading(_) => "Fading",
         Keyword::Vanishing(_) => "Vanishing",
+        Keyword::Impending(_) => "Impending",
         Keyword::Cycling(_) => "Cycling",
         Keyword::Landcycling(_, _) => "Landcycling",
         Keyword::Madness(_) => "Madness",

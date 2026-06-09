@@ -363,6 +363,7 @@ pub fn solitude() -> CardDefinition {
             flash: false,
             marks_kicked: false,
             emerge: None,
+            impending: 0,
         }),
         ..Default::default()
     }

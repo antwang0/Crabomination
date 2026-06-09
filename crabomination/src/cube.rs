@@ -447,6 +447,8 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // Impending Overlord (Duskmourn)
+        overlord_of_the_mistmoors,
         // ── Cube expansion ──
         reveillark,
         spirit_of_the_labyrinth,
@@ -961,6 +963,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        overlord_of_the_floodpits,
         // ── Cube expansion ──
         frost_titan,
         // untap-all combo enabler
@@ -1288,6 +1291,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        overlord_of_the_balemurk,
         // ── Cube expansion ──
         noxious_gearhulk,
         sheoldred_whispering_one,
@@ -1667,6 +1671,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        overlord_of_the_boilerbilges,
         // untap-prevention stax enchantment
         smoke,
         // cast-trigger ritual god
@@ -2087,6 +2092,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        overlord_of_the_hauntwoods,
         // ── Cube expansion ──
         hornet_queen,
         // team-pump finishers (Overrun variants)
