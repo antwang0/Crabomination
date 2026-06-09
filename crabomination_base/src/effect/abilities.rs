@@ -113,6 +113,12 @@ pub enum StaticEffect {
     /// permanents), so it only discounts its own cast. Generic-only; clamped by
     /// `ManaCost::reduce_generic`. No continuous-layer effect.
     SelfCostReducedByGreatestPower,
+    /// Card-intrinsic "This spell costs {X} less to cast, where X is your
+    /// Domain" (CR 702.43 — Leyline Binding). Read by `cost_reduction_for_spell`
+    /// off the *spell being cast*; the count is the distinct basic land types
+    /// among the caster's lands (0–5). Generic-only; clamped by
+    /// `ManaCost::reduce_generic`. No continuous-layer effect.
+    SelfCostReducedByDomain,
     /// CR 601.2b — card-intrinsic optional additional cost: "you may sacrifice
     /// any number of creatures; this spell costs {N} less to cast for each."
     /// `per` is the per-creature generic reduction. Carried on the spell's own

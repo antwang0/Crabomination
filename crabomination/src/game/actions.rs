@@ -268,6 +268,17 @@ pub(crate) fn cost_reduction_for_spell(
             .unwrap_or(0);
         reduction = reduction.saturating_add(greatest);
     }
+    // Card-intrinsic "costs {X} less, where X is your Domain" (Leyline Binding)
+    // — distinct basic land types among the caster's lands. Generic-only,
+    // clamped by the caller via `ManaCost::reduce_generic`.
+    if card
+        .definition
+        .static_abilities
+        .iter()
+        .any(|sa| matches!(sa.effect, StaticEffect::SelfCostReducedByDomain))
+    {
+        reduction = reduction.saturating_add(state.domain_count(caster) as u32);
+    }
     // One-shot "the next instant or sorcery you cast this turn costs {N}
     // less" discounts (Thundertrap Trainer). Each was stamped with the
     // caster's instant/sorcery tally at grant time; it applies only while

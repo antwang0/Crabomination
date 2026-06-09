@@ -390,7 +390,26 @@ impl GameState {
                         .count() as i32
                 })
                 .unwrap_or(0),
+            Value::DomainCount(p) => self
+                .resolve_player(p, ctx)
+                .map(|seat| self.domain_count(seat) as i32)
+                .unwrap_or(0),
         }
+    }
+
+    /// CR 702.43 — distinct basic land types among lands `seat` controls (0–5).
+    pub(crate) fn domain_count(&self, seat: usize) -> usize {
+        use crate::card::LandType::*;
+        [Plains, Island, Swamp, Mountain, Forest]
+            .into_iter()
+            .filter(|lt| {
+                self.battlefield.iter().any(|c| {
+                    c.controller == seat
+                        && c.definition.is_land()
+                        && c.definition.subtypes.land_types.contains(lt)
+                })
+            })
+            .count()
     }
 
     pub(crate) fn evaluate_predicate(&self, p: &Predicate, ctx: &EffectContext) -> bool {

@@ -2579,6 +2579,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(watchwolf);
         v.push(thornglint_bridge);
         v.push(lush_portico);
+        // ── modern_decks: Domain removal ──
+        v.push(leyline_binding);
         v.push(torsten_founder_of_benalia);
         v.push(wax_wane);
         v.push(alive_well);
@@ -2604,6 +2606,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(ghor_clan_rampager);
         v.push(slagwoods_bridge);
         v.push(elegant_parlor);
+        // ── modern_decks: Domain payoff ──
+        v.push(tribal_flames);
         // ── modern_decks batch 102 (RG cube expansion) ──
         v.push(territorial_kavu);
         v.push(omnath_locus_of_rage);

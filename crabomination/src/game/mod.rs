@@ -219,6 +219,10 @@ pub struct HandAffordances {
     /// (Morph/Megamorph/Disguise cost, or a manifested/cloaked creature card's
     /// mana cost) is payable right now, so the client can offer "turn face up".
     pub turn_up_able: Vec<CardId>,
+    /// CR 702.77 — hand cards with a Reinforce ability whose cost is payable
+    /// right now (a legal creature target exists), so the client can offer the
+    /// from-hand Reinforce activation.
+    pub reinforceable: Vec<CardId>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -7003,6 +7007,8 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // SelfCostReducedByGreatestPower (The Great Henge) — read by
             // `cost_reduction_for_spell` off the spell being cast; no layer.
             | StaticEffect::SelfCostReducedByGreatestPower
+            // SelfCostReducedByDomain (Leyline Binding) — same, off the spell.
+            | StaticEffect::SelfCostReducedByDomain
             // SacrificeCostReduction (Awaken the Blood Avatar) — an optional
             // additional cost consulted by `cast_spell_sacrifice_reduce`; no
             // continuous-layer effect.

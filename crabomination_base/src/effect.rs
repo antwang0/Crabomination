@@ -494,6 +494,10 @@ pub enum Value {
     /// equal to the number of snow permanents you control") and other
     /// snow-matters scaling.
     SnowPermanentCountControlledBy(PlayerRef),
+    /// CR 702.43 — Domain: the number of distinct basic land types among lands
+    /// the resolved player controls (0–5). Powers Tribal Flames / Territorial
+    /// Kavu, and (as a generic cost reduction) Leyline Binding.
+    DomainCount(PlayerRef),
 }
 
 impl Value {

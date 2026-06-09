@@ -826,7 +826,41 @@ impl GameState {
             hand_activatable: self.hand_activatable_cards(seat),
             morphable: self.morphable_hand_cards_on(&template, seat),
             turn_up_able: self.turn_up_able_permanents_on(&template, seat),
+            reinforceable: self.reinforceable_hand_cards_on(&template, seat),
         }
+    }
+
+    /// CR 702.77 — hand cards `seat` could Reinforce right now: the card carries
+    /// `Keyword::Reinforce` and the activation (pay cost, discard, +1/+1 on a
+    /// creature) is legal against some creature target. Surfaced in
+    /// `PlayerView.reinforceable_hand`.
+    fn reinforceable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
+        let any_creature = self
+            .battlefield
+            .iter()
+            .find(|c| c.definition.is_creature())
+            .map(|c| c.id);
+        let Some(tid) = any_creature else { return vec![] };
+        self.players[seat]
+            .hand
+            .iter()
+            .filter(|c| {
+                c.definition
+                    .keywords
+                    .iter()
+                    .any(|k| matches!(k, crate::card::Keyword::Reinforce(_, _)))
+            })
+            .map(|c| c.id)
+            .filter(|&id| {
+                Self::would_accept_on(
+                    template,
+                    GameAction::Reinforce {
+                        card_id: id,
+                        target: crate::game::types::Target::Permanent(tid),
+                    },
+                )
+            })
+            .collect()
     }
 
     /// CR 708.5 — face-down permanents `seat` controls whose turn-up cost is

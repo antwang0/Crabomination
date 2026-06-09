@@ -8,10 +8,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Reinforce/face-down client affordances.** `GameAction::Reinforce` (CR
-  702.77) and `CastFaceDown`/`TurnFaceUp` are engine-complete and the bot uses
-  the face-down ones, but there's no `reinforceable_hand` affordance yet (the
-  client can't surface the from-hand Reinforce activation). `turn_up_able` ships.
+- ✅ **Reinforce/face-down client affordances.** `GameAction::Reinforce` (CR
+  702.77) and `CastFaceDown`/`TurnFaceUp` are engine-complete. `reinforceable_hand`
+  now ships (`PlayerView.reinforceable_hand` + `compute_hand_affordances`,
+  dry-run-gated on a payable cost + creature target). `turn_up_able` ships.
 - ⏳ **MKM Disguise riders dropped this run (each wants one small primitive).**
   - Granite Witness — "tap **or untap**" collapses to tap.
   - Offender at Large — "**up to one** target" collapses to a required target.
@@ -37,8 +37,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   - **Umezawa's Jitte** — Equipment that puts charge counters on *itself* when
     the equipped creature deals combat damage; needs an `EquipBonus` trigger
     whose effect targets the equipment (not the equipped creature).
-  - **Leyline Binding** — Domain cost reduction ({1} less per basic land type
-    among your lands); add a `Value::DomainCount` / generic-reduction hook.
+  - ✅ **Leyline Binding** — Domain cost reduction ({1} less per basic land type)
+    ships via `StaticEffect::SelfCostReducedByDomain` + `Value::DomainCount`;
+    Tribal Flames reuses the Value for its X-damage. (Leyline Binding, Tribal Flames.)
   - **Orcish Bowmasters** — "whenever an opponent draws a card except the first
     in their draw step" trigger scope.
   - **Restless lands cycle** — manlands with per-card attack riders + typeless

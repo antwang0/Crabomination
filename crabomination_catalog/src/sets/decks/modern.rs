@@ -37036,3 +37036,48 @@ pub fn simian_sling() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Leyline Binding — {5}{W} Enchantment with Flash. Domain — costs {1} less per
+/// basic land type among your lands (`SelfCostReducedByDomain`). When it enters,
+/// exile target nonland permanent an opponent controls until it leaves.
+pub fn leyline_binding() -> CardDefinition {
+    use crate::card::{ExileReturnZone, StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Leyline Binding",
+        cost: cost(&[generic(5), w()]),
+        card_types: vec![CardType::Enchantment],
+        keywords: vec![Keyword::Flash],
+        static_abilities: vec![StaticAbility {
+            description: "Domain — This spell costs {1} less to cast for each basic land type among lands you control.",
+            effect: StaticEffect::SelfCostReducedByDomain,
+        }],
+        triggered_abilities: vec![etb(Effect::ExileUntilSourceLeaves {
+            what: target_filtered(
+                SelectionRequirement::Permanent
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::Land)))
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            return_to: ExileReturnZone::Battlefield,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tribal Flames — {1}{R} Sorcery. Domain — deals X damage to any target, where
+/// X is the number of basic land types among lands you control.
+pub fn tribal_flames() -> CardDefinition {
+    CardDefinition {
+        name: "Tribal Flames",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::DomainCount(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}

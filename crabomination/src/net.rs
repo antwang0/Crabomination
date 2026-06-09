@@ -361,6 +361,11 @@ pub struct ClientView {
     /// face up". Empty off-priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub turn_up_able: Vec<CardId>,
+    /// CR 702.77 — CardIds in the viewer's hand with a Reinforce ability that
+    /// can be activated right now (cost payable, a creature target exists).
+    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub reinforceable_hand: Vec<CardId>,
     /// Creatures the viewer controls that may be declared as attackers right
     /// now (only during the viewer's Declare Attackers step). Drives the
     /// client's legal-attacker highlight. Empty otherwise. `#[serde(default)]`

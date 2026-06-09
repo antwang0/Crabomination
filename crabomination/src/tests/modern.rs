@@ -36209,6 +36209,51 @@ fn the_great_henge_cost_reduced_by_greatest_power() {
     assert!(g.battlefield.iter().any(|c| c.id == henge), "Henge resolved");
 }
 
+/// Leyline Binding's cast cost drops by {1} per basic land type you control
+/// (Domain, CR 702.43), and its ETB exiles an opponent's nonland permanent
+/// until it leaves.
+#[test]
+fn leyline_binding_domain_reduction_and_exile() {
+    use crate::game::actions::cost_reduction_for_spell;
+    let mut g = two_player_game();
+    // Three distinct basic land types → {3} off {5}{W} = {2}{W}.
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let spell = crate::card::CardInstance::new(g.next_id(), catalog::leyline_binding(), 0);
+    assert_eq!(cost_reduction_for_spell(&g, 0, &spell, None), 3, "domain = 3");
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::leyline_binding());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(victim))]));
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Leyline Binding costs {2}{W} with domain 3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "victim exiled");
+    // When the Binding leaves, the exiled permanent returns.
+    g.remove_from_battlefield_to_graveyard(id);
+    assert!(g.battlefield.iter().any(|c| c.id == victim), "victim returns when Binding leaves");
+}
+
+/// Tribal Flames deals damage equal to your domain.
+#[test]
+fn tribal_flames_deals_domain_damage() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let id = g.add_card_to_hand(0, catalog::tribal_flames());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Tribal Flames");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 2, "domain 2 → 2 damage");
+}
+
 /// The Great Henge taps for {G} and 2 life, and on a nontoken creature ETB it
 /// draws a card and puts a +1/+1 counter on that creature.
 #[test]
@@ -42234,6 +42279,23 @@ fn reinforce_bannerhide_krushok_puts_two_counters() {
     assert_eq!((t.power(), t.toughness()), (4, 4), "2/2 + two +1/+1 counters");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id), "Krushok discarded as cost");
     assert!(g.battlefield_find(id).is_none(), "Krushok not on the battlefield");
+}
+
+/// The reinforceable_hand affordance surfaces a Reinforce card only when the
+/// cost is payable and a creature target exists (CR 702.77).
+#[test]
+fn reinforceable_affordance_requires_mana_and_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::bannerhide_krushok());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // No creature on the battlefield and no mana: not reinforceable.
+    assert!(!g.compute_hand_affordances(0).reinforceable.contains(&id));
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.compute_hand_affordances(0).reinforceable.contains(&id),
+        "payable Reinforce with a creature target is surfaced");
 }
 
 /// Granite Witness taps a creature when turned face up.
