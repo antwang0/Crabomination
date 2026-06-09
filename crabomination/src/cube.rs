@@ -463,13 +463,14 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         field_marshal,
         daru_warchief,
         catapult_master,
-        // white Slivers
+        // white Slivers + tribal lords
         sinew_sliver,
         steelform_sliver,
         sentinel_sliver,
         bonescythe_sliver,
         talon_sliver,
         watcher_sliver,
+        leonin_warleader,
         // Spirit + Knight tribal
         empyrean_eagle,
         kinsbaile_cavalier,
@@ -1352,6 +1353,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         cemetery_reaper,
         vengeful_dead,
         withered_wretch,
+        lord_of_the_accursed,
+        lilianas_mastery,
+        captivating_vampire,
         overlord_of_the_balemurk,
         get_lost,
         deep_cavern_bat,
@@ -2193,6 +2197,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         spinneret_sliver,
         horned_sliver,
         immaculate_magistrate,
+        voice_of_the_woods,
         overlord_of_the_hauntwoods,
         cenote_scout,
         anthem_of_champions,

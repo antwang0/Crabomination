@@ -35949,3 +35949,179 @@ pub fn coastal_piracy() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: tribal lords (batch 4) ──────────────────────────────────────
+
+/// Lord of the Accursed — {2}{B} 2/3 Zombie. Other Zombies you control get
+/// +1/+1. {1}{B}, {T}: All Zombies gain menace until end of turn.
+pub fn lord_of_the_accursed() -> CardDefinition {
+    CardDefinition {
+        name: "Lord of the Accursed",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Zombies you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie),
+                ),
+                keyword: Keyword::Menace,
+                duration: Duration::EndOfTurn,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Liliana's Mastery — {3}{B}{B} Enchantment. Zombies you control get +1/+1.
+/// When it enters, create two 2/2 black Zombie creature tokens.
+pub fn lilianas_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Liliana's Mastery",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Zombies you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Zombie".into(),
+                power: 2,
+                toughness: 2,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Black],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+                ..Default::default()
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Leonin Warleader — {2}{W}{W} 4/4 Cat Soldier. Whenever it attacks, create two
+/// 1/1 white Cat tokens with lifelink that are tapped and attacking.
+pub fn leonin_warleader() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Leonin Warleader",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Cat".into(),
+                power: 1,
+                toughness: 1,
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                subtypes: Subtypes { creature_types: vec![CreatureType::Cat], ..Default::default() },
+                keywords: vec![Keyword::Lifelink],
+                ..Default::default()
+            },
+            cleanup: crate::effect::AttackingTokenCleanup::None,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Captivating Vampire — {1}{B}{B} 2/2 Vampire. Other Vampires you control get
+/// +1/+1. Tap five untapped Vampires you control: Gain control of target
+/// creature. (The "it becomes a Vampire" rider is dropped.)
+pub fn captivating_vampire() -> CardDefinition {
+    CardDefinition {
+        name: "Captivating Vampire",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Vampires you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Vampire), 5)),
+            effect: Effect::GainControl {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: None,
+                duration: Duration::Permanent,
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Voice of the Woods — {3}{G}{G} 2/2 Elf. Tap five untapped Elves you control:
+/// Create a 7/7 green Elemental creature token with trample.
+pub fn voice_of_the_woods() -> CardDefinition {
+    CardDefinition {
+        name: "Voice of the Woods",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_n_filter: Some((SelectionRequirement::HasCreatureType(CreatureType::Elf), 5)),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Elemental".into(),
+                    power: 7,
+                    toughness: 7,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Elemental], ..Default::default() },
+                    keywords: vec![Keyword::Trample],
+                    ..Default::default()
+                },
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

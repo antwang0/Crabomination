@@ -40896,6 +40896,101 @@ fn cemetery_reaper_buffs_other_zombies() {
     assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Zombie gets +1/+1");
 }
 
+/// Lord of the Accursed pumps other Zombies and can grant all Zombies menace.
+#[test]
+fn lord_of_the_accursed_pumps_and_grants_menace() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let lord = g.add_card_to_battlefield(0, catalog::lord_of_the_accursed());
+    let other = g.add_card_to_battlefield(0, catalog::shepherd_of_rot());
+    assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Zombie +1/+1");
+    g.clear_sickness(lord);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lord, ability_index: 0, target: None, x_value: None,
+    }).expect("grant menace");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(other).unwrap().keywords.contains(&Keyword::Menace));
+}
+
+/// Liliana's Mastery enters making two Zombie tokens it then anthems.
+#[test]
+fn lilianas_mastery_makes_and_buffs_zombies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lilianas_mastery());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Liliana's Mastery");
+    drain_stack(&mut g);
+    use crate::card::CreatureType;
+    let zombies: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.subtypes.creature_types.contains(&CreatureType::Zombie))
+        .map(|c| c.id).collect();
+    assert_eq!(zombies.len(), 2, "two Zombie tokens entered");
+    assert_eq!(g.computed_permanent(zombies[0]).unwrap().power, 3, "tokens anthemed to 3/3");
+}
+
+/// Leonin Warleader mints two tapped, attacking lifelink Cats on attack.
+#[test]
+fn leonin_warleader_makes_attacking_cats() {
+    let mut g = two_player_game();
+    let lion = g.add_card_to_battlefield(0, catalog::leonin_warleader());
+    g.battlefield.iter_mut().find(|c| c.id == lion).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let events = g.declare_attackers(vec![Attack { attacker: lion, target: AttackTarget::Player(1) }])
+        .expect("attack");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+    let cats = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Cat" && c.tapped && c.controller == 0)
+        .count();
+    assert_eq!(cats, 2, "two attacking Cat tokens");
+}
+
+/// Voice of the Woods taps five Elves to mint a 7/7 trampling Elemental.
+#[test]
+fn voice_of_the_woods_makes_elemental() {
+    let mut g = two_player_game();
+    let voice = g.add_card_to_battlefield(0, catalog::voice_of_the_woods());
+    g.clear_sickness(voice);
+    let mut elves = vec![voice];
+    for _ in 0..4 {
+        let e = g.add_card_to_battlefield(0, catalog::voice_of_the_woods());
+        g.clear_sickness(e);
+        elves.push(e);
+    }
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: voice, ability_index: 0, target: None, x_value: None,
+    }).expect("tap five Elves");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Elemental" && c.power() == 7),
+        "7/7 Elemental token created");
+}
+
+/// Captivating Vampire steals a creature when five Vampires tap.
+#[test]
+fn captivating_vampire_steals_with_five_vampires() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::captivating_vampire());
+    g.clear_sickness(cap);
+    let mut vamps = vec![cap];
+    for _ in 0..4 {
+        let v = g.add_card_to_battlefield(0, catalog::captivating_vampire());
+        g.clear_sickness(v);
+        vamps.push(v);
+    }
+    let prey = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cap, ability_index: 0, target: Some(Target::Permanent(prey)), x_value: None,
+    }).expect("tap five Vampires");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(prey).unwrap().controller, 0, "gained control of the bear");
+}
+
 /// Horned Sliver grants trample to every Sliver (yours and theirs).
 #[test]
 fn horned_sliver_grants_trample() {
