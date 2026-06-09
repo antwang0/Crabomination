@@ -1,17 +1,17 @@
+use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
 
 use crate::card::{
     hand_card_transform, layout::player_hand_anchor, Animating, BattlefieldCard,
-    CardFlipAnimation, CardHoverLift, CardOwner, CombatLurch, DeckCard, DeckShuffleAnimation,
+    CardFlipAnimation, CardHoverLift, CombatLurch, DeckCard, DeckShuffleAnimation,
     DrawCardAnimation, GameCardId, HandCard, HandSlideAnimation, MdfcFlipAnimation,
     PlayCardAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, RevealPeekAnimation,
     SendToGraveyardAnimation, ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
 };
 use crate::net_plugin::CurrentView;
-use crabomination::card::Keyword;
-use crabomination::game::TurnStep;
+use crabomination::card::CardId;
 
 /// Global animation playback speed multiplier (1.0 = normal, 2.0 = double speed, etc.).
 #[derive(Resource)]
@@ -59,158 +59,100 @@ pub fn animate_hover_lift(
     }
 }
 
-/// Lerp speed for [`CombatLurch::progress`] toward its target.
-/// `progress` is a 0..1 fraction along [`CombatLurch::target_offset`];
-/// a value of 6.0 makes the card cover ~10% of the gap per 60-Hz frame,
-/// so a step transition fully resolves in ~150 ms with a smooth ease.
-const COMBAT_LURCH_SPEED: f32 = 5.0;
+/// How fast a [`CombatLurch`] strike plays: `progress` advances by this per
+/// second, so the full out-and-back arc resolves in ~1/this seconds (0.4 s).
+const COMBAT_STRIKE_SPEED: f32 = 2.5;
 
-/// Fraction of the way to the icon attackers reach on a damage step —
-/// the lunge into contact. Blockers stop short of this so the attacker
-/// is what visibly hits the icon.
+/// Fraction of the clamped distance-to-defender the attacker reaches at the
+/// peak of its strike arc — a firm lunge into contact without overshooting
+/// onto the defender's side of the table.
 const COMBAT_STRIKE_PROGRESS: f32 = 0.85;
 
 /// Cap on how far (world units) a creature lunges toward its target. The
-/// defender's icon is most of the table away (~15 units), so without a cap
-/// even `COMBAT_HOLD_PROGRESS` would slide a declared attacker a third of the
-/// way across the board and park it there — reading as the card "hovering" in
-/// no-man's-land rather than leaning in to attack. Clamping the offset to a
-/// few card widths keeps the *direction* but turns the motion into a tidy
-/// lean / lunge that returns home after combat.
+/// defender's anchor is most of the table away (~15 units), so without a cap
+/// the strike would fling the attacker a third of the way across the board.
+/// Clamping the offset to a few card widths keeps the *direction* but turns
+/// the motion into a tidy lunge that returns home.
 const MAX_LUNGE_DISTANCE: f32 = CARD_WIDTH * 3.0;
 
-/// Drive the per-permanent [`CombatLurch`] from the latest view: pick a
-/// world-space target (the defending player's icon for attackers, the
-/// same icon for blockers but at a reduced distance), and set the
-/// progress fraction from the combat step. [`animate_combat_lurch`]
-/// handles the actual smooth interpolation so this system can be cheap
-/// and re-run every frame without jitter.
+/// Trigger a one-shot "strike" lunge on each attacker the instant combat
+/// resolves.
+///
+/// Combat damage is resolved inside the server's `PassPriority` handling, so
+/// the client never receives a `CombatDamage` view with attackers still
+/// declared — there's no step to gate a lunge on. The reliable signal is the
+/// attacking→cleared transition: we remember each attacker's strike vector
+/// while it's declared, and when it stops attacking *and is still on the
+/// battlefield* (i.e. it survived), we insert a [`CombatLurch`] that arcs it
+/// out toward the defender and back. Attackers that died/left play their own
+/// exit (graveyard flight), so they're skipped here.
 pub fn update_combat_lurch_targets(
     view: Res<CurrentView>,
     mut commands: Commands,
-    mut bf_q: Query<
-        (Entity, &GameCardId, &CardOwner, Option<&mut CombatLurch>),
-        With<BattlefieldCard>,
-    >,
+    bf_q: Query<(Entity, &GameCardId), With<BattlefieldCard>>,
     lift_q: Query<&CardHoverLift>,
+    mut prev_attackers: Local<HashMap<CardId, Vec3>>,
 ) {
-    let Some(cv) = &view.0 else { return };
+    let Some(cv) = &view.0 else {
+        prev_attackers.clear();
+        return;
+    };
     let viewer = cv.your_seat;
     let n_seats = cv.players.len();
-    for (entity, gid, owner, lurch_opt) in &mut bf_q {
-        let perm = cv.battlefield.iter().find(|p| p.id == gid.0);
-        let attacking = perm.map(|p| p.attacking).unwrap_or(false);
-        let is_blocker = perm.and_then(|p| p.blocking_attacker).is_some();
 
-        // Off combat: retract whatever offset we currently have. Keep the
-        // component alive so the lerp can finish; `animate_combat_lurch`
-        // removes it once both progress and target are ~0.
-        if !attacking && !is_blocker {
-            if let Some(mut l) = lurch_opt {
-                l.target_progress = 0.0;
-            }
+    let mut entity_of: HashMap<CardId, Entity> = HashMap::new();
+    for (e, gid) in &bf_q {
+        entity_of.insert(gid.0, e);
+    }
+    let on_battlefield: HashSet<CardId> = cv.battlefield.iter().map(|p| p.id).collect();
+
+    // Each currently-declared attacker → its strike displacement vector: a
+    // flat (Y=0) direction toward the defender's anchor, clamped so the lunge
+    // stays a tidy jab rather than a slide across the table, scaled to the
+    // strike reach. Stored so it's ready to fire the moment combat resolves
+    // (when the attacking flag clears and the defender is no longer derivable).
+    let mut current: HashMap<CardId, Vec3> = HashMap::new();
+    for p in &cv.battlefield {
+        if !p.attacking {
             continue;
         }
-
-        // Defending player: first seat that isn't the owner. Engine
-        // doesn't expose per-attacker defenders yet, so in multiplayer
-        // we just point at the first opponent — close enough for the
-        // visual lunge until per-target metadata is plumbed through.
-        let def_seat = (0..n_seats).find(|&s| s != owner.0).unwrap_or(owner.0);
+        let Some(&e) = entity_of.get(&p.id) else { continue };
+        let base = lift_q.get(e).map(|l| l.base_translation).unwrap_or(Vec3::ZERO);
+        // Defender: first seat that isn't the attacker's controller. The engine
+        // doesn't expose per-attacker defenders yet, so we point at the first
+        // opponent — close enough for the lunge direction.
+        let def_seat = (0..n_seats).find(|&s| s != p.controller).unwrap_or(p.controller);
         let icon = player_hand_anchor(def_seat, viewer, n_seats);
-        // base_translation tracks the card's resting transform. Falling
-        // back to ZERO is a no-op direction (offset becomes ~icon) which
-        // matters only on the one frame between spawn and the first
-        // lift-system pass, so the visual cost is negligible.
-        let base = lift_q.get(entity).map(|l| l.base_translation).unwrap_or(Vec3::ZERO);
-        // Keep Y at 0 so the attacker glides flat across the table
-        // rather than bobbing toward the icon's slightly-raised disc, and
-        // clamp the distance so the card leans toward its target instead of
-        // drifting a third of the way across the board (see
-        // `MAX_LUNGE_DISTANCE`).
-        let target_offset =
+        let dir =
             Vec3::new(icon.x - base.x, 0.0, icon.z - base.z).clamp_length_max(MAX_LUNGE_DISTANCE);
+        current.insert(p.id, dir * COMBAT_STRIKE_PROGRESS);
+    }
 
-        // On a damage step, only the creatures actually assigning damage
-        // that step should lunge into contact — the others hold at
-        // [`COMBAT_HOLD_PROGRESS`]. First-strike-only creatures strike
-        // during FirstStrikeDamage; vanilla creatures during CombatDamage;
-        // double-strikers during both.
-        let strikes_this_step = |step: TurnStep| -> bool {
-            let Some(p) = perm else { return false };
-            let fs = p.keywords.contains(&Keyword::FirstStrike);
-            let ds = p.keywords.contains(&Keyword::DoubleStrike);
-            match step {
-                TurnStep::FirstStrikeDamage => fs || ds,
-                TurnStep::CombatDamage => !fs || ds,
-                _ => false,
-            }
-        };
-
-        // Creatures stay at rest through BeginCombat / DeclareAttackers /
-        // DeclareBlockers — the lunge is reserved for the damage step, so the
-        // motion reads as the actual strike rather than a premature creep
-        // forward while attacks/blocks are still being declared. Only the
-        // creatures striking *this* damage step lunge (a first-striker doesn't
-        // move during regular combat damage, nor a vanilla creature during
-        // first-strike damage); everything else holds home and the smooth lerp
-        // retracts anyone who struck on an earlier step.
-        let base_progress = match cv.step {
-            step @ (TurnStep::FirstStrikeDamage | TurnStep::CombatDamage)
-                if strikes_this_step(step) =>
-            {
-                COMBAT_STRIKE_PROGRESS
-            }
-            _ => 0.0,
-        };
-        let target_progress = if is_blocker { base_progress * 0.55 } else { base_progress };
-
-        match lurch_opt {
-            Some(mut l) => {
-                l.target_progress = target_progress;
-                l.target_offset = target_offset;
-            }
-            None if target_progress > 0.0 => {
-                // Snap to the lurch position on first insertion — the
-                // slow lerp from 0 → target tended to bleed into the next
-                // combat step when the viewer received their first
-                // "attacking" view late (declare-attackers happens on the
-                // bot's tick; the human's first frame with `attacking:
-                // true` may arrive at the step boundary). Snapping makes
-                // the lunge an instant "this creature is committed"
-                // indicator, which is what the visual is actually
-                // communicating — there's no narrative value in watching
-                // the slide.
-                commands.entity(entity).insert(CombatLurch {
-                    progress: target_progress,
-                    target_progress,
-                    target_offset,
-                });
-            }
-            None => {}
+    // Fire a strike for every attacker that just stopped attacking but is still
+    // on the battlefield (survived combat).
+    for (id, offset) in prev_attackers.iter() {
+        if current.contains_key(id) || !on_battlefield.contains(id) {
+            continue;
+        }
+        if let Some(&e) = entity_of.get(id) {
+            commands.entity(e).insert(CombatLurch { progress: 0.0, offset: *offset });
         }
     }
+
+    *prev_attackers = current;
 }
 
-/// Smoothly lerp each [`CombatLurch::progress`] toward `target_progress`
-/// and add `target_offset * progress` to the card's transform. Runs
-/// after [`animate_hover_lift`] so the lift system's full-translation
-/// write doesn't overwrite the combat offset. Self-removes when both
-/// progress and target are ~0 so cards not in combat carry no
-/// component.
+/// Drive each one-shot [`CombatLurch`] strike: advance `progress` 0 → 1 and add
+/// a sine arc of `offset` onto the card's transform, so it lunges out toward
+/// the defender at the midpoint and returns to rest, then self-removes. Runs
+/// after [`animate_hover_lift`] (which rewrites the resting translation each
+/// frame) and skips the same cards it does, so a card mid-tap/flight doesn't
+/// get the arc piled on top of an already-moving transform.
 #[allow(clippy::type_complexity)]
 pub fn animate_combat_lurch(
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
     mut commands: Commands,
-    // The combat offset is *added* on top of the resting translation that
-    // `animate_hover_lift` rewrites each frame, so this system must skip
-    // exactly the cards `animate_hover_lift` skips — otherwise, while one of
-    // those animations runs (most importantly `TapAnimation`, which every
-    // non-vigilance attacker gets when it taps), nothing resets the base and
-    // the per-frame add accumulates, flinging the attacker across the table.
-    // When skipped, the card simply holds its current (already-lurched)
-    // position until the animation finishes.
     mut q: Query<
         (Entity, &mut Transform, &mut CombatLurch),
         (
@@ -228,13 +170,14 @@ pub fn animate_combat_lurch(
     >,
 ) {
     let dt = time.delta_secs() * speed.0;
-    let lerp = (COMBAT_LURCH_SPEED * dt).min(1.0);
     for (entity, mut transform, mut lurch) in &mut q {
-        lurch.progress += (lurch.target_progress - lurch.progress) * lerp;
-        transform.translation += lurch.target_offset * lurch.progress;
-        if lurch.progress.abs() < 0.005 && lurch.target_progress == 0.0 {
+        lurch.progress += dt * COMBAT_STRIKE_SPEED;
+        if lurch.progress >= 1.0 {
             commands.entity(entity).remove::<CombatLurch>();
+            continue;
         }
+        let arc = (lurch.progress * PI).sin();
+        transform.translation += lurch.offset * arc;
     }
 }
 

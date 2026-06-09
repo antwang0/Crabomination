@@ -271,19 +271,18 @@ pub struct ValidTarget;
 #[derive(Component)]
 pub struct PlayerTargetZone(pub usize);
 
-/// Combat-animation offset for a battlefield creature. `progress`
-/// interpolates 0..1 along `target_offset` (the world-space vector from
-/// the card's base position to whatever it's lunging at — defending
-/// player's icon for attackers, the attacker's position for blockers).
-/// `update_combat_lurch_targets` writes the desired `target_progress`
-/// each frame from the view's combat step; `animate_combat_lurch`
-/// lerps `progress` toward it and writes `target_offset * progress`
-/// onto the card's transform. Removed once both are ~0.
+/// One-shot combat "strike" offset for a battlefield attacker. Inserted by
+/// `update_combat_lurch_targets` the instant the attacker stops attacking
+/// (combat resolved) while still on the battlefield; `animate_combat_lurch`
+/// advances `progress` 0 → 1 and adds a sine arc of `offset` onto the card's
+/// transform — so the creature lunges out toward the defender at the midpoint
+/// and returns to rest — then removes the component.
 #[derive(Component, Default, Clone, Copy)]
 pub struct CombatLurch {
+    /// Animation driver, 0 → 1 over the strike's duration.
     pub progress: f32,
-    pub target_progress: f32,
-    pub target_offset: Vec3,
+    /// Full strike displacement (direction × reach), applied as `sin(progress·π)·offset`.
+    pub offset: Vec3,
 }
 
 /// Animates a card flying to the graveyard pile; despawns the entity on completion.
