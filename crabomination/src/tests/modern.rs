@@ -40450,3 +40450,60 @@ fn roadkill_rodney_squad_mints_deathtouch_copies() {
     assert!(rodneys.iter().all(|c| c.has_keyword(&crate::card::Keyword::Deathtouch)),
         "copies keep deathtouch");
 }
+
+/// Gigadrowse replicated once taps two different permanents (copy retargets).
+#[test]
+fn replicate_gigadrowse_taps_two_targets() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::gigadrowse());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    // Copy retargets to a different permanent via the scripted decider.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Target(Target::Permanent(b)),
+    ]));
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: id, times: 1,
+        target: Some(Target::Permanent(a)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Gigadrowse replicated once");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped, "original target tapped");
+    assert!(g.battlefield_find(b).unwrap().tapped, "copy's retarget tapped");
+}
+
+/// Vacuumelt returns target creature to its owner's hand.
+#[test]
+fn replicate_vacuumelt_bounces_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::vacuumelt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: id, times: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Vacuumelt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "returned to owner's hand");
+}
+
+/// Leap of Flame grants its target +1/+0, flying, and first strike.
+#[test]
+fn replicate_leap_of_flame_pumps_and_grants_keywords() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::leap_of_flame());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpellReplicate {
+        card_id: id, times: 0,
+        target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Leap of Flame");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!(c.power, 3, "+1/+0");
+    assert!(c.keywords.contains(&crate::card::Keyword::Flying), "flying");
+    assert!(c.keywords.contains(&crate::card::Keyword::FirstStrike), "first strike");
+}

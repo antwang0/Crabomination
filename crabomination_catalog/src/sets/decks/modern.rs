@@ -34071,3 +34071,61 @@ pub fn roadkill_rodney() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gigadrowse — {U} Instant. Replicate {U}. Tap target permanent.
+pub fn gigadrowse() -> CardDefinition {
+    CardDefinition {
+        name: "Gigadrowse",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Replicate(cost(&[u()]))],
+        effect: Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+        ..Default::default()
+    }
+}
+
+/// Vacuumelt — {2}{U} Sorcery. Replicate {2}{U}. Return target creature to its
+/// owner's hand.
+pub fn vacuumelt() -> CardDefinition {
+    CardDefinition {
+        name: "Vacuumelt",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Replicate(cost(&[generic(2), u()]))],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        },
+        ..Default::default()
+    }
+}
+
+/// Leap of Flame — {U}{R} Instant. Replicate {U}{R}. Target creature gets +1/+0
+/// and gains flying and first strike until end of turn.
+pub fn leap_of_flame() -> CardDefinition {
+    CardDefinition {
+        name: "Leap of Flame",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Replicate(cost(&[u(), r()]))],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
