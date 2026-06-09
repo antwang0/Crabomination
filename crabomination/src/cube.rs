@@ -1009,6 +1009,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         otawara_soaring_city,
         restless_spire,
+        restless_reef,
+        restless_vinestalk,
+        trygon_predator,
         overlord_of_the_floodpits,
         make_disappear,
         // ── modern_decks: Affinity (CR 702.41) ──
@@ -1770,6 +1773,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks: red utility land ──
         kessig_wolf_run,
         sokenzan_crucible_of_defiance,
+        restless_bivouac,
         overlord_of_the_boilerbilges,
         heartfire_immolator,
         warleaders_call,

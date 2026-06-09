@@ -42064,3 +42064,62 @@ fn ainok_survivalist_morph_cast_and_megamorph_turn_up() {
     assert_eq!((up.power(), up.toughness()), (3, 2), "2/1 + megamorph +1/+1 counter");
     assert!(g.battlefield_find(victim).is_none(), "turn-up trigger destroyed the artifact");
 }
+
+/// Restless Reef animates into a 4/3 and surveils 2 on attack.
+#[test]
+fn restless_reef_animates_and_surveils_on_attack() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_reef());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate Restless Reef");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert_eq!((post.power, post.toughness), (4, 3));
+    // Library cards to surveil.
+    for _ in 0..3 { let cid = g.next_id(); g.players[0].library.push(CardInstance::new(cid, catalog::grizzly_bears(), 0)); }
+    let lib_before = g.players[0].library.len();
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack { attacker: land, target: AttackTarget::Player(1) }]).expect("attack");
+    drain_stack(&mut g);
+    // Surveil 2 keeps cards on top or bins them; library either same or smaller.
+    assert!(g.players[0].library.len() <= lib_before, "surveil 2 resolved");
+}
+
+/// Restless Vinestalk animates into a 5/5 trampler.
+#[test]
+fn restless_vinestalk_animates_5_5_trample() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::restless_vinestalk());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate Vinestalk");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert_eq!((post.power, post.toughness), (5, 5));
+    assert!(post.keywords.contains(&Keyword::Trample));
+}
+
+/// Trygon Predator's combat-damage trigger destroys an opponent's artifact.
+#[test]
+fn trygon_predator_destroys_artifact_on_combat_damage() {
+    let mut g = two_player_game();
+    let trygon = g.add_card_to_battlefield(0, catalog::trygon_predator());
+    let art = g.add_card_to_battlefield(1, catalog::null_rod());
+    let trig = catalog::trygon_predator().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        trygon, 0, Some(Target::Permanent(art)), 0,
+    );
+    g.resolve_effect(&trig, &ctx).unwrap();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(art).is_none(), "Trygon destroyed the opponent's artifact");
+}

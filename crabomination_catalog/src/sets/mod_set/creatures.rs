@@ -5254,6 +5254,36 @@ pub fn hauntwoods_shrieker() -> CardDefinition {
     }
 }
 
+/// Trygon Predator — {1}{G}{U} 2/3 Beast with Flying. Whenever it deals combat
+/// damage to a player, you may destroy target artifact or enchantment that
+/// player controls. (The "may" + "that player controls" rider is approximated
+/// as destroy target artifact/enchantment an opponent controls.)
+pub fn trygon_predator() -> CardDefinition {
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, Keyword, SelectionRequirement as R, TriggeredAbility};
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Trygon Predator",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    R::Artifact.or(R::Enchantment).and(R::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Ainok Survivalist — {1}{G} 2/1 Human Warrior. Megamorph {G} (CR 702.36e).
 /// When it's turned face up, destroy target artifact or enchantment an opponent
 /// controls.

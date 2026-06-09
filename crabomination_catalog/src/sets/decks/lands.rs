@@ -783,6 +783,89 @@ pub fn blinkmoth_nexus() -> CardDefinition {
     )
 }
 
+/// Build a Restless creature-land (MOM/LCI cycle): enters tapped, taps for two
+/// colors, animates into a specific creature for a cost, and has an on-attack
+/// trigger. The lands carry no basic land types (typeless), unlike `manland`.
+#[allow(clippy::too_many_arguments)]
+fn restless_land(
+    name: &'static str,
+    color_a: Color,
+    color_b: Color,
+    animate_cost: ManaCost,
+    power: i32,
+    toughness: i32,
+    creature_types: Vec<crate::card::CreatureType>,
+    keywords: Vec<crate::card::Keyword>,
+    attack_effect: Effect,
+) -> CardDefinition {
+    use crate::effect::Duration;
+    let animate = ActivatedAbility {
+        mana_cost: animate_cost,
+        effect: Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(power),
+            toughness: Value::Const(toughness),
+            creature_types,
+            keywords,
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![tap_add(color_a), tap_add(color_b), animate],
+        triggered_abilities: vec![etb_tap(), crate::effect::shortcut::on_attack(attack_effect)],
+        ..Default::default()
+    }
+}
+
+/// Restless Reef — U/B. `{4}{U}{B}`: becomes a 4/3 Fish. Whenever it attacks,
+/// surveil 2.
+pub fn restless_reef() -> CardDefinition {
+    use crate::card::CreatureType;
+    restless_land(
+        "Restless Reef", Color::Blue, Color::Black,
+        cost(&[generic(4), u(), crate::mana::b()]), 4, 3,
+        vec![CreatureType::Fish], vec![],
+        Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+    )
+}
+
+/// Restless Bivouac — R/W. `{3}{R}{W}`: becomes a 2/2 Ox. Whenever it attacks,
+/// put a +1/+1 counter on target creature you control.
+pub fn restless_bivouac() -> CardDefinition {
+    use crate::card::{CreatureType, SelectionRequirement as R};
+    use crate::effect::shortcut::target_filtered;
+    restless_land(
+        "Restless Bivouac", Color::Red, Color::White,
+        cost(&[generic(3), crate::mana::r(), crate::mana::w()]), 2, 2,
+        vec![CreatureType::Ox], vec![],
+        Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: crate::card::CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+    )
+}
+
+/// Restless Vinestalk — G/U. `{3}{G}{U}`: becomes a 5/5 Plant with trample.
+/// Whenever it attacks, put a +1/+1 counter on target creature you control.
+pub fn restless_vinestalk() -> CardDefinition {
+    use crate::card::{CreatureType, Keyword, SelectionRequirement as R};
+    use crate::effect::shortcut::target_filtered;
+    restless_land(
+        "Restless Vinestalk", Color::Green, Color::Blue,
+        cost(&[generic(3), crate::mana::g(), u()]), 5, 5,
+        vec![CreatureType::Plant], vec![Keyword::Trample],
+        Effect::AddCounter {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            kind: crate::card::CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+    )
+}
+
 /// Restless Spire — U/R creature-land. Enters tapped, `{T}: Add {U} or {R}`.
 /// `{U}{R}`: becomes a 2/1 Elemental with first strike until end of turn (still
 /// a land). Whenever it attacks, scry 1.
