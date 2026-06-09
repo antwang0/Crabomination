@@ -40767,3 +40767,71 @@ fn merrow_reejerey_buffs_and_triggers_on_merfolk_cast() {
     let other = g.add_card_to_battlefield(0, catalog::cursecatcher());
     assert_eq!(g.computed_permanent(other).unwrap().power, 2, "other Merfolk pumped");
 }
+
+// ── Elf / Zombie / Vampire tribal ─────────────────────────────────────────────
+
+/// Elvish Champion pumps other Elves and grants forestwalk.
+#[test]
+fn elvish_champion_buffs_elves() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::elvish_champion());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let ec = g.computed_permanent(elf).unwrap();
+    assert_eq!(ec.power, 2, "Llanowar Elves 1/1 → 2/2");
+    assert!(ec.keywords.contains(&Keyword::Landwalk(crate::card::LandType::Forest)), "forestwalk");
+}
+
+/// Dwynen gains life per attacking Elf when she attacks.
+#[test]
+fn dwynen_gains_life_per_attacking_elf() {
+    let mut g = two_player_game();
+    let dwynen = g.add_card_to_battlefield(0, catalog::dwynen_gilt_leaf_daen());
+    let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    for id in [dwynen, elf] { g.clear_sickness(id); }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let life = g.players[0].life;
+    g.declare_attackers(vec![
+        Attack { attacker: dwynen, target: AttackTarget::Player(1) },
+        Attack { attacker: elf, target: AttackTarget::Player(1) },
+    ]).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 2, "gained 1 per the two attacking Elves");
+}
+
+/// Legion Lieutenant buffs your other Vampires.
+#[test]
+fn legion_lieutenant_buffs_vampires() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::legion_lieutenant());
+    let vamp = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+    assert_eq!(g.computed_permanent(vamp).unwrap().power, 3, "Nighthawk 2/3 → 3/4");
+}
+
+/// Stromkirk Captain grants other Vampires first strike.
+#[test]
+fn stromkirk_captain_grants_first_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::stromkirk_captain());
+    let vamp = g.add_card_to_battlefield(0, catalog::vampire_nighthawk());
+    assert!(g.computed_permanent(vamp).unwrap().keywords.contains(&Keyword::FirstStrike));
+}
+
+/// Lord of the Undead returns a Zombie from your graveyard to hand.
+#[test]
+fn lord_of_the_undead_returns_zombie() {
+    let mut g = two_player_game();
+    let lord = g.add_card_to_battlefield(0, catalog::lord_of_the_undead());
+    g.clear_sickness(lord);
+    let zombie = g.add_card_to_graveyard(0, catalog::diregraf_ghoul());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: lord, ability_index: 0,
+        target: Some(Target::Permanent(zombie)), x_value: None,
+    }).expect("activate Lord of the Undead");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == zombie), "Zombie returned to hand");
+}

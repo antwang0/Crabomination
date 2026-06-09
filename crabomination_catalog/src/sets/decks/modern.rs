@@ -34573,3 +34573,181 @@ pub fn crystalline_sliver() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: Elf / Zombie / Vampire tribal ──────────────────────────────
+
+/// Elvish Champion — {1}{G}{G} 2/2 Elf. Other Elves get +1/+1 and have
+/// forestwalk.
+pub fn elvish_champion() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Elf)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Elvish Champion",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Elf], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Elves get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Elves have forestwalk.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: others(),
+                    keyword: Keyword::Landwalk(LandType::Forest),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Dwynen, Gilt-Leaf Daen — {2}{G}{G} 3/4 Elf Warrior. Reach. Other Elf
+/// creatures you control get +1/+1. "Whenever Dwynen attacks, you gain 1 life
+/// for each attacking Elf."
+pub fn dwynen_gilt_leaf_daen() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Dwynen, Gilt-Leaf Daen",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        static_abilities: vec![StaticAbility {
+            description: "Other Elf creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1, toughness: 1,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Elf)
+                        .and(SelectionRequirement::IsAttacking),
+                ))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Legion Lieutenant — {B}{R} 2/2 Vampire Soldier. Other Vampires you control
+/// get +1/+1.
+pub fn legion_lieutenant() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Legion Lieutenant",
+        cost: cost(&[b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Vampires you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1, toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stromkirk Captain — {1}{R}{B} 2/2 Vampire. Other Vampires you control get
+/// +1/+1 and have first strike.
+pub fn stromkirk_captain() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    let others = || Selector::EachPermanent(
+        SelectionRequirement::HasCreatureType(CreatureType::Vampire)
+            .and(SelectionRequirement::ControlledByYou)
+            .and(SelectionRequirement::OtherThanSource),
+    );
+    CardDefinition {
+        name: "Stromkirk Captain",
+        cost: cost(&[generic(1), r(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Vampire], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Vampires you control get +1/+1.",
+                effect: StaticEffect::PumpPT { applies_to: others(), power: 1, toughness: 1 },
+            },
+            StaticAbility {
+                description: "Other Vampires you control have first strike.",
+                effect: StaticEffect::GrantKeyword { applies_to: others(), keyword: Keyword::FirstStrike },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lord of the Undead — {1}{B}{B} 2/2 Zombie. Other Zombie creatures get
+/// +1/+1. "{1}{B}, {T}: Return target Zombie card from your graveyard to your
+/// hand."
+pub fn lord_of_the_undead() -> CardDefinition {
+    use crate::card::{ActivatedAbility, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Lord of the Undead",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Zombie creatures get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1, toughness: 1,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: true,
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Zombie)),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

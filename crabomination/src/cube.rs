@@ -1310,6 +1310,10 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         preacher_of_the_schism,
         glissa_sunslayer,
         sip_of_hemlock,
+        // ── modern_decks: Zombie + Vampire tribal ──
+        lord_of_the_undead,
+        legion_lieutenant,
+        stromkirk_captain,
         // ── Cube expansion ──
         noxious_gearhulk,
         sheoldred_whispering_one,
@@ -2130,6 +2134,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         bristly_bill_spine_sower,
         // ── modern_decks: put-creature-from-hand cheat ──
         elvish_piper,
+        // Elf tribal
+        elvish_champion,
+        dwynen_gilt_leaf_daen,
         // ── Cube expansion ──
         hornet_queen,
         // team-pump finishers (Overrun variants)
