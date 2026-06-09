@@ -37697,3 +37697,127 @@ pub fn whispering_madness() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Bloodrush (Gatecrash) ─────────────────────────────────────────────────────
+//
+// Bloodrush is a from-hand activated ability ({cost}, Discard this card: target
+// attacking creature gets +X/+Y [+ keyword] until end of turn). It rides the
+// existing `ActivatedAbility { from_hand, discard_self_cost }` path.
+
+/// Build a Bloodrush activated ability: from hand, discard self, pump a target
+/// attacking creature (optionally granting a keyword) until end of turn.
+fn bloodrush(mana: crate::mana::ManaCost, power: i32, toughness: i32, grant: Option<Keyword>) -> ActivatedAbility {
+    let pump = Effect::PumpPT {
+        what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking)),
+        power: Value::Const(power),
+        toughness: Value::Const(toughness),
+        duration: Duration::EndOfTurn,
+    };
+    let effect = match grant {
+        Some(kw) => Effect::Seq(vec![
+            pump,
+            Effect::GrantKeyword { what: Selector::Target(0), keyword: kw, duration: Duration::EndOfTurn },
+        ]),
+        None => pump,
+    };
+    ActivatedAbility { mana_cost: mana, effect, from_hand: true, discard_self_cost: true, ..Default::default() }
+}
+
+/// Ghor-Clan Rampager — {2}{R}{G} 4/4 Trample. Bloodrush — {R}{G}: target
+/// attacking creature gets +4/+4 and gains trample.
+pub fn ghor_clan_rampager() -> CardDefinition {
+    CardDefinition {
+        name: "Ghor-Clan Rampager",
+        cost: cost(&[generic(2), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        activated_abilities: vec![bloodrush(cost(&[r(), g()]), 4, 4, Some(Keyword::Trample))],
+        ..Default::default()
+    }
+}
+
+/// Slaughterhorn — {2}{G} 3/2 Beast. Bloodrush — {G}: target attacking creature
+/// gets +3/+2.
+pub fn slaughterhorn() -> CardDefinition {
+    CardDefinition {
+        name: "Slaughterhorn",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Beast], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        activated_abilities: vec![bloodrush(cost(&[g()]), 3, 2, None)],
+        ..Default::default()
+    }
+}
+
+/// Skinbrand Goblin — {1}{R} 2/1 Goblin Warrior. Bloodrush — {R}: target
+/// attacking creature gets +2/+1.
+pub fn skinbrand_goblin() -> CardDefinition {
+    CardDefinition {
+        name: "Skinbrand Goblin",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        activated_abilities: vec![bloodrush(cost(&[r()]), 2, 1, None)],
+        ..Default::default()
+    }
+}
+
+/// Zhur-Taa Swine — {3}{R}{G} 5/4 Boar. Bloodrush — {1}{R}{G}: target attacking
+/// creature gets +5/+4.
+pub fn zhur_taa_swine() -> CardDefinition {
+    CardDefinition {
+        name: "Zhur-Taa Swine",
+        cost: cost(&[generic(3), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Boar], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        activated_abilities: vec![bloodrush(cost(&[generic(1), r(), g()]), 5, 4, None)],
+        ..Default::default()
+    }
+}
+
+/// Wasteland Viper — {G} 1/2 Snake, Deathtouch. Bloodrush — {G}: target
+/// attacking creature gets +1/+2 and gains deathtouch.
+pub fn wasteland_viper() -> CardDefinition {
+    CardDefinition {
+        name: "Wasteland Viper",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Snake], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        activated_abilities: vec![bloodrush(cost(&[g()]), 1, 2, Some(Keyword::Deathtouch))],
+        ..Default::default()
+    }
+}
+
+/// Viashino Shanktail — {3}{R} 3/1 Lizard Warrior, First strike. Bloodrush —
+/// {2}{R}: target attacking creature gets +3/+1 and gains first strike.
+pub fn viashino_shanktail() -> CardDefinition {
+    CardDefinition {
+        name: "Viashino Shanktail",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![bloodrush(cost(&[generic(2), r()]), 3, 1, Some(Keyword::FirstStrike))],
+        ..Default::default()
+    }
+}

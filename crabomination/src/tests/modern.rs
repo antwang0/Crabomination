@@ -43206,3 +43206,69 @@ fn whispering_madness_wheels_each_player() {
     assert_eq!(g.players[0].hand.len(), 4, "seat 0 drew up to the max (4)");
     assert_eq!(g.players[1].hand.len(), 4, "seat 1 drew up to the max (4)");
 }
+
+// ── Bloodrush ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn ghor_clan_rampager_bloodrush_pumps_and_grants_trample() {
+    use crate::card::Keyword;
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    let rampager = g.add_card_to_hand(0, catalog::ghor_clan_rampager());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rampager, ability_index: 0,
+        target: Some(Target::Permanent(attacker)), x_value: None,
+    }).expect("bloodrush from hand");
+    drain_stack(&mut g);
+    let a = g.computed_permanent(attacker).unwrap();
+    assert_eq!((a.power, a.toughness), (6, 6), "2/2 +4/+4");
+    assert!(a.keywords.contains(&Keyword::Trample), "gained trample");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == rampager),
+        "the Bloodrush card was discarded as a cost");
+}
+
+#[test]
+fn slaughterhorn_bloodrush_pumps_attacker() {
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let horn = g.add_card_to_hand(0, catalog::slaughterhorn());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: horn, ability_index: 0,
+        target: Some(Target::Permanent(attacker)), x_value: None,
+    }).expect("bloodrush");
+    drain_stack(&mut g);
+    let a = g.computed_permanent(attacker).unwrap();
+    assert_eq!((a.power, a.toughness), (5, 4), "2/2 +3/+2");
+}
+
+/// Bloodrush can only target an *attacking* creature.
+#[test]
+fn bloodrush_rejects_non_attacking_target() {
+    let mut g = two_player_game();
+    let idle = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(idle);
+    let horn = g.add_card_to_hand(0, catalog::slaughterhorn());
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Green, 1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: horn, ability_index: 0,
+        target: Some(Target::Permanent(idle)), x_value: None,
+    }).is_err(), "no attacking creature → illegal target");
+}

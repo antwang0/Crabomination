@@ -1795,6 +1795,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // Bloodrush (Gatecrash)
+        skinbrand_goblin,
+        viashino_shanktail,
+        ghor_clan_rampager,
+        zhur_taa_swine,
         // ── claude/modern_decks: red utility land ──
         bolrac_clan_basher,
         // ── modern_decks: Soulbond haste ──
@@ -2248,6 +2253,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // Bloodrush (Gatecrash)
+        slaughterhorn,
+        wasteland_viper,
         nervous_gardener,
         greenbelt_radical,
         // ── modern_decks: mana dork + X-Hydra ──
