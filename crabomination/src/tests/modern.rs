@@ -40966,3 +40966,42 @@ fn catapult_master_exiles_with_five_soldiers() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == victim), "target creature exiled");
 }
+
+// ── Spirit + Knight tribal ────────────────────────────────────────────────────
+
+/// Supreme Phantom buffs your other Spirits.
+#[test]
+fn supreme_phantom_buffs_spirits() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::supreme_phantom());
+    let spirit = g.add_card_to_battlefield(0, catalog::empyrean_eagle());
+    assert_eq!(g.computed_permanent(spirit).unwrap().power, 3, "Eagle 2/2 → 3/3");
+}
+
+/// Empyrean Eagle pumps your other fliers.
+#[test]
+fn empyrean_eagle_buffs_fliers() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::empyrean_eagle());
+    // Another flier (a second Eagle) gets +1/+1.
+    let flier = g.add_card_to_battlefield(0, catalog::empyrean_eagle());
+    // Each Eagle pumps the other: base 2/2 + 1 from the other Eagle.
+    assert_eq!(g.computed_permanent(flier).unwrap().power, 3, "flier pumped");
+    // A non-flier is unaffected.
+    let ground = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert_eq!(g.computed_permanent(ground).unwrap().power, 2, "non-flier untouched");
+}
+
+/// Kinsbaile Cavalier grants other Knights double strike.
+#[test]
+fn kinsbaile_cavalier_grants_double_strike() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::kinsbaile_cavalier());
+    let knight = g.add_card_to_battlefield(0, catalog::field_marshal()); // not a Knight
+    assert!(!g.computed_permanent(knight).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "non-Knight unaffected");
+    let real_knight = g.add_card_to_battlefield(0, catalog::kinsbaile_cavalier());
+    assert!(g.computed_permanent(real_knight).unwrap().keywords.contains(&Keyword::DoubleStrike),
+        "other Knight gets double strike");
+}

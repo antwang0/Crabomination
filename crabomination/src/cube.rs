@@ -458,6 +458,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         field_marshal,
         daru_warchief,
         catapult_master,
+        // Spirit + Knight tribal
+        empyrean_eagle,
+        kinsbaile_cavalier,
         // ── Cube expansion ──
         reveillark,
         spirit_of_the_labyrinth,
@@ -978,6 +981,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         somber_hoverguard,
         broodstar,
         qumulox,
+        // ── modern_decks: Spirit tribal ──
+        supreme_phantom,
         // ── modern_decks: Merfolk + blue Slivers tribal ──
         master_of_the_pearl_trident,
         merfolk_mistbinder,

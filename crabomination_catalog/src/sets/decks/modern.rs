@@ -34967,3 +34967,90 @@ pub fn catapult_master() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── modern_decks: Spirit + Knight tribal ──────────────────────────────────────
+
+/// Supreme Phantom — {1}{U} 1/3 Spirit. Other Spirit creatures you control get
+/// +1/+1.
+pub fn supreme_phantom() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Supreme Phantom",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource)),
+                power: 1, toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Empyrean Eagle — {1}{W}{U} 2/2 Spirit Bird. Flying. Other creatures you
+/// control with flying get +1/+1.
+pub fn empyrean_eagle() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Empyrean Eagle",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        static_abilities: vec![StaticAbility {
+            description: "Other creatures you control with flying get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasKeyword(Keyword::Flying)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource)),
+                power: 1, toughness: 1,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kinsbaile Cavalier — {2}{W}{W} 2/2 Kithkin Knight. Other Knight creatures
+/// you control have double strike.
+pub fn kinsbaile_cavalier() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Kinsbaile Cavalier",
+        cost: cost(&[generic(2), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "Other Knight creatures you control have double strike.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Knight)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource)),
+                keyword: Keyword::DoubleStrike,
+            },
+        }],
+        ..Default::default()
+    }
+}
