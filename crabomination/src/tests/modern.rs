@@ -40286,3 +40286,17 @@ fn replicate_shattering_spree_base_destroys_artifact() {
 
     assert!(g.battlefield_find(art).is_none(), "artifact destroyed");
 }
+
+/// Hand affordances surface Squad and Replicate cast options for the
+/// priority-holding seat when the extra cost is affordable.
+#[test]
+fn affordances_surface_squad_and_replicate() {
+    let mut g = two_player_game();
+    let squad = g.add_card_to_hand(0, catalog::vanguard_suppressor());
+    let repl = g.add_card_to_hand(0, catalog::train_of_thought());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    g.players[0].mana_pool.add_colorless(8);
+    let a = g.compute_hand_affordances(0);
+    assert!(a.squadable.contains(&squad), "Squad card is squadable");
+    assert!(a.replicatable.contains(&repl), "Replicate card is replicatable");
+}

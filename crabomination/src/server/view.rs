@@ -110,6 +110,8 @@ fn project_for(state: &GameState, viewer: Option<usize>) -> ClientView {
         bestowable_hand: affordances.bestowable,
         miracle_hand: affordances.miracle,
         bargainable_hand: affordances.bargainable,
+        squadable_hand: affordances.squadable,
+        replicatable_hand: affordances.replicatable,
         dashable_hand: affordances.dashable,
         blitzable_hand: affordances.blitzable,
         suspendable_hand: affordances.suspendable,

@@ -196,6 +196,12 @@ pub struct HandAffordances {
     /// CR 702.176 — hand cards with Bargain that are castable right now, so the
     /// client can offer a "sacrifice an artifact/enchantment/token?" toggle.
     pub bargainable: Vec<CardId>,
+    /// CR 702.157 — hand cards with Squad castable paying the squad cost at
+    /// least once, so the client can offer a "pay Squad N times?" stepper.
+    pub squadable: Vec<CardId>,
+    /// CR 702.107 — hand cards with Replicate castable paying the replicate
+    /// cost at least once, so the client can offer a "replicate N times?" stepper.
+    pub replicatable: Vec<CardId>,
     /// CR 702.94 — hand cards with a live Miracle window (revealed as the
     /// turn's first draw): castable for the cheaper miracle cost via
     /// `GameAction::CastFromZoneWithoutPaying`.

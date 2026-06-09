@@ -8,6 +8,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- ⏳ **Client Squad/Replicate stepper.** `PlayerView.{squadable_hand,
+  replicatable_hand}` now surface which hand cards can pay Squad (CR 702.157) /
+  Replicate (CR 702.107) at least once; the client should render a "pay N
+  times" stepper feeding `GameAction::CastSpell{Squad,Replicate} { times }`
+  (wayland sandbox blocks the client render edit this run).
 - ⏳ **Resolution-time target legality (CR 608.2b).** Only *token-copy* spells
   now fizzle when their single target stops matching the spell's filter
   (`continue_spell_resolution`, scoped to `is_token`). It relies on the

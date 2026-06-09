@@ -422,6 +422,69 @@ impl GameState {
         out
     }
 
+    /// CR 702.157 — hand cards with Squad the caster could cast paying the
+    /// squad cost at least once right now (probed at `times: 1`). Mirrors
+    /// `bargainable_hand_cards_on`.
+    fn squadable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.squad_cost().is_some())
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, needs_target, effect) in &hand {
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellSquad {
+                card_id: *id, times: 1, target, additional_targets, mode: None, x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
+    /// CR 702.107 — hand cards with Replicate the caster could cast paying the
+    /// replicate cost at least once right now (probed at `times: 1`).
+    fn replicatable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        let hand: Vec<(CardId, bool, Option<_>)> = self.players[caster]
+            .hand
+            .iter()
+            .filter(|c| c.definition.replicate_cost().is_some())
+            .map(|c| {
+                let needs_target = c.definition.effect.requires_target();
+                (c.id, needs_target, needs_target.then(|| c.definition.effect.clone()))
+            })
+            .collect();
+        let mut out = Vec::new();
+        for (id, needs_target, effect) in &hand {
+            let (target, additional_targets) = if *needs_target {
+                match effect {
+                    Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, None),
+                    None => (None, Vec::new()),
+                }
+            } else {
+                (None, Vec::new())
+            };
+            if Self::would_accept_on(template, GameAction::CastSpellReplicate {
+                card_id: *id, times: 1, target, additional_targets, mode: None, x_value: None,
+            }) {
+                out.push(*id);
+            }
+        }
+        out
+    }
+
     /// [`buyback_hand_cards`] against a prebuilt probe template; the caller
     /// owns the priority short-circuit.
     ///
@@ -756,6 +819,8 @@ impl GameState {
             adventurable: self.adventurable_hand_cards_on(&template, seat),
             splittable_right: self.splittable_right_hand_cards_on(&template, seat),
             bargainable: self.bargainable_hand_cards_on(&template, seat),
+            squadable: self.squadable_hand_cards_on(&template, seat),
+            replicatable: self.replicatable_hand_cards_on(&template, seat),
             miracle: self.miracle_hand_cards(seat),
             activatable_permanents: self.activatable_permanents_on(&template, seat),
         }

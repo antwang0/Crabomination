@@ -289,6 +289,16 @@ pub struct ClientView {
     /// toggle. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub bargainable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with Squad they could cast paying the
+    /// squad cost at least once (CR 702.157), so the client can offer a "pay
+    /// Squad N times?" stepper. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub squadable_hand: Vec<CardId>,
+    /// CardIds in the viewer's hand with Replicate they could cast paying the
+    /// replicate cost at least once (CR 702.107). `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub replicatable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast via their Dash
     /// alternative cost right now (CR 702.110). Lets the client offer a
     /// "dash?" affordance distinct from the plain castable highlight.
