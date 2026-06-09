@@ -1610,7 +1610,17 @@ pub enum Effect {
     /// Each player the selector resolves to exiles the top `amount` cards of
     /// their own library (CR 702.115 Ingest, processed-card exile, etc.).
     /// Mirrors `Mill` but routes to the exile zone instead of the graveyard.
-    ExileTopOfLibrary { who: Selector, amount: Value },
+    ExileTopOfLibrary {
+        who: Selector,
+        amount: Value,
+        /// Stamp `exiled_with = source` on each exiled card (Bomat Courier's
+        /// stash — recoverable via `Selector::CardExiledWithSource`).
+        #[serde(default)]
+        link_to_source: bool,
+        /// Exile face down ("you can't look at it").
+        #[serde(default)]
+        face_down: bool,
+    },
     /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
     /// an opponent owns from exile into that player's graveyard. If you do,
     /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);

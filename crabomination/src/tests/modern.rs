@@ -43695,3 +43695,220 @@ fn wrench_mind_discards_two() {
     crate::game::cast_at(&mut g, spell, Target::Player(1));
     assert_eq!(g.players[1].hand.len(), 1, "discarded two of three");
 }
+
+/// Mirrorform turns each of your nonland permanents into a permanent copy of
+/// the target.
+#[test]
+fn mirrorform_copies_your_nonland_permanents() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    let small = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let spell = g.add_card_to_hand(0, catalog::mirrorform());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    crate::game::cast_at(&mut g, spell, Target::Permanent(big));
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Colossal Dreadmaw");
+    assert_eq!(g.battlefield_find(land).unwrap().definition.name, "Forest", "lands untouched");
+    // Permanent duration: survives cleanup.
+    g.do_cleanup();
+    assert_eq!(g.battlefield_find(small).unwrap().definition.name, "Colossal Dreadmaw");
+}
+
+/// Shifting Woodland needs delirium, then copies a permanent card in the
+/// graveyard until end of turn.
+#[test]
+fn shifting_woodland_delirium_copies_graveyard_permanent() {
+    let mut g = two_player_game();
+    let wood = g.add_card_to_battlefield(0, catalog::shifting_woodland());
+    g.clear_sickness(wood);
+    let dead = g.add_card_to_graveyard(0, catalog::colossal_dreadmaw());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    // No delirium yet (one card type in gy) → gated.
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: wood, ability_index: 1,
+        target: Some(Target::Permanent(dead)), x_value: None,
+    }).is_err(), "delirium not met");
+    // Fill the graveyard to four card types.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::divination());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wood, ability_index: 1,
+        target: Some(Target::Permanent(dead)), x_value: None,
+    }).expect("delirium copy");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(wood).unwrap().definition.name, "Colossal Dreadmaw");
+    g.do_cleanup();
+    assert_eq!(g.battlefield_find(wood).unwrap().definition.name, "Shifting Woodland",
+        "reverts at end of turn");
+}
+
+// ── Staple batch (modern_decks) ───────────────────────────────────────────────
+
+/// Gravecrawler recasts from the graveyard only while you control a Zombie.
+#[test]
+fn gravecrawler_recasts_from_graveyard_with_a_zombie() {
+    let mut g = two_player_game();
+    let crawler = g.add_card_to_graveyard(0, catalog::gravecrawler());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: crawler, ability_index: 0, target: None, x_value: None,
+    }).is_err(), "no Zombie → stays dead");
+    g.add_card_to_battlefield(0, catalog::gravecrawler()); // a Zombie
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: crawler, ability_index: 0, target: None, x_value: None,
+    }).expect("recast with a Zombie out");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(crawler).is_some(), "Gravecrawler returned");
+}
+
+/// Soulherder grows on battlefield exiles and flickers a creature at end step.
+#[test]
+fn soulherder_grows_and_flickers() {
+    let mut g = two_player_game();
+    let herder = g.add_card_to_battlefield(0, catalog::soulherder());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // End-step trigger: flicker the bear (MayDo yes).
+    g.active_player_idx = 0;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "bear flickered back");
+    let h = g.battlefield_find(herder).unwrap();
+    assert_eq!(h.counter_count(CounterType::PlusOnePlusOne), 1, "grew off the exile");
+}
+
+/// Knight of the Ebon Legion gets a counter at end step after 4+ life lost.
+#[test]
+fn knight_of_the_ebon_legion_grows_after_bloodshed() {
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, catalog::knight_of_the_ebon_legion());
+    g.adjust_life(1, -4);
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield_find(knight).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "4 life lost this turn → counter"
+    );
+}
+
+/// Tourach grows on opponent discards; the kicked ETB rips two cards.
+#[test]
+fn tourach_kicked_etb_discards_two_and_grows() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_hand(1, catalog::island()); }
+    let t = g.add_card_to_hand(0, catalog::tourach_dread_cantor());
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: t, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast kicked");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), 1, "discarded two");
+    // The two opponent discards each grew Tourach (CR 603.6 fan-out).
+    assert_eq!(
+        g.battlefield_find(t).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        2,
+        "two discard triggers"
+    );
+}
+
+/// Yawgmoth converts a spare body into a -1/-1 counter and a card.
+#[test]
+fn yawgmoth_sacrifices_for_counter_and_card() {
+    let mut g = two_player_game();
+    let yawg = g.add_card_to_battlefield(0, catalog::yawgmoth_thran_physician());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: yawg, ability_index: 0,
+        target: Some(Target::Permanent(opp)), x_value: None,
+    }).expect("activate Yawgmoth");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 19, "paid 1 life");
+    assert_eq!(g.battlefield_find(opp).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+    assert_eq!(g.players[0].hand.len(), 1, "drew a card");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "bear sacrificed");
+}
+
+/// Archfiend of Ifnir withers opposing creatures when you cycle.
+#[test]
+fn archfiend_of_ifnir_withers_on_cycle() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::archfiend_of_ifnir());
+    let opp = g.add_card_to_battlefield(1, catalog::colossal_dreadmaw());
+    let cycler = g.add_card_to_hand(0, catalog::archfiend_of_ifnir());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::Cycle { card_id: cycler }).expect("cycle");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(opp).unwrap().counter_count(CounterType::MinusOneMinusOne), 1);
+}
+
+/// Battle Display destroys an artifact; the Knight can be cast later.
+#[test]
+fn embereth_shieldbreaker_adventure_smashes_artifact() {
+    let mut g = two_player_game();
+    let oven = g.add_card_to_battlefield(1, catalog::witchs_oven());
+    let card = g.add_card_to_hand(0, catalog::embereth_shieldbreaker());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastAdventure {
+        card_id: card, target: Some(Target::Permanent(oven)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Battle Display");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(oven).is_none(), "artifact destroyed");
+    assert!(g.exile.iter().any(|c| c.id == card), "on an adventure");
+}
+
+/// Bomat Courier stashes cards on attack and trades the hand for the stash.
+#[test]
+fn bomat_courier_stashes_and_cashes_out() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let courier = g.add_card_to_battlefield(0, catalog::bomat_courier());
+    g.clear_sickness(courier);
+    let stash1 = g.add_card_to_library(0, catalog::island());
+    let junk = g.add_card_to_hand(0, catalog::forest());
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: courier, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let stashed = g.exile.iter().find(|c| c.id == stash1).expect("top card stashed");
+    assert!(stashed.face_down, "stash is face down");
+    assert_eq!(stashed.exiled_with, Some(courier), "linked to the Courier");
+    // Cash out: {R}, sac — discard hand, take the stash.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.step = TurnStep::PostCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: courier, ability_index: 0, target: None, x_value: None,
+    }).expect("cash out");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == stash1), "stash in hand");
+    assert!(!g.players[0].hand.iter().any(|c| c.id == junk), "old hand discarded");
+}

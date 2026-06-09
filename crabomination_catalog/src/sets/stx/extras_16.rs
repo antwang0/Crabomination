@@ -410,7 +410,7 @@ pub fn culmination_of_studies() -> CardDefinition {
         cost: cost(&[x(), u(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
-            Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::XFromCost },
+            Effect::ExileTopOfLibrary { who: Selector::You, amount: Value::XFromCost, link_to_source: false, face_down: false },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::CountMatching {

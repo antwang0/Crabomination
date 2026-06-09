@@ -197,7 +197,7 @@ impl Effect {
             }
             Effect::Draw { who, amount }
             | Effect::Mill { who, amount }
-            | Effect::ExileTopOfLibrary { who, amount } => {
+            | Effect::ExileTopOfLibrary { who, amount, .. } => {
                 sel_has_target(who) || value_has_target(amount)
             }
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),

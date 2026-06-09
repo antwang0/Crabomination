@@ -2140,6 +2140,8 @@ pub fn ingest() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
         effect: Effect::ExileTopOfLibrary {
+            link_to_source: false,
+            face_down: false,
             who: Selector::Player(PlayerRef::Target(0)),
             amount: Value::Const(1),
         },

@@ -26,7 +26,7 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
-| Mirrorform | ⏳ | Aura + clone target. |
+| Mirrorform | ✅ | Each of your nonland permanents becomes a copy of the target (`BecomeCopyOfFor`, Permanent duration). |
 
 ### Black
 
@@ -44,7 +44,7 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Shifting Woodland | ⏳ | Delirium-gated continuous "becomes a copy of a gy permanent" (layer-1 loop). |
+| Shifting Woodland | ✅ | Delirium-gated EOT copy of a graveyard permanent card (`BecomeCopyOfFor` + any-zone source). |
 
 ### Artifacts & Planeswalkers (mono / colorless)
 
@@ -92,7 +92,7 @@ are listed in `DECK_FEATURES.md`.
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
 | Saga lore counters | ✅ | `saga_chapters` (History of Benalia, The Eldest Reborn). DFC sagas (transform-on-final-chapter) still ⏳. |
 | Transforming DFCs | ✅ | CR 712 — `Effect::Transform` + `CardInstance.{transformed,front_face}` + `EventKind::Transformed`. Swaps the active face in place (counters/tapped/attachments persist), round-trips through snapshots. Ships Concealing Curtains // Revealing Eye, Delver of Secrets // Insectile Aberration, The Everflowing Well // The Myriad Pools (descend-8 upkeep flip). Remaining ⏳: Daybound/Nightbound auto-flip, DFC sagas, manifest/disguise face-down. |
-| Hideaway lands | ✅ | CR 702.76 — `Effect::Hideaway { count }` looks at the top N, exiles the best face down stamped `exiled_with = source`, bottoms the rest; `Selector::CardExiledWithSource` + `CastWithoutPayingImmediate` play it later. Shelldock Isle ✅. Remaining ⏳: the Lorwyn cycle's harder gates (attacked-with-3, lost-7-life, total-power-8). |
+| Hideaway lands | ✅ | CR 702.76 — `Effect::Hideaway { count }` looks at the top N, exiles the best face down stamped `exiled_with = source`, bottoms the rest; `Selector::CardExiledWithSource` + `CastWithoutPayingImmediate` play it later. Shelldock Isle, Mosswort Bridge, Spinerock Knoll, Windbrisk Heights ✅ (printed gates). |
 | Impending (CR 702.183) | ✅ | `Keyword::Impending(n)` + `AlternativeCost.impending`: cast for the impending cost → enters with N time counters, isn't a creature (layer-4) until they tick off one per end step. All five Duskmourn Overlords ship with their enters-or-attacks triggers. |
 | Verge / surveil land family expansion | ✅ | All five enemy/allied `*verge` lands ship via `verge_land`. Horizon-canopy cycle complete (`horizon_land`; all six). All ten MKM surveil lands ship via `dual_land_with` + `etb_tap_then_surveil_one`. |
 | ETB-replacement effects (suppress entirely) | 🟡 | "Exile non-cast nontoken creature instead" wired (`StaticEffect::ExileNontokenCreaturesNotCast`, Containment Priest ✅). Creature-ETB / death **trigger** suppression ships via `StaticEffect::SuppressCreatureEtbTriggers { also_dies }` (Torpor Orb, Tocatli Honor Guard, Hushbringer ✅). Remaining: Gather Specimens (steal-instead). |

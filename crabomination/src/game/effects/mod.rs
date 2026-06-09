@@ -1785,7 +1785,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileTopOfLibrary { who, amount } => {
+            Effect::ExileTopOfLibrary { who, amount, link_to_source, face_down } => {
                 // CR 702.115 Ingest etc. — like Mill but routes to exile.
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;
                 for ent in self.resolve_selector(who, ctx) {
@@ -1796,6 +1796,14 @@ impl GameState {
                             let cid = card.id;
                             self.place_card_in_dest(card, p, &ZoneDest::Exile, events);
                             self.last_moved_cards.push(cid);
+                            if *link_to_source || *face_down {
+                                if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                                    if *link_to_source {
+                                        c.exiled_with = ctx.source;
+                                    }
+                                    c.face_down = *face_down;
+                                }
+                            }
                         }
                     }
                 }
@@ -5970,8 +5978,11 @@ impl GameState {
                     .resolve_selector(source, ctx)
                     .into_iter()
                     .find_map(|e| e.as_permanent_id());
+                // The copy source may be a battlefield permanent or a card
+                // in another zone (Shifting Woodland copies a graveyard
+                // permanent *card*).
                 let src_def = src
-                    .and_then(|id| self.battlefield.iter().find(|c| c.id == id))
+                    .and_then(|id| self.find_card_anywhere(id))
                     .map(|c| c.definition.clone());
                 let Some(src_def) = src_def else { return Ok(()) };
                 let copy_def = if *non_legendary {

@@ -19660,10 +19660,8 @@ pub fn fallen_shinobi() -> CardDefinition {
     }
 }
 
-/// Bonecrusher Giant — {2}{R} Creature — Giant 4/3.
-/// (Stomp adventure omitted — implemented as just the creature body.)
-/// Whenever Bonecrusher Giant becomes the target of a spell, deal 2
-/// damage to that spell's controller. (Triggered ability omitted.)
+/// Bonecrusher Giant — {2}{R} 4/3 Giant. Whenever it becomes the target of a
+/// spell, deal 2 damage to that spell's controller. // Stomp.
 pub fn bonecrusher_giant() -> CardDefinition {
     CardDefinition {
         name: "Bonecrusher Giant",
@@ -19675,6 +19673,13 @@ pub fn bonecrusher_giant() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(2),
+            },
+        }],
         // Adventure — Stomp {1}{R}: damage can't be prevented this turn; deal
         // 2 damage to any target (CR 715).
         adventure: Some(Box::new(Adventure {
@@ -38218,6 +38223,341 @@ pub fn radical_idea() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::JumpStart],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Mirrorform — {4}{U}{U} Instant. Each nonland permanent you control becomes
+/// a copy of target non-Aura permanent (CR 707.2 via `BecomeCopyOfFor`).
+pub fn mirrorform() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    CardDefinition {
+        name: "Mirrorform",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::BecomeCopyOfFor {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByYou),
+            ),
+            source: target_filtered(SelectionRequirement::Permanent.and(
+                SelectionRequirement::Not(Box::new(SelectionRequirement::HasEnchantmentSubtype(
+                    EnchantmentSubtype::Aura,
+                ))),
+            )),
+            duration: Duration::Permanent,
+            non_legendary: false,
+        },
+        ..Default::default()
+    }
+}
+
+// ── Staple batch (modern_decks) ───────────────────────────────────────────────
+
+/// Gravecrawler — {B} 2/1 Zombie. Can't block. Recast from your graveyard
+/// while you control a Zombie (modeled as a graveyard activation at {B}).
+pub fn gravecrawler() -> CardDefinition {
+    CardDefinition {
+        name: "Gravecrawler",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::CantBlock],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[b()]),
+            effect: Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            from_graveyard: true,
+            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Zombie)
+                    .and(SelectionRequirement::ControlledByYou),
+            ))),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Soulherder — {1}{W}{U} 1/1 Spirit. Grows on each battlefield exile; at
+/// your end step, may flicker another creature you control.
+pub fn soulherder() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Soulherder",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Spirit], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardExiled, EventScope::AnyPlayer)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::MayDo {
+                    description: "Exile another creature you control, then return it?".into(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Exile {
+                            what: target_filtered(
+                                SelectionRequirement::Creature
+                                    .and(SelectionRequirement::ControlledByYou)
+                                    .and(SelectionRequirement::OtherThanSource),
+                            ),
+                        },
+                        Effect::Move {
+                            what: Selector::Target(0),
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        },
+                    ])),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Knight of the Ebon Legion — {B} 1/2 Vampire Knight. {2}{B}: +3/+3 and
+/// deathtouch EOT. End step: if a player lost 4+ life this turn, +1/+1 counter.
+pub fn knight_of_the_ebon_legion() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Knight of the Ebon Legion",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), b()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Deathtouch,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::End),
+                EventScope::YourControl,
+            )
+            .with_filter(Predicate::ValueAtLeast(
+                Value::LifeLostThisTurn(PlayerRef::EachPlayer),
+                Value::Const(4),
+            )),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tourach, Dread Cantor — {1}{B} 2/1 Legendary Human Cleric, Kicker {B}{B},
+/// protection from white. Grows when an opponent discards; kicked ETB makes
+/// a target player discard two.
+pub fn tourach_dread_cantor() -> CardDefinition {
+    CardDefinition {
+        name: "Tourach, Dread Cantor",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![
+            Keyword::Kicker(cost(&[b(), b()])),
+            Keyword::Protection(Color::White),
+        ],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardDiscarded, EventScope::OpponentControl),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            etb(Effect::If {
+                cond: Predicate::SpellWasKicked,
+                then: Box::new(Effect::Discard {
+                    who: target_filtered(SelectionRequirement::Player),
+                    amount: Value::Const(2),
+                    random: false,
+                }),
+                else_: Box::new(Effect::Noop),
+            }),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Yawgmoth, Thran Physician — {2}{B}{B} 2/4 Legendary Human Cleric.
+/// Pay 1 life, sacrifice another creature: -1/-1 counter on up to one target
+/// creature, draw a card. {B}{B}, discard a card: proliferate.
+/// (Protection from Humans is dropped — no creature-type protection yet.)
+pub fn yawgmoth_thran_physician() -> CardDefinition {
+    CardDefinition {
+        name: "Yawgmoth, Thran Physician",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        activated_abilities: vec![
+            ActivatedAbility {
+                life_cost: 1,
+                sac_other_filter: Some((
+                    SelectionRequirement::Creature.and(SelectionRequirement::OtherThanSource),
+                    1,
+                )),
+                effect: Effect::Seq(vec![
+                    Effect::MayDo {
+                        description: "Put a -1/-1 counter on the target creature?".into(),
+                        body: Box::new(Effect::AddCounter {
+                            what: target_filtered(SelectionRequirement::Creature),
+                            kind: CounterType::MinusOneMinusOne,
+                            amount: Value::Const(1),
+                        }),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[b(), b()]),
+                discard_cost: Some((SelectionRequirement::Any, 1)),
+                effect: Effect::Proliferate,
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Archfiend of Ifnir — {3}{B}{B} 5/4 Demon, flying, cycling {2}. Whenever
+/// you cycle or discard another card, a -1/-1 counter lands on each creature
+/// your opponents control.
+pub fn archfiend_of_ifnir() -> CardDefinition {
+    let wither_all = || Effect::AddCounter {
+        what: Selector::EachPermanent(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+        ),
+        kind: CounterType::MinusOneMinusOne,
+        amount: Value::Const(1),
+    };
+    CardDefinition {
+        name: "Archfiend of Ifnir",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Demon], ..Default::default() },
+        power: 5,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Cycling(cost(&[generic(2)]))],
+        // A cycle also emits the discard event, so one trigger covers
+        // the printed "cycle or discard" wording.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CardDiscarded, EventScope::YourControl),
+            effect: wither_all(),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Embereth Shieldbreaker — {1}{R} 2/1 Human Knight // Battle Display {R}
+/// Sorcery: destroy target artifact.
+pub fn embereth_shieldbreaker() -> CardDefinition {
+    CardDefinition {
+        name: "Embereth Shieldbreaker",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        adventure: Some(Box::new(Adventure {
+            name: "Battle Display",
+            cost: cost(&[r()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+/// Bomat Courier — {1} 1/1 Construct, haste. Attacks stash the top of your
+/// library face down; {R}, sacrifice: discard your hand and take the stash.
+/// (The hand discard is part of the resolution rather than the cost.)
+pub fn bomat_courier() -> CardDefinition {
+    CardDefinition {
+        name: "Bomat Courier",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ExileTopOfLibrary {
+                who: Selector::You,
+                amount: Value::Const(1),
+                link_to_source: true,
+                face_down: true,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            sac_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::Discard { who: Selector::You, amount: Value::Const(100), random: false },
+                Effect::Move {
+                    what: Selector::CardExiledWithSource,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

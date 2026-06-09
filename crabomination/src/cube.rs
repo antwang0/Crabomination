@@ -243,6 +243,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         grim_monolith,
         mirror_universe,
         disrupting_scepter,
+        bomat_courier,
         // Copy lands (CR 707 — BecomeCopyOfFor).
         vesuva,
         thespians_stage,
@@ -1008,6 +1009,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(lingering_souls);
     }
     if pair_contains(pair, Color::Blue) {
+        v.push(soulherder);
         v.push(teferi_time_raveler);
         v.push(dovins_veto);
         v.push(stand_deliver);
@@ -1028,6 +1030,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         hidden_strings,
         aether_gust,
         thought_reflection,
+        mirrorform,
         chemisters_insight,
         radical_idea,
         distortion_strike,
@@ -1398,6 +1401,11 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         orcish_bowmasters,
+        gravecrawler,
+        knight_of_the_ebon_legion,
+        tourach_dread_cantor,
+        yawgmoth_thran_physician,
+        archfiend_of_ifnir,
         shadow_slice,
         midnight_recovery,
         tainted_strike,
@@ -1814,6 +1822,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Hideaway land (CR 702.76)
         spinerock_knoll,
+        embereth_shieldbreaker,
         // Bloodrush (Gatecrash)
         skinbrand_goblin,
         faithless_salvaging,
@@ -2280,6 +2289,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // Hideaway land (CR 702.76)
         mosswort_bridge,
+        shifting_woodland,
         // Bloodrush (Gatecrash)
         slaughterhorn,
         wasteland_viper,

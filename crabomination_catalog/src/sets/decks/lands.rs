@@ -727,6 +727,51 @@ pub fn thespians_stage() -> CardDefinition {
     }
 }
 
+/// Shifting Woodland — Land. Enters tapped unless you control a Forest.
+/// `{T}: Add {G}`. Delirium — {2}{G}{G}: becomes a copy of target permanent
+/// card in your graveyard until end of turn.
+pub fn shifting_woodland() -> CardDefinition {
+    use crate::effect::Duration;
+    let permanent_card = SelectionRequirement::Creature
+        .or(SelectionRequirement::Artifact)
+        .or(SelectionRequirement::Enchantment)
+        .or(SelectionRequirement::Planeswalker)
+        .or(SelectionRequirement::Land);
+    CardDefinition {
+        name: "Shifting Woodland",
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add(Color::Green),
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2), g(), g()]),
+                condition: Some(Predicate::DeliriumActive { who: PlayerRef::You }),
+                effect: Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(
+                        permanent_card.and(SelectionRequirement::InGraveyard),
+                    ),
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                },
+                ..Default::default()
+            },
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::If {
+                cond: Predicate::SelectorExists(Selector::EachPermanent(
+                    SelectionRequirement::HasLandType(LandType::Forest)
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                )),
+                then: Box::new(Effect::Noop),
+                else_: Box::new(Effect::Tap { what: Selector::This }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Manlands (CR 702 — lands that animate into creatures) ───────────────────
 
 /// Build a creature-land (manland): enters tapped, taps for each of two
