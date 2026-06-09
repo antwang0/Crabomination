@@ -13067,6 +13067,74 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Faerie Snoop — {1}{U}{B} 1/4 Faerie Detective with flying. Disguise
+/// {1}{U/B}{U/B}. When turned face up, look at the top two cards of your
+/// library; put one into your hand and the other into your graveyard. (MKM)
+pub fn faerie_snoop() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
+    let ub = || hybrid(Color::Blue, Color::Black);
+    CardDefinition {
+        name: "Faerie Snoop",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Disguise(cost(&[generic(1), ub(), ub()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                rest_to_graveyard: true,
+                pick_filter: None,
+                take: None,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Crowd-Control Warden — {3}{G}{W} 4/4 Centaur Soldier. As it enters or is
+/// turned face up, put X +1/+1 counters on it, where X is the number of other
+/// creatures you control. Disguise {3}{G/W}{G/W}. (MKM)
+pub fn crowd_control_warden() -> CardDefinition {
+    use crate::mana::{hybrid, Color};
+    let gw = || hybrid(Color::Green, Color::White);
+    let pump = || Effect::AddCounter {
+        what: Selector::This,
+        kind: CounterType::PlusOnePlusOne,
+        amount: Value::count(Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::OtherThanSource),
+        )),
+    };
+    CardDefinition {
+        name: "Crowd-Control Warden",
+        cost: cost(&[generic(3), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Disguise(cost(&[generic(3), gw(), gw()]))],
+        triggered_abilities: vec![
+            etb(pump()),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+                effect: pump(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Bolrac-Clan Basher — {4}{R}{R} 3/2 Cyclops with double strike and trample.
 /// Disguise {3}{R}{R}. (MKM)
 pub fn bolrac_clan_basher() -> CardDefinition {

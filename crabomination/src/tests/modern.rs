@@ -42174,6 +42174,46 @@ fn bot_turns_up_affordable_face_down_creature() {
         "bot should turn up the face-down creature; got {action:?}");
 }
 
+/// Faerie Snoop's turn-up digs two cards, taking one to hand.
+#[test]
+fn disguise_faerie_snoop_turn_up_digs_two() {
+    let mut g = two_player_game();
+    let keep = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(keep))]));
+    let id = g.add_card_to_hand(0, catalog::faerie_snoop());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == keep), "kept card went to hand");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "exactly one card taken");
+}
+
+/// Crowd-Control Warden enters sized by the rest of the board.
+#[test]
+fn crowd_control_warden_enters_with_counters_per_other_creature() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::crowd_control_warden());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Warden");
+    drain_stack(&mut g);
+    let w = g.battlefield_find(id).expect("here");
+    assert_eq!((w.power(), w.toughness()), (6, 6), "4/4 + two +1/+1 counters (two other creatures)");
+}
+
 /// Riftburst Hellion disguises and turns up into a 6/7 reacher.
 #[test]
 fn disguise_riftburst_hellion_turns_up_6_7_reach() {

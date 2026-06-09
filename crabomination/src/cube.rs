@@ -468,6 +468,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks: white/multicolor staples ──
         defenestrated_phantom,
         museum_nightwatch,
+        crowd_control_warden,
         eiganjo_seat_of_the_empire,
         restless_fortress,
         phelia_exuberant_shepherd,
@@ -1011,6 +1012,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         bubble_smuggler,
+        faerie_snoop,
         otawara_soaring_city,
         restless_spire,
         restless_reef,
