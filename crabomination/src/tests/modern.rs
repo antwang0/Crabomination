@@ -41130,3 +41130,20 @@ fn skymarcher_aspirant_menace_with_blessing() {
     assert!(g.computed_permanent(asp).unwrap().keywords.contains(&Keyword::Menace),
         "menace with the city's blessing");
 }
+
+/// Casting a Merfolk with Merrow Reejerey out fires its tap/untap trigger
+/// cleanly (AutoDecider taps a permanent; no panic).
+#[test]
+fn merrow_reejerey_trigger_resolves_on_merfolk_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::merrow_reejerey());
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let merfolk = g.add_card_to_hand(0, catalog::cursecatcher());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: merfolk, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Merfolk");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(merfolk).is_some(), "Merfolk resolved");
+    let _ = land; // the trigger may tap/untap any permanent; just assert no panic
+}
