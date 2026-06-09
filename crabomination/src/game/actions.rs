@@ -1208,7 +1208,7 @@ impl GameState {
         // Pay the base cost first (pip-aware, so the colored pips aren't
         // stranded by the generic squad payment), then charge the squad cost
         // `times` times as an additional cost (CR 601.2f).
-        let mut events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
+        let events = self.cast_spell(card_id, target, additional_targets, mode, x_value)?;
         if times > 0 {
             let mut combined = crate::mana::ManaCost { symbols: Vec::new() };
             for _ in 0..times {

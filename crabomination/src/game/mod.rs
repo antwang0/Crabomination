@@ -5943,7 +5943,7 @@ impl GameState {
             && additional_targets.is_empty()
             && let Some(t) = &target
             && let Some(filter) = effect.target_filter_for_slot(0)
-            && !self.evaluate_requirement_static(&filter, t, caster, Some(card.id))
+            && !self.evaluate_requirement_static(filter, t, caster, Some(card.id))
         {
             return Ok(Vec::new());
         }
