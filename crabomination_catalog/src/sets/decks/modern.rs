@@ -37079,11 +37079,19 @@ pub fn tribal_flames() -> CardDefinition {
 /// Umezawa's Jitte — {2} Legendary Artifact — Equipment. Whenever equipped
 /// creature deals combat damage, put two charge counters on this. Remove a
 /// charge counter: choose one — equipped creature gets +2/+2; or target
-/// creature gets -1/-1; or you gain 2 life. Equip {2}. (The combat trigger
-/// fires on damage to a player; combat-damage-to-a-creature isn't dispatched.)
+/// creature gets -1/-1; or you gain 2 life. Equip {2}. Charges on combat damage
+/// to a player or to a creature (CR 510.2).
 pub fn umezawas_jitte() -> CardDefinition {
     use crate::card::{ArtifactSubtype, CounterType, EquipBonus};
     use crate::effect::Duration;
+    let charge = || TriggeredAbility {
+        event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+        effect: Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Charge,
+            amount: Value::Const(2),
+        },
+    };
     CardDefinition {
         name: "Umezawa's Jitte",
         cost: cost(&[generic(2)]),
@@ -37096,14 +37104,16 @@ pub fn umezawas_jitte() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
             triggers_on_equipment: true,
-            triggered_abilities: vec![TriggeredAbility {
-                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-                effect: Effect::AddCounter {
-                    what: Selector::This,
-                    kind: CounterType::Charge,
-                    amount: Value::Const(2),
+            triggered_abilities: vec![
+                charge(),
+                TriggeredAbility {
+                    event: EventSpec::new(
+                        EventKind::DealsCombatDamageToCreature,
+                        EventScope::SelfSource,
+                    ),
+                    ..charge()
                 },
-            }],
+            ],
             ..Default::default()
         }),
         activated_abilities: vec![

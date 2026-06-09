@@ -254,3 +254,48 @@ fn cr_702_6e_equip_trigger_resolves_on_the_equipment() {
     assert_eq!(g.battlefield_find(attacker).unwrap().counter_count(CounterType::Charge), 0,
         "the equipped creature got no counters");
 }
+
+// ── CR 510.2 — combat damage to a creature fires triggers ─────────────────────
+
+/// `DealsCombatDamageToCreature` triggers (CR 510.2) are now dispatched from
+/// the combat damage step, so Umezawa's Jitte charges when its equipped
+/// creature is blocked and deals damage to the blocker.
+#[test]
+fn cr_510_2_jitte_charges_when_equipped_creature_is_blocked() {
+    use crate::card::CounterType;
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let jitte = g.add_card_to_battlefield(0, catalog::umezawas_jitte());
+    g.battlefield_find_mut(jitte).unwrap().attached_to = Some(attacker);
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.block_map.insert(blocker, attacker);
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    g.resolve_combat().expect("regular combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jitte).unwrap().counter_count(CounterType::Charge), 2,
+        "Jitte charges off combat damage dealt to the blocking creature");
+}
+
+/// A creature unblocked deals damage to a *player*, not a creature, so the
+/// to-creature dispatch must not fire for it (no spurious double-charge).
+#[test]
+fn cr_510_2_to_creature_dispatch_skips_unblocked_attacker() {
+    use crate::card::CounterType;
+    use crate::game::types::Attack;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let jitte = g.add_card_to_battlefield(0, catalog::umezawas_jitte());
+    g.battlefield_find_mut(jitte).unwrap().attached_to = Some(attacker);
+    g.clear_sickness(attacker);
+    g.attacking = vec![Attack { attacker, target: AttackTarget::Player(1) }];
+    g.step = TurnStep::CombatDamage;
+    g.active_player_idx = 0;
+    g.resolve_combat().expect("regular combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(jitte).unwrap().counter_count(CounterType::Charge), 2,
+        "exactly one charge trigger (the to-player one) — two counters, not four");
+}

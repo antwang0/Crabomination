@@ -1252,6 +1252,11 @@ impl GameState {
             if d > 0 { 1u32 << d.min(16) } else { 1 }
         };
 
+        // Creature-vs-creature combat damage recorded here and dispatched after
+        // all damage in this step is dealt, so `DealsCombatDamageToCreature`
+        // triggers (CR 510.2) go on the stack simultaneously (CR 603.3b).
+        let mut creature_damage: Vec<(CardId, CardId, u32)> = vec![];
+
         for atk in &attacker_infos {
             if !atk.should_deal {
                 continue;
@@ -1375,6 +1380,7 @@ impl GameState {
                             to_player: None,
                             to_card: Some(blocker_id),
                         });
+                        creature_damage.push((atk.id, blocker_id, dealt as u32));
                     }
                 }
 
@@ -1471,6 +1477,18 @@ impl GameState {
                             });
                         }
                     }
+                    // Each blocker that struck the attacker dealt combat damage
+                    // to a creature (CR 510.2). Record per-blocker (its own
+                    // power as the amount) so each blocker's to-creature
+                    // triggers fire; only when some damage got through.
+                    if dmg > 0 {
+                        for &bid in &dealing_blocker_ids {
+                            let p = computed_of(bid).map(|c| c.power.max(0) as u32).unwrap_or(0);
+                            if p > 0 {
+                                creature_damage.push((bid, atk.id, p));
+                            }
+                        }
+                    }
 
                     // Blocker lifelink — gained by each blocker's controller
                     // (different blockers can have different controllers in
@@ -1509,6 +1527,12 @@ impl GameState {
                     }
                 }
             }
+        }
+
+        // CR 510.2 — now that all combat damage in this step has been dealt,
+        // put `DealsCombatDamageToCreature` triggers on the stack.
+        for (source, damaged, amount) in creature_damage {
+            self.fire_combat_damage_to_creature_triggers(source, damaged, amount);
         }
 
         Ok(events)
@@ -1648,6 +1672,48 @@ impl GameState {
         damaged_player: usize,
         damage_amount: u32,
     ) {
+        self.fire_combat_damage_triggers(
+            source,
+            EventKind::DealsCombatDamageToPlayer,
+            Target::Player(damaged_player),
+            damage_amount,
+        );
+    }
+
+    /// Push triggered abilities of `source` whose event spec is
+    /// `DealsCombatDamageToCreature` onto the stack, binding the damaged
+    /// creature to the trigger's target so "destroy / exile / -1/-1 that
+    /// creature" payoffs and equipment charge-triggers (Umezawa's Jitte)
+    /// resolve correctly. CR 510.2. Fires once per (source, damaged-creature)
+    /// pair; an equipped creature blocked by several creatures therefore
+    /// charges Jitte once per blocker (a minor over-count for the rare
+    /// multi-block case).
+    pub(crate) fn fire_combat_damage_to_creature_triggers(
+        &mut self,
+        source: CardId,
+        damaged_creature: CardId,
+        damage_amount: u32,
+    ) {
+        self.fire_combat_damage_triggers(
+            source,
+            EventKind::DealsCombatDamageToCreature,
+            Target::Permanent(damaged_creature),
+            damage_amount,
+        );
+    }
+
+    /// Shared body for the combat-damage trigger dispatch (to a player or to a
+    /// creature). Walks the attacker's printed `SelfSource`/`AnyPlayer`
+    /// triggers, equipment- and soulbond-granted triggers (CR 702.6e / 702.95),
+    /// `YourControl`-scope listeners, and `FromYourGraveyard` triggers, pushing
+    /// each onto the stack with `default_target` bound to slot 0.
+    fn fire_combat_damage_triggers(
+        &mut self,
+        source: CardId,
+        kind: EventKind,
+        default_target: Target,
+        damage_amount: u32,
+    ) {
         let attacker_controller = self
             .battlefield
             .iter()
@@ -1663,7 +1729,7 @@ impl GameState {
                     .triggered_abilities
                     .iter()
                     .filter(|t| {
-                        t.event.kind == EventKind::DealsCombatDamageToPlayer
+                        t.event.kind == kind
                             && matches!(
                                 t.event.scope,
                                 crate::effect::EventScope::SelfSource
@@ -1691,7 +1757,7 @@ impl GameState {
                 // counters on the Equipment, so `Selector::This` must read it).
                 let trig_source = if bonus.triggers_on_equipment { eq.id } else { source };
                 for t in &bonus.triggered_abilities {
-                    if t.event.kind == EventKind::DealsCombatDamageToPlayer
+                    if t.event.kind == kind
                         && matches!(
                             t.event.scope,
                             crate::effect::EventScope::SelfSource
@@ -1716,7 +1782,7 @@ impl GameState {
                     continue;
                 }
                 for t in &bonus.triggered_abilities {
-                    if t.event.kind == EventKind::DealsCombatDamageToPlayer {
+                    if t.event.kind == kind {
                         triggers.push((source, t.effect.clone(), atk_ctrl));
                     }
                 }
@@ -1734,7 +1800,7 @@ impl GameState {
                     continue;
                 }
                 for t in &c.definition.triggered_abilities {
-                    if t.event.kind == EventKind::DealsCombatDamageToPlayer
+                    if t.event.kind == kind
                         && matches!(t.event.scope, crate::effect::EventScope::YourControl)
                     {
                         triggers.push((c.id, t.effect.clone(), c.controller));
@@ -1754,7 +1820,7 @@ impl GameState {
                 }
                 for gy_card in &player.graveyard {
                     for t in &gy_card.definition.triggered_abilities {
-                        if t.event.kind == EventKind::DealsCombatDamageToPlayer
+                        if t.event.kind == kind
                             && matches!(
                                 t.event.scope,
                                 crate::effect::EventScope::FromYourGraveyard
@@ -1776,9 +1842,9 @@ impl GameState {
             // the damaged player.
             let target = if effect.prefers_graveyard_target() {
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(trig_source))
-                    .or(Some(Target::Player(damaged_player)))
+                    .or(Some(default_target.clone()))
             } else {
-                Some(Target::Player(damaged_player))
+                Some(default_target.clone())
             };
             self.stack.push(StackItem::Trigger {
                 source: trig_source,

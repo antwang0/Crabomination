@@ -8,13 +8,15 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
-- ⏳ **Combat-damage-**to-a-creature** trigger dispatch.** `EventKind::
-  DealsCombatDamageToCreature` exists but nothing fires it; only the
-  to-a-player path is dispatched. Wiring it would make Umezawa's Jitte charge
-  when its equipped creature is blocked, and unblock other "deals combat damage
-  to a creature" payoffs. Fire it from `resolve_combat_damage_with_filter`'s
-  attacker→blocker / blocker→attacker damage application, with the damaged
-  creature bound to a target slot.
+- ✅ **Combat-damage-to-a-creature trigger dispatch (CR 510.2).**
+  `resolve_combat_damage_with_filter` records every creature-vs-creature damage
+  pair and, after all damage in the step is dealt, fires
+  `DealsCombatDamageToCreature` triggers via the shared
+  `fire_combat_damage_triggers` (printed SelfSource/AnyPlayer, equipment
+  CR 702.6e, soulbond, YourControl, gy FromYourGraveyard), binding the damaged
+  creature to slot 0. Umezawa's Jitte now charges when its equipped creature is
+  blocked. (Fires once per damaged creature — a minor over-count for Jitte under
+  multi-block.)
 - ⏳ **Aether Gust + Subtlety-style "spell or permanent → top/bottom of
   library".** Aether Gust hits a red/green *spell or permanent* and the owner
   chooses top or bottom; the spell-counter half rides `CounteredSpellZone::
