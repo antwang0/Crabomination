@@ -964,6 +964,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         overlord_of_the_floodpits,
+        // Hideaway land (CR 702.76)
+        shelldock_isle,
         // ── Cube expansion ──
         frost_titan,
         // untap-all combo enabler

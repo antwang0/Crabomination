@@ -118,6 +118,7 @@ impl Effect {
             Effect::HoneFromHand { .. } => false,
             Effect::CatchUpBasicLands => false,
             Effect::ExileFromHandTaxed { .. } => false,
+            Effect::Hideaway { .. } => false,
             Effect::NthResolutionThisTurn { branches } => {
                 branches.iter().any(|e| e.requires_target())
             }

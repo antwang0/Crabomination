@@ -4655,6 +4655,50 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Hideaway { count } => {
+                // CR 702.76 — look at the top N, exile the best (highest-MV)
+                // face down linked to the source, bottom the rest at random.
+                let Some(src) = ctx.source else { return Ok(()); };
+                let p = ctx.controller;
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let top: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top.is_empty() {
+                    return Ok(());
+                }
+                let pick = top
+                    .iter()
+                    .copied()
+                    .max_by_key(|id| {
+                        self.players[p]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| c.definition.cost.cmc())
+                            .unwrap_or(0)
+                    })
+                    .unwrap();
+                if let Some(pos) = self.players[p].library.iter().position(|c| c.id == pick) {
+                    let mut card = self.players[p].library.remove(pos);
+                    card.face_down = true;
+                    card.exiled_with = Some(src);
+                    self.exile.push(card);
+                    events.push(crate::game::GameEvent::PermanentExiled { card_id: pick });
+                }
+                // Bottom the remaining looked-at cards in a random order.
+                use rand::seq::SliceRandom;
+                let mut rest: Vec<crate::card::CardId> =
+                    top.iter().copied().filter(|id| *id != pick).collect();
+                rest.shuffle(&mut rand::rng());
+                for id in rest {
+                    if let Some(pos) = self.players[p].library.iter().position(|c| c.id == id) {
+                        let card = self.players[p].library.remove(pos);
+                        self.players[p].library.push(card);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::RevealTopTakeOnePerType { who, count } => {
                 use crate::card::CardType;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
@@ -6779,6 +6823,12 @@ impl GameState {
                 .into_iter()
                 .collect(),
             Selector::ChoiceResult(_) => vec![], // TODO when decision loop lands
+            Selector::CardExiledWithSource => self
+                .exile
+                .iter()
+                .filter(|c| ctx.source.is_some() && c.exiled_with == ctx.source)
+                .map(|c| EntityRef::Permanent(c.id))
+                .collect(),
             Selector::LastCreatedToken => self
                 .last_created_token
                 .filter(|id| self.battlefield.iter().any(|c| c.id == *id))

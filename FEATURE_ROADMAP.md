@@ -275,7 +275,9 @@ feature; sweep card-batch by card-batch.
   Terror), ⏳ Gift,
   ✅ Offspring (CR 702.166 — `Keyword::Offspring(cost)` reuses the Kicker
   pipeline; `SpellWasKicked` gates an ETB 1/1 token-copy; Thundertrap Trainer),
-  ⏳ Impending, ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
+  ✅ Impending (CR 702.183 — `Keyword::Impending(n)` + `AlternativeCost.impending`:
+  enters with N time counters, not a creature until they tick off at end step;
+  Duskmourn Overlord cycle), ✅ Ninjutsu (`Keyword::Ninjutsu(cost)` +
   `GameAction::Ninjutsu` — declare-blockers special action that returns an
   unblocked attacker and swaps the ninja in tapped + attacking; Fallen
   Shinobi), ✅ Embalm (CR 702.88) / Eternalize (CR 702.91) —
@@ -319,7 +321,8 @@ feature; sweep card-batch by card-batch.
   Bloom. Creature-suspend haste + a UI prompt for the free cast's targets are
   TODO.md follow-ups), ✅ Forecast (CR 702.56 — rides the `from_hand`
   activated-ability path gated to the controller's upkeep + once-per-turn;
-  Steeling Stance), ⏳ Hideaway, ⏳ Aftermath.
+  Steeling Stance), ✅ Hideaway (CR 702.76 — `Effect::Hideaway { count }` +
+  `Selector::CardExiledWithSource`; Shelldock Isle), ⏳ Aftermath.
 - **Combat-flavor:** ✅ Bushido / ✅ Flanking / ✅ Rampage
   (`Keyword::{Bushido,Flanking,Rampage}` — combat-step rules in
   `declare_blockers`),

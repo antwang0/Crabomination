@@ -553,6 +553,45 @@ pub fn cephalid_coliseum() -> CardDefinition {
     }
 }
 
+/// Shelldock Isle — Legendary Land. Enters tapped. Hideaway 4 (CR 702.76). `{T}:
+/// Add {U}.` `{U}, {T}: You may play the exiled card without paying its mana
+/// cost if a player has 20 or less life.`
+pub fn shelldock_isle() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Shelldock Isle",
+        cost: ManaCost::default(),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            tap_add(Color::Blue),
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[u()]),
+                condition: Some(Predicate::PlayerLifeAtMost {
+                    who: PlayerRef::EachPlayer,
+                    life: 20,
+                }),
+                effect: Effect::CastWithoutPayingImmediate {
+                    what: Selector::CardExiledWithSource,
+                    source_zone: crate::card::Zone::Exile,
+                    exile_after: false,
+                },
+                ..Default::default()
+            },
+        ],
+        // Enters tapped + Hideaway 4 on ETB.
+        triggered_abilities: vec![
+            etb_tap(),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Hideaway { count: Value::Const(4) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 // ── Manlands (CR 702 — lands that animate into creatures) ───────────────────
 
 /// Build a creature-land (manland): enters tapped, taps for each of two

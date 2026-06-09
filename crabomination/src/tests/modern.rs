@@ -39851,3 +39851,39 @@ fn impending_hauntwoods_creates_tapped_omniland() {
         assert!(token.definition.subtypes.land_types.contains(&lt), "has every basic land type");
     }
 }
+
+// ── Hideaway (CR 702.76) — Shelldock Isle ────────────────────────────────────
+
+/// Shelldock Isle's ETB Hideaway exiles the best of the top four cards face
+/// down, linked to the land; its activated ability then plays that card for
+/// free while a player has 20 or less life.
+#[test]
+fn hideaway_shelldock_isle_exiles_then_plays_hidden_card() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    // Known top four: three MV-1 bolts and an MV-2 bear (the highest MV).
+    g.players[0].library.clear();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::lightning_bolt()); }
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let land = g.add_card_to_hand(0, catalog::shelldock_isle());
+    g.perform_action(GameAction::PlayLand(land)).expect("play Shelldock Isle");
+    drain_stack(&mut g);
+    // The bear (highest MV) is hidden in exile, face down, linked to the land.
+    let hidden = g.exile.iter().find(|c| c.id == bear).expect("bear hidden in exile");
+    assert!(hidden.face_down, "hidden card is face down");
+    assert_eq!(hidden.exiled_with, Some(land), "hidden card linked to Shelldock Isle");
+    assert!(g.battlefield_find(land).unwrap().tapped, "Shelldock enters tapped");
+    // Activate {U},{T}: play the hidden card for free (P0 starts at 20 life).
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.battlefield_find_mut(land).unwrap().tapped = false; // untap to pay the tap cost
+    g.priority.player_with_priority = 0;
+    // Say yes to the "cast without paying?" prompt.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: None, x_value: None,
+    }).expect("activate Shelldock hideaway play");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the hidden bear was played onto the battlefield");
+    assert!(!g.exile.iter().any(|c| c.id == bear), "bear left exile");
+}

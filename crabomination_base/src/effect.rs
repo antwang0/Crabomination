@@ -118,6 +118,11 @@ pub enum Selector {
     /// The player/object that answered a pending decision.
     ChoiceResult(u8),
 
+    /// CR 702.76 — the card hidden (exiled) by the source via Hideaway: the
+    /// exile-zone card stamped `exiled_with == ctx.source`. Resolves to that
+    /// single card so the activated ability can play it from exile.
+    CardExiledWithSource,
+
     /// The most-recently-created token from `Effect::CreateToken` in
     /// the current resolution. Used by Quandrix-style "create a token,
     /// then put X +1/+1 counters on it" cards (Fractal Anomaly,
@@ -1776,6 +1781,12 @@ pub enum Effect {
     /// `Value::DistinctCardTypesExiledWith`. Keen-Eyed Curator's
     /// "{1}: Exile target card from a graveyard."
     ExileTaggedWithSource { what: Selector },
+    /// CR 702.76 — Hideaway N. Look at the top `count` cards of the controller's
+    /// library, exile one face down stamped `exiled_with = source`, then put the
+    /// rest on the bottom in a random order. The hidden card is later played via
+    /// `CastWithoutPayingImmediate { what: Selector::CardExiledWithSource }`.
+    /// The controller's pick is auto-resolved to the highest-mana-value card.
+    Hideaway { count: Value },
     /// "Exile any number of target cards from graveyards." The controller
     /// picks a subset (via `Decision::ChooseCards`) of every graveyard card
     /// matching `filter`; chosen cards move to exile. AutoDecider exiles
