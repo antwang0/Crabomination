@@ -42128,6 +42128,28 @@ fn disguise_bubble_smuggler_turn_up_adds_four_counters() {
     assert_eq!((up.power(), up.toughness()), (6, 5), "2/1 + four +1/+1 counters");
 }
 
+/// Greenbelt Radical's turn-up pumps the whole team with +1/+1 counters.
+#[test]
+fn disguise_greenbelt_radical_turn_up_pumps_team() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::greenbelt_radical());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastFaceDown { card_id: id }).expect("cast face down");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::TurnFaceUp { card_id: id }).expect("turn up for {5}{G}{G}");
+    drain_stack(&mut g);
+    let other = g.battlefield_find(buddy).expect("buddy here");
+    assert_eq!((other.power(), other.toughness()), (3, 3), "team gets a +1/+1 counter");
+    assert!(g.computed_permanent(buddy).unwrap().keywords.contains(&Keyword::Trample),
+        "team gains trample until EOT");
+}
+
 /// Hide in Plain Sight cloaks the top two library cards: two face-down 2/2
 /// ward-{2} creatures enter, and a cloaked creature can be turned face up for
 /// its mana cost.

@@ -13067,6 +13067,41 @@ pub fn bubble_smuggler() -> CardDefinition {
     }
 }
 
+/// Greenbelt Radical — {3}{G} 4/4 Centaur. Disguise {5}{G}{G}. When turned face
+/// up, put a +1/+1 counter on each creature you control and they gain trample
+/// until end of turn. (MKM)
+pub fn greenbelt_radical() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Greenbelt Radical",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Citizen],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Disguise(cost(&[generic(5), g(), g()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: each_your_creature(),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: each_your_creature(),
+                    keyword: Keyword::Trample,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hide in Plain Sight — {3}{G} Sorcery. Cloak two cards (CR 702.182): put the
 /// top two cards of your library onto the battlefield face down as 2/2 creatures
 /// with ward {2}. (The "look at top five, pick two, rest to bottom" selection is
